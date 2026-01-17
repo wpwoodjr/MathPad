@@ -12,7 +12,9 @@ This repository contains:
 
 ## Web Application
 
-Open `web/index.html` in a browser to use the web version.
+**Try it online: https://wpwoodjr.github.io/MathPad/**
+
+Or open `docs/index.html` locally in a browser.
 
 ### Features
 
