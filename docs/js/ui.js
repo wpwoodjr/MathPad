@@ -622,6 +622,13 @@ function solveRecord(text, context, record) {
 
         for (const eq of equations) {
             try {
+                // Skip definition equations that are in the substitution map
+                // (they become tautologies when substituted into themselves)
+                const def = isDefinitionEquation(eq.text);
+                if (def && substitutions.has(def.variable)) {
+                    continue;
+                }
+
                 const result = solveEquationInContext(eq.text, context, variables, substitutions);
 
                 if (result.solved) {
