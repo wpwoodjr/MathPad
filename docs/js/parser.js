@@ -307,6 +307,13 @@ class Tokenizer {
                 continue;
             }
 
+            // Comma (alternative argument separator)
+            if (ch === ',') {
+                this.advance();
+                this.tokens.push(this.makeToken(TokenType.COMMA, ',', startLine, startCol));
+                continue;
+            }
+
             // Colon (variable declaration)
             if (ch === ':') {
                 // Check for ::
@@ -522,7 +529,8 @@ class Parser {
 
                 if (this.peek().type !== TokenType.RPAREN) {
                     args.push(this.parseExpression());
-                    while (this.peek().type === TokenType.SEMICOLON) {
+                    // Accept both semicolon and comma as argument separators
+                    while (this.peek().type === TokenType.SEMICOLON || this.peek().type === TokenType.COMMA) {
                         this.advance();
                         args.push(this.parseExpression());
                     }
