@@ -305,6 +305,136 @@ function findVariables(node) {
 }
 
 /**
+ * Substitute variables in an AST with their definition expressions
+ * @param {Object} node - AST node
+ * @param {Map} substitutions - Map of variable name -> AST expression
+ * @returns {Object} New AST with substitutions applied
+ */
+function substituteInAST(node, substitutions) {
+    if (!node) return node;
+
+    switch (node.type) {
+        case 'NUMBER':
+            return node;
+
+        case 'VARIABLE':
+            if (substitutions.has(node.name)) {
+                // Return a deep copy of the substitution to avoid shared references
+                return deepCopyAST(substitutions.get(node.name));
+            }
+            return node;
+
+        case 'BINARY_OP':
+            return {
+                type: 'BINARY_OP',
+                op: node.op,
+                left: substituteInAST(node.left, substitutions),
+                right: substituteInAST(node.right, substitutions)
+            };
+
+        case 'UNARY_OP':
+            return {
+                type: 'UNARY_OP',
+                op: node.op,
+                operand: substituteInAST(node.operand, substitutions)
+            };
+
+        case 'FUNCTION_CALL':
+            return {
+                type: 'FUNCTION_CALL',
+                name: node.name,
+                args: node.args.map(arg => substituteInAST(arg, substitutions))
+            };
+
+        default:
+            return node;
+    }
+}
+
+/**
+ * Deep copy an AST node
+ */
+function deepCopyAST(node) {
+    if (!node) return node;
+
+    switch (node.type) {
+        case 'NUMBER':
+            return { ...node };
+
+        case 'VARIABLE':
+            return { ...node };
+
+        case 'BINARY_OP':
+            return {
+                type: 'BINARY_OP',
+                op: node.op,
+                left: deepCopyAST(node.left),
+                right: deepCopyAST(node.right)
+            };
+
+        case 'UNARY_OP':
+            return {
+                type: 'UNARY_OP',
+                op: node.op,
+                operand: deepCopyAST(node.operand)
+            };
+
+        case 'FUNCTION_CALL':
+            return {
+                type: 'FUNCTION_CALL',
+                name: node.name,
+                args: node.args.map(deepCopyAST)
+            };
+
+        default:
+            return { ...node };
+    }
+}
+
+/**
+ * Check if an equation is a simple definition: variable = expression
+ * Returns { variable, expression AST } or null
+ */
+function isDefinitionEquation(eqText) {
+    const eqMatch = eqText.match(/^(.+)=(.+)$/);
+    if (!eqMatch) return null;
+
+    const leftText = eqMatch[1].trim();
+    const rightText = eqMatch[2].trim();
+
+    // Check if left side is a simple variable name
+    if (!/^\w+$/.test(leftText)) return null;
+
+    try {
+        const rightAST = parseExpression(rightText);
+        return {
+            variable: leftText,
+            expressionAST: rightAST,
+            expressionText: rightText
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Build a substitution map from definition equations
+ * Only includes definitions where the variable has no value in context
+ */
+function buildSubstitutionMap(equations, context) {
+    const substitutions = new Map();
+
+    for (const eq of equations) {
+        const def = isDefinitionEquation(eq.text);
+        if (def && !context.hasVariable(def.variable)) {
+            substitutions.set(def.variable, def.expressionAST);
+        }
+    }
+
+    return substitutions;
+}
+
+/**
  * Create an equation function for solving
  * Returns a function f(x) where f(x) = left - right = 0
  */
@@ -330,6 +460,7 @@ function createEquationFunction(leftAST, rightAST, unknownVar, context) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         SolverError, brent, bracket, solveEquation,
-        parseEquation, findVariables, createEquationFunction
+        parseEquation, findVariables, createEquationFunction,
+        substituteInAST, deepCopyAST, isDefinitionEquation, buildSubstitutionMap
     };
 }

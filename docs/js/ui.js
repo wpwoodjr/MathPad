@@ -617,9 +617,12 @@ function solveRecord(text, context, record) {
         // Find equations
         const equations = findEquations(text);
 
+        // Build substitution map from definition equations (var = expr)
+        const substitutions = buildSubstitutionMap(equations, context);
+
         for (const eq of equations) {
             try {
-                const result = solveEquationInContext(eq.text, context, variables);
+                const result = solveEquationInContext(eq.text, context, variables, substitutions);
 
                 if (result.solved) {
                     // Update the variable value in text
@@ -679,7 +682,7 @@ function solveRecord(text, context, record) {
 /**
  * Solve a single equation in context
  */
-function solveEquationInContext(eqText, context, variables) {
+function solveEquationInContext(eqText, context, variables, substitutions = new Map()) {
     // Parse the equation: left = right
     const eqMatch = eqText.match(/^(.+)=(.+)$/);
     if (!eqMatch) {
@@ -690,16 +693,16 @@ function solveEquationInContext(eqText, context, variables) {
     const rightText = eqMatch[2].trim();
 
     // Parse both sides
-    const leftAST = parseExpression(leftText);
-    const rightAST = parseExpression(rightText);
+    let leftAST = parseExpression(leftText);
+    let rightAST = parseExpression(rightText);
 
     // Find variables in equation
-    const leftVars = findVariablesInAST(leftAST);
-    const rightVars = findVariablesInAST(rightAST);
-    const allVars = new Set([...leftVars, ...rightVars]);
+    let leftVars = findVariablesInAST(leftAST);
+    let rightVars = findVariablesInAST(rightAST);
+    let allVars = new Set([...leftVars, ...rightVars]);
 
     // Find unknowns (variables without values in context)
-    const unknowns = [...allVars].filter(v => !context.hasVariable(v));
+    let unknowns = [...allVars].filter(v => !context.hasVariable(v));
 
     if (unknowns.length === 0) {
         // All variables known - just evaluate to check
@@ -711,8 +714,26 @@ function solveEquationInContext(eqText, context, variables) {
         return { solved: false };
     }
 
+    // If multiple unknowns, try applying substitutions
+    if (unknowns.length > 1 && substitutions.size > 0) {
+        // Apply substitutions to reduce unknowns
+        leftAST = substituteInAST(leftAST, substitutions);
+        rightAST = substituteInAST(rightAST, substitutions);
+
+        // Re-find variables after substitution
+        leftVars = findVariablesInAST(leftAST);
+        rightVars = findVariablesInAST(rightAST);
+        allVars = new Set([...leftVars, ...rightVars]);
+        unknowns = [...allVars].filter(v => !context.hasVariable(v));
+    }
+
+    if (unknowns.length === 0) {
+        // All variables known after substitution
+        return { solved: false };
+    }
+
     if (unknowns.length > 1) {
-        // Too many unknowns
+        // Still too many unknowns after substitution
         return { solved: false };
     }
 
