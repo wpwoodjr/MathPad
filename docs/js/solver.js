@@ -429,8 +429,8 @@ function deriveSubstitution(eqText, context) {
     const leftText = eqMatch[1].trim();
     const rightText = eqMatch[2].trim();
 
-    // First check if it's already a simple definition
-    if (/^\w+$/.test(leftText)) {
+    // First check if it's already a simple definition (but only if variable is unknown)
+    if (/^\w+$/.test(leftText) && !context.hasVariable(leftText)) {
         try {
             const rightAST = parseExpression(rightText);
             return { variable: leftText, expressionAST: rightAST };
