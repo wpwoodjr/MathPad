@@ -62,7 +62,7 @@ mint->>                 "monthly interest rate (full precision)"
 **Try it:**
 
 1. Click **Solve** — MathPad calculates `pmt: 699.21` (monthly payment)
-2. Change `pv: 250000` and click **Solve** — now `pmt: 1748.04`
+2. Change `pv: 250000`, clear `pmt:`, and click **Solve** — now `pmt: 1748.04`
 3. To solve backwards, set `pmt: 2000` and clear `pv:`, then click **Solve** — MathPad finds `pv: 286035.25`
 
 MathPad automatically detects which variable is unknown and solves for it using root-finding.
