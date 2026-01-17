@@ -665,6 +665,18 @@ function solveRecord(text, context, record) {
                     }
                 }
 
+                // Also skip equations that were used to derive algebraic substitutions
+                // (e.g., height/width = 16/9 => derived height = width * 16/9)
+                const derived = deriveSubstitution(eq.text, context);
+                if (derived && substitutions.has(derived.variable)) {
+                    // Check if the derived expression has unknowns
+                    const derivedVars = findVariablesInAST(derived.expressionAST);
+                    const derivedUnknowns = [...derivedVars].filter(v => !context.hasVariable(v));
+                    if (derivedUnknowns.length > 0) {
+                        continue;
+                    }
+                }
+
                 const result = solveEquationInContext(eq.text, context, variables, substitutions);
 
                 if (result.solved) {

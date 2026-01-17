@@ -418,16 +418,141 @@ function isDefinitionEquation(eqText) {
 }
 
 /**
+ * Try to algebraically derive a substitution from an equation
+ * Handles cases like: a/b = c => a = b*c, a + b = c => a = c - b, etc.
+ * Returns { variable, expressionAST } or null
+ */
+function deriveSubstitution(eqText, context) {
+    const eqMatch = eqText.match(/^(.+)=(.+)$/);
+    if (!eqMatch) return null;
+
+    const leftText = eqMatch[1].trim();
+    const rightText = eqMatch[2].trim();
+
+    // First check if it's already a simple definition
+    if (/^\w+$/.test(leftText)) {
+        try {
+            const rightAST = parseExpression(rightText);
+            return { variable: leftText, expressionAST: rightAST };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // Try to parse and algebraically manipulate
+    try {
+        const leftAST = parseExpression(leftText);
+        const rightAST = parseExpression(rightText);
+
+        // Only handle binary operations on the left side
+        if (leftAST.type !== 'BINARY_OP') return null;
+
+        const op = leftAST.op;
+        const leftOperand = leftAST.left;
+        const rightOperand = leftAST.right;
+
+        // Check if left operand is a single variable without a value
+        if (leftOperand.type === 'VARIABLE' && !context.hasVariable(leftOperand.name)) {
+            const exprAST = invertOperation(op, rightAST, rightOperand, true);
+            if (exprAST) {
+                return { variable: leftOperand.name, expressionAST: exprAST };
+            }
+        }
+
+        // Check if right operand is a single variable without a value
+        if (rightOperand.type === 'VARIABLE' && !context.hasVariable(rightOperand.name)) {
+            const exprAST = invertOperation(op, rightAST, leftOperand, false);
+            if (exprAST) {
+                return { variable: rightOperand.name, expressionAST: exprAST };
+            }
+        }
+
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Invert a binary operation to solve for a variable
+ * Given: result = var op other (if varOnLeft) or result = other op var
+ * Returns: AST for var = ...
+ */
+function invertOperation(op, result, other, varOnLeft) {
+    switch (op) {
+        case '+':
+            // var + other = result => var = result - other
+            // other + var = result => var = result - other
+            return { type: 'BINARY_OP', op: '-', left: deepCopyAST(result), right: deepCopyAST(other) };
+
+        case '-':
+            if (varOnLeft) {
+                // var - other = result => var = result + other
+                return { type: 'BINARY_OP', op: '+', left: deepCopyAST(result), right: deepCopyAST(other) };
+            } else {
+                // other - var = result => var = other - result
+                return { type: 'BINARY_OP', op: '-', left: deepCopyAST(other), right: deepCopyAST(result) };
+            }
+
+        case '*':
+            // var * other = result => var = result / other
+            // other * var = result => var = result / other
+            return { type: 'BINARY_OP', op: '/', left: deepCopyAST(result), right: deepCopyAST(other) };
+
+        case '/':
+            if (varOnLeft) {
+                // var / other = result => var = result * other
+                return { type: 'BINARY_OP', op: '*', left: deepCopyAST(result), right: deepCopyAST(other) };
+            } else {
+                // other / var = result => var = other / result
+                return { type: 'BINARY_OP', op: '/', left: deepCopyAST(other), right: deepCopyAST(result) };
+            }
+
+        case '**':
+            if (varOnLeft) {
+                // var ** other = result => var = result ** (1/other)
+                return {
+                    type: 'BINARY_OP',
+                    op: '**',
+                    left: deepCopyAST(result),
+                    right: {
+                        type: 'BINARY_OP',
+                        op: '/',
+                        left: { type: 'NUMBER', value: 1 },
+                        right: deepCopyAST(other)
+                    }
+                };
+            } else {
+                // other ** var = result => var = ln(result) / ln(other)
+                // Skip this complex case for now
+                return null;
+            }
+
+        default:
+            return null;
+    }
+}
+
+/**
  * Build a substitution map from definition equations
  * Only includes definitions where the variable has no value in context
+ * Now includes algebraically derived substitutions
  */
 function buildSubstitutionMap(equations, context) {
     const substitutions = new Map();
 
     for (const eq of equations) {
+        // First try simple definition
         const def = isDefinitionEquation(eq.text);
         if (def && !context.hasVariable(def.variable)) {
             substitutions.set(def.variable, def.expressionAST);
+            continue;
+        }
+
+        // Try algebraic derivation
+        const derived = deriveSubstitution(eq.text, context);
+        if (derived && !context.hasVariable(derived.variable) && !substitutions.has(derived.variable)) {
+            substitutions.set(derived.variable, derived.expressionAST);
         }
     }
 
@@ -461,6 +586,7 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         SolverError, brent, bracket, solveEquation,
         parseEquation, findVariables, createEquationFunction,
-        substituteInAST, deepCopyAST, isDefinitionEquation, buildSubstitutionMap
+        substituteInAST, deepCopyAST, isDefinitionEquation,
+        deriveSubstitution, invertOperation, buildSubstitutionMap
     };
 }
