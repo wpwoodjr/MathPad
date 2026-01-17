@@ -698,6 +698,36 @@ function solveRecord(text, context, record) {
         }
     }
 
+    // Check for inconsistent equations (all variables known but equation doesn't balance)
+    const finalEquations = findEquations(text);
+    for (const eq of finalEquations) {
+        try {
+            const eqMatch = eq.text.match(/^(.+)=(.+)$/);
+            if (!eqMatch) continue;
+
+            const leftAST = parseExpression(eqMatch[1].trim());
+            const rightAST = parseExpression(eqMatch[2].trim());
+
+            // Check if all variables are known
+            const allVars = new Set([...findVariablesInAST(leftAST), ...findVariablesInAST(rightAST)]);
+            const unknowns = [...allVars].filter(v => !context.hasVariable(v));
+
+            if (unknowns.length === 0) {
+                // All variables known - check if equation balances
+                const leftVal = evaluate(leftAST, context);
+                const rightVal = evaluate(rightAST, context);
+                const diff = Math.abs(leftVal - rightVal);
+                const tolerance = Math.max(Math.abs(leftVal), Math.abs(rightVal)) * 1e-10 + 1e-10;
+
+                if (diff > tolerance) {
+                    errors.push(`Equation doesn't balance: ${eq.text} (${leftVal.toFixed(4)} ≠ ${rightVal.toFixed(4)})`);
+                }
+            }
+        } catch (e) {
+            // Ignore errors during consistency check
+        }
+    }
+
     // Handle inline evaluations: \ expression \
     const inlineEvals = findInlineEvaluations(text);
     for (let i = inlineEvals.length - 1; i >= 0; i--) { // Reverse to preserve positions
