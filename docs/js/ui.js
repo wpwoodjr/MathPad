@@ -288,14 +288,6 @@ function renderDetailsPanel() {
             </label>
         </div>
 
-        <div class="detail-group checkbox">
-            <label>
-                <input type="checkbox" id="detail-secret" ${record.secret ? 'checked' : ''}
-                       onchange="updateRecordDetail('secret', this.checked)">
-                Secret
-            </label>
-        </div>
-
         <div class="details-actions">
             <button onclick="duplicateCurrentRecord()" class="btn-secondary">Duplicate</button>
             <button onclick="deleteCurrentRecord()" class="btn-danger">Delete</button>
