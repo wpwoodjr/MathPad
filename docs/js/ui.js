@@ -606,6 +606,37 @@ function solveRecord(text, context, record) {
     for (const [name, info] of variables) {
         if (info.value !== null) {
             context.setVariable(name, info.value);
+        } else if (info.declaration?.valueText) {
+            // Try to evaluate expressions like "9/16"
+            try {
+                const ast = parseExpression(info.declaration.valueText);
+                const exprVars = findVariablesInAST(ast);
+                // Only evaluate if all variables in the expression are known
+                if ([...exprVars].every(v => context.hasVariable(v))) {
+                    const value = evaluate(ast, context);
+                    context.setVariable(name, value);
+                    info.value = value;
+                }
+            } catch (e) {
+                // Ignore parse/eval errors - will be solved later
+            }
+        }
+    }
+
+    // Second pass: try again now that more variables may be known
+    for (const [name, info] of variables) {
+        if (!context.hasVariable(name) && info.declaration?.valueText) {
+            try {
+                const ast = parseExpression(info.declaration.valueText);
+                const exprVars = findVariablesInAST(ast);
+                if ([...exprVars].every(v => context.hasVariable(v))) {
+                    const value = evaluate(ast, context);
+                    context.setVariable(name, value);
+                    info.value = value;
+                }
+            } catch (e) {
+                // Ignore
+            }
         }
     }
 
