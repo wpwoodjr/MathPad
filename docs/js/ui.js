@@ -654,10 +654,15 @@ function solveRecord(text, context, record) {
         for (const eq of equations) {
             try {
                 // Skip definition equations that are in the substitution map
-                // (they become tautologies when substituted into themselves)
+                // BUT only if the right side has unknowns (otherwise it can be solved directly)
                 const def = isDefinitionEquation(eq.text);
                 if (def && substitutions.has(def.variable)) {
-                    continue;
+                    // Check if right side has unknowns
+                    const rhsVars = findVariablesInAST(def.expressionAST);
+                    const rhsUnknowns = [...rhsVars].filter(v => !context.hasVariable(v));
+                    if (rhsUnknowns.length > 0) {
+                        continue;
+                    }
                 }
 
                 const result = solveEquationInContext(eq.text, context, variables, substitutions);
