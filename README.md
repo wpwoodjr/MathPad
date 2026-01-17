@@ -45,7 +45,7 @@ mint = yint / 100 / 12
 pmt = pv * mint / (1 - (1 + mint)**-n)
 
 "Variables"
-pmt->                   "monthly payment (output)"
+pmt:                    "monthly payment"
 pv: 100000              "loan amount"
 yint: 7.5               "annual interest rate %"
 n: 360                  "number of payments (30 years)"
@@ -55,17 +55,17 @@ mint->>                 "monthly interest rate (full precision)"
 **How it works:**
 
 1. **Equations** define relationships between variables (`mint = yint / 100 / 12`)
-2. **Input variables** have values you provide (`pv: 100000`)
-3. **Output variables** (`pmt->`) are cleared and recalculated when you click Solve
+2. **Variables** with values are known inputs (`pv: 100000`)
+3. **Variables** without values are unknowns to solve for (`pmt:`)
 4. **Full precision outputs** (`mint->>`) show all decimal places
 
 **Try it:**
 
-1. Click **Solve** — MathPad calculates `pmt-> 699.21` (monthly payment)
-2. Change `pv: 250000` and click **Solve** — now `pmt-> 1748.04`
-3. Clear `pv:` and set `pmt: 2000` — MathPad solves backwards to find `pv-> 285770.56`
+1. Click **Solve** — MathPad calculates `pmt: 699.21` (monthly payment)
+2. Change `pv: 250000` and click **Solve** — now `pmt: 1748.04`
+3. To solve backwards, set `pmt: 2000` and clear `pv:`, then click **Solve** — MathPad finds `pv: 286035.25`
 
-MathPad automatically detects which variable is unknown and solves for it using root-finding
+MathPad automatically detects which variable is unknown and solves for it using root-finding.
 
 ## License
 
