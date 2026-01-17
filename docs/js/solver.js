@@ -444,26 +444,49 @@ function deriveSubstitution(eqText, context) {
         const leftAST = parseExpression(leftText);
         const rightAST = parseExpression(rightText);
 
-        // Only handle binary operations on the left side
-        if (leftAST.type !== 'BINARY_OP') return null;
+        // Case 1: Binary operation on the left side (e.g., height/width = ratio)
+        if (leftAST.type === 'BINARY_OP') {
+            const op = leftAST.op;
+            const leftOperand = leftAST.left;
+            const rightOperand = leftAST.right;
 
-        const op = leftAST.op;
-        const leftOperand = leftAST.left;
-        const rightOperand = leftAST.right;
+            // Check if left operand is a single variable without a value
+            if (leftOperand.type === 'VARIABLE' && !context.hasVariable(leftOperand.name)) {
+                const exprAST = invertOperation(op, rightAST, rightOperand, true);
+                if (exprAST) {
+                    return { variable: leftOperand.name, expressionAST: exprAST };
+                }
+            }
 
-        // Check if left operand is a single variable without a value
-        if (leftOperand.type === 'VARIABLE' && !context.hasVariable(leftOperand.name)) {
-            const exprAST = invertOperation(op, rightAST, rightOperand, true);
-            if (exprAST) {
-                return { variable: leftOperand.name, expressionAST: exprAST };
+            // Check if right operand is a single variable without a value
+            if (rightOperand.type === 'VARIABLE' && !context.hasVariable(rightOperand.name)) {
+                const exprAST = invertOperation(op, rightAST, leftOperand, false);
+                if (exprAST) {
+                    return { variable: rightOperand.name, expressionAST: exprAST };
+                }
             }
         }
 
-        // Check if right operand is a single variable without a value
-        if (rightOperand.type === 'VARIABLE' && !context.hasVariable(rightOperand.name)) {
-            const exprAST = invertOperation(op, rightAST, leftOperand, false);
-            if (exprAST) {
-                return { variable: rightOperand.name, expressionAST: exprAST };
+        // Case 2: Binary operation on the right side (e.g., ratio = height/width)
+        if (rightAST.type === 'BINARY_OP') {
+            const op = rightAST.op;
+            const leftOperand = rightAST.left;
+            const rightOperand = rightAST.right;
+
+            // Check if left operand is a single variable without a value
+            if (leftOperand.type === 'VARIABLE' && !context.hasVariable(leftOperand.name)) {
+                const exprAST = invertOperation(op, leftAST, rightOperand, true);
+                if (exprAST) {
+                    return { variable: leftOperand.name, expressionAST: exprAST };
+                }
+            }
+
+            // Check if right operand is a single variable without a value
+            if (rightOperand.type === 'VARIABLE' && !context.hasVariable(rightOperand.name)) {
+                const exprAST = invertOperation(op, leftAST, leftOperand, false);
+                if (exprAST) {
+                    return { variable: rightOperand.name, expressionAST: exprAST };
+                }
             }
         }
 
