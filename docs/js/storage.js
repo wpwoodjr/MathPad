@@ -23,11 +23,11 @@ mint = yint / 100 / 12
 pmt = pv * mint / (1 - (1 + mint)**-n)
 
 "Variables"
-pmt-> "monthly payment"
-pv: 100000 "present value (loan amount)"
+pmt: "monthly payment"
+pv: 100000 "loan amount"
 yint: 7.5 "annual interest rate %"
-n: 360 "number of payments"
-mint->> "monthly interest rate"`,
+n: 360 "number of payments (30 years)"
+mint->> "monthly interest rate (full precision)"`,
                 category: 'Finance',
                 secret: false,
                 places: 2,
