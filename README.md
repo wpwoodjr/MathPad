@@ -4,11 +4,9 @@ An algebraic equation solver with automatic unknown detection and root-finding.
 
 ## About
 
-MathPad was originally created by **Rick Huebner** for PalmOS PDAs (circa 1997-2000). The original code is public domain.
-
-This repository contains:
-- The original MathPad 1.5 PalmOS application and desktop utilities
-- A modern web-based reimplementation with the same functionality
+MathPad was originally created by **Rick Huebner** for PalmOS PDAs (circa 1997-2000). This repository contains:
+- The original MathPad 1.5 release (documentation, PRC files, and desktop utilities)
+- A modern web-based reimplementation based on the original documentation
 
 ## Web Application
 
@@ -71,4 +69,4 @@ MathPad automatically detects which variable is unknown and solves for it using 
 
 ## License
 
-The original MathPad code by Rick Huebner is public domain. The web reimplementation follows the same licensing.
+MIT License. See [LICENSE](LICENSE) for details.
