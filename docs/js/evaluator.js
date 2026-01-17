@@ -444,7 +444,7 @@ function evaluate(node, context) {
 /**
  * Format a number for display
  */
-function formatNumber(value, places = 14, stripZeros = true, format = 'float', base = 10) {
+function formatNumber(value, places = 14, stripZeros = true, format = 'float', base = 10, groupDigits = false) {
     if (!isFinite(value)) {
         if (isNaN(value)) return 'NaN';
         return value > 0 ? 'Infinity' : '-Infinity';
@@ -493,6 +493,13 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
     // Strip trailing zeros if requested
     if (stripZeros && str.includes('.') && !str.includes('e')) {
         str = str.replace(/\.?0+$/, '');
+    }
+
+    // Add comma grouping to integer part if requested
+    if (groupDigits && !str.includes('e')) {
+        const parts = str.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        str = parts.join('.');
     }
 
     return str;

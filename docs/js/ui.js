@@ -298,6 +298,14 @@ function renderDetailsPanel() {
             </label>
         </div>
 
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" id="detail-group" ${record.groupDigits ? 'checked' : ''}
+                       onchange="updateRecordDetail('groupDigits', this.checked)">
+                Group digits with commas
+            </label>
+        </div>
+
         <div class="details-actions">
             <button onclick="duplicateCurrentRecord()" class="btn-secondary">Duplicate</button>
             <button onclick="deleteCurrentRecord()" class="btn-danger">Delete</button>
@@ -698,6 +706,7 @@ function solveRecord(text, context, record) {
                     const format = {
                         places: isFullPrecision ? 15 : (record.places || 2),
                         stripZeros: record.stripZeros !== false,
+                        groupDigits: record.groupDigits || false,
                         format: record.format || 'float'
                     };
 
@@ -760,9 +769,10 @@ function solveRecord(text, context, record) {
             const format = {
                 places: record.places || 2,
                 stripZeros: record.stripZeros !== false,
+                groupDigits: record.groupDigits || false,
                 format: record.format || 'float'
             };
-            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10);
+            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
             text = text.substring(0, evalInfo.start) +
                    '\\' + formatted + '\\' +
                    text.substring(evalInfo.end);

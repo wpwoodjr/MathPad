@@ -197,8 +197,9 @@ function setVariableValue(text, varName, value, format = {}) {
     // Format the value
     const places = format.places ?? 14;
     const stripZeros = format.stripZeros ?? true;
+    const groupDigits = format.groupDigits ?? false;
     const numberFormat = format.format ?? 'float';
-    const formattedValue = formatNumber(value, places, stripZeros, numberFormat, decl.base);
+    const formattedValue = formatNumber(value, places, stripZeros, numberFormat, decl.base, groupDigits);
 
     // Find the position to insert the value (after the marker)
     const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));

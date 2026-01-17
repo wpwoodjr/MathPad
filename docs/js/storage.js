@@ -32,6 +32,7 @@ mint->> "monthly interest rate (full precision)"`,
                 secret: false,
                 places: 2,
                 stripZeros: true,
+                groupDigits: false,
                 format: 'float'
             },
             {
@@ -54,6 +55,7 @@ x2->`,
                 secret: false,
                 places: 2,
                 stripZeros: true,
+                groupDigits: false,
                 format: 'float'
             },
             {
@@ -72,6 +74,7 @@ golden: 1.61803398874989 "golden ratio"`,
                 secret: false,
                 places: 2,
                 stripZeros: true,
+                groupDigits: false,
                 format: 'float'
             },
             {
@@ -96,6 +99,7 @@ disc(a;b;c) = b**2 - 4*a*c`,
                 secret: false,
                 places: 2,
                 stripZeros: true,
+                groupDigits: false,
                 format: 'float'
             }
         ],
@@ -360,6 +364,7 @@ function createRecord(title = 'New Record', category = 'Unfiled') {
         secret: false,
         places: 14,
         stripZeros: true,
+        groupDigits: false,
         format: 'float'
     };
 }

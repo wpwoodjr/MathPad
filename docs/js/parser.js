@@ -134,8 +134,10 @@ class Tokenizer {
         }
 
         // Regular decimal number (possibly floating point with scientific notation)
-        while (this.isDigit(this.peek())) {
-            value += this.advance();
+        // Allow commas as digit grouping (ignored)
+        while (this.isDigit(this.peek()) || this.peek() === ',') {
+            const ch = this.advance();
+            if (ch !== ',') value += ch;  // Skip commas
         }
 
         // Decimal point
@@ -304,13 +306,6 @@ class Tokenizer {
             if (ch === ';') {
                 this.advance();
                 this.tokens.push(this.makeToken(TokenType.SEMICOLON, ';', startLine, startCol));
-                continue;
-            }
-
-            // Comma (alternative argument separator)
-            if (ch === ',') {
-                this.advance();
-                this.tokens.push(this.makeToken(TokenType.COMMA, ',', startLine, startCol));
                 continue;
             }
 
@@ -529,8 +524,7 @@ class Parser {
 
                 if (this.peek().type !== TokenType.RPAREN) {
                     args.push(this.parseExpression());
-                    // Accept both semicolon and comma as argument separators
-                    while (this.peek().type === TokenType.SEMICOLON || this.peek().type === TokenType.COMMA) {
+                    while (this.peek().type === TokenType.SEMICOLON) {
                         this.advance();
                         args.push(this.parseExpression());
                     }
