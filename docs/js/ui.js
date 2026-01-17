@@ -38,9 +38,15 @@ function initUI(data) {
     // Set up event listeners
     setupEventListeners();
 
-    // Open first record if available
+    // Open last viewed record, or first record if not available
     if (data.records.length > 0) {
-        openRecord(data.records[0].id);
+        const lastRecordId = data.settings?.lastRecordId;
+        const lastRecord = lastRecordId ? findRecord(data, lastRecordId) : null;
+        if (lastRecord) {
+            openRecord(lastRecordId);
+        } else {
+            openRecord(data.records[0].id);
+        }
     }
 
     setStatus('Ready');
@@ -146,6 +152,10 @@ function openRecord(recordId) {
 
     // Switch to this record
     UI.currentRecordId = recordId;
+
+    // Save last viewed record
+    UI.data.settings.lastRecordId = recordId;
+    debouncedSave(UI.data);
 
     // Create editor if not exists
     if (!UI.editors.has(recordId)) {
