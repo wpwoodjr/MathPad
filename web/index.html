@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathPad Web - Algebraic Equation Solver</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1 class="app-title">MathPad</h1>
+                <span class="app-subtitle">Algebraic Equation Solver</span>
+            </div>
+            <div class="header-center">
+                <button id="btn-solve" class="btn-primary" title="Solve equations (Ctrl+Enter)">
+                    Solve
+                </button>
+                <button id="btn-clear" class="btn-secondary" title="Clear output variables">
+                    Clear Output
+                </button>
+            </div>
+            <div class="header-right">
+                <label class="toggle-label" title="Switch between radians and degrees for trig functions">
+                    <input type="checkbox" id="toggle-degrees">
+                    <span>Degrees</span>
+                </label>
+                <button id="btn-import" class="btn-icon" title="Import records from file">
+                    Import
+                </button>
+                <button id="btn-export" class="btn-icon" title="Export records to file">
+                    Export
+                </button>
+                <button onclick="showHelp()" class="btn-icon" title="Help">
+                    ?
+                </button>
+            </div>
+            <input type="file" id="file-input" accept=".txt,.pdb" style="display: none">
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar" id="sidebar">
+                <!-- Populated by JavaScript -->
+            </aside>
+
+            <!-- Editor Area -->
+            <main class="editor-main">
+                <!-- Tab Bar -->
+                <div class="tab-bar" id="tab-bar">
+                    <!-- Populated by JavaScript -->
+                </div>
+
+                <!-- Editor Container -->
+                <div class="editor-container" id="editor-container">
+                    <!-- Editors created by JavaScript -->
+                    <div class="no-editor-message">
+                        Select a record from the sidebar or create a new one.
+                    </div>
+                </div>
+            </main>
+
+            <!-- Details Panel -->
+            <aside class="details-panel" id="details-panel">
+                <!-- Populated by JavaScript -->
+            </aside>
+        </div>
+
+        <!-- Status Bar -->
+        <footer class="status-bar" id="status-bar">
+            Ready
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/parser.js"></script>
+    <script src="js/evaluator.js"></script>
+    <script src="js/solver.js"></script>
+    <script src="js/variables.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/editor.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

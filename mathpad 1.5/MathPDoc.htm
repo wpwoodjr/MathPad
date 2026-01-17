@@ -1,0 +1,1349 @@
+<html>
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=iso-8859-1">
+<title>MathPad User's Manual</title>
+<meta name=Author content="Rick Huebner">
+<meta name=KeyWords
+content="MathPad, math, equation, formula, solver, calculator, Palm, Pilot, PalmPilot, USR, US Robotics">
+</head>
+
+<body bgcolor="#E0E0E0" lang="EN-US" style="tab-interval:.5in">
+
+<h1 align=center style='text-align:center'><a name=top></a>MathPad User's
+Manual</h1>
+
+<p>Last updated October 17, 2000. See the <a
+href="http://www.radiks.net/~rhuebner/mathpad.html">MathPad Information web page</a>
+for the latest version, registration, bug reports, or other information, or
+send email to <a href="mailto:rhuebner@radiks.net">rhuebner@radiks.net</a>. </p>
+
+<h5><u>[Description]</u> <a href="#How_it_works">[How it works]</a> <a
+href="#Installation">[Installation]</a> <a href="#Using_MathPad">[Using
+MathPad]</a> <a href="#Backup_&amp;_Recovery">[Backup &amp; Recovery]</a> <a
+href="#Exporting">[Exporting &amp; Importing Records]</a> <a
+href="#Registration">[Registration]</a> <a href="#Legal_Stuff">[Legal Stuff]</a>
+<a href="#Maintenance_Notes">[Maintenance Notes]</a>&nbsp; </h5>
+
+<hr size=2 width="100%" align=center>
+
+<h3><img width=163 height=163 src=mathtvm.gif
+align=left hspace=10>Description</h3>
+
+<p>MathPad is a tool for solving and storing mathematical equations in standard
+algebraic syntax. It works just like the standard MemoPad app, except that if
+you write down an equation and tap the Solve button, it computes the answer and
+fills it in for you. These equations can be simple math expressions like
+&quot;2+2=&quot;, or algebraic expressions using variables such as
+&quot;sqrt(x+4) / acos(0.7) = y**3&quot;. MathPad provides operators for
+exponentiation, bitwise AND, OR, NOT, and XOR, bit shifts, integer or modulo
+division, comparisons, and Boolean logic. Functions for trigonometry (including
+inverse and hyperbolics), logarithms, and date manipulation are also provided. <a
+href="mathlib.html">MathLib</a> is required for use of the trigonometric
+functions, but all other features work on any Pilot-compatible PDA, running any
+OS version.</p>
+
+<p>You can supply the values for the known variables and solve for a single
+remaining unknown variable without the hassle of re-arranging the equation to
+isolate the unknown. This allows you to easily play around with &quot;what
+if&quot; questions which would normally be too hard to calculate. Say you're
+shopping for a new house. Using the standard TVM (time value of money) formula,
+you can enter the house price and mortgage interest rate to determine the
+monthly payment. Payment too high? Put in your desired monthly payment, and
+solve for the house price you can really afford. Or put in the house price and
+payment you want, and solve for the interest rate you'll need to find to pull
+it off. And unlike hardwired financial calculators, you can tailor the
+equations to your special needs. Maybe you'd like to add the predicted property
+taxes and insurance into your monthly payment total?</p>
+
+<p>Also, if you enter a set of linked equations, MathPad can solve for multiple
+unknown variables by repeatedly solving any equation in the set with a single
+unknown until all the variables have been determined. For example, you can put
+in the standard equations describing DC power expenditure (P=E*I, P=I**2*R, P=E**2/R)
+and fill in any two of the four variables, and MathPad will figure out how to
+compute <i>both</i> of the other two unknowns. MathPad doesn't handle
+simultaneous equations, however; I'm afraid that's a bit too difficult for the
+Pilot's memory and CPU constraints.</p>
+
+<p>The equation records are maintained in a database file similar to MemoPad's,
+allowing you to build a custom library of frequently-used equations for quick
+reference. Structural engineers can archive their mass and stress calculations,
+real estate agents or bankers can put in loan and annuity formulas,
+anesthesiologists can compute dosages and blood gasses... whatever standard
+equations you need are at your fingertips. And since the calculations are
+written as text instead of being punched into a calculator, you can easily cut
+and paste the equations and their results to and from other apps such as email,
+or file your work for future reference.</p>
+
+
+<hr size=2 width="100%" align=center>
+
+<h3 align=center style='text-align:center'><a name="How_it_works"></a>How it
+works</h3>
+
+<p>MathPad combines a powerful algebraic expression parsing routine with a
+highly optimized root finding convergence algorithm. When you tap the Solve
+button, it searches the text of the current record for any equation with no
+more than one unknown variable. If you've entered an incomplete equation with
+no unknowns such as &quot;8.3**9=&quot;, MathPad simply computes the answer and
+inserts it into the text for you. If it finds an equation with one unknown
+variable, it solves for the unknown by repeatedly trying different possible
+values for that variable until the equation works out correctly. First it
+internally rephrases the equation into the form &quot;leftside minus
+rightside&quot;, so that a correct value for the unknown would cause the entire
+expression to equal 0. Then it tries to &quot;bracket&quot; the correct answer
+by looking for one value which causes the expression to yield a positive result
+(value too large), and another value which causes the expression to give a
+negative result (value too small). Usually, the correct answer can be found
+somewhere between those two values. Once it has identified a range which
+contains the correct answer in it somewhere, it uses a fancy algorithm (the Van
+Wijngaarden-Dekker-Brent method, from <i>Numerical Recipes in C</i>, 2nd ed.;
+Press, W.H. 1995; Cambridge University Press, if you care) to rapidly narrow
+the possible range and converge to the correct answer with as few tries as
+possible. After setting the unknown variable to the correct answer, MathPad
+restarts its search of the entire record to see if some other equation can now
+be solved. This continues until no more solvable equations are found.</p>
+
+<h3 align=center style='text-align:center'><a name=Limitations></a>Limitations</h3>
+
+<p>While such a root finding algorithm is a very powerful and useful tool, it's
+not perfect. Many equations can have multiple equally correct possible answers
+(e.g. in &quot;x*x=4&quot;, x could be either 2 or -2), and MathPad makes no
+attempt to find or display them all. For certain non-continuous or otherwise
+&quot;strange&quot; equations, MathPad can simply fail to find an answer and
+will give up. In particular, it does not understand or solve for imaginary or
+complex numbers. In cases where one possible answer is positive and another
+negative, a purposeful decision was made to preferentially bracket and find the
+positive answer, since that's much more likely to be the useful answer for
+real-world problems. If there are multiple correct positive answers, or no positive
+answers and multiple correct negative answers, MathPad will simply display the
+first one it stumbles across (generally the one closer to 0). Using MathPad to
+solve an equation for you does not absolve you of the responsibility to
+understand the equation and to exercise judgement in using the result. That
+said, however, these sorts of concerns generally apply more to &quot;pure
+mathematics&quot; problems in the theoretical realm than to the sort of actual,
+real-world problems you're likely to need to solve. &quot;Real&quot; problems
+involving tons, dollars, or cubic centimeters generally have only one correct
+answer which MathPad can &quot;zero in&quot; on without confusion.</p>
+
+
+<hr size=2 width="100%" align=center>
+
+<h3 align=center style='text-align:center'><a name=Installation></a>Installation</h3>
+
+<p>There are two separate versions of the MathPad application program provided:
+MathPSA.prc (Stand-Alone) and MathPML.prc (MathLib). You only need to install
+one of them; which one will depend on which PalmPilot OS version you're
+running, and how much memory you have available.</p>
+
+<ul type=disc>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l2 level1 lfo1;tab-stops:list .5in'>If you're still using OS
+     version 1.0 through 1.06 (or anything else before 2.0), you need to
+     install MathPSA.prc. This version of MathPad has been compiled using the
+     NewFloatMgr.lib library so that it doesn't require your Pilot to have the
+     floating point math functions built into its ROM. Unfortunately, this
+     version does not include the trigonometry functions, since those take up
+     too much space to include in the program and are normally provided by
+     MathLib, which doesn't work under OS 1.0. </li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l2 level1 lfo1;tab-stops:list .5in'>If you're using OS version
+     2.0 or above, and you already have MathLib installed on your Pilot (or
+     have enough free memory to do so), I recommend using MathPML.prc and
+     MathLib.prc. This will allow MathPad to provide its full functionality,
+     and if you already needed MathLib for some other program anyway, this
+     takes up the least amount of additional memory. </li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l2 level1 lfo1;tab-stops:list .5in'>If you have OS 2.0+ but don't
+     have MathLib (or room to add it), you can install MathPSA.prc to get the
+     same capabilities as an OS 1.0 user, namely everything except the
+     trigonometry functions. This might be a good compromise for those who don't
+     do much trigonometry and are tight on memory.</li>
+</ul>
+
+<p>Once you've decided, just use the Install Tool of your PalmPilot Desktop
+software package to install either MathPSA.prc or MathPML.prc (and possibly
+MathLib.prc) onto your PalmPilot.</p>
+
+<p><b>Note: </b>You should <b>not</b> delete MathPad from memory when upgrading
+to a newer version. Just use the install tool to install the new version of the
+.PRC file over the old one. If you delete MathPad, your database of equations
+is automatically deleted along with it. If you do this by accident, you can use
+the install tool to re-install the MathPadDB.pdb file that was backed up into
+your C:\Pilot\username\Backup directory</p>
+
+<p>Also, I'd like to recommend <a
+href="http://www.mindspring.com/~jetton/pilot/index.html">SelectHack</a> by
+Jeff Jetton. It allows you to highlight an entire word of text with a
+double-tap, and is great for easily deleting and replacing variables in MathPad
+records.</p>
+
+<p>MathLib is a free shared library that can be used by any OS 2.0 Pilot
+program that needs IEEE 754 double precision math functions. It's distributed
+under the terms of the GNU General Public License, and is freely available with
+full source code and documentation at the <a
+href="http://www.radiks.net/~rhuebner/mathlib.html">MathLib Information web page</a>.
+It's not a part of the MathPad program, and you're not paying anything for its
+use; a copy is simply included in this archive for your convenience.</p>
+
+<p>If you decide to uninstall MathPad, use the standard Memory application
+built into the ROM to delete it. The equation database is tied to MathPad, and
+will be automatically deleted when MathPad is deleted. </p>
+
+
+<hr size=2 width="100%" align=center>
+
+<h3 align=center style='text-align:center'><a name="Using_MathPad"></a>Using
+MathPad</h3>
+
+<p>MathPad is really very easy to use. It maintains a database of text records
+which you create and edit just like the standard MemoPad application. To do
+math, you essentially just write down an equation and tap Solve, and it does.
+You can write your equations directly using Graffiti, or you may find it more
+convenient to tap the &quot;123&quot; or &quot;abc&quot; dots in the lower
+corners of the Graffiti area to bring up the keyboard. The elements of an
+equation are:</p>
+
+<h4>Operators</h4>
+
+<p>The mathematical operators which MathPad recognizes are:</p>
+
+<ol start=1 type=1>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l1 level1 lfo2;tab-stops:list .5in'>Unary - (negative), unary +
+     (positive), ~ (bitwise NOT), ! (logical NOT)</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l1 level1 lfo2;tab-stops:list .5in'>** (exponentiation)</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l1 level1 lfo2;tab-stops:list .5in'>* (multiplication), / (division),
+     % (modulo)</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l1 level1 lfo2;tab-stops:list .5in'>+ (addition), - (subtraction)</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l1 level1 lfo2;tab-stops:list .5in'>&lt;&lt; (bit shift left),
+     &gt;&gt; (arithmetic bit shift right)</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l1 level1 lfo2;tab-stops:list .5in'>&amp; (bitwise AND), |
+     (bitwise OR), ^ (bitwise XOR)</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l1 level1 lfo2;tab-stops:list .5in'>== (equal to), != (not equal
+     to), &lt; (less than), &lt;= (less than or equal to), &gt; (greater than),
+     &gt;= (greater than or equal to)</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l1 level1 lfo2;tab-stops:list .5in'>&amp;&amp; (logical AND), ||
+     (logical OR), ^^ (logical XOR)</li>
+</ol>
+
+<p>The operators are ranked according to precedence. In mixed expressions,
+operators higher up in the list are evaluated first, while operators at the
+same precedence are evaluated left to right. You can use parentheses to
+override this order of evaluation as required. For example, &quot;1+2**3&quot;
+equals 9, since ** comes before +, but &quot;(1+2)**3&quot; equals 27. MathPad
+supports nested parentheses more than 50 levels deep..</p>
+
+<p>The operators ~, &lt;&lt;, &gt;&gt;, &amp;, |, and ^ are computer logic
+oriented bit manipulation operations which work on 32-bit signed integer
+values. The values used with these operators must be whole numbers in the range
+-(2**31) to 2**31-1. These operations are performed internally using signed
+longs, so they'll wrap or overflow their results as required to stay within the
+32-bit range.</p>
+
+<p>The operators ==, !=, &lt;, &lt;=, &gt;, and &gt;= are conditional test
+operations. If the condition is true, the result is 1, otherwise the result is
+0. Note that the equaltity test operator == requires two = signs, to
+differentiate it from the equation symbol.</p>
+
+<p>The operators !, &amp;&amp;, ||, and ^^ are Boolean logic operators for use
+with the conditional test operations above. They're different from the bitwise
+operators ~, &amp;, |, and ^ in that they consider the entire value as a whole
+instead of bit by bit. They treat 0 as false and any other value as true, and
+return 0 for false or 1 for true. For example, 1 &amp; 4 = 0 using the bitwise
+operation, but 1 &amp;&amp; 4 = 1 since both values are nonzero. Note that the
+meaning of the ! operator has changed; early versions of MathPad used this for
+factorials, which are now done using the Fact() function to allow all the
+standard C-style conditional operators to be used.</p>
+
+<h4>Built-In Functions</h4>
+
+<p>MathPad includes the following built-in functions. Function names are not
+case sensitive; abs(), ABS(), and Abs() are equally valid. Note that all
+trigonometry functions work in radians, not degrees; use the Degrees() and
+Radians() functions as necessary to convert back and forth.</p>
+
+<table border=1 cellpadding=0 width="90%" style='width:90.0%;mso-cellspacing:
+ 1.5pt'>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Abs</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Absolute value; forces sign to positive</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Sign</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>-1 if value is negative, 1 if positive or 0</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Int</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Integer portion of value; truncates fractional part</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Frac</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Fractional portion of value; sets integer portion to 0</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Round</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Nearest integral value</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Floor</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Largest integral value not greater than x (round down)</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Ceil</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Smallest integral value not less than x (round up)</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Sqrt</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Square root; sqrt(x) = x**(1/2). Since imaginary numbers
+  aren't supported, x can't be negative.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Cbrt</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Cube root; cbrt(x) = x**(1/3). X can be negative.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Root</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Any root (inverse of **); root(x;y) = x**(1/y). If y is an
+  odd integer (3, 5, 7, etc.), then x can be negative.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Exp</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Exponential function or natural antilog; e**x</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Ln</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Natural logarithm</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Log</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Base 10 logarithm; for base 10 antilog just use 10**x</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Fact</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Factorial; valid only for integral values from 0 through
+  170. Note: this function replaces the ! operator, which was reassigned for
+  use as the logical NOT.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Pi</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>3.141592653589793116</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Radians</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Converts a number of degrees to the equivalent number of
+  radians</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Degrees</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Converts a number of radians to the equivalent number of
+  degrees</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Sin, ASin, SinH, ASinH</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Sine, arc sine, hyperbolic sine, and hyperbolic arc sine</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Cos, ACos, CosH, ACosH</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Cosine, arc cosine, hyperbolic cosine, and hyperbolic arc
+  cosine</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Tan, ATan, TanH, ATanH</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Tangent, arc tangent, hyperbolic tangent, and hyperbolic
+  arc tangent</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Now</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Current date and time, as the number of days since January
+  1 1904. For example, January 1 1904 00:00:00 = 0.0; January 1 1904 12:00:00 =
+  0.5; January 2 1904 00:00:00 = 1.0.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Days</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Converts an explicit date and time in the format
+  YYYYMMDD.HHMMSS to the number of days since January 1 1904. For example, Days(19040101)
+  = 0.0; Days(19040102.12) = 1.5.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>JDays</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Like the Days function, but uses Julian date in the format
+  YYYYJJJ.HHMMSS instead of month and day.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Date</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Converts a number of days since January 1 1904 to an explicit
+  date in the format YYYYMMDD.HHMMSS. For example, &quot;Date(Now())=&quot;
+  returns the current date and time in human readable form.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>JDate</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Like the Date function, but converts to a Julian date in
+  the format YYYYJJJ.HHMMSS instead of month and day.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Year, Month, Day, Weekday, Hour, Minute, Second</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Extracts the specified value from a number of days since
+  January 1 1904. Weekday returns the day of the week, from Sunday = 0 to
+  Saturday = 6.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Hours</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Converts a time from HH.MMSS format to fractional hours.
+  Can also be used to convert degrees, minutes, and seconds to degrees.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>HMS</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Converts a time from fractional hours to HH.MMSS format.
+  Can also be used to convert fractional degrees to degrees, minutes, and
+  seconds.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>If</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Conditional value. Requires three arguments, separated by
+  semicolons. The first argument is a Boolean condition, which is evaluated as
+  true if nonzero, or false if zero. If the condition is true, If() returns the
+  value of the second argument. If the condition is false, If() returns the
+  value of the third argument. For example; If(x &lt; y; 3; 5) returns 3 if x
+  is less than y, or 5 if not.</p>
+  </td>
+ </tr>
+ <tr>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Choose</p>
+  </td>
+  <td style='padding:.75pt .75pt .75pt .75pt'>
+  <p class=MsoNormal>Selects a value from a list of arguments separated by
+  semicolons. The first argument is truncated to an integral index which must
+  be from 1 to 63. This index is used to select one of the remaining arguments
+  to return, with an index value of 1 returning the first argument after the
+  index, value 2 selecting the second value after the index, etc. For example,
+  if x = Pi() then Choose(x; 5; 10; 15; 20; 25) = 15.</p>
+  </td>
+ </tr>
+</table>
+
+<h4>Floating-point constants</h4>
+
+<p>MathPad uses IEEE-754 double-precision floating point functions to provide
+14 significant digits of accuracy from negative to positive 10**300
+(approximately). You enter floating-point values in the standard computer
+format of [-]digits[[decimal mark]digits][E[-]digits], e.g. &quot;1&quot;,
+&quot;1.23&quot;, &quot;1.23E45&quot;, &quot;-12.1E-3&quot;, etc. The decimal
+mark used is correctly determined from the Pilot's number format preferences.</p>
+
+<h4><a name="Integer_In"></a>Integer constants</h4>
+
+<p>Integer constants are entered in the format &quot;[-]digits#[base]&quot;,
+e.g. 100#16 = 256, 100#8 = 64, etc. If the number base is omitted, it defaults
+to 10. The first digit must be from 0-9 to differentiate the value from a
+variable, so you may need to pad with a leading zero when using bases above 10,
+e.g. FFFF#16 must be entered as 0FFFF#16. Any base from 2 through 36 may be
+used.</p>
+
+<h4>Variables</h4>
+
+<p>Variable names can be any length, and are composed of the letters A to Z, a
+to z, 0 to 9, the underscore character &quot;_&quot;, the dollar sign character
+&quot;$&quot;, and the upper-128 symbols and international characters. The
+first character of the variable name must be from A-Z or a-z. Variable names <b>are</b>
+case sensitive; the variable &quot;t&quot; is different and separate from the
+variable &quot;T&quot;. To use a variable in an equation, you must
+&quot;declare&quot; it, that is, reserve a place for its current value to be
+stored in your text somewhere. This is done by writing the variable name
+followed by a colon (&quot;:&quot;) and optionally a single space or tab. When
+MathPad needs to check if a variable is currently defined, it looks for
+&quot;variable:&quot; in your text and uses the value it finds written there.
+If no value is found, meaning the next thing MathPad sees after &quot;variable:&quot;
+is not a number, the variable is considered unknown and MathPad will try to
+solve for it and insert the answer after the colon.</p>
+
+<p><a name="Integer_Out"></a>When MathPad solves for a variable and prints the
+result, it normally uses floating-point format. To tell MathPad to print a
+value as an integer using a specific number base, append &quot;#base&quot;
+after the variable name in the declaration, e.g. &quot;x#16:&quot; to print x
+as a base 16 (hexadecimal) integer instead of in floating-point format. MathPad
+performs all its integer math using signed 32-bit longs, so the value may be
+truncated to fit before being printed. Note that the &quot;#base&quot;
+specification after a variable name only controls how that variable is printed
+when solved for; it does not affect how that variable is read in if a value is
+already set. </p>
+
+<p>Variables may also be specially designated as &quot;input only&quot; or
+&quot;output only&quot;, for extra convenience with equations which you usually
+solve for the same variable each time. To mark a variable as &quot;input
+only&quot;, declare it using &quot;&lt;-&quot; after the name instead of the
+colon (e.g. &quot;x&lt;-&quot;). Variables declared this way are automatically
+erased whenever the equation record is selected from the main display, with the
+cursor left sitting at the first input variable of the record for immediate data
+entry. There is also a menu command to &quot;Clear Input Variables&quot; which
+will clear them again during use with a quick two-stroke shortcut
+(&quot;/I&quot;). To mark a variable as &quot;output only&quot;, declare it
+using &quot;-&gt;&quot; after the name instead of the colon (e.g.
+&quot;x-&gt;&quot;). Variables declared this way are automatically erased
+whenever the Solve button is tapped, so that they are always considered
+unknown, and so are always solved for without requiring you to erase them each
+time.</p>
+
+<p>When a record contains more than one equation, MathPad normally tries to
+automatically solve as many as possible whenever the Solve button is tapped. If
+you want to verify the results of a variable's solution before continuing on to
+use that variable in further equations, you can mark that variable as requiring
+a &quot;confirmation breakpoint&quot; by appending a &quot;?&quot; after the
+variable name (e.g. &quot;x?:&quot;). This causes MathPad to pop up a
+confirmation dialog box showing the new value of x whenever x is solved for,
+allowing you to either Continue or Halt the solution of the rest of the record
+at that point.</p>
+
+<p><a name=Precision></a>There are times when you need to force a variable to
+always be computed with the maximum possible precision, rather than using the
+current number format specified by the <a href="#Details">Details</a> window.
+For example, if one equation computes a variable which will be used as an input
+to another equation, and you currently have the number of output decimal places
+set to 2, this intermediate value would normally be computed only to two
+decimal places before being used in the second equation, and this loss of
+precision could cause problems. To avoid this, you may specify &quot;x::&quot;
+instead of &quot;x:&quot; for a normal variable, or &quot;x-&gt;&gt;&quot;
+instead of &quot;x-&gt;&quot; for an output variable, to force that variable to
+always be computed with full precision regardless of the current output
+settings.</p>
+
+<p><a name=Limits></a>Finally, you may sometimes need to manually specify the
+limits of the range of possible answers which will be searched to solve for a
+particular variable. If you know that the equation you're attempting to solve
+has multiple valid answers, you can limit the range to be checked to force
+MathPad to converge in the desired region. Since MathPad preferentially
+searches for positive answers before negative ones, this can be used to force
+it to generate a negative solution when necessary. Also, the automatic solution
+&quot;bracketing&quot; algorithm sometimes fails when solving non-continuous
+functions, so you can use this to manually set the limits when the automatic
+search fails. To specify the limits of the range to be searched, specify both
+the lower and the upper limits of the search range in square brackets,
+separated by a &quot;:&quot;, between the variable name and the variable type
+suffix, like this: &quot;vname[lowlimit:highlimit]-&gt;&quot; or
+&quot;x[0:1E6]::&quot;.</p>
+
+<h4>User-Defined Mathematical Constants</h4>
+
+<p>MathPad also allows you to define your own named mathematical constants for
+use in your calculations. This is handy for common values such as degrees to
+radians conversions, pi, e, speed of light, weights &amp; measures conversions,
+atomic weights, or whatever other values you refer to often. When MathPad is
+searching for the value of a variable, it first searches the text of the
+current record being edited. If the variable is not declared anywhere in the
+current record, MathPad then tries to look for a record named
+&quot;Constants&quot;, and if it exists, will also search that record for the
+variable as well. Only if the variable does not exist in either the current
+record or the Constants record will MathPad report an Undeclared Variable
+error.</p>
+
+<p>To define your own named constants, just create a record with the title
+&quot;Constants&quot;, and then define as many variables in that record as you
+like. You must declare each constant with the standard variable suffix
+&quot;:&quot; (input and output variable types don't apply), and you should
+enter the value as a floating point number with as many decimal places as
+possible for best accuracy when used.</p>
+
+<h4>User-Defined Functions</h4>
+
+<p>You can also define your own mathematical functions, which can then be
+called from within any math expression in MathPad. This is done by creating a
+record with the title &quot;Functions&quot;, and entering your new function
+definitions into this record in the following format:</p>
+
+<pre style='margin-top:0in;margin-right:.5in;margin-bottom:0in;margin-left:
+.5in;margin-bottom:.0001pt'>funcname(arg1;arg2) = sqrt(arg1)*arg2/pi()</pre>
+
+<p>You can then use this new function just like the standard ones, like so:</p>
+
+<pre style='margin-top:0in;margin-right:.5in;margin-bottom:0in;margin-left:
+.5in;margin-bottom:.0001pt'>x**3 = y + funcname(x+5;y) / 7</pre>
+
+<p>Each function can accept from 0 to 32 arguments, which can be named anything
+you like. When the function is called, these temporary variables will be set to
+the values passed in the function call, the math expression after the
+&quot;=&quot; will be evaluated, and the answer will be returned as the result
+of the call. Note that function names must follow the rules for variable names,
+and so are case-sensitive, unlike the built-in functions. The function
+definition can use constants from your &quot;Constants&quot; page, built-in
+functions, and other user-defined functions, but can't access any variables
+except its function call arguments. Also, you must be careful to avoid indirect
+infinite loops from having two functions call each other; a() can call b(), but
+then b() had better not call a() again or you'll end up pressing Reset.
+Finally, if your function definition spans multiple lines, you must surround it
+in curly braces (see Equations, below).</p>
+
+<p>Since MathPad can't easily switch away from the record you're solving, any
+errors that occur during the execution of a user-defined function will leave
+the cursor at the closing &quot;)&quot; of the offending call. Also, if you
+press Solve while editing the Functions record, the solver will think the function
+definitions are equations and report Undeclared Variable and Unknown Function
+errors. For these reasons it's best to debug your custom functions as equations
+within a normal MathPad record, and then cut &amp; paste them into your
+Functions record once they're fully tested.</p>
+
+<h4>Equations</h4>
+
+<p>An equation is simply two mathematical expressions joined with the
+&quot;=&quot; character. When you tap the Solve button, MathPad will scan your
+text for equations to solve by looking for any &quot;=&quot; characters. When
+it finds one, it then has to determine the boundaries of the equation in your
+text. By default, MathPad will assume that the equation has been written on a
+line by itself, and that its ends are therefore marked by the previous and
+following newline characters. If your equation needs to span more than one
+line, or if you want to put other text on the same line before or after the
+equation, you must explicitly mark the boundaries of the equation by
+surrounding it in curly braces, like this &quot;Example: { x + 5 = y }&quot;.
+These braces are not required if the equation automatically wraps to another
+line, only if you explicitly insert a newline character. Within an equation,
+you can use spaces and tabs as desired to make things more readable, except
+that variable names, function names, and multi-character operators like
+&quot;**&quot; or &quot;&lt;&lt;&quot; must not be broken up.</p>
+
+<h4>Page Position Commands</h4>
+
+<p>These commands let you control where within the text of the current record
+the display is scrolled to, so that it automatically jumps to a particular page
+of the text when you select the record from the main display (and when the
+&quot;Clear Input Variables&quot; menu option is selected), and to another page
+of the text after the Solve button is tapped. You can use this to clean up the
+display for more convenient use by setting up a separate area in the text for
+entering input values, and another area in the text for displaying output
+results, so that you don't have to see all the equations and other variables in
+the record. To set where the display will be positioned when the record is
+entered, put the command &quot;--Input--&quot; on a line in the record. The
+display will automatically be scrolled so that the <i>following</i> line of
+text is the first line on the display (with the &quot;--Input--&quot; command
+just off the top edge) when the record is entered or the input variables are
+cleared. The cursor will be placed at the first input variable, if any. To set
+where the display will be positioned after the Solve button is tapped, use the
+command &quot;--Output--&quot;. You may need to add extra blank lines to the end
+of your record to allow it to be scrolled down far enough to go to the position
+you've specified; if your position command is too close to the end of the
+record, the display will simply be scrolled to the bottom of the record and the
+line with the command will still be visible.</p>
+
+<h4>Write-Protected Areas</h4>
+
+<p>To help prevent accidental alteration of your equations, you can
+write-protect areas of your text by enclosing them between /* and */ markers.
+Once you've marked an area of text as protected, MathPad will try to keep you
+from altering it. You can still select and copy from such areas, but you won't
+be able to insert, delete, cut or paste anything there (unless you cut the
+entire area out at one time). To disable the protection, just delete or change
+one of the markers; they aren't protected, the area between them is. There's
+one loophole: the popup keyboard dialog edits the record text directly without
+involving MathPad, so it completely ignores this protection. This is either a
+problem or a convenient temporary bypass feature, depending on how often you
+normally use the popup keyboard. Also, this protection only applies to your
+changes, not MathPad's; MathPad will still solve for and update variables
+within protected regions, so you can protect output variable declarations if
+you like. Protecting input variable declarations is a bad idea.</p>
+
+<h4>Comments</h4>
+
+<p>Finally, any text surrounded by double quotes, &quot;like this&quot;, is
+considered a comment and is ignored. You don't need to mark all of your
+comments or notes this way, since MathPad only pays attention to equations, but
+it can be useful if you want to use &quot;=&quot; or other characters with
+special meanings in your notes.</p>
+
+<h3 align=center style='text-align:center'>Putting it all together</h3>
+
+<p>If you just want to perform a simple calculation instead of solving an
+equation, you have two options. You can write any mathematical expression
+surrounded by back-slant characters, e.g. &quot;\ 2**32 - 1 \&quot;, and
+MathPad will solve the expression and <b>replace</b> it with the answer in your
+text. Or, you can write an incomplete equation such as &quot;2**32 - 1 =&quot;,
+and MathPad will <b>insert</b> the answer at the = sign. These simple
+calculations can use any operators, functions, or variables you like, except
+that any variables used must already have known values, since they're not
+phrased in a way which would let MathPad solve for any unknowns. If any unknown
+variables are used, MathPad will simply leave the expression untouched.</p>
+
+<p>To solve an equation for an unknown, you just write in the equation(s),
+declare storage space for any variables you use, and fill in any known values.
+When you tap Solve, MathPad will fill in the values of any unknown variables
+used in your equation(s) which it was able to solve for.</p>
+
+<h4>Example: Mortgage payments</h4>
+
+<p>Write the following text into a MathPad record:</p>
+
+<pre style='margin-top:0in;margin-right:.5in;margin-bottom:0in;margin-left:
+.5in;margin-bottom:.0001pt'>TVM (mortgage)</pre><pre style='margin-top:0in;
+margin-right:.5in;margin-bottom:0in;margin-left:.5in;margin-bottom:.0001pt'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></pre><pre
+style='margin-top:0in;margin-right:.5in;margin-bottom:0in;margin-left:.5in;
+margin-bottom:.0001pt'>mint = yint / 100 / 12</pre><pre style='margin-top:0in;
+margin-right:.5in;margin-bottom:0in;margin-left:.5in;margin-bottom:.0001pt'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></pre><pre
+style='margin-top:0in;margin-right:.5in;margin-bottom:0in;margin-left:.5in;
+margin-bottom:.0001pt'>pmt = pv / ((1 - (1 + mint) ** -n) / mint)</pre><pre
+style='margin-top:0in;margin-right:.5in;margin-bottom:0in;margin-left:.5in;
+margin-bottom:.0001pt'><![if !supportEmptyParas]>&nbsp;<![endif]><o:p></o:p></pre><pre
+style='margin-top:0in;margin-right:.5in;margin-bottom:0in;margin-left:.5in;
+margin-bottom:.0001pt'>pmt: 1000</pre><pre style='margin-top:0in;margin-right:
+.5in;margin-bottom:0in;margin-left:.5in;margin-bottom:.0001pt'>pv: </pre><pre
+style='margin-top:0in;margin-right:.5in;margin-bottom:0in;margin-left:.5in;
+margin-bottom:.0001pt'>yint: 7.2&nbsp;&nbsp;&nbsp;(yearly interest as percentage)</pre><pre
+style='margin-top:0in;margin-right:.5in;margin-bottom:0in;margin-left:.5in;
+margin-bottom:.0001pt'>n: 360</pre><pre style='margin-top:0in;margin-right:
+.5in;margin-bottom:0in;margin-left:.5in;margin-bottom:.0001pt'>mint-&gt;&gt;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(monthly interest as fraction)</pre>
+
+<p>This sets up the standard time value of money formula and calculates what
+value of house can be bought with a monthly payment of $1000 on a 30-year
+mortgage at 7.2% interest per year. When you tap Solve, MathPad will locate the
+equations and solve the first one for the unknown variable mint. This reduces
+the number of unknowns in the second equation to 1, so it then solves that
+equation for the unknown variable pv. To solve for a different variable, just
+erase its value and tap Solve again. You can easily play around with changing
+different values and solving for any unknown as desired. Note the use of the
+&quot;-&gt;&gt;&quot; precision output variable type for mint; this is
+necessary because we need mint to be computed with full precision regardless of
+the current output format set in the Details window (below).</p>
+
+<h3 align=center style='text-align:center'><a name=Details></a>Details</h3>
+
+<p>The Details window lets you delete the record, set the category for the
+record, mark the record as private, or set the output number format options.
+The Format option allows you to choose the desired format of any answers which
+MathPad prints into your record. &quot;Float&quot; is the normal floating-point
+format, &quot;Sci&quot; is for scientific notation, and &quot;Eng&quot; is for
+engineering notation. The Decimal Places option sets the desired precision; you
+can select from 0 to 14 decimal places of accuracy in your results. MathPad
+always computes all results to 15 decimal places, and then rounds the result to
+the precision selected when printing. The Strip Zeros option tells MathPad
+whether it should remove any trailing zeros from the result. For example, when
+calculating in dollars, you'd set Decimal Places to 2 and turn Strip Zeros off.
+If you're using any intermediate variables which will be used in other
+equations (such as &quot;mint&quot; in the example above), remember to override
+these output format settings to force the values to be computed in full precision
+using &quot;::&quot; or &quot;-&gt;&gt;&quot;; see the <a href="#Precision">Variables</a>
+section for details.</p>
+
+<h3 align=center style='text-align:center'>Error Messages</h3>
+
+<p>These are the error messages which MathPad might display when you tap Solve:</p>
+
+<ul type=disc>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Missing '('</b>. Your
+     parentheses aren't matched. The cursor is left just after the first
+     unmatched ')'.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Missing ')'</b>. Ditto.
+     The cursor is left at the end of the expression.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Missing or invalid operand</b>.
+     MathPad thinks there's a number or variable missing, e.g. &quot;x * =
+     z&quot;. The cursor is left at the spot where the value should be. </li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Missing or invalid
+     operator</b>. MathPad thinks there's a math operator missing, e.g. &quot;x
+     y = z&quot;. The cursor is left at the spot where the operator should be
+     (if you wanted multiplication, you need to explicitly put in
+     &quot;*&quot;).</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Operand out of range</b>.
+     The bitwise operators and some functions (Fact(), Choose()) have limits on
+     the values which they can handle. The cursor is left just after the
+     operator or invalid function argument.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Unknown function</b>.
+     MathPad doesn't recognize this function, e.g. &quot;x = Fubar(3)&quot;.
+     The cursor is left just after the unrecognized function name. This could
+     also be caused by a missing operator between a variable name and a
+     parenthetical expression.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Undeclared variable</b>.
+     When checking an equation for unknowns, MathPad discovered a variable with
+     no &quot;variable:&quot; storage location set aside for it. You're asked
+     if you wish MathPad to automatically declare it for you; if you agree,
+     MathPad adds &quot;variable:&quot; to the end of the record, otherwise the
+     cursor is left just after the undeclared variable's name in the equation.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Too many nested operations</b>.
+     If you get this error, you must be doing something really evil to your
+     poor little Pilot. MathPad can handle operations nested up to 64 levels
+     deep; what more do you want?</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Can't bracket solution;
+     try specifying limits</b>. The equation solving algorithm can't find any
+     two values which would &quot;bracket&quot; the equation. Before MathPad
+     can converge to the correct answer, it must set a lower and an upper limit
+     which the answer is expected to be between. Normally it does this
+     automatically by scanning for two values which, when used for the unknown
+     value, cause the equation to give errors with opposite signs. This works
+     well for most equations which describe &quot;continuous&quot; functions, meaning
+     that as the value used for the unknown is smoothly changed, the output
+     result smoothly changes as well. It does not work well for functions which
+     are not continuous, where the answer varies wildly up and down in value as
+     the unknown changes. When the automatic bracketing algorithm fails, you
+     have the option of telling MathPad what the upper and lower limits of the
+     possible answer are, so that it may converge to the best answer it can
+     find within that specified range. See the section on limits under <a
+     href="#Limits">Variables</a> for details. The cursor is left after the
+     name of the variable that couldn't be solved for, so you can easily insert
+     the limits if you like. This error might also mean that the answer is
+     imaginary, e.g. &quot;x * x = -1&quot;, which MathPad can't handle, or
+     that the equation is impossible, e.g. &quot;x * 0 = 5&quot;. See the <a
+     href="#Limitations">Limitations</a> section for details.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Invalid solution limits</b>.
+     The limits specification found after the variable name is in the wrong
+     format. You must specify both a lower and an upper limit, separated by a
+     colon, like this: &quot;fubar[1:100]-&gt;&quot;. The cursor is left at the
+     point where the error was detected.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Inexact result; returning
+     closest guess</b>. After converging to the best possible answer in the
+     selected range, the two sides of the equation are still not equal. If
+     you've manually specified the limits of the range to be tested, this
+     probably means that the range you specified doesn't contain a valid
+     answer, and you should change the limits and try again. This is especially
+     likely to be the case when the &quot;closest guess&quot; answer which is
+     returned is the same as one of your specified limits; this means the
+     solver ran into your limit while converging, and was forced to give up
+     before minimizing the error to 0. If this error happens when you haven't
+     manually set the limits, it probably means that you're trying to solve a
+     poorly-behaved non-continuous function, and the automatic solution
+     bracketing algorithm guessed badly when trying to determine the limits on
+     its own. In this case, you'll need to specify the limits yourself to force
+     MathPad to avoid the false &quot;local minima&quot; solution that it
+     stumbled into.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Only valid in function
+     call</b>. The semicolon &quot;;&quot; operator is used to separate the
+     arguments of a function call, and is not needed or usable outside the
+     parenthesis after a function name.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Not enough function
+     arguments</b>. This function requires more arguments than you listed.
+     Remember that the arguments must be separated by semicolons &quot;;&quot;
+     not commas, since many countries use commas in their number format.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><b>Too many function
+     arguments</b>. You listed more arguments for the function than it knows
+     what to do with. For example, Pi() and Now() take no arguments, and will
+     generate this error if you try to pass them any.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><strong>Illegal operation
+     returned NAN</strong>. An illegal mathematical operation was attempted,
+     and the result was flagged by the IEEE-754 floating point routines as
+     being NAN (Not A Number).</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l4 level1 lfo3;tab-stops:list .5in'><strong>Illegal operation
+     returned INF</strong>. An illegal mathematical operation was attempted,
+     and the result was flagged by the IEEE-754 floating point routines as
+     being INF (Infinite).</li>
+</ul>
+
+
+<hr size=2 width="100%" align=center>
+
+<h3 align=center style='text-align:center'><a name="Backup_&amp;_Recovery"></a>Backup
+&amp; Recovery</h3>
+
+<p>The PalmPilot Desktop software creates a directory named something like
+C:\Pilot\&lt;username&gt;\Backup, and stores backup copies of your system
+preferences and other settings there whenever you Hotsync. MathPad marks its
+equation database as requiring this kind of backup, so all of your equations
+will be automatically backed up as a file named MathPadDB.pdb in this
+directory. <b>Warning:</b> Hotsync version 1.0 has a bug which causes it to
+only back up the first 32 files installed on your Pilot. Anyone still using 1.0
+should consider getting the <a
+href="http://www.usr.com/palm/custsupp/hs11rdme.html">free 1.1 upgrade</a> from
+USR's web site, especially if they have a lot of stuff installed. </p>
+
+<p>Should your Pilot require a hard reset or suffer battery failure, it could
+lose its memory. If this happens, just do a Hotsync after fixing the problem,
+and all files in the backup directory will be automatically reinstalled. What
+many don't realize is that you can stick application .PRC files into this
+directory yourself, and they'll be automatically reinstalled after the reset as
+well. The only problem is that the apps you put there are deleted after the
+restore, so you'll need to recopy them back into the backup directory again
+afterwards. </p>
+
+<p>What I've done on my system is create a C:\Pilot\Huebner\Apps directory, and
+whenever I find a new app that I want to keep around, I copy it into this
+directory and into the Backup directory. If my Pilot loses its memory, I do a
+Hotsync and everything is automatically reinstalled. Then I just copy the
+contents of the App directory back into the Backup directory so that it'll be
+ready again for the next time. </p>
+
+<p>If your Pilot loses its memory and you haven't prepared like this, it's not
+a disaster; it just means you have to go back and re-install all the .PRC files
+you had before using the Install Tool. It's a drag, but no real loss. Either
+way, your equations will have been automatically backed up and then restored,
+giving you one less thing to worry about. </p>
+
+<h4 align=center style='text-align:center'><a name=Reinstalling></a>Reinstalling
+Backed-Up Database Files</h4>
+
+<p>MathPad versions 1.3 and earlier had a problem installing the MathPadDB.pdb
+file with MathPad already installed, when using certain combinations of Hotsync
+and PalmOS. This problem has been fixed in version 1.4. It no longer matters
+whether MathPad is already installed or not when you install the database file.</p>
+
+
+<hr size=2 width="100%" align=center>
+
+
+<h3 align=center style='text-align:center'><a name=Exporting></a>Exporting and
+Importing MathPad Records</h3>
+
+<p>MathPad now includes full IR beaming support.  You can beam individual records or full categories to other MathPad users.  
+To beam a single record, open that record for use, and then select the Beam Record menu option.  If the receiving handheld is not currently running 
+MathPad, it will ask the user if it should interrupt what they're currently doing and accept the MathPad data.  If the receiving handheld 
+is already running MathPad, the record will be accepted automatically without prompting.  The receiving MathPad will then jump to the new record 
+and display it to the user.</p>
+
+<p>To beam an entire category of records, go to the main display and select the category to be beamed using the category selector in the upper right corner, then select 
+the Beam Category menu option.  This works just like sending individual records, except that every record in the current category will be sent.  
+If the current category is "All", then every MathPad record you have will be sent; make sure this is what you intended, or select a specific 
+category before beaming.  If any records in the category are marked as Private, they will not be sent; Private records must be sent one by one 
+using individual Beam Record commands to prevent accidental disclosure.</p>
+
+<p>Two utility programs are included with MathPad to give you access to the
+equation records stored in the backed up MathPad database file on your PC.
+MpExport copies the records from the database file to a plain text file that
+you can edit with your favorite editor, print, give or email to others, etc.
+MpImport copies the records from a plain text file back into your MathPad
+database file, which you can then reinstall on your Pilot using the standard
+install tool (see the <a href="#Reinstalling">Reinstalling</a> section above).</p>
+
+<p>Windows executables for these utilities are included, plus simple
+ANSI-standard C source code for other platforms. Since these programs need to
+be portable, they're executed from the command line (MS-DOS window or
+whatever).</p>
+
+<p>Also available for Mac users: <a
+href="http://www.radiks.net/~rhuebner/MPIO.sit">MPIO.sit</a>; Macintosh versions
+of the MpExport and MpImport utilities (renamed ToAscii and ToPDB in this
+archive), with source code. Thanks to Roger Gabin for translating these.</p>
+
+<p>Unix users should be able to just do a &quot;cc mpexport.c -o mpexport&quot;
+or equivalent to generate a native executable for their system.</p>
+
+<p>I decided to write these export/import utilites rather than doing a fancy
+desktop app and conduit for two main reasons: 1) Palm has made it insanely
+difficult to write conduits, and 2) this way, the solution works on all
+platforms, instead of being restricted to Windows systems (since I have no way
+to create any Mac or Unix software).</p>
+
+<h4 align=center style='text-align:center'>MpExport</h4>
+
+<p>MpExport is very simple to use. Copy MPEXPORT.EXE into a standard directory
+in your search path, open a command line window, go to the directory where your
+Pilot files are backed up (usually C:\Pilot\&lt;username&gt;\Backup) and enter
+&quot;mpexport mathpaddb.pdb mathpad.txt&quot; to create a simple text file named
+&quot;mathpad.txt&quot; containing all the records in
+&quot;mathpaddb.pdb&quot;. This output text file will be created if necessary,
+or overwritten if it already exists. You can then edit this text file with
+Notepad or any other standard text editor, print it, cut records from it to
+paste into an email message, or whatever. </p>
+
+<p>Windows users might want to make an icon to run the program automatically if
+you expect to be using it often, perhaps writing the text file out to your
+C:\Windows\Desktop directory to have the exported text file pop up on your
+desktop for easy access.</p>
+
+<p>If you edit the text file, be sure to stick to the record format which
+MpExport used when it wrote the file, so that MpImport will know how to read it
+back in again. The Category and Places lines are optional, but must be in the
+order and format exported if used. The record separator line must appear
+between records, and must be copied exactly as exported.</p>
+
+<h4 align=center style='text-align:center'>MpImport</h4>
+
+<p>MpImport is a bit more complicated to use than MpExport. When you run it,
+you have the option of either making the changes directly to your backed up
+database file, or of writing a new database file which incorporates the changes
+so that the current database is left alone as insurance. You would make the
+changes to the current file by entering &quot;mpimport mathpaddb.pdb
+mathpad.txt&quot;, or you'd write a new file by entering &quot;mpimport
+mathpaddb.pdb mathpad.txt newmpdb.pdb&quot;. Note that MpImport can't create a
+new MathPad database from scratch; it requires an existing MathPad database as
+a starting point and then incorporates the text file records into that. This
+ensures that your categories, registration data, etc. are carried forward
+correctly from one database to the next.</p>
+
+<p>MpImport works by copying the entire contents of the text file you specify
+into your MathPad database file. You should edit the file before running
+MpImport to make sure that it contains only the records you actually want to
+import. As it processes each record in the text file, it checks to see if a
+record with the same title already exists in your current database. If not, it
+goes ahead and adds it to the database automatically. If there's already a
+record by that name, and it's different than the one in the text file, it asks
+you whether it should overwrite the current version of that record in your database.
+If you say yes, the old version of the record in your database is replaced by
+the version from the text file. If you say no, the new version from the text
+file is added to your database alongside the original. When a record is added
+to your database, MpImport automatically adds that record's category to your
+database's category list if necessary. If your category list is already full
+(16 categories is the limit, including Unfiled), MpImport marks the new record
+as Unfiled instead.</p>
+
+<p>After importing the text records into your database, just install the
+updated database in your Pilot using the standard install tool. Due to a
+problem with HotSync, it's currently necessary to delete the entire MathPad
+program and database from your Pilot before installing the updated database.
+The MathPad.prc application file must be reinstalled in your Pilot <i>after</i>
+installation of the database file. This can still be done during a single
+HotSync session, as long as you select the files for installation in the
+correct order. See the <a href="#Reinstalling">Reinstalling</a> section above</p>
+
+
+<hr size=2 width="100%" align=center>
+
+<h3 align=center style='text-align:center'><a name=Registration></a>Registration</h3>
+
+<p>As you'd probably expect after reading this far through this nice manual I
+went to the trouble of writing, MathPad is shareware. It's not, however,
+crippleware or constantly-in-your-face-ware or even plead&amp;whineware. I
+don't like those sorts of programs when I download them, so I won't distribute
+one myself. The only &quot;persuasion&quot; MathPad applies is that it will
+remind you to pay for what you've gotten every couple of weeks. Starting with
+the 5th such biweekly reminder, these reminders will insist on sticking around
+for a few seconds before you can dismiss them, and this delay will increase
+slightly with each subsequent biweekly reminder. This will allow plenty of time
+for a lengthy evaluation, while still providing some motivation to eventually
+get around to registering if you keep it for more than a few months.</p>
+
+<p>If you like MathPad enough to give it a permanent home in your Pilot, you
+may register it for the entirely reasonable low price of $10 to $12 US
+(depending on processing surcharge). Registered users will receive a code to
+turn off the registration reminders (which will work with all future updates),
+and are automatically notified by email when new versions are available. They
+also enjoy the smug satisfaction of knowing that they're helping to encourage
+the production of fine software like this for their Pilot, and (more to the
+point) that they're helping to encourage me to continue supporting and
+improving it instead of giving up on the whole thing in disgust. </p>
+
+<p>In an attempt to make it as painless as possible for you to give me your
+money, I've set up several ways to register MathPad. The cost of registration
+varies somewhat depending on the method used. I'm charging such a low price for
+my software that I can't just absorb the stiff fees some payment processing
+companies impose, but rather than raise my prices across the board, I've
+decided to pass on my cost of using each payment system and let you choose for
+yourself.<o:p></o:p></p>
+
+<ol start=1 type=1>
+    <li class="MsoNormal"
+    style="mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l0 level1 lfo3;tab-stops:list .5in">
+<!-- Begin PayPal Logo -->
+<FORM ACTION="https://secure.paypal.com/cgi-bin/webscr" METHOD="POST">
+<INPUT TYPE="hidden" NAME="cmd" VALUE="_xclick">
+<INPUT TYPE="hidden" NAME="business" VALUE="rhuebner@radiks.net">
+<INPUT TYPE="hidden" NAME="return" VALUE="http://www.radiks.net/~rhuebner/mathpad.html">
+<INPUT TYPE="hidden" NAME="undefined_quantity" VALUE="1">
+<INPUT TYPE="hidden" NAME="item_name" VALUE="MathPad Registration Fee">
+<INPUT TYPE="hidden" NAME="amount" VALUE="10.00">
+<INPUT TYPE="image" SRC="http://images.paypal.com/images/x-click-but6.gif" NAME="submit" ALT="Make payments with PayPal - it's fast, free and secure!">
+<!-- End PayPal Logo -->
+	<b>PayPal.com ($10 US):</b> This very cool new service looks like a
+        great way to pay for shareware, or for other similar
+        small payments between individuals.&nbsp; They charge
+        your payment to your Visa or MasterCard, and deposit it
+        directly into my bank account, without any service fee or
+        markup.&nbsp; Just click the PayPal button to make your payment.</FORM></li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l0 level1 lfo3;tab-stops:list .5in'><a
+     href="http://www.handango.com/PlatformSoftwareSection.jsp?platformId=1&siteId=1&homePath=null&catalog=1&sectionId=1244&productId=12262&title=Rick+Huebner&authorId=60021"><b><span
+     style='text-decoration:none;text-underline:none'><img border=0 width=200
+     height=71 src="http://www.radiks.net/~rhuebner/Handango.gif"></span></b></a><b>Handango.com ($11.95 US):</b> Handango.com's secure web site accepts Visa, MasterCard, American
+     Express, and Discover. <a href="http://www.handango.com">Click here for
+     Handango.com's main shopping mall page</a>, or <a
+     href="http://www.handango.com/PlatformSoftwareSection.jsp?platformId=1&siteId=1&homePath=null&catalog=1&sectionId=1244&productId=12262&title=Rick+Huebner&authorId=60021">click here to
+     jump directly to my product page</a>.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l0 level1 lfo3;tab-stops:list .5in'><a
+     href="http://store.yahoo.com/pilotgearsw/rickhuebner.html"><b><span
+     style='text-decoration:none;text-underline:none'><img border=0 width=200
+     height=71 id="_x0000_i1032" src="http://www.radiks.net/~rhuebner/PGHQbuyit.gif"></span></b></a><b>PalmGear
+     H.Q. ($11.95 US):</b> PalmGear H.Q. accepts Visa, MasterCard, or American
+     Express, and you can order by secure encrypted web page, email, telephone,
+     or fax. <a href="http://store.yahoo.com/pilotgear/">Click here for
+     PalmGear's main shopping mall page</a>, or <a
+     href="http://store.yahoo.com/pilotgearsw/rickhuebner.html">click here to
+     jump directly to my product page</a>.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l0 level1 lfo3;tab-stops:list .5in'><b>Kagi ($11.50 US)</b> You
+     can <a href="https://order.kagi.com/?1UV">click here to order online</a>
+     through Kagi's secure encrypted web page, using your Visa, MasterCard,
+     American Express, Optima, Discover, Diners Club, Carte Blanche or JCB.
+     Alternative web pages are also available in <a
+     href="https://order.kagi.com/cgi-bin/r1.cgi?1UV&amp;&amp;lang=de">Deutsch</a>
+     | <a href="https://order.kagi.com/cgi-bin/r1.cgi?1UV&amp;&amp;lang=es">Español</a>
+     | <a href="https://order.kagi.com/cgi-bin/r1.cgi?1UV&amp;&amp;lang=fr">Français</a>
+     | <a href="https://order.kagi.com/cgi-bin/r1.cgi?1UV&amp;&amp;lang=it">Italiano</a>
+     | <a href="https://order.kagi.com/cgi-bin/r1.cgi?1UV&amp;&amp;lang=nl">Nederlands</a>
+     | <a href="https://order.kagi.com/cgi-bin/r1.cgi?1UV&amp;&amp;lang=sv">Svenska</a>
+     | <a href="https://order.kagi.com/cgi-bin/r1.cgi?1UV&amp;&amp;lang=ja"><span
+     style='text-decoration:none;text-underline:none'><img border=0 width=41
+     height=12 id="_x0000_i1033" src="http://www.radiks.net/~rhuebner/jver.gif" alt="&#8220;ú&#8211;{&#338;ê"></span></a><a
+     href="https://order.kagi.com/cgi-bin/r1.cgi?1UV&amp;&amp;lang=ja">(Japanese)</a>.</li>
+ <li class=MsoNormal style='mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;
+     mso-list:l0 level1 lfo3;tab-stops:list .5in'><b>Postal Mail ($10 US):</b>
+     The options above are more convenient for both of us, but if you prefer
+     you can send cash (no coins!), check, or money order for $10 in US funds,
+     drawn on a US&nbsp;bank, to:</li>
+</ol>
+
+<p style='margin-right:1.0in;margin-left:1.0in'>Rick Huebner<br>
+18920 SW Rock Ct<br>
+Beaverton, OR  97006-3059</p>
+
+<p style='margin-right:.5in;margin-left:.5in'>If you send cash, use an opaque
+security-printed or brown paper envelope so you won't tempt the mail handlers
+into theft. Specify which of my programs you're registering, the name you wish
+to register it under, and please <b>include an email address</b> so I can send
+you your registration code and update notices. Your email address will never be
+revealed to anyone else, nor used for any other purpose.</p>
+
+
+<hr size=2 width="100%" align=center>
+
+<h3 align=center style='text-align:center'><a name="Legal_Stuff"></a>Legal
+Stuff</h3>
+
+<h4>Short form (English):</h4>
+
+<p>MathPad is protected by copyright law, and is licensed, not sold. You're allowed
+and encouraged to use and redistribute MathPad in its original form, as
+officially distributed by me, but not to distribute registered or modified
+copies. You're allowed to use but not distribute one registered copy per
+registration fee paid. MathPad is guaranteed to work pretty much as described
+in this documentation, with no seriously impairing bugs, or I'll fix the bug or
+return your money. No other warranties or remedies are applicable. </p>
+
+<h4>Long form (Legalese):</h4>
+
+<p>SOFTWARE PRODUCT LICENSE. This software is protected by copyright laws and
+international copyright treaties, as well as other intellectual property laws
+and treaties. It is licensed for use, not sold. You are allowed to use and
+distribute the software in its original, unmodified form as desired. You are
+limited to one registered copy of the software per registration fee paid,
+installed on a single PalmPilot organizer at any one time. You may not reverse
+engineer, decompile, disassemble, or modify the software. LIMITED WARRANTY. I
+warrant that the software will perform substantially in accordance with these
+accompanying written materials when installed on a PalmPilot organizer running
+OS versions 1.0 through 3.0. CUSTOMER REMEDIES. My entire liability and your
+exclusive remedy shall be, at my option, either (a) return of the price paid,
+or (b) repair or replacement of the software that does not meet this Limited
+Warranty. This Limited Warranty is void if failure of the software has resulted
+from accident, abuse, or misapplication. NO OTHER WARRANTIES. To the maximum
+extent permitted by applicable law, I disclaim all other warranties, either
+express or implied. NO LIABILITY FOR CONSEQUENTIAL DAMAGES. To the maximum
+extent permitted by applicable law, in no event shall I be liable for any
+damages whatsoever arising out of the use of or inability to use this product.
+My entire liability under any provision of this agreement shall be limited to
+the amount actually paid by you for the software. </p>
+
+
+<hr size=2 width="100%" align=center>
+
+<h3 align=center style='text-align:center'><a name="Maintenance_Notes"></a>Version
+History</h3>
+
+<p>Version 1.5, October 15, 2000: Added full IR beaming support. You can now beam individual records or entire record categories to other MathPad users. Also added Degrees/Radians selection to preferences, to set the default units used by the trig functions. Fixed a problem with double underlining under some OS versions.</p>
+
+<p>Version 1.4, April 18th, 1999: Added quick pick list for entering function
+names, ability to write-protect areas of the record by enclosing them in /* and
+*/ marks, <a href="#Integer In">input</a> and <a href="#Integer Out">output</a>
+of integers in base 2 through 36, root() function (root(x;y) = x**(1.0/y)), and
+improved reporting of NAN and INF error results. Fixed problem with installing
+database after program with some Hotsync/PalmOS combinations, stack overflows
+with some very complex or deeply nested functions, imprecise results for
+certain trig values (sin(radians(180)) now = exactly 0), and scroll arrow
+updates after cut/paste/undo. Includes updated MathLib which is slightly
+smaller and fixes problem with cbrt() returning bad results from 0.5 to 1.0.</p>
+
+<p>Version 1.3, February 26th, 1998: Added a user-defined &quot;Functions&quot;
+record, so you can add your own math functions to the ones built in. Expanded
+the allowable character set for variable names to include '$' and the upper-128
+symbols and international letters.</p>
+
+<p>Version 1.2, February 17th, 1998: Added a stand-alone version that doesn't
+require MathLib, so it can run under OS 1.0+ (but without the trig functions).
+Added scientific and engineering notation output capability. Improved the
+detection of certain syntax errors, which caused crashes instead of being
+reported. Corrected the docs to show the proper name of the Weekday function is
+Weekday, not WDay. Added a Graffiti Help menu command for 2.0 users.</p>
+
+<p>Version 1.11, October 14th, 1997: Fixed (I think) a subtle stack overflow
+bug that caused erratic Fatal Errors during or after solving equations with
+nested parenthesis or function calls. I'm pretty sure this is solid now; please
+let me know if you're still seeing this problem.</p>
+
+<p>Version 1.1, October 1st, 1997: Added date and time functions, comparison
+and logical operators, and If and Choose functions. Added two utility programs,
+MpExport and MpImport, which copy equation records between a backed up MathPad
+database file and a plain text file on your PC so you can share equations with
+other users, edit long records with a text editor, etc. Windows executables for
+these utilities are included, plus simple ANSI-standard C source code for other
+platforms. Added a confirmation breakpoint variable flag for the crew at
+Baylor. Now allows use of the &quot;_&quot; character in variable names. Fixed
+a problem that caused the root finder to stop converging too early in some
+cases, which could result in slightly inaccurate answers when solving for a
+variable. Fixed a problem with updating the scroll arrows after a Solve. Fixed
+the automatic selection of uppercase shift mode when creating a new record.
+Added the operator precedence chart to the Tips window in the record view.</p>
+
+<p>Version 1.01, August 24th, 1997: Fixed a problem that caused some math
+library routines to lock up or die with Fatal Exception errors under some
+obscure conditions. Fixed the preferences dialog frame.</p>
+
+<p>Version 1.0, August 19th, 1997: Major update. Added trig and log functions
+via new <a href="http://www.radiks.net/~rhuebner/mathlib.html">MathLib</a>
+shared library (freely usable in your own programs!). New mathematical
+constants lookup page, ability to specify solver search limits, display
+positioning controls, and large font option. Now returns to last position when
+launched (for easier cut &amp; paste and use with SwitchHack). Fixed 0! bug,
+problem with scientific notation constants in expressions, and problem when one
+variable name matched the end of another.</p>
+
+<p>Version 0.82alpha, May 30th, 1997: Fixed the infinite solutions bug (I
+think), improved handling of undeclared variables, added ability to designate
+variables as &quot;input only&quot; (automatically cleared when record loaded
+or by menu command) or &quot;output only&quot; (automatically cleared when
+Solve is tapped, thus always solved for), and added Undo Last Solve menu
+command.</p>
+
+<p>Version 0.81alpha, May 29th, 1997: Fixed a last-minute typo that caused
+problems solving for small fractions under some conditions, preventing MathPad
+from solving the mortgage example for the interest rate.</p>
+
+<p>Version 0.8alpha, May 28th, 1997: Original release. </p>
+
+
+<hr size=2 width="100%" align=center>
+
+<h5 align=center style='text-align:center'>Copyright © 1998 Rick Huebner; All
+Rights Reserved</h5>
+
+</body>
+
+</html>
