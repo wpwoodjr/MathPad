@@ -17,8 +17,8 @@ const VarType = {
  * Returns declaration info or null if not a variable declaration
  */
 function parseVariableLine(line) {
-    // Remove comments (text in double quotes)
-    const cleanLine = line.replace(/"[^"]*"/g, '');
+    // Remove comments (text in double quotes) and trim leading/trailing whitespace
+    const cleanLine = line.replace(/"[^"]*"/g, '').trim();
 
     // Variable declaration patterns (order matters - check more specific patterns first)
     const patterns = [
