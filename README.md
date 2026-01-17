@@ -35,19 +35,39 @@ Or open `docs/index.html` locally in a browser.
 
 - `Ctrl+Enter` - Solve current record
 
-## Original Desktop Utilities
+## Example: Mortgage Calculator
 
-The `mathpad 1.5/` directory contains the original C source code for import/export utilities:
+Here's a walkthrough using the built-in TVM (Time Value of Money) example:
 
-```bash
-# Compile on Linux/Unix
-gcc -o mpexport "mathpad 1.5/MpExport.c"
-gcc -o mpimport "mathpad 1.5/MpImport.c"
-
-# Usage
-./mpexport <DbFileName> <TextFileName>
-./mpimport <OldDbFileName> <TextFileName> [NewDbFileName]
 ```
+"Monthly interest rate from annual"
+mint = yint / 100 / 12
+
+"Payment calculation"
+pmt = pv * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt->                   "monthly payment (output)"
+pv: 100000              "loan amount"
+yint: 7.5               "annual interest rate %"
+n: 360                  "number of payments (30 years)"
+mint->>                 "monthly interest rate (full precision)"
+```
+
+**How it works:**
+
+1. **Equations** define relationships between variables (`mint = yint / 100 / 12`)
+2. **Input variables** have values you provide (`pv: 100000`)
+3. **Output variables** (`pmt->`) are cleared and recalculated when you click Solve
+4. **Full precision outputs** (`mint->>`) show all decimal places
+
+**Try it:**
+
+1. Click **Solve** — MathPad calculates `pmt-> 699.21` (monthly payment)
+2. Change `pv: 250000` and click **Solve** — now `pmt-> 1748.04`
+3. Clear `pv:` and set `pmt: 2000` — MathPad solves backwards to find `pv-> 285770.56`
+
+MathPad automatically detects which variable is unknown and solves for it using root-finding
 
 ## License
 
