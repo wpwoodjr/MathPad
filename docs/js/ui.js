@@ -781,17 +781,20 @@ function solveRecord(text, context, record) {
                 // Handle definition equations (var = expr)
                 const def = isDefinitionEquation(eq.text);
                 if (def) {
-                    // Check if variable already has a value from declaration - don't overwrite
                     const varInfo = variables.get(def.variable);
-                    if (varInfo && varInfo.value !== null) {
-                        // Variable already has a user-specified value, just update context
-                        context.setVariable(def.variable, varInfo.value);
-                        continue;
-                    }
-
-                    // Check if right side can be evaluated (no unknowns)
                     const rhsVars = findVariablesInAST(def.expressionAST);
                     const rhsUnknowns = [...rhsVars].filter(v => !context.hasVariable(v));
+
+                    // If variable already has a value and RHS has unknowns,
+                    // let it go through normal solving (equation can solve for RHS unknowns)
+                    if (varInfo && varInfo.value !== null) {
+                        context.setVariable(def.variable, varInfo.value);
+                        // Only skip if RHS has no unknowns (nothing to solve)
+                        if (rhsUnknowns.length === 0) {
+                            continue;
+                        }
+                        // Otherwise fall through to normal equation solving
+                    }
 
                     if (rhsUnknowns.length === 0) {
                         // RHS is fully known - evaluate and set the variable
@@ -827,10 +830,12 @@ function solveRecord(text, context, record) {
                             // Evaluation failed, skip
                         }
                         continue;
-                    } else if (substitutions.has(def.variable)) {
-                        // Has unknowns and is in substitution map - skip for now
+                    } else if (substitutions.has(def.variable) && !(varInfo && varInfo.value !== null)) {
+                        // Has unknowns, is in substitution map, and variable doesn't have a declared value
+                        // Skip for now - will be solved via substitution
                         continue;
                     }
+                    // If variable has a declared value and RHS has unknowns, fall through to normal solving
                 }
 
                 // Also skip equations that were used to derive algebraic substitutions
