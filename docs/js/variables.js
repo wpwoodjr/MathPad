@@ -166,11 +166,19 @@ function parseAllVariables(text) {
                 }
             }
 
-            variables.set(decl.name, {
-                declaration: decl,
-                lineIndex: i,
-                value: value
-            });
+            // Don't overwrite a variable that has a value with one that doesn't
+            const existing = variables.get(decl.name);
+            if (existing && existing.value !== null && value === null) {
+                // Keep existing value but update declaration info for output variable
+                existing.declaration = decl;
+                existing.lineIndex = i;
+            } else {
+                variables.set(decl.name, {
+                    declaration: decl,
+                    lineIndex: i,
+                    value: value
+                });
+            }
         }
     }
 

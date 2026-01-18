@@ -880,6 +880,25 @@ function solveRecord(text, context, record) {
         }
     }
 
+    // Fill in output variables that have known values but weren't written
+    const finalVariables = parseAllVariables(text);
+    for (const [name, info] of finalVariables) {
+        if (info.declaration.type === VarType.OUTPUT && !info.declaration.valueText) {
+            // Output variable without a value - check if we know the value
+            if (context.hasVariable(name)) {
+                const value = context.getVariable(name);
+                const isFullPrecision = info.declaration.fullPrecision;
+                const format = {
+                    places: isFullPrecision ? 15 : (record.places || 2),
+                    stripZeros: record.stripZeros !== false,
+                    groupDigits: record.groupDigits || false,
+                    format: record.format || 'float'
+                };
+                text = setVariableValue(text, name, value, format);
+            }
+        }
+    }
+
     return { text, solved, errors };
 }
 
