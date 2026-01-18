@@ -885,7 +885,6 @@ function solveRecord(text, context, record) {
     }
 
     // Check for inconsistent equations (all variables known but equation doesn't balance)
-    // Skip definition equations (var = expr) - they're definitions, not assertions
     const finalEquations = findEquations(text);
     for (const eq of finalEquations) {
         try {
@@ -894,9 +893,6 @@ function solveRecord(text, context, record) {
 
             const leftText = eqMatch[1].trim();
             const rightText = eqMatch[2].trim();
-
-            // Skip definition equations (single variable on left side)
-            if (/^\w+$/.test(leftText)) continue;
 
             const leftAST = parseExpression(leftText);
             const rightAST = parseExpression(rightText);
