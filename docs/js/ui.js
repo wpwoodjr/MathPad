@@ -392,10 +392,23 @@ function duplicateCurrentRecord() {
     const record = findRecord(UI.data, UI.currentRecordId);
     if (!record) return;
 
+    const newTitle = record.title + ' (copy)';
+    let newText = record.text;
+
+    // Update the title comment in the text if present
+    const lines = newText.split('\n');
+    const firstLine = lines[0].trim();
+    const titleMatch = firstLine.match(/^"([^"]+)"$/);
+    if (titleMatch && titleMatch[1] === record.title) {
+        lines[0] = `"${newTitle}"`;
+        newText = lines.join('\n');
+    }
+
     const newRecord = {
         ...record,
         id: generateId(),
-        title: record.title + ' (copy)'
+        title: newTitle,
+        text: newText
     };
 
     UI.data.records.push(newRecord);
@@ -727,6 +740,31 @@ function solveRecord(text, context, record) {
                         // Second pass will catch truly failed inline evals
                     }
                     continue; // Re-find equations on next iteration
+                }
+
+                // Check for incomplete equation (expr =) - evaluate and insert result
+                const incompleteMatch = eq.text.match(/^(.+?)\s*=\s*$/);
+                if (incompleteMatch) {
+                    try {
+                        let ast = parseExpression(incompleteMatch[1].trim());
+                        ast = substituteInAST(ast, substitutions);
+                        const value = evaluate(ast, context);
+                        const format = {
+                            places: record.places || 2,
+                            stripZeros: record.stripZeros !== false,
+                            groupDigits: record.groupDigits || false,
+                            format: record.format || 'float'
+                        };
+                        const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
+                        // Find and replace in text: "expr =" becomes "expr = result"
+                        const eqPattern = eq.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        text = text.replace(new RegExp(eqPattern), eq.text + ' ' + formatted);
+                        changed = true;
+                        solved++;
+                    } catch (e) {
+                        // Can't evaluate - may have unknown variables, leave untouched
+                    }
+                    continue;
                 }
 
                 // Skip definition equations that are in the substitution map
