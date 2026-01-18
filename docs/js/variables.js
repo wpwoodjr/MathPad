@@ -248,23 +248,25 @@ function setVariableValue(text, varName, value, format = {}) {
 
 /**
  * Clear variable values based on type
+ * Clears ALL matching declarations, not just one per variable
  * clearType: 'input' clears input variables (<-)
  *            'output' clears output variables (-> and ->>)
  *            'all' clears all variables
  */
 function clearVariables(text, clearType = 'input') {
     const lines = text.split('\n');
-    const variables = parseAllVariables(text);
 
-    for (const [name, varInfo] of variables) {
-        const decl = varInfo.declaration;
+    for (let i = 0; i < lines.length; i++) {
+        const decl = parseVariableLine(lines[i]);
+        if (!decl) continue;
+
         const shouldClear =
             clearType === 'all' ||
             (clearType === 'input' && decl.type === VarType.INPUT) ||
             (clearType === 'output' && decl.type === VarType.OUTPUT);
 
         if (shouldClear && decl.valueText) {
-            const line = lines[varInfo.lineIndex];
+            const line = lines[i];
             const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
 
             // Find the marker and clear everything after it (preserving comments)
@@ -275,7 +277,7 @@ function clearVariables(text, clearType = 'input') {
                     markerIndex = bracketMatch.index + bracketMatch[0].length;
                 }
             } else {
-                const markerMatch = cleanLine.match(new RegExp(`${name}\\s*(${escapeRegex(decl.marker)})`));
+                const markerMatch = cleanLine.match(new RegExp(`${decl.name}\\s*(${escapeRegex(decl.marker)})`));
                 if (markerMatch) {
                     markerIndex = markerMatch.index + markerMatch[0].length;
                 }
@@ -287,7 +289,7 @@ function clearVariables(text, clearType = 'input') {
                 const comment = commentMatch ? commentMatch[0] : '';
 
                 const beforeValue = line.substring(0, markerIndex);
-                lines[varInfo.lineIndex] = beforeValue + (comment ? ' ' + comment : '');
+                lines[i] = beforeValue + (comment ? ' ' + comment : '');
             }
         }
     }
