@@ -187,62 +187,63 @@ function parseAllVariables(text) {
 
 /**
  * Insert or update a variable value in text
+ * Fills ALL empty declarations of the variable
  * Returns the modified text
  */
 function setVariableValue(text, varName, value, format = {}) {
     const lines = text.split('\n');
-    const variables = parseAllVariables(text);
-
-    if (!variables.has(varName)) {
-        return text; // Variable not found
-    }
-
-    const varInfo = variables.get(varName);
-    const decl = varInfo.declaration;
-    const lineIndex = varInfo.lineIndex;
-    const line = lines[lineIndex];
+    let modified = false;
 
     // Format the value
     const places = format.places ?? 14;
     const stripZeros = format.stripZeros ?? true;
     const groupDigits = format.groupDigits ?? false;
     const numberFormat = format.format ?? 'float';
-    const formattedValue = formatNumber(value, places, stripZeros, numberFormat, decl.base, groupDigits);
 
-    // Find the position to insert the value (after the marker)
-    const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+    // Process each line looking for declarations of this variable
+    for (let i = 0; i < lines.length; i++) {
+        const decl = parseVariableLine(lines[i]);
+        if (!decl || decl.name !== varName) continue;
 
-    // Find where the value should go (after the declaration marker)
-    let markerIndex;
-    if (decl.limits) {
-        // Find the closing bracket of limits and then the colon
-        const bracketMatch = cleanLine.match(/\w+\s*\[[^\]]+\]\s*:/);
-        if (bracketMatch) {
-            markerIndex = bracketMatch.index + bracketMatch[0].length;
+        // Skip if already has a value
+        if (decl.valueText) continue;
+
+        const line = lines[i];
+        const formattedValue = formatNumber(value, places, stripZeros, numberFormat, decl.base, groupDigits);
+
+        // Find the position to insert the value (after the marker)
+        const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+
+        // Find where the value should go (after the declaration marker)
+        let markerIndex;
+        if (decl.limits) {
+            // Find the closing bracket of limits and then the colon
+            const bracketMatch = cleanLine.match(/\w+\s*\[[^\]]+\]\s*:/);
+            if (bracketMatch) {
+                markerIndex = bracketMatch.index + bracketMatch[0].length;
+            }
+        } else {
+            // Find the marker
+            const markerMatch = cleanLine.match(new RegExp(`${varName}\\s*(${escapeRegex(decl.marker)})`));
+            if (markerMatch) {
+                markerIndex = markerMatch.index + markerMatch[0].length;
+            }
         }
-    } else {
-        // Find the marker
-        const markerMatch = cleanLine.match(new RegExp(`${varName}\\s*(${escapeRegex(decl.marker)})`));
-        if (markerMatch) {
-            markerIndex = markerMatch.index + markerMatch[0].length;
-        }
+
+        if (markerIndex === undefined) continue;
+
+        // Preserve any trailing comment
+        const afterMarker = line.substring(markerIndex);
+        const commentMatch = afterMarker.match(/"[^"]*"$/);
+        const comment = commentMatch ? commentMatch[0] : '';
+
+        // Build the new line
+        const beforeValue = line.substring(0, markerIndex);
+        lines[i] = beforeValue + ' ' + formattedValue + (comment ? ' ' + comment : '');
+        modified = true;
     }
 
-    if (markerIndex === undefined) {
-        return text;
-    }
-
-    // Preserve any trailing comment
-    const afterMarker = line.substring(markerIndex);
-    const commentMatch = afterMarker.match(/"[^"]*"$/);
-    const comment = commentMatch ? commentMatch[0] : '';
-
-    // Build the new line
-    const beforeValue = line.substring(0, markerIndex);
-    const newLine = beforeValue + ' ' + formattedValue + (comment ? ' ' + comment : '');
-
-    lines[lineIndex] = newLine;
-    return lines.join('\n');
+    return modified ? lines.join('\n') : text;
 }
 
 /**

@@ -583,6 +583,17 @@ function handleSolve() {
             }
         }
 
+        // Also load functions defined in the current record (overrides Functions record)
+        const localFunctions = parseFunctionsRecord(text);
+        for (const [name, { params, bodyText }] of localFunctions) {
+            try {
+                const bodyAST = parseExpression(bodyText);
+                context.setUserFunction(name, params, bodyAST);
+            } catch (e) {
+                console.warn(`Error parsing local function ${name}:`, e);
+            }
+        }
+
         // Solve the record
         const result = solveRecord(text, context, record);
         text = result.text;
@@ -767,14 +778,57 @@ function solveRecord(text, context, record) {
                     continue;
                 }
 
-                // Skip definition equations that are in the substitution map
-                // BUT only if the right side has unknowns (otherwise it can be solved directly)
+                // Handle definition equations (var = expr)
                 const def = isDefinitionEquation(eq.text);
-                if (def && substitutions.has(def.variable)) {
-                    // Check if right side has unknowns
+                if (def) {
+                    // Check if variable already has a value from declaration - don't overwrite
+                    const varInfo = variables.get(def.variable);
+                    if (varInfo && varInfo.value !== null) {
+                        // Variable already has a user-specified value, just update context
+                        context.setVariable(def.variable, varInfo.value);
+                        continue;
+                    }
+
+                    // Check if right side can be evaluated (no unknowns)
                     const rhsVars = findVariablesInAST(def.expressionAST);
                     const rhsUnknowns = [...rhsVars].filter(v => !context.hasVariable(v));
-                    if (rhsUnknowns.length > 0) {
+
+                    if (rhsUnknowns.length === 0) {
+                        // RHS is fully known - evaluate and set the variable
+                        try {
+                            let ast = def.expressionAST;
+                            ast = substituteInAST(ast, substitutions);
+                            const value = evaluate(ast, context);
+
+                            // Update context
+                            context.setVariable(def.variable, value);
+
+                            // If variable has a declaration without value, update it in text
+                            if (varInfo && !varInfo.declaration.valueText) {
+                                const isFullPrecision = varInfo.declaration?.fullPrecision;
+                                const format = {
+                                    places: isFullPrecision ? 15 : (record.places || 2),
+                                    stripZeros: record.stripZeros !== false,
+                                    groupDigits: record.groupDigits || false,
+                                    format: record.format || 'float'
+                                };
+                                text = setVariableValue(text, def.variable, value, format);
+
+                                // Re-parse variables after update
+                                const newVars = parseAllVariables(text);
+                                variables.clear();
+                                for (const [n, i] of newVars) {
+                                    variables.set(n, i);
+                                }
+                                solved++;
+                                changed = true;
+                            }
+                        } catch (e) {
+                            // Evaluation failed, skip
+                        }
+                        continue;
+                    } else if (substitutions.has(def.variable)) {
+                        // Has unknowns and is in substitution map - skip for now
                         continue;
                     }
                 }
@@ -826,14 +880,21 @@ function solveRecord(text, context, record) {
     }
 
     // Check for inconsistent equations (all variables known but equation doesn't balance)
+    // Skip definition equations (var = expr) - they're definitions, not assertions
     const finalEquations = findEquations(text);
     for (const eq of finalEquations) {
         try {
             const eqMatch = eq.text.match(/^(.+)=(.+)$/);
             if (!eqMatch) continue;
 
-            const leftAST = parseExpression(eqMatch[1].trim());
-            const rightAST = parseExpression(eqMatch[2].trim());
+            const leftText = eqMatch[1].trim();
+            const rightText = eqMatch[2].trim();
+
+            // Skip definition equations (single variable on left side)
+            if (/^\w+$/.test(leftText)) continue;
+
+            const leftAST = parseExpression(leftText);
+            const rightAST = parseExpression(rightText);
 
             // Check if all variables are known
             const allVars = new Set([...findVariablesInAST(leftAST), ...findVariablesInAST(rightAST)]);
@@ -880,22 +941,20 @@ function solveRecord(text, context, record) {
         }
     }
 
-    // Fill in output variables that have known values but weren't written
+    // Fill in any empty variable declarations with known values
+    // setVariableValue handles skipping declarations that already have values
     const finalVariables = parseAllVariables(text);
     for (const [name, info] of finalVariables) {
-        if (info.declaration.type === VarType.OUTPUT && !info.declaration.valueText) {
-            // Output variable without a value - check if we know the value
-            if (context.hasVariable(name)) {
-                const value = context.getVariable(name);
-                const isFullPrecision = info.declaration.fullPrecision;
-                const format = {
-                    places: isFullPrecision ? 15 : (record.places || 2),
-                    stripZeros: record.stripZeros !== false,
-                    groupDigits: record.groupDigits || false,
-                    format: record.format || 'float'
-                };
-                text = setVariableValue(text, name, value, format);
-            }
+        if (context.hasVariable(name)) {
+            const value = context.getVariable(name);
+            const isFullPrecision = info.declaration.fullPrecision;
+            const format = {
+                places: isFullPrecision ? 15 : (record.places || 2),
+                stripZeros: record.stripZeros !== false,
+                groupDigits: record.groupDigits || false,
+                format: record.format || 'float'
+            };
+            text = setVariableValue(text, name, value, format);
         }
     }
 
