@@ -574,8 +574,8 @@ function handleSolve() {
         const result = solveRecord(text, context, record);
         text = result.text;
 
-        // Update editor with results
-        editorInfo.editor.setValue(text);
+        // Update editor with results (undoable so Ctrl+Z works)
+        editorInfo.editor.setValue(text, true);
         record.text = text;
         debouncedSave(UI.data);
 
@@ -608,7 +608,8 @@ function handleClearInput() {
     let text = editorInfo.editor.getValue();
     text = clearVariables(text, 'output');
 
-    editorInfo.editor.setValue(text);
+    // Use undoable so Ctrl+Z works
+    editorInfo.editor.setValue(text, true);
     record.text = text;
     debouncedSave(UI.data);
 

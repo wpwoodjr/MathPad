@@ -249,8 +249,15 @@ class SimpleEditor {
         return this.textarea.value;
     }
 
-    setValue(value) {
-        this.textarea.value = value;
+    setValue(value, undoable = false) {
+        if (undoable) {
+            // Use execCommand to make the change undoable with Ctrl+Z
+            this.textarea.focus();
+            this.textarea.select();
+            document.execCommand('insertText', false, value);
+        } else {
+            this.textarea.value = value;
+        }
         this.updateHighlighting();
         this.updateLineNumbers();
     }
