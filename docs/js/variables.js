@@ -153,10 +153,10 @@ function parseAllVariables(text) {
             // Try to parse the value
             let value = null;
             if (decl.valueText) {
-                // Check if value is a simple number
-                const numMatch = decl.valueText.match(/^-?[\d.]+(?:[eE][+-]?\d+)?$/);
+                // Check if value is a simple number (allow commas as digit grouping)
+                const numMatch = decl.valueText.match(/^-?[\d,]+\.?\d*(?:[eE][+-]?\d+)?$/);
                 if (numMatch) {
-                    value = parseFloat(decl.valueText);
+                    value = parseFloat(decl.valueText.replace(/,/g, ''));
                 } else if (decl.valueText.match(/^0x[0-9a-fA-F]+$/)) {
                     value = parseInt(decl.valueText, 16);
                 } else if (decl.valueText.match(/^0b[01]+$/)) {
@@ -254,7 +254,7 @@ function clearVariables(text, clearType = 'input') {
             (clearType === 'input' && decl.type === VarType.INPUT) ||
             (clearType === 'output' && decl.type === VarType.OUTPUT);
 
-        if (shouldClear && varInfo.value !== null) {
+        if (shouldClear && decl.valueText) {
             const line = lines[varInfo.lineIndex];
             const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
 

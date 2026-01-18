@@ -370,6 +370,10 @@ function renameRecord(recordId) {
  * Update record title from content (first comment)
  */
 function updateRecordTitleFromContent(record) {
+    // Don't auto-update title for special records
+    if (record.title === 'Constants' || record.title === 'Functions') {
+        return;
+    }
     const firstLine = record.text.split('\n')[0].trim();
     const match = firstLine.match(/^"([^"]+)"$/);
     if (match && match[1] !== record.title) {
@@ -619,7 +623,30 @@ function solveRecord(text, context, record) {
     let solved = 0;
     let maxIterations = 50; // Prevent infinite loops
 
-    // First pass: extract all variable values
+    // First pass: process inline evaluations that don't need variables
+    // This allows y: \3+4\ to become y: 7 before variable parsing
+    let inlineEvals = findInlineEvaluations(text);
+    for (let i = inlineEvals.length - 1; i >= 0; i--) {
+        const evalInfo = inlineEvals[i];
+        try {
+            const ast = parseExpression(evalInfo.expression);
+            const value = evaluate(ast, context);
+            const format = {
+                places: record.places || 2,
+                stripZeros: record.stripZeros !== false,
+                groupDigits: record.groupDigits || false,
+                format: record.format || 'float'
+            };
+            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
+            text = text.substring(0, evalInfo.start) +
+                   formatted +
+                   text.substring(evalInfo.end);
+        } catch (e) {
+            // Silently skip - will try again after equation solving
+        }
+    }
+
+    // Extract all variable values
     const variables = parseAllVariables(text);
     for (const [name, info] of variables) {
         if (info.value !== null) {
@@ -671,6 +698,36 @@ function solveRecord(text, context, record) {
 
         for (const eq of equations) {
             try {
+                // Check for unevaluated inline expressions in equation
+                const inlineMatch = eq.text.match(/\\([^\\]+)\\/);
+                if (inlineMatch) {
+                    // Try to evaluate it
+                    try {
+                        let ast = parseExpression(inlineMatch[1]);
+                        // Apply substitutions (for variables defined in equations like x = 7)
+                        ast = substituteInAST(ast, substitutions);
+                        const value = evaluate(ast, context);
+                        const format = {
+                            places: record.places || 2,
+                            stripZeros: record.stripZeros !== false,
+                            groupDigits: record.groupDigits || false,
+                            format: record.format || 'float'
+                        };
+                        const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
+                        // Replace in text and mark as changed
+                        const fullMatch = inlineMatch[0];
+                        const matchIndex = text.indexOf(fullMatch);
+                        if (matchIndex !== -1) {
+                            text = text.substring(0, matchIndex) + formatted + text.substring(matchIndex + fullMatch.length);
+                            changed = true;
+                        }
+                    } catch (e) {
+                        // Don't report error - may succeed on later iteration
+                        // Second pass will catch truly failed inline evals
+                    }
+                    continue; // Re-find equations on next iteration
+                }
+
                 // Skip definition equations that are in the substitution map
                 // BUT only if the right side has unknowns (otherwise it can be solved directly)
                 const def = isDefinitionEquation(eq.text);
@@ -759,12 +816,15 @@ function solveRecord(text, context, record) {
         }
     }
 
-    // Handle inline evaluations: \ expression \
-    const inlineEvals = findInlineEvaluations(text);
-    for (let i = inlineEvals.length - 1; i >= 0; i--) { // Reverse to preserve positions
-        const evalInfo = inlineEvals[i];
+    // Second pass: process remaining inline evaluations (those needing equation-derived variables)
+    // Rebuild substitutions from final equations
+    const finalSubstitutions = buildSubstitutionMap(finalEquations, context);
+    const remainingEvals = findInlineEvaluations(text);
+    for (let i = remainingEvals.length - 1; i >= 0; i--) {
+        const evalInfo = remainingEvals[i];
         try {
-            const ast = parseExpression(evalInfo.expression);
+            let ast = parseExpression(evalInfo.expression);
+            ast = substituteInAST(ast, finalSubstitutions);
             const value = evaluate(ast, context);
             const format = {
                 places: record.places || 2,
@@ -774,7 +834,7 @@ function solveRecord(text, context, record) {
             };
             const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
             text = text.substring(0, evalInfo.start) +
-                   '\\' + formatted + '\\' +
+                   formatted +
                    text.substring(evalInfo.end);
         } catch (e) {
             errors.push(`Inline eval error: ${e.message}`);
