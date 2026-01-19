@@ -21,10 +21,11 @@ function parseVariableLine(line) {
     const cleanLine = line.replace(/"[^"]*"/g, '').trim();
 
     // Variable declaration patterns (order matters - check more specific patterns first)
+    // Note: \w+[$%]? allows optional $ or % suffix for money/percentage variables
     const patterns = [
         // With search limits: var[low:high]: value
         {
-            regex: /^(\w+)\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\]\s*:\s*(.*)$/,
+            regex: /^(\w+[$%]?)\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\]\s*:\s*(.*)$/,
             handler: (m) => ({
                 name: m[1],
                 type: VarType.STANDARD,
@@ -38,7 +39,7 @@ function parseVariableLine(line) {
         },
         // Input variable: var<-
         {
-            regex: /^(\w+)\s*<-\s*(.*)$/,
+            regex: /^(\w+[$%]?)\s*<-\s*(.*)$/,
             handler: (m) => ({
                 name: m[1],
                 type: VarType.INPUT,
@@ -51,7 +52,7 @@ function parseVariableLine(line) {
         },
         // Full precision output: var->>
         {
-            regex: /^(\w+)\s*->>\s*(.*)$/,
+            regex: /^(\w+[$%]?)\s*->>\s*(.*)$/,
             handler: (m) => ({
                 name: m[1],
                 type: VarType.OUTPUT,
@@ -64,7 +65,7 @@ function parseVariableLine(line) {
         },
         // Output variable: var->
         {
-            regex: /^(\w+)\s*->\s*(.*)$/,
+            regex: /^(\w+[$%]?)\s*->\s*(.*)$/,
             handler: (m) => ({
                 name: m[1],
                 type: VarType.OUTPUT,
@@ -77,7 +78,7 @@ function parseVariableLine(line) {
         },
         // Full precision: var::
         {
-            regex: /^(\w+)\s*::\s*(.*)$/,
+            regex: /^(\w+[$%]?)\s*::\s*(.*)$/,
             handler: (m) => ({
                 name: m[1],
                 type: VarType.STANDARD,
@@ -90,7 +91,7 @@ function parseVariableLine(line) {
         },
         // Confirmation: var?:
         {
-            regex: /^(\w+)\s*\?\s*:\s*(.*)$/,
+            regex: /^(\w+[$%]?)\s*\?\s*:\s*(.*)$/,
             handler: (m) => ({
                 name: m[1],
                 type: VarType.STANDARD,
@@ -103,7 +104,7 @@ function parseVariableLine(line) {
         },
         // Integer base: var#base:
         {
-            regex: /^(\w+)\s*#\s*(\d+)\s*:\s*(.*)$/,
+            regex: /^(\w+[$%]?)\s*#\s*(\d+)\s*:\s*(.*)$/,
             handler: (m) => ({
                 name: m[1],
                 type: VarType.STANDARD,
@@ -116,7 +117,7 @@ function parseVariableLine(line) {
         },
         // Standard: var:
         {
-            regex: /^(\w+)\s*:\s*(.*)$/,
+            regex: /^(\w+[$%]?)\s*:\s*(.*)$/,
             handler: (m) => ({
                 name: m[1],
                 type: VarType.STANDARD,
@@ -153,16 +154,30 @@ function parseAllVariables(text) {
             // Try to parse the value
             let value = null;
             if (decl.valueText) {
+                let textToParse = decl.valueText;
+
+                // Handle money format: $1,234.56 or -$1,234.56
+                const moneyMatch = textToParse.match(/^(-?)\$(.+)$/);
+                if (moneyMatch) {
+                    textToParse = moneyMatch[1] + moneyMatch[2];
+                }
+
+                // Handle percentage format: 7.5%
+                const percentMatch = textToParse.match(/^(.+)%$/);
+                if (percentMatch) {
+                    textToParse = percentMatch[1];
+                }
+
                 // Check if value is a simple number (allow commas as digit grouping)
-                const numMatch = decl.valueText.match(/^-?[\d,]+\.?\d*(?:[eE][+-]?\d+)?$/);
+                const numMatch = textToParse.match(/^-?[\d,]+\.?\d*(?:[eE][+-]?\d+)?$/);
                 if (numMatch) {
-                    value = parseFloat(decl.valueText.replace(/,/g, ''));
-                } else if (decl.valueText.match(/^0x[0-9a-fA-F]+$/)) {
-                    value = parseInt(decl.valueText, 16);
-                } else if (decl.valueText.match(/^0b[01]+$/)) {
-                    value = parseInt(decl.valueText.slice(2), 2);
-                } else if (decl.valueText.match(/^0o[0-7]+$/)) {
-                    value = parseInt(decl.valueText.slice(2), 8);
+                    value = parseFloat(textToParse.replace(/,/g, ''));
+                } else if (textToParse.match(/^0x[0-9a-fA-F]+$/)) {
+                    value = parseInt(textToParse, 16);
+                } else if (textToParse.match(/^0b[01]+$/)) {
+                    value = parseInt(textToParse.slice(2), 2);
+                } else if (textToParse.match(/^0o[0-7]+$/)) {
+                    value = parseInt(textToParse.slice(2), 8);
                 }
             }
 
@@ -209,7 +224,7 @@ function setVariableValue(text, varName, value, format = {}) {
         if (decl.valueText) continue;
 
         const line = lines[i];
-        const formattedValue = formatNumber(value, places, stripZeros, numberFormat, decl.base, groupDigits);
+        const formattedValue = formatNumber(value, places, stripZeros, numberFormat, decl.base, groupDigits, varName);
 
         // Find the position to insert the value (after the marker)
         const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
@@ -218,13 +233,13 @@ function setVariableValue(text, varName, value, format = {}) {
         let markerIndex;
         if (decl.limits) {
             // Find the closing bracket of limits and then the colon
-            const bracketMatch = cleanLine.match(/\w+\s*\[[^\]]+\]\s*:/);
+            const bracketMatch = cleanLine.match(/\w+[$%]?\s*\[[^\]]+\]\s*:/);
             if (bracketMatch) {
                 markerIndex = bracketMatch.index + bracketMatch[0].length;
             }
         } else {
-            // Find the marker
-            const markerMatch = cleanLine.match(new RegExp(`${varName}\\s*(${escapeRegex(decl.marker)})`));
+            // Find the marker (escape varName since it may contain $ or %)
+            const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}\\s*(${escapeRegex(decl.marker)})`));
             if (markerMatch) {
                 markerIndex = markerMatch.index + markerMatch[0].length;
             }
@@ -272,12 +287,13 @@ function clearVariables(text, clearType = 'input') {
             // Find the marker and clear everything after it (preserving comments)
             let markerIndex;
             if (decl.limits) {
-                const bracketMatch = cleanLine.match(/\w+\s*\[[^\]]+\]\s*:/);
+                const bracketMatch = cleanLine.match(/\w+[$%]?\s*\[[^\]]+\]\s*:/);
                 if (bracketMatch) {
                     markerIndex = bracketMatch.index + bracketMatch[0].length;
                 }
             } else {
-                const markerMatch = cleanLine.match(new RegExp(`${decl.name}\\s*(${escapeRegex(decl.marker)})`));
+                // Escape decl.name since it may contain $ or %
+                const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(decl.name)}\\s*(${escapeRegex(decl.marker)})`));
                 if (markerMatch) {
                     markerIndex = markerMatch.index + markerMatch[0].length;
                 }

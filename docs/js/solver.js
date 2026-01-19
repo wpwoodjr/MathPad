@@ -402,8 +402,8 @@ function isDefinitionEquation(eqText) {
     const leftText = eqMatch[1].trim();
     const rightText = eqMatch[2].trim();
 
-    // Check if left side is a simple variable name
-    if (!/^\w+$/.test(leftText)) return null;
+    // Check if left side is a simple variable name (may have $ or % suffix)
+    if (!/^\w+[$%]?$/.test(leftText)) return null;
 
     try {
         const rightAST = parseExpression(rightText);
@@ -430,7 +430,7 @@ function deriveSubstitution(eqText, context) {
     const rightText = eqMatch[2].trim();
 
     // First check if it's already a simple definition (but only if variable is unknown)
-    if (/^\w+$/.test(leftText) && !context.hasVariable(leftText)) {
+    if (/^\w+[$%]?$/.test(leftText) && !context.hasVariable(leftText)) {
         try {
             const rightAST = parseExpression(rightText);
             return { variable: leftText, expressionAST: rightAST };

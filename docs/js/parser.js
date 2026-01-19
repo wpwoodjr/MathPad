@@ -174,6 +174,11 @@ class Tokenizer {
             value += this.advance();
         }
 
+        // Allow $ or % suffix for money/percentage variable names
+        if (this.peek() === '$' || this.peek() === '%') {
+            value += this.advance();
+        }
+
         return this.makeToken(TokenType.IDENTIFIER, value, startLine, startCol);
     }
 

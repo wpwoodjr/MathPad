@@ -443,11 +443,31 @@ function evaluate(node, context) {
 
 /**
  * Format a number for display
+ * If varName ends with '$', format as money (up to 2 decimals, comma grouping, $ prefix)
+ * If varName ends with '%', format as percentage (up to 2 decimals, % suffix)
  */
-function formatNumber(value, places = 14, stripZeros = true, format = 'float', base = 10, groupDigits = false) {
+function formatNumber(value, places = 14, stripZeros = true, format = 'float', base = 10, groupDigits = false, varName = null) {
     if (!isFinite(value)) {
         if (isNaN(value)) return 'NaN';
         return value > 0 ? 'Infinity' : '-Infinity';
+    }
+
+    // Check for special variable name suffixes
+    if (varName) {
+        if (varName.endsWith('$')) {
+            // Money format: $1,234.56 with exactly 2 decimal places
+            const absValue = Math.abs(value);
+            const formatted = absValue.toFixed(2);
+            const parts = formatted.split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            const result = parts.join('.');
+            return value < 0 ? '-$' + result : '$' + result;
+        }
+        if (varName.endsWith('%')) {
+            // Percentage format: 12.34% with up to 2 decimal places
+            const formatted = value.toFixed(2).replace(/\.?0+$/, '');
+            return formatted + '%';
+        }
     }
 
     // Integer base output
