@@ -216,8 +216,8 @@ function setVariableValue(text, varName, value, format = {}) {
     const lines = text.split('\n');
     let modified = false;
 
-    // Format the value
-    const places = format.places ?? 14;
+    // Format defaults
+    const regularPlaces = format.places ?? 2;
     const stripZeros = format.stripZeros ?? true;
     const groupDigits = format.groupDigits ?? false;
     const numberFormat = format.format ?? 'float';
@@ -231,7 +231,10 @@ function setVariableValue(text, varName, value, format = {}) {
         if (decl.valueText) continue;
 
         const line = lines[i];
-        const formattedValue = formatNumber(value, places, stripZeros, numberFormat, decl.base, groupDigits, varName);
+        // Use full precision (15 places) for ->> and :: declarations, otherwise use regularPlaces
+        // Don't apply $/%  formatting for full precision - show raw value
+        const places = decl.fullPrecision ? 15 : regularPlaces;
+        const formattedValue = formatNumber(value, places, stripZeros, numberFormat, decl.base, groupDigits, decl.fullPrecision ? null : varName);
 
         // Find the position to insert the value (after the marker)
         const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));

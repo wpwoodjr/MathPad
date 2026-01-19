@@ -808,9 +808,8 @@ function solveRecord(text, context, record) {
 
                             // If variable has a declaration without value, update it in text
                             if (varInfo && !varInfo.declaration.valueText) {
-                                const isFullPrecision = varInfo.declaration?.fullPrecision;
                                 const format = {
-                                    places: isFullPrecision ? 15 : (record.places || 2),
+                                    places: record.places || 2,
                                     stripZeros: record.stripZeros !== false,
                                     groupDigits: record.groupDigits || false,
                                     format: record.format || 'float'
@@ -854,12 +853,8 @@ function solveRecord(text, context, record) {
 
                 if (result.solved) {
                     // Update the variable value in text
-                    // Check if this variable uses full precision (->> or ::)
-                    const varInfo = variables.get(result.variable);
-                    const isFullPrecision = varInfo?.declaration?.fullPrecision;
-
                     const format = {
-                        places: isFullPrecision ? 15 : (record.places || 2),
+                        places: record.places || 2,
                         stripZeros: record.stripZeros !== false,
                         groupDigits: record.groupDigits || false,
                         format: record.format || 'float'
@@ -906,7 +901,13 @@ function solveRecord(text, context, record) {
                 const leftVal = evaluate(leftAST, context);
                 const rightVal = evaluate(rightAST, context);
                 const diff = Math.abs(leftVal - rightVal);
-                const tolerance = Math.max(Math.abs(leftVal), Math.abs(rightVal)) * 1e-10 + 1e-10;
+
+                // Use display precision for tolerance: if any variable ends with $, use 2 decimal places
+                // (money always displays with 2 decimals), otherwise use record.places
+                const hasMoney = [...allVars].some(v => v.endsWith('$'));
+                const displayPlaces = hasMoney ? 2 : (record.places || 2);
+                const displayTolerance = 0.5 * Math.pow(10, -displayPlaces);
+                const tolerance = Math.max(displayTolerance, Math.max(Math.abs(leftVal), Math.abs(rightVal)) * 1e-10);
 
                 if (diff > tolerance) {
                     errors.push(`Equation doesn't balance: ${eq.text} (${leftVal.toFixed(4)} ≠ ${rightVal.toFixed(4)})`);
@@ -944,13 +945,13 @@ function solveRecord(text, context, record) {
 
     // Fill in any empty variable declarations with known values
     // setVariableValue handles skipping declarations that already have values
+    // and uses full precision for ->> and :: declarations
     const finalVariables = parseAllVariables(text);
     for (const [name, info] of finalVariables) {
         if (context.hasVariable(name)) {
             const value = context.getVariable(name);
-            const isFullPrecision = info.declaration.fullPrecision;
             const format = {
-                places: isFullPrecision ? 15 : (record.places || 2),
+                places: record.places || 2,
                 stripZeros: record.stripZeros !== false,
                 groupDigits: record.groupDigits || false,
                 format: record.format || 'float'
