@@ -163,7 +163,8 @@ function parseAllVariables(text) {
                 }
 
                 // Handle percentage format: 7.5% becomes 0.075 (divide by 100)
-                let isPercent = false;
+                // Also treat as percent if variable name ends with %
+                let isPercent = decl.name.endsWith('%');
                 const percentMatch = textToParse.match(/^(.+)%$/);
                 if (percentMatch) {
                     textToParse = percentMatch[1];

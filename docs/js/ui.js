@@ -630,6 +630,7 @@ function handleClearInput() {
     if (!editorInfo) return;
 
     let text = editorInfo.editor.getValue();
+    text = clearVariables(text, 'input');
     text = clearVariables(text, 'output');
 
     // Use undoable so Ctrl+Z works
@@ -637,7 +638,7 @@ function handleClearInput() {
     record.text = text;
     debouncedSave(UI.data);
 
-    setStatus('Output variables cleared');
+    setStatus('Input and output variables cleared');
 }
 
 /**
