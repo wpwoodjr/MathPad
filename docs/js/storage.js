@@ -17,17 +17,16 @@ function createDefaultData() {
                 title: 'Example: TVM',
                 text: `"Time Value of Money calculation"
 "Monthly interest rate from annual"
-mint = yint / 100 / 12
+mint = yint% / 12
 
 "Payment calculation"
-pmt = pv * mint / (1 - (1 + mint)**-n)
+pmt$ = pv$ * mint / (1 - (1 + mint)**-n)
 
 "Variables"
-pmt: "monthly payment"
-pv: 100000 "loan amount"
-yint: 7.5 "annual interest rate %"
-n: 360 "number of payments (30 years)"
-mint->> "monthly interest rate (full precision)"`,
+pmt$: "monthly payment"
+pv$: $100,000.00 "loan amount"
+yint%: 7.5% "annual interest rate"
+n: 360 "number of payments (30 years)"`,
                 category: 'Finance',
                 secret: false,
                 places: 2,

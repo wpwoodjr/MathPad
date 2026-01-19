@@ -162,10 +162,12 @@ function parseAllVariables(text) {
                     textToParse = moneyMatch[1] + moneyMatch[2];
                 }
 
-                // Handle percentage format: 7.5%
+                // Handle percentage format: 7.5% becomes 0.075 (divide by 100)
+                let isPercent = false;
                 const percentMatch = textToParse.match(/^(.+)%$/);
                 if (percentMatch) {
                     textToParse = percentMatch[1];
+                    isPercent = true;
                 }
 
                 // Check if value is a simple number (allow commas as digit grouping)
@@ -178,6 +180,11 @@ function parseAllVariables(text) {
                     value = parseInt(textToParse.slice(2), 2);
                 } else if (textToParse.match(/^0o[0-7]+$/)) {
                     value = parseInt(textToParse.slice(2), 8);
+                }
+
+                // Convert percentage display value to decimal (7.5% -> 0.075)
+                if (isPercent && value !== null) {
+                    value = value / 100;
                 }
             }
 

@@ -464,8 +464,9 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
             return value < 0 ? '-$' + result : '$' + result;
         }
         if (varName.endsWith('%')) {
-            // Percentage format: 12.34% with up to 2 decimal places
-            const formatted = value.toFixed(2).replace(/\.?0+$/, '');
+            // Percentage format: 0.075 displays as 7.5% (multiply by 100, up to 2 decimal places)
+            const percent = value * 100;
+            const formatted = percent.toFixed(2).replace(/\.?0+$/, '');
             return formatted + '%';
         }
     }
