@@ -175,27 +175,81 @@ function openRecord(recordId) {
  * Create an editor for a record
  */
 function createEditorForRecord(record) {
+    // Create split container
     const container = document.createElement('div');
-    container.className = 'editor-wrapper';
+    container.className = 'editor-split-container';
     container.id = `editor-${record.id}`;
     container.style.display = 'none';
 
+    // Create formulas panel (top)
+    const formulasPanel = document.createElement('div');
+    formulasPanel.className = 'formulas-panel';
+
+    // Create resize divider
+    const divider = document.createElement('div');
+    divider.className = 'panel-divider';
+
+    // Create variables panel (bottom)
+    const variablesPanel = document.createElement('div');
+    variablesPanel.className = 'variables-panel';
+    variablesPanel.innerHTML = '<div class="variables-header">Variables</div><div class="variables-table"></div>';
+
+    container.appendChild(formulasPanel);
+    container.appendChild(divider);
+    container.appendChild(variablesPanel);
     UI.editorContainer.appendChild(container);
 
-    const editor = createEditor(container, {
+    // Create SimpleEditor in formulas panel
+    const editor = createEditor(formulasPanel, {
         value: record.text
     });
 
-    // Save changes on edit
+    // Create VariablesPanel manager
+    const variablesManager = new VariablesPanel(
+        variablesPanel.querySelector('.variables-table'),
+        record,
+        editor
+    );
+
+    // Set up bidirectional sync
+    let syncFromVariables = false;
+
     editor.onChange((value) => {
         record.text = value;
         debouncedSave(UI.data);
 
         // Update title if first comment changed
         updateRecordTitleFromContent(record);
+
+        // Update variables panel (unless change originated from there)
+        if (!syncFromVariables) {
+            variablesManager.updateFromText(value);
+        }
+        syncFromVariables = false;
     });
 
-    UI.editors.set(record.id, { editor, container });
+    variablesManager.onValueChange((varName, newValue, newText) => {
+        syncFromVariables = true;
+        const cursorPos = editor.getCursorPosition();
+        const oldLength = editor.getValue().length;
+        editor.setValue(newText, true);
+        // Adjust cursor position based on text length change
+        const delta = newText.length - oldLength;
+        editor.setCursorPosition(Math.max(0, cursorPos + delta));
+    });
+
+    // Set up divider drag
+    setupPanelResizer(divider, formulasPanel, variablesPanel);
+
+    // Initial variables render
+    variablesManager.updateFromText(record.text);
+
+    // Restore saved panel height
+    if (UI.data.settings?.variablesPanelHeight) {
+        variablesPanel.style.height = UI.data.settings.variablesPanelHeight + 'px';
+    }
+
+    UI.editors.set(record.id, { editor, container, variablesManager });
 }
 
 /**
@@ -603,6 +657,11 @@ function handleSolve() {
         record.text = text;
         debouncedSave(UI.data);
 
+        // Update variables panel
+        if (editorInfo.variablesManager) {
+            editorInfo.variablesManager.updateFromText(text);
+        }
+
         if (result.errors.length > 0) {
             setStatus('Solved with errors: ' + result.errors[0], true);
         } else if (result.solved > 0) {
@@ -637,6 +696,11 @@ function handleClearInput() {
     editorInfo.editor.setValue(text, true);
     record.text = text;
     debouncedSave(UI.data);
+
+    // Update variables panel
+    if (editorInfo.variablesManager) {
+        editorInfo.variablesManager.updateFromText(text);
+    }
 
     setStatus('Input and output variables cleared');
 }
@@ -1107,6 +1171,66 @@ function escapeHtmlText(text) {
  */
 function escapeAttr(text) {
     return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/**
+ * Setup panel resizer for the divider
+ */
+function setupPanelResizer(divider, topPanel, bottomPanel) {
+    let startY, startHeight;
+
+    function onMouseDown(e) {
+        startY = e.clientY;
+        startHeight = bottomPanel.offsetHeight;
+        divider.classList.add('dragging');
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        e.preventDefault();
+    }
+
+    function onMouseMove(e) {
+        const delta = startY - e.clientY;
+        const newHeight = Math.max(80, Math.min(
+            bottomPanel.parentElement.offsetHeight * 0.6,
+            startHeight + delta
+        ));
+        bottomPanel.style.height = newHeight + 'px';
+    }
+
+    function onMouseUp() {
+        divider.classList.remove('dragging');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+
+        // Save preference
+        if (UI.data.settings) {
+            UI.data.settings.variablesPanelHeight = bottomPanel.offsetHeight;
+            debouncedSave(UI.data);
+        }
+    }
+
+    divider.addEventListener('mousedown', onMouseDown);
+
+    // Touch support for mobile
+    divider.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            onMouseDown({ clientY: touch.clientY, preventDefault: () => {} });
+        }
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        if (divider.classList.contains('dragging') && e.touches.length === 1) {
+            const touch = e.touches[0];
+            onMouseMove({ clientY: touch.clientY });
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        if (divider.classList.contains('dragging')) {
+            onMouseUp();
+        }
+    });
 }
 
 // Export functions to global scope for HTML onclick handlers
