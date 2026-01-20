@@ -16,15 +16,17 @@ function createDefaultData() {
                 id: generateId(),
                 title: 'Example: TVM',
                 text: `"Time Value of Money calculation"
+
 "Monthly interest rate from annual"
 mint = yint% / 12
 
 "Payment calculation"
-pmt$ = pv$ * mint / (1 - (1 + mint)**-n)
+pmt$ = -(pv$ + fv$ / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
 
-"Variables"
+"Variables (example: compute monthly payment for loan of $100,000 for 30 years at 7.5%)"
 pmt$: "monthly payment"
-pv$: $100,000.00 "loan amount"
+pv$: $100,000.00 "present value"
+fv$: $0.00 "future value"
 yint%: 7.5% "annual interest rate"
 n: 360 "number of payments (30 years)"`,
                 category: 'Finance',
