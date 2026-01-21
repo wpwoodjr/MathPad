@@ -434,7 +434,9 @@ button {
     bottom: 0;
     padding: 8px;
     overflow: auto;
-    white-space: pre;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
     pointer-events: none;
     color: transparent;
     font-family: var(--font-mono);
@@ -459,6 +461,9 @@ button {
     line-height: 1.5;
     caret-color: white;
     overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .editor-textarea::selection {

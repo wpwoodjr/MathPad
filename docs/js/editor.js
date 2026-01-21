@@ -394,12 +394,13 @@ class SimpleEditor {
  * Helper: escape HTML
  */
 function escapeHtml(text) {
+    // Note: Don't replace spaces with &nbsp; - with white-space: pre-wrap,
+    // regular spaces are preserved AND allow wrapping at the same points as textarea
     return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
-        .replace(/ /g, '&nbsp;')
         .replace(/\n/g, '<br>');
 }
 
