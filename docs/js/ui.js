@@ -775,6 +775,16 @@ function solveRecord(text, context, record) {
         }
     }
 
+    // Track variables with user-provided values (before any computation)
+    // Only count INPUT declarations (: syntax), not OUTPUT declarations (-> syntax)
+    // This distinguishes user input from computed values that get displayed/rounded
+    const userProvidedVars = new Set();
+    for (const [varName, varInfo] of variables) {
+        if (varInfo.value !== null && varInfo.declaration?.type !== 'output') {
+            userProvidedVars.add(varName);
+        }
+    }
+
     // Solve equations iteratively
     let changed = true;
     while (changed && maxIterations-- > 0) {
@@ -850,9 +860,10 @@ function solveRecord(text, context, record) {
                     const rhsVars = findVariablesInAST(def.expressionAST);
                     const rhsUnknowns = [...rhsVars].filter(v => !context.hasVariable(v));
 
-                    // If variable already has a value and RHS has unknowns,
+                    // If variable has a user-provided value and RHS has unknowns,
                     // let it go through normal solving (equation can solve for RHS unknowns)
-                    if (varInfo && varInfo.value !== null) {
+                    // Only use user-provided values, not computed values that got displayed/rounded
+                    if (varInfo && varInfo.value !== null && userProvidedVars.has(def.variable)) {
                         context.setVariable(def.variable, varInfo.value);
                         // Only skip if RHS has no unknowns (nothing to solve)
                         if (rhsUnknowns.length === 0) {
@@ -897,9 +908,12 @@ function solveRecord(text, context, record) {
                         }
                         continue;
                     }
-                    // If RHS has unknowns, skip for now - will be evaluated when unknowns are resolved
-                    // Don't try to solve definition equations numerically
-                    continue;
+                    // If RHS has unknowns and no user-provided value, skip for now
+                    // Will be evaluated when unknowns are resolved by other equations
+                    // But if user provided a value, fall through to solve for RHS unknowns
+                    if (!userProvidedVars.has(def.variable)) {
+                        continue;
+                    }
                 }
 
                 // Skip equations that were used to derive algebraic substitutions
