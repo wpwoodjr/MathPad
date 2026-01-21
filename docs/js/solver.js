@@ -451,18 +451,26 @@ function deriveSubstitution(eqText, context) {
             const rightOperand = leftAST.right;
 
             // Check if left operand is a single variable without a value
+            // Also ensure the other operand doesn't contain this variable (avoid circular refs)
             if (leftOperand.type === 'VARIABLE' && !context.hasVariable(leftOperand.name)) {
-                const exprAST = invertOperation(op, rightAST, rightOperand, true);
-                if (exprAST) {
-                    return { variable: leftOperand.name, expressionAST: exprAST };
+                const otherVars = findVariablesInAST(rightOperand);
+                if (!otherVars.has(leftOperand.name)) {
+                    const exprAST = invertOperation(op, rightAST, rightOperand, true);
+                    if (exprAST) {
+                        return { variable: leftOperand.name, expressionAST: exprAST };
+                    }
                 }
             }
 
             // Check if right operand is a single variable without a value
+            // Also ensure the other operand doesn't contain this variable (avoid circular refs)
             if (rightOperand.type === 'VARIABLE' && !context.hasVariable(rightOperand.name)) {
-                const exprAST = invertOperation(op, rightAST, leftOperand, false);
-                if (exprAST) {
-                    return { variable: rightOperand.name, expressionAST: exprAST };
+                const otherVars = findVariablesInAST(leftOperand);
+                if (!otherVars.has(rightOperand.name)) {
+                    const exprAST = invertOperation(op, rightAST, leftOperand, false);
+                    if (exprAST) {
+                        return { variable: rightOperand.name, expressionAST: exprAST };
+                    }
                 }
             }
         }
@@ -474,18 +482,26 @@ function deriveSubstitution(eqText, context) {
             const rightOperand = rightAST.right;
 
             // Check if left operand is a single variable without a value
+            // Also ensure the other operand doesn't contain this variable (avoid circular refs)
             if (leftOperand.type === 'VARIABLE' && !context.hasVariable(leftOperand.name)) {
-                const exprAST = invertOperation(op, leftAST, rightOperand, true);
-                if (exprAST) {
-                    return { variable: leftOperand.name, expressionAST: exprAST };
+                const otherVars = findVariablesInAST(rightOperand);
+                if (!otherVars.has(leftOperand.name)) {
+                    const exprAST = invertOperation(op, leftAST, rightOperand, true);
+                    if (exprAST) {
+                        return { variable: leftOperand.name, expressionAST: exprAST };
+                    }
                 }
             }
 
             // Check if right operand is a single variable without a value
+            // Also ensure the other operand doesn't contain this variable (avoid circular refs)
             if (rightOperand.type === 'VARIABLE' && !context.hasVariable(rightOperand.name)) {
-                const exprAST = invertOperation(op, leftAST, leftOperand, false);
-                if (exprAST) {
-                    return { variable: rightOperand.name, expressionAST: exprAST };
+                const otherVars = findVariablesInAST(leftOperand);
+                if (!otherVars.has(rightOperand.name)) {
+                    const exprAST = invertOperation(op, leftAST, leftOperand, false);
+                    if (exprAST) {
+                        return { variable: rightOperand.name, expressionAST: exprAST };
+                    }
                 }
             }
         }
@@ -575,7 +591,13 @@ function buildSubstitutionMap(equations, context) {
         // Try algebraic derivation
         const derived = deriveSubstitution(eq.text, context);
         if (derived && !context.hasVariable(derived.variable) && !substitutions.has(derived.variable)) {
-            substitutions.set(derived.variable, derived.expressionAST);
+            // Don't add if expression contains a variable already in substitution map
+            // This prevents circular substitution chains
+            const exprVars = findVariablesInAST(derived.expressionAST);
+            const hasSubstitutedVar = [...exprVars].some(v => substitutions.has(v));
+            if (!hasSubstitutedVar) {
+                substitutions.set(derived.variable, derived.expressionAST);
+            }
         }
     }
 

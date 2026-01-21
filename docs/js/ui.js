@@ -871,6 +871,9 @@ function solveRecord(text, context, record) {
                             // Update context
                             context.setVariable(def.variable, value);
 
+                            // Always iterate when we compute a new value
+                            changed = true;
+
                             // If variable has a declaration without value, update it in text
                             if (varInfo && !varInfo.declaration.valueText) {
                                 const format = {
@@ -888,29 +891,29 @@ function solveRecord(text, context, record) {
                                     variables.set(n, i);
                                 }
                                 solved++;
-                                changed = true;
                             }
                         } catch (e) {
                             // Evaluation failed, skip
                         }
                         continue;
-                    } else if (substitutions.has(def.variable) && !(varInfo && varInfo.value !== null)) {
-                        // Has unknowns, is in substitution map, and variable doesn't have a declared value
-                        // Skip for now - will be solved via substitution
-                        continue;
                     }
-                    // If variable has a declared value and RHS has unknowns, fall through to normal solving
+                    // If RHS has unknowns, skip for now - will be evaluated when unknowns are resolved
+                    // Don't try to solve definition equations numerically
+                    continue;
                 }
 
-                // Also skip equations that were used to derive algebraic substitutions
+                // Skip equations that were used to derive algebraic substitutions
                 // (e.g., height/width = 16/9 => derived height = width * 16/9)
-                const derived = deriveSubstitution(eq.text, context);
-                if (derived && substitutions.has(derived.variable)) {
-                    // Check if the derived expression has unknowns
-                    const derivedVars = findVariablesInAST(derived.expressionAST);
-                    const derivedUnknowns = [...derivedVars].filter(v => !context.hasVariable(v));
-                    if (derivedUnknowns.length > 0) {
-                        continue;
+                // But NOT simple definition equations - those should fall through to solving
+                if (!def) {
+                    const derived = deriveSubstitution(eq.text, context);
+                    if (derived && substitutions.has(derived.variable)) {
+                        // Check if the derived expression has unknowns
+                        const derivedVars = findVariablesInAST(derived.expressionAST);
+                        const derivedUnknowns = [...derivedVars].filter(v => !context.hasVariable(v));
+                        if (derivedUnknowns.length > 0) {
+                            continue;
+                        }
                     }
                 }
 
@@ -1119,13 +1122,18 @@ function solveEquationInContext(eqText, context, variables, substitutions = new 
     };
 
     // Solve
-    const value = solveEquation(f, limits);
+    try {
+        const value = solveEquation(f, limits);
 
-    return {
-        solved: true,
-        variable: unknown,
-        value: value
-    };
+        return {
+            solved: true,
+            variable: unknown,
+            value: value
+        };
+    } catch (e) {
+        // Solving failed (e.g., degenerate equation where both sides are identical)
+        return { solved: false };
+    }
 }
 
 /**
