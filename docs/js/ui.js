@@ -706,6 +706,37 @@ function handleClearInput() {
 }
 
 /**
+ * Get format settings for an inline evaluation expression
+ * Looks up variable's format property for $ (money) and % (percentage) formatting
+ */
+function getInlineEvalFormat(expression, record, variables = null) {
+    const trimmed = expression.trim();
+    let varName = null;
+
+    // If expression is a simple variable name, look up its format from the variables map
+    if (variables && /^[a-zA-Z_]\w*[$%]?$/.test(trimmed)) {
+        const varInfo = variables.get(trimmed);
+        if (varInfo && varInfo.declaration && varInfo.declaration.format) {
+            // Variable has a format property - use it
+            varName = trimmed;  // Pass varName so formatNumber applies special formatting
+        }
+    }
+
+    // Fallback: detect $ or % suffix in expression itself
+    if (!varName && (trimmed.endsWith('$') || trimmed.endsWith('%'))) {
+        varName = trimmed;
+    }
+
+    return {
+        places: record.places || 2,
+        stripZeros: record.stripZeros !== false,
+        groupDigits: record.groupDigits || false,
+        format: record.format || 'float',
+        varName: varName
+    };
+}
+
+/**
  * Solve a record's equations
  */
 function solveRecord(text, context, record) {
@@ -721,13 +752,8 @@ function solveRecord(text, context, record) {
         try {
             const ast = parseExpression(evalInfo.expression);
             const value = evaluate(ast, context);
-            const format = {
-                places: record.places || 2,
-                stripZeros: record.stripZeros !== false,
-                groupDigits: record.groupDigits || false,
-                format: record.format || 'float'
-            };
-            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
+            const format = getInlineEvalFormat(evalInfo.expression, record);
+            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits, format.varName);
             text = text.substring(0, evalInfo.start) +
                    formatted +
                    text.substring(evalInfo.end);
@@ -739,12 +765,14 @@ function solveRecord(text, context, record) {
     // Extract all variable values
     const variables = parseAllVariables(text);
     for (const [name, info] of variables) {
+        // Check both declaration.valueText and preserved info.valueText (for merged declarations)
+        const valueText = info.declaration?.valueText || info.valueText;
         if (info.value !== null) {
             context.setVariable(name, info.value);
-        } else if (info.declaration?.valueText) {
-            // Try to evaluate expressions like "9/16"
+        } else if (valueText) {
+            // Try to evaluate expressions like "9/16" or "cos(1)"
             try {
-                const ast = parseExpression(info.declaration.valueText);
+                const ast = parseExpression(valueText);
                 const exprVars = findVariablesInAST(ast);
                 // Only evaluate if all variables in the expression are known
                 if ([...exprVars].every(v => context.hasVariable(v))) {
@@ -760,9 +788,10 @@ function solveRecord(text, context, record) {
 
     // Second pass: try again now that more variables may be known
     for (const [name, info] of variables) {
-        if (!context.hasVariable(name) && info.declaration?.valueText) {
+        const valueText = info.declaration?.valueText || info.valueText;
+        if (!context.hasVariable(name) && valueText) {
             try {
-                const ast = parseExpression(info.declaration.valueText);
+                const ast = parseExpression(valueText);
                 const exprVars = findVariablesInAST(ast);
                 if ([...exprVars].every(v => context.hasVariable(v))) {
                     const value = evaluate(ast, context);
@@ -807,13 +836,8 @@ function solveRecord(text, context, record) {
                         // Apply substitutions (for variables defined in equations like x = 7)
                         ast = substituteInAST(ast, substitutions);
                         const value = evaluate(ast, context);
-                        const format = {
-                            places: record.places || 2,
-                            stripZeros: record.stripZeros !== false,
-                            groupDigits: record.groupDigits || false,
-                            format: record.format || 'float'
-                        };
-                        const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
+                        const format = getInlineEvalFormat(inlineMatch[1], record, variables);
+                        const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits, format.varName);
                         // Replace in text and mark as changed
                         const fullMatch = inlineMatch[0];
                         const matchIndex = text.indexOf(fullMatch);
@@ -1010,13 +1034,9 @@ function solveRecord(text, context, record) {
             let ast = parseExpression(evalInfo.expression);
             ast = substituteInAST(ast, finalSubstitutions);
             const value = evaluate(ast, context);
-            const format = {
-                places: record.places || 2,
-                stripZeros: record.stripZeros !== false,
-                groupDigits: record.groupDigits || false,
-                format: record.format || 'float'
-            };
-            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
+            const finalVars = parseAllVariables(text);
+            const format = getInlineEvalFormat(evalInfo.expression, record, finalVars);
+            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits, format.varName);
             text = text.substring(0, evalInfo.start) +
                    formatted +
                    text.substring(evalInfo.end);

@@ -34,7 +34,8 @@ function parseVariableLine(line) {
                 base: 10,
                 confirm: false,
                 fullPrecision: false,
-                marker: ':'
+                marker: ':',
+                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
             })
         },
         // Input variable: var<-
@@ -47,7 +48,8 @@ function parseVariableLine(line) {
                 base: 10,
                 confirm: false,
                 fullPrecision: false,
-                marker: '<-'
+                marker: '<-',
+                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
             })
         },
         // Full precision output: var->>
@@ -60,7 +62,8 @@ function parseVariableLine(line) {
                 base: 10,
                 confirm: false,
                 fullPrecision: true,
-                marker: '->>'
+                marker: '->>',
+                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
             })
         },
         // Output variable: var->
@@ -73,7 +76,8 @@ function parseVariableLine(line) {
                 base: 10,
                 confirm: false,
                 fullPrecision: false,
-                marker: '->'
+                marker: '->',
+                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
             })
         },
         // Full precision: var::
@@ -86,7 +90,8 @@ function parseVariableLine(line) {
                 base: 10,
                 confirm: false,
                 fullPrecision: true,
-                marker: '::'
+                marker: '::',
+                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
             })
         },
         // Confirmation: var?:
@@ -99,7 +104,8 @@ function parseVariableLine(line) {
                 base: 10,
                 confirm: true,
                 fullPrecision: false,
-                marker: '?:'
+                marker: '?:',
+                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
             })
         },
         // Integer base: var#base:
@@ -112,7 +118,8 @@ function parseVariableLine(line) {
                 base: parseInt(m[2]),
                 confirm: false,
                 fullPrecision: false,
-                marker: `#${m[2]}:`
+                marker: `#${m[2]}:`,
+                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
             })
         },
         // Standard: var:
@@ -125,7 +132,8 @@ function parseVariableLine(line) {
                 base: 10,
                 confirm: false,
                 fullPrecision: false,
-                marker: ':'
+                marker: ':',
+                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
             })
         }
     ];
@@ -189,17 +197,29 @@ function parseAllVariables(text) {
                 }
             }
 
-            // Don't overwrite a variable that has a value with one that doesn't
+            // Don't overwrite a variable that has a value or valueText expression with one that doesn't
             const existing = variables.get(decl.name);
-            if (existing && existing.value !== null && value === null) {
-                // Keep existing value but update declaration info for output variable
+            const existingHasValue = existing && (existing.value !== null || existing.declaration?.valueText);
+            const newHasValue = value !== null || decl.valueText;
+            if (existingHasValue && !newHasValue) {
+                // Keep existing value/expression but update declaration info for output variable
                 existing.declaration = decl;
                 existing.lineIndex = i;
+            } else if (existingHasValue && newHasValue && existing.declaration?.valueText && !decl.valueText) {
+                // New has a numeric value but existing has an expression - keep the expression
+                // but use the new numeric value if it exists
+                existing.declaration = decl;
+                existing.lineIndex = i;
+                if (value !== null) {
+                    existing.value = value;
+                }
             } else {
                 variables.set(decl.name, {
                     declaration: decl,
                     lineIndex: i,
-                    value: value
+                    value: value,
+                    // Preserve valueText from input declaration if output declaration has none
+                    valueText: decl.valueText || existing?.declaration?.valueText
                 });
             }
         }
