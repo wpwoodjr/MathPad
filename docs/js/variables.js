@@ -71,10 +71,10 @@ function replaceValueOnLine(line, varName, marker, hasLimits, newValue) {
 
     if (markerIndex === undefined) return null;
 
-    // Preserve any trailing comment
+    // Preserve any trailing comment (allow trailing whitespace after comment)
     const afterMarker = line.substring(markerIndex);
-    const commentMatch = afterMarker.match(/"[^"]*"$/);
-    const comment = commentMatch ? commentMatch[0] : '';
+    const commentMatch = afterMarker.match(/"[^"]*"\s*$/);
+    const comment = commentMatch ? commentMatch[0].trim() : '';
 
     const beforeValue = line.substring(0, markerIndex);
     const valuePart = newValue ? ' ' + newValue : '';

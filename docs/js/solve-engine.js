@@ -218,8 +218,11 @@ function solveEquations(text, context, declarations) {
                         if (rhsUnknowns.length === 0) continue;
                     }
 
-                    // Skip if variable already computed (unless user provided value for solving)
-                    if (context.hasVariable(def.variable) && !userProvidedVars.has(def.variable)) continue;
+                    // Skip if variable already computed and RHS is fully known (nothing to solve)
+                    if (context.hasVariable(def.variable) && !userProvidedVars.has(def.variable)) {
+                        if (rhsUnknowns.length === 0) continue;
+                        // Has unknowns in RHS - fall through to numerical solving
+                    }
 
                     // If RHS is fully known, evaluate and set variable
                     if (rhsUnknowns.length === 0) {
@@ -236,7 +239,7 @@ function solveEquations(text, context, declarations) {
                         continue;
                     }
 
-                    if (!userProvidedVars.has(def.variable)) continue;
+                    if (!userProvidedVars.has(def.variable) && !context.hasVariable(def.variable)) continue;
                 }
 
                 // Skip equations used for algebraic substitutions

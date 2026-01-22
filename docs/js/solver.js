@@ -598,10 +598,9 @@ function buildSubstitutionMap(equations, context, errors = []) {
 
         const exprVars = findVariablesInAST(def.expressionAST);
 
-        // Check for cycle before adding
+        // Check for cycle before adding (skip silently - numerical solving can still work)
         const cycleVars = detectCycle(def.variable, exprVars, dependencies);
         if (cycleVars) {
-            errors.push(`Circular dependency detected: ${cycleVars.join(' → ')} → ${def.variable}`);
             continue;
         }
 
