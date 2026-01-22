@@ -526,13 +526,16 @@ function deleteCurrentRecord() {
 
 /**
  * Set status message
+ * @param {string} message - The status message
+ * @param {boolean} isError - Whether this is an error message
+ * @param {boolean} persist - Whether to save to the record (default true)
  */
-function setStatus(message, isError = false) {
+function setStatus(message, isError = false, persist = true) {
     UI.statusBar.textContent = message;
     UI.statusBar.className = 'status-bar' + (isError ? ' error' : '');
 
-    // Save status to current record
-    if (UI.currentRecordId) {
+    // Save status to current record (unless persist is false)
+    if (persist && UI.currentRecordId) {
         const record = findRecord(UI.data, UI.currentRecordId);
         if (record) {
             record.status = message;
@@ -597,14 +600,14 @@ async function handleFileSelect(e) {
     if (!file) return;
 
     try {
-        setStatus('Importing...');
+        setStatus('Importing...', false, false);
         const text = await readTextFile(file);
         UI.data = importFromText(text, UI.data);
         saveData(UI.data);
         renderSidebar();
-        setStatus(`Imported from ${file.name}`);
+        setStatus(`Imported from ${file.name}`, false, false);
     } catch (err) {
-        setStatus('Import failed: ' + err.message, true);
+        setStatus('Import failed: ' + err.message, true, false);
     }
 
     // Reset file input
@@ -619,9 +622,9 @@ function handleExport() {
         const text = exportToText(UI.data);
         const timestamp = new Date().toISOString().slice(0, 10);
         downloadTextFile(text, `mathpad_export_${timestamp}.txt`);
-        setStatus('Exported successfully');
+        setStatus('Exported successfully', false, false);
     } catch (err) {
-        setStatus('Export failed: ' + err.message, true);
+        setStatus('Export failed: ' + err.message, true, false);
     }
 }
 

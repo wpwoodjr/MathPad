@@ -324,7 +324,12 @@ function discoverVariables(text, context, record) {
         for (let j = inlineMatches.length - 1; j >= 0; j--) {
             const evalInfo = inlineMatches[j];
             try {
-                const ast = parseExpression(evalInfo.expression);
+                // Strip format suffix ($ or %) before parsing - it's used for output formatting only
+                let exprToParse = evalInfo.expression;
+                if (exprToParse.endsWith('$') || exprToParse.endsWith('%')) {
+                    exprToParse = exprToParse.slice(0, -1);
+                }
+                const ast = parseExpression(exprToParse);
                 const value = evaluate(ast, context);
                 const format = getInlineEvalFormat(evalInfo.expression, record, null);
                 const formatted = formatVariableValue(value, format.varFormat, false, format);
