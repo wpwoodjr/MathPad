@@ -104,7 +104,7 @@ This document uses indentation and formatting (#, ##, ###) to indicate a hierarc
             y and x must have values (after solving)
 
 ## \expr\ substitutions
-    An expr enclosed in backslashes is replaced by the result. Variables may be used if they have a known value.  The substitutions should be done during variable discovery and again during final output.
+    An expr enclosed in backslashes is replaced by the result. Variables may be used if they have a known value.  The substitutions should be done during variable discovery only.
         \3+4\ becomes 7
-        If x: 3, then \x+2\ becomes 5.  If x does not have a value, leave the \expr\
-        \cos(1)\
+        If x: 3, then \x+2\ becomes 5.  If x does not have a value, it's an error
+        \cos(1)\ should become 0.5403 (assuming Decimal Places is set to 4)

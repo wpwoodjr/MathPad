@@ -44,6 +44,46 @@ function parseVarNameAndFormat(nameWithSuffix) {
 }
 
 /**
+ * Replace the value portion of a variable declaration line
+ * @param {string} line - The line of text
+ * @param {string} varName - Variable name (without $ or % suffix)
+ * @param {string} marker - The declaration marker (: <- -> ->> ::)
+ * @param {boolean} hasLimits - Whether the declaration has limits [low:high]
+ * @param {string} newValue - The new value to insert (empty string to clear)
+ * @returns {string|null} The modified line, or null if marker not found
+ */
+function replaceValueOnLine(line, varName, marker, hasLimits, newValue) {
+    const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+
+    let markerIndex;
+    if (hasLimits) {
+        const bracketMatch = cleanLine.match(/\w+[$%]?\s*\[[^\]]+\]\s*:/);
+        if (bracketMatch) {
+            markerIndex = bracketMatch.index + bracketMatch[0].length;
+        }
+    } else {
+        // varName doesn't include $ or % suffix, but text may have it
+        const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}[$%]?\\s*(${escapeRegex(marker)})`));
+        if (markerMatch) {
+            markerIndex = markerMatch.index + markerMatch[0].length;
+        }
+    }
+
+    if (markerIndex === undefined) return null;
+
+    // Preserve any trailing comment
+    const afterMarker = line.substring(markerIndex);
+    const commentMatch = afterMarker.match(/"[^"]*"$/);
+    const comment = commentMatch ? commentMatch[0] : '';
+
+    const beforeValue = line.substring(0, markerIndex);
+    const valuePart = newValue ? ' ' + newValue : '';
+    const commentPart = comment ? ' ' + comment : '';
+
+    return beforeValue + valuePart + commentPart;
+}
+
+/**
  * Parse a single line to extract variable declaration
  * Returns declaration info or null if not a variable declaration
  */
@@ -218,8 +258,8 @@ function findVariablesInExpression(node) {
 }
 
 /**
- * Parse all variable declarations from text
- * Returns map of variable name -> { declaration, lineIndex, value }
+ * Parse all variable declarations from text (simple parse, no evaluation)
+ * Returns array of { name, declaration, lineIndex, value, valueText }
  */
 function parseAllVariables(text) {
     const lines = text.split('\n');
@@ -246,6 +286,117 @@ function parseAllVariables(text) {
     }
 
     return declarations;
+}
+
+/**
+ * Discover variables with inline expression evaluation
+ * Processes text line by line, evaluating \expr\ and parsing declarations
+ * @param {string} text - The formula text
+ * @param {EvalContext} context - Context with constants and functions loaded
+ * @param {object} record - Record settings for formatting
+ * @returns {{ text: string, declarations: Array, errors: Array }}
+ */
+function discoverVariables(text, context, record) {
+    const lines = text.split('\n');
+    const declarations = [];
+    const errors = [];
+    const definedVars = new Set();
+
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+
+        // Evaluate any \expr\ in this line
+        const inlineRegex = /\\([^\\]+)\\/g;
+        let match;
+        let lineModified = false;
+
+        // Process inline expressions from right to left to preserve positions
+        const inlineMatches = [];
+        while ((match = inlineRegex.exec(line)) !== null) {
+            inlineMatches.push({
+                fullMatch: match[0],
+                expression: match[1].trim(),
+                start: match.index,
+                end: match.index + match[0].length
+            });
+        }
+
+        for (let j = inlineMatches.length - 1; j >= 0; j--) {
+            const evalInfo = inlineMatches[j];
+            try {
+                const ast = parseExpression(evalInfo.expression);
+                const value = evaluate(ast, context);
+                const format = getInlineEvalFormat(evalInfo.expression, record, null);
+                const formatted = formatVariableValue(value, format.varFormat, false, format);
+                line = line.substring(0, evalInfo.start) + formatted + line.substring(evalInfo.end);
+                lineModified = true;
+            } catch (e) {
+                errors.push(`Line ${i + 1}: Cannot evaluate \\${evalInfo.expression}\\ - ${e.message}`);
+            }
+        }
+
+        if (lineModified) {
+            lines[i] = line;
+        }
+
+        // Parse variable declaration from this line
+        const decl = parseVariableLine(line);
+        if (decl) {
+            const name = decl.name;
+            const isOutput = decl.clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
+
+            // Check for duplicate input declarations
+            if (!isOutput) {
+                if (definedVars.has(name)) {
+                    errors.push(`Line ${i + 1}: Variable "${name}" is already defined`);
+                    continue;
+                }
+                if (context.hasVariable(name)) {
+                    errors.push(`Line ${i + 1}: Variable "${name}" is already defined`);
+                    continue;
+                }
+                definedVars.add(name);
+            }
+
+            // Evaluate the value if present
+            let value = null;
+            let valueText = decl.valueText;
+
+            if (valueText && !isOutput) {
+                // Try to parse as numeric literal first
+                value = parseNumericValue(valueText, decl.format);
+
+                // If not a numeric literal, try to evaluate as expression
+                if (value === null) {
+                    try {
+                        const ast = parseExpression(valueText);
+                        value = evaluate(ast, context);
+                    } catch (e) {
+                        errors.push(`Line ${i + 1}: Cannot evaluate "${valueText}" - ${e.message}`);
+                    }
+                }
+
+                // Add to context for subsequent lines
+                if (value !== null) {
+                    context.setVariable(name, value);
+                }
+            }
+
+            declarations.push({
+                name: name,
+                declaration: decl,
+                lineIndex: i,
+                value: value,
+                valueText: valueText
+            });
+        }
+    }
+
+    return {
+        text: lines.join('\n'),
+        declarations: declarations,
+        errors: errors
+    };
 }
 
 /**
@@ -296,6 +447,42 @@ function parseNumericValue(valueText, varFormat = null) {
     }
 
     return value;
+}
+
+/**
+ * Get format settings for an inline evaluation expression
+ * Looks up variable's format property for $ (money) and % (percentage) formatting
+ */
+function getInlineEvalFormat(expression, record, variables = null) {
+    const trimmed = expression.trim();
+    let varFormat = null;
+
+    // Check if expression ends with $ or % (format suffix)
+    let baseName = trimmed;
+    if (trimmed.endsWith('$')) {
+        baseName = trimmed.slice(0, -1);
+        varFormat = 'money';
+    } else if (trimmed.endsWith('%')) {
+        baseName = trimmed.slice(0, -1);
+        varFormat = 'percent';
+    }
+
+    // If expression is a simple variable name, look up its format from the variables map
+    if (variables && /^[a-zA-Z_]\w*$/.test(baseName)) {
+        const varInfo = variables.get(baseName);
+        if (varInfo && varInfo.declaration && varInfo.declaration.format) {
+            // Variable has a format property - use it (overrides suffix if present)
+            varFormat = varInfo.declaration.format;
+        }
+    }
+
+    return {
+        places: record.places ?? 4,
+        stripZeros: record.stripZeros !== false,
+        groupDigits: record.groupDigits || false,
+        numberFormat: record.format || 'float',
+        varFormat: varFormat
+    };
 }
 
 /**
@@ -370,7 +557,6 @@ function setVariableValue(text, varName, value, format = {}) {
         // Skip if already has a value
         if (decl.valueText) continue;
 
-        const line = lines[i];
         const formattedValue = formatVariableValue(value, decl.format, decl.fullPrecision, {
             places: regularPlaces,
             stripZeros,
@@ -379,36 +565,11 @@ function setVariableValue(text, varName, value, format = {}) {
             groupDigits
         });
 
-        // Find the position to insert the value (after the marker)
-        const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
-
-        // Find where the value should go (after the declaration marker)
-        let markerIndex;
-        if (decl.limits) {
-            // Find the closing bracket of limits and then the colon
-            const bracketMatch = cleanLine.match(/\w+[$%]?\s*\[[^\]]+\]\s*:/);
-            if (bracketMatch) {
-                markerIndex = bracketMatch.index + bracketMatch[0].length;
-            }
-        } else {
-            // Find the marker (escape varName since it may contain $ or %)
-            const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}\\s*(${escapeRegex(decl.marker)})`));
-            if (markerMatch) {
-                markerIndex = markerMatch.index + markerMatch[0].length;
-            }
+        const newLine = replaceValueOnLine(lines[i], varName, decl.marker, !!decl.limits, formattedValue);
+        if (newLine !== null) {
+            lines[i] = newLine;
+            modified = true;
         }
-
-        if (markerIndex === undefined) continue;
-
-        // Preserve any trailing comment
-        const afterMarker = line.substring(markerIndex);
-        const commentMatch = afterMarker.match(/"[^"]*"$/);
-        const comment = commentMatch ? commentMatch[0] : '';
-
-        // Build the new line
-        const beforeValue = line.substring(0, markerIndex);
-        lines[i] = beforeValue + ' ' + formattedValue + (comment ? ' ' + comment : '');
-        modified = true;
     }
 
     return modified ? lines.join('\n') : text;
@@ -441,31 +602,9 @@ function clearVariables(text, clearType = 'input') {
             (clearType === 'output' && clearBehavior === ClearBehavior.ON_SOLVE);
 
         if (shouldClear && decl.valueText) {
-            const line = lines[i];
-            const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
-
-            // Find the marker and clear everything after it (preserving comments)
-            let markerIndex;
-            if (decl.limits) {
-                const bracketMatch = cleanLine.match(/\w+[$%]?\s*\[[^\]]+\]\s*:/);
-                if (bracketMatch) {
-                    markerIndex = bracketMatch.index + bracketMatch[0].length;
-                }
-            } else {
-                // Escape decl.name since it may contain $ or %
-                const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(decl.name)}\\s*(${escapeRegex(decl.marker)})`));
-                if (markerMatch) {
-                    markerIndex = markerMatch.index + markerMatch[0].length;
-                }
-            }
-
-            if (markerIndex !== undefined) {
-                const afterMarker = line.substring(markerIndex);
-                const commentMatch = afterMarker.match(/"[^"]*"$/);
-                const comment = commentMatch ? commentMatch[0] : '';
-
-                const beforeValue = line.substring(0, markerIndex);
-                lines[i] = beforeValue + (comment ? ' ' + comment : '');
+            const newLine = replaceValueOnLine(lines[i], decl.name, decl.marker, !!decl.limits, '');
+            if (newLine !== null) {
+                lines[i] = newLine;
             }
         }
     }

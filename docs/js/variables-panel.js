@@ -95,10 +95,11 @@ class VariablesPanel {
             typeIndicator.textContent = '';
         }
 
-        // Variable name label (includes marker to distinguish declarations)
+        // Variable name label (includes format suffix and marker to distinguish declarations)
+        const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
-        nameLabel.textContent = info.name + (decl.marker || ':');
+        nameLabel.textContent = info.name + formatSuffix + (decl.marker || ':');
 
         // Value input or display
         // Output types (-> and ->>) are read-only
@@ -171,13 +172,13 @@ class VariablesPanel {
 
         // Format the value for display in formulas
         // If it's a number, format it; otherwise use the raw input (allows expressions)
+        // Empty value clears the declaration
         let formattedValue;
         if (parsedValue !== null) {
             formattedValue = this.formatInputForFormulas(decl.format, newValue, parsedValue);
         } else {
-            // Not a number - use the raw input (could be an expression like sqrt(3))
+            // Not a number - use the raw input (could be an expression like sqrt(3), or empty to clear)
             formattedValue = newValue.trim();
-            if (!formattedValue) return; // Don't allow empty values
         }
 
         // Get current text and update the specific line
@@ -185,27 +186,9 @@ class VariablesPanel {
         const lines = text.split('\n');
 
         if (lineIndex >= 0 && lineIndex < lines.length) {
-            const line = lines[lineIndex];
-            const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
-
-            let markerIndex;
-            if (decl.limits) {
-                const bracketMatch = cleanLine.match(/\w+[$%]?\s*\[[^\]]+\]\s*:/);
-                if (bracketMatch) {
-                    markerIndex = bracketMatch.index + bracketMatch[0].length;
-                }
-            } else {
-                const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}\\s*(${escapeRegex(decl.marker)})`));
-                if (markerMatch) {
-                    markerIndex = markerMatch.index + markerMatch[0].length;
-                }
-            }
-
-            if (markerIndex !== undefined) {
-                const commentMatch = line.match(/"[^"]*"$/);
-                const comment = commentMatch ? ' ' + commentMatch[0] : '';
-                const beforeValue = line.substring(0, markerIndex);
-                lines[lineIndex] = beforeValue + ' ' + formattedValue + comment;
+            const newLine = replaceValueOnLine(lines[lineIndex], varName, decl.marker, !!decl.limits, formattedValue);
+            if (newLine !== null) {
+                lines[lineIndex] = newLine;
                 text = lines.join('\n');
             }
         }
@@ -267,28 +250,12 @@ class VariablesPanel {
     }
 
     /**
-     * Format a value for display in the panel
-     * Uses the computed numeric value when available, falls back to raw text
+     * Get display value for a variable
+     * Simply returns the valueText from parsing - no re-formatting needed
+     * since the formula pane already has the formatted text
      */
     formatValueForDisplay(info) {
-        // If we have a computed numeric value, format and display it
-        if (info.value !== null && info.value !== undefined) {
-            return formatVariableValue(info.value, info.declaration.format, info.declaration.fullPrecision, {
-                places: this.record.places,
-                stripZeros: this.record.stripZeros,
-                numberFormat: this.record.format,
-                base: info.declaration.base,
-                groupDigits: this.record.groupDigits
-            });
-        }
-
-        // No computed value - show the raw valueText if available
-        // This handles expressions with unknown variables that can't be evaluated yet
-        if (info.valueText) {
-            return info.valueText;
-        }
-
-        return '';
+        return info.valueText || '';
     }
 
     /**

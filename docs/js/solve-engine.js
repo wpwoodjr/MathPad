@@ -17,42 +17,6 @@ function buildVariablesMap(declarations) {
 }
 
 /**
- * Get format settings for an inline evaluation expression
- * Looks up variable's format property for $ (money) and % (percentage) formatting
- */
-function getInlineEvalFormat(expression, record, variables = null) {
-    const trimmed = expression.trim();
-    let varFormat = null;
-
-    // Check if expression ends with $ or % (format suffix)
-    let baseName = trimmed;
-    if (trimmed.endsWith('$')) {
-        baseName = trimmed.slice(0, -1);
-        varFormat = 'money';
-    } else if (trimmed.endsWith('%')) {
-        baseName = trimmed.slice(0, -1);
-        varFormat = 'percent';
-    }
-
-    // If expression is a simple variable name, look up its format from the variables map
-    if (variables && /^[a-zA-Z_]\w*$/.test(baseName)) {
-        const varInfo = variables.get(baseName);
-        if (varInfo && varInfo.declaration && varInfo.declaration.format) {
-            // Variable has a format property - use it (overrides suffix if present)
-            varFormat = varInfo.declaration.format;
-        }
-    }
-
-    return {
-        places: record.places ?? 4,
-        stripZeros: record.stripZeros !== false,
-        groupDigits: record.groupDigits || false,
-        numberFormat: record.format || 'float',
-        varFormat: varFormat
-    };
-}
-
-/**
  * Find variables in an AST
  */
 function findVariablesInAST(node) {
@@ -187,110 +151,19 @@ function solveEquationInContext(eqText, context, variables, substitutions = new 
 }
 
 /**
- * Solve a record's equations using a 3-pass architecture:
- *
- * Pass 1: Variable Discovery
- *   - Parse all variable declarations
- *   - Evaluate input values using already-known vars
- *   - Evaluate simple \expr\ inline evaluations
- *
- * Pass 2: Equation Solving
- *   - Build substitution map with cycle detection
- *   - Solve equations iteratively until no progress
- *   - Handle definition equations (var = expr) and general equations
- *
- * Pass 3: Final Output
- *   - Insert computed values into output declarations
- *   - Evaluate remaining inline expressions
- *   - Fill incomplete equations (expr =)
- *   - Check equation consistency
+ * Solve equations and return computed values (no text modification)
+ * @param {string} text - The formula text (with \expr\ already evaluated)
+ * @param {EvalContext} context - Context with known variables
+ * @param {Array} declarations - Parsed declarations from discoverVariables
+ * @returns {{ computedValues: Map, solved: number, errors: Array }}
  */
-function solveRecord(text, context, record) {
+function solveEquations(text, context, declarations) {
     const errors = [];
+    const computedValues = new Map();
     let solved = 0;
 
-    // ============================================================
-    // PASS 1: Variable Discovery
-    // ============================================================
-
-    // First, process simple inline evaluations that don't need variables
-    // This allows y: \3+4\ to become y: 7 before variable parsing
-    let inlineEvals = findInlineEvaluations(text);
-    for (let i = inlineEvals.length - 1; i >= 0; i--) {
-        const evalInfo = inlineEvals[i];
-        try {
-            const ast = parseExpression(evalInfo.expression);
-            const value = evaluate(ast, context);
-            const format = getInlineEvalFormat(evalInfo.expression, record);
-            const formatted = formatVariableValue(value, format.varFormat, false, format);
-            text = text.substring(0, evalInfo.start) + formatted + text.substring(evalInfo.end);
-        } catch (e) {
-            // Skip - will try again after equation solving
-        }
-    }
-
-    // Parse all variable declarations (returns array, not map)
-    const declarations = parseAllVariables(text);
-
-    // Build a map for quick lookup by name (first declaration wins for value)
+    // Build variables map for lookup
     let variables = buildVariablesMap(declarations);
-
-    // Track which variables have been defined (by input declarations)
-    // A variable can only be defined once - multiple input declarations are errors
-    const definedVars = new Set();
-
-    // Evaluate variable values top-to-bottom, adding to context as we go
-    // This enforces top-to-bottom ordering - forward references are errors for input types
-    for (const info of declarations) {
-        const name = info.name;
-        const decl = info.declaration;
-        const valueText = info.valueText;
-
-        // Skip output declarations - they don't define values
-        if (decl.type === VarType.OUTPUT) {
-            continue;
-        }
-
-        // Check for duplicate input declarations
-        if (definedVars.has(name)) {
-            errors.push(`Variable "${name}" defined more than once (line ${info.lineIndex + 1})`);
-            continue;
-        }
-        definedVars.add(name);
-
-        // If already has a numeric value (parsed literal), add to context
-        if (info.value !== null) {
-            context.setVariable(name, info.value);
-            continue;
-        }
-
-        // Try to evaluate expression
-        if (valueText) {
-            try {
-                const ast = parseExpression(valueText);
-                const value = evaluate(ast, context);
-                info.value = value;
-                context.setVariable(name, value);
-            } catch (e) {
-                // Couldn't evaluate - this is an error for input types
-                const isInputType = decl.type === VarType.STANDARD || decl.type === VarType.INPUT;
-                if (isInputType) {
-                    try {
-                        const ast = parseExpression(valueText);
-                        const exprVars = findVariablesInAST(ast);
-                        const undefinedVars = [...exprVars].filter(v => !context.hasVariable(v));
-                        if (undefinedVars.length > 0) {
-                            errors.push(`Variable "${name}" references undefined: ${undefinedVars.join(', ')}`);
-                        } else {
-                            errors.push(`Variable "${name}": invalid expression "${valueText}"`);
-                        }
-                    } catch (parseErr) {
-                        errors.push(`Variable "${name}" has invalid expression: ${valueText}`);
-                    }
-                }
-            }
-        }
-    }
 
     // Track user-provided values (input declarations only, not output)
     const userProvidedVars = new Set();
@@ -300,10 +173,7 @@ function solveRecord(text, context, record) {
         }
     }
 
-    // ============================================================
-    // PASS 2: Equation Solving
-    // ============================================================
-
+    // Iterative solving
     const maxIterations = 50;
     let iterations = 0;
     let changed = true;
@@ -316,26 +186,8 @@ function solveRecord(text, context, record) {
 
         for (const eq of equations) {
             try {
-                // Handle inline expressions within equations
-                const inlineMatch = eq.text.match(/\\([^\\]+)\\/);
-                if (inlineMatch) {
-                    try {
-                        let ast = parseExpression(inlineMatch[1]);
-                        ast = substituteInAST(ast, substitutions);
-                        const value = evaluate(ast, context);
-                        const format = getInlineEvalFormat(inlineMatch[1], record, variables);
-                        const formatted = formatVariableValue(value, format.varFormat, false, format);
-                        const fullMatch = inlineMatch[0];
-                        const matchIndex = text.indexOf(fullMatch);
-                        if (matchIndex !== -1) {
-                            text = text.substring(0, matchIndex) + formatted + text.substring(matchIndex + fullMatch.length);
-                            changed = true;
-                        }
-                    } catch (e) {
-                        // Will retry on next iteration
-                    }
-                    continue;
-                }
+                // Skip equations with unevaluated inline expressions
+                if (eq.text.includes('\\')) continue;
 
                 // Handle incomplete equations (expr =)
                 const incompleteMatch = eq.text.match(/^(.+?)\s*=\s*$/);
@@ -344,19 +196,11 @@ function solveRecord(text, context, record) {
                         let ast = parseExpression(incompleteMatch[1].trim());
                         ast = substituteInAST(ast, substitutions);
                         const value = evaluate(ast, context);
-                        const format = {
-                            places: record.places ?? 4,
-                            stripZeros: record.stripZeros !== false,
-                            groupDigits: record.groupDigits || false,
-                            format: record.format || 'float'
-                        };
-                        const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
-                        const eqPattern = eq.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        text = text.replace(new RegExp(eqPattern), eq.text + ' ' + formatted);
-                        changed = true;
+                        // Store result but don't modify text
+                        computedValues.set(`__incomplete_${eq.line}`, value);
                         solved++;
                     } catch (e) {
-                        // Unknown variables - skip for now
+                        // Unknown variables - skip
                     }
                     continue;
                 }
@@ -368,11 +212,10 @@ function solveRecord(text, context, record) {
                     const rhsVars = findVariablesInAST(def.expressionAST);
                     const rhsUnknowns = [...rhsVars].filter(v => !context.hasVariable(v));
 
-                    // If user provided value and RHS has unknowns, use equation to solve for unknowns
+                    // If user provided value and RHS has unknowns, use equation to solve
                     if (varInfo && varInfo.value !== null && userProvidedVars.has(def.variable)) {
                         context.setVariable(def.variable, varInfo.value);
                         if (rhsUnknowns.length === 0) continue;
-                        // Fall through to solve for RHS unknowns
                     }
 
                     // If RHS is fully known, evaluate and set variable
@@ -381,30 +224,19 @@ function solveRecord(text, context, record) {
                             let ast = substituteInAST(def.expressionAST, substitutions);
                             const value = evaluate(ast, context);
                             context.setVariable(def.variable, value);
+                            computedValues.set(def.variable, value);
                             changed = true;
-
-                            if (varInfo && !varInfo.declaration.valueText) {
-                                const format = {
-                                    places: record.places ?? 4,
-                                    stripZeros: record.stripZeros !== false,
-                                    groupDigits: record.groupDigits || false,
-                                    format: record.format || 'float'
-                                };
-                                text = setVariableValue(text, def.variable, value, format);
-                                variables = buildVariablesMap(parseAllVariables(text));
-                                solved++;
-                            }
+                            solved++;
                         } catch (e) {
                             // Skip
                         }
                         continue;
                     }
 
-                    // RHS has unknowns and no user value - skip for now
                     if (!userProvidedVars.has(def.variable)) continue;
                 }
 
-                // Skip equations used for algebraic substitutions (unless all vars known)
+                // Skip equations used for algebraic substitutions
                 if (!def) {
                     const derived = deriveSubstitution(eq.text, context);
                     if (derived && substitutions.has(derived.variable)) {
@@ -417,15 +249,8 @@ function solveRecord(text, context, record) {
                 // Try to solve the equation numerically
                 const result = solveEquationInContext(eq.text, context, variables, substitutions);
                 if (result.solved) {
-                    const format = {
-                        places: record.places ?? 4,
-                        stripZeros: record.stripZeros !== false,
-                        groupDigits: record.groupDigits || false,
-                        format: record.format || 'float'
-                    };
-                    text = setVariableValue(text, result.variable, result.value, format);
                     context.setVariable(result.variable, result.value);
-                    variables = buildVariablesMap(parseAllVariables(text));
+                    computedValues.set(result.variable, result.value);
                     solved++;
                     changed = true;
                 }
@@ -435,45 +260,8 @@ function solveRecord(text, context, record) {
         }
     }
 
-    // ============================================================
-    // PASS 3: Final Output
-    // ============================================================
-
-    // Process remaining inline evaluations
-    const finalEquations = findEquations(text);
-    const finalSubstitutions = buildSubstitutionMap(finalEquations, context, []);
-    const remainingEvals = findInlineEvaluations(text);
-    for (let i = remainingEvals.length - 1; i >= 0; i--) {
-        const evalInfo = remainingEvals[i];
-        try {
-            let ast = parseExpression(evalInfo.expression);
-            ast = substituteInAST(ast, finalSubstitutions);
-            const value = evaluate(ast, context);
-            const finalVars = buildVariablesMap(parseAllVariables(text));
-            const format = getInlineEvalFormat(evalInfo.expression, record, finalVars);
-            const formatted = formatVariableValue(value, format.varFormat, false, format);
-            text = text.substring(0, evalInfo.start) + formatted + text.substring(evalInfo.end);
-        } catch (e) {
-            errors.push(`Inline eval error: ${e.message}`);
-        }
-    }
-
-    // Fill empty variable declarations with computed values
-    const finalDeclarations = parseAllVariables(text);
-    for (const info of finalDeclarations) {
-        if (context.hasVariable(info.name)) {
-            const value = context.getVariable(info.name);
-            const format = {
-                places: record.places ?? 4,
-                stripZeros: record.stripZeros !== false,
-                groupDigits: record.groupDigits || false,
-                format: record.format || 'float'
-            };
-            text = setVariableValue(text, info.name, value, format);
-        }
-    }
-
     // Check equation consistency
+    const finalEquations = findEquations(text);
     for (const eq of finalEquations) {
         try {
             const eqMatch = eq.text.match(/^(.+)=(.+)$/);
@@ -490,7 +278,6 @@ function solveRecord(text, context, record) {
                 const rightVal = evaluate(rightAST, context);
                 const diff = Math.abs(leftVal - rightVal);
 
-                // Use relative error for tolerance (10 significant digits)
                 const maxVal = Math.max(Math.abs(leftVal), Math.abs(rightVal));
                 const relError = maxVal > 0 ? diff / maxVal : diff;
 
@@ -503,12 +290,88 @@ function solveRecord(text, context, record) {
         }
     }
 
-    return { text, solved, errors };
+    return { computedValues, solved, errors };
+}
+
+/**
+ * Format output - insert computed values into text
+ * @param {string} text - The formula text
+ * @param {Array} declarations - Parsed declarations
+ * @param {EvalContext} context - Context with all computed values
+ * @param {object} record - Record settings for formatting
+ * @returns {{ text: string, errors: Array }} Formatted text and any errors
+ */
+function formatOutput(text, declarations, context, record) {
+    const errors = [];
+    const format = {
+        places: record.places ?? 4,
+        stripZeros: record.stripZeros !== false,
+        groupDigits: record.groupDigits || false,
+        format: record.format || 'float'
+    };
+
+    // Fill empty variable declarations with computed values
+    for (const info of declarations) {
+        if (!info.valueText) {
+            if (context.hasVariable(info.name)) {
+                const value = context.getVariable(info.name);
+                text = setVariableValue(text, info.name, value, format);
+            } else {
+                // Output declaration with no value is an error
+                const decl = info.declaration;
+                const isOutput = decl.clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
+                if (isOutput) {
+                    errors.push(`Variable '${info.name}' has no value to output`);
+                }
+            }
+        }
+    }
+
+    // Handle incomplete equations (expr =)
+    const equations = findEquations(text);
+    for (const eq of equations) {
+        const incompleteMatch = eq.text.match(/^(.+?)\s*=\s*$/);
+        if (incompleteMatch) {
+            try {
+                const ast = parseExpression(incompleteMatch[1].trim());
+                const value = evaluate(ast, context);
+                const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
+                const eqPattern = eq.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                text = text.replace(new RegExp(eqPattern), eq.text + ' ' + formatted);
+            } catch (e) {
+                // Skip - can't evaluate
+            }
+        }
+    }
+
+    return { text, errors };
+}
+
+/**
+ * Main solve function - orchestrates discovery, solving, and formatting
+ */
+function solveRecord(text, context, record) {
+    // Pass 1: Variable Discovery (evaluates \expr\, parses declarations)
+    const discovery = discoverVariables(text, context, record);
+    text = discovery.text;
+    const declarations = discovery.declarations;
+    const errors = [...discovery.errors];
+
+    // Pass 2: Equation Solving (computes values, no text modification)
+    const solveResult = solveEquations(text, context, declarations);
+    errors.push(...solveResult.errors);
+
+    // Pass 3: Format Output (inserts values into text)
+    const formatResult = formatOutput(text, declarations, context, record);
+    text = formatResult.text;
+    errors.push(...formatResult.errors);
+
+    return { text, solved: solveResult.solved, errors };
 }
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        solveRecord, solveEquationInContext, getInlineEvalFormat, findVariablesInAST
+        solveRecord, solveEquations, formatOutput, solveEquationInContext, findVariablesInAST, buildVariablesMap
     };
 }
