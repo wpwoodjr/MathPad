@@ -11,8 +11,6 @@ class EvalContext {
         this.constants = new Map();
         this.userFunctions = new Map();
         this.degreesMode = false; // false = radians, true = degrees
-        this.places = 14;
-        this.stripZeros = true;
     }
 
     setVariable(name, value) {
@@ -51,8 +49,6 @@ class EvalContext {
         ctx.constants = this.constants;
         ctx.userFunctions = this.userFunctions;
         ctx.degreesMode = this.degreesMode;
-        ctx.places = this.places;
-        ctx.stripZeros = this.stripZeros;
         return ctx;
     }
 }
@@ -347,10 +343,15 @@ function evaluate(node, context) {
 
         case 'VARIABLE': {
             const value = context.getVariable(node.name);
-            if (value === undefined) {
-                throw new EvalError(`Undefined variable: ${node.name}`);
+            if (value !== undefined) {
+                return value;
             }
-            return value;
+            // Check if it's a zero-arg builtin function like pi
+            const builtin = builtinFunctions[node.name.toLowerCase()];
+            if (builtin) {
+                return builtin([], context);
+            }
+            throw new EvalError(`Undefined variable: ${node.name}`);
         }
 
         case 'UNARY_OP': {

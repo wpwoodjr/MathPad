@@ -3,7 +3,22 @@
  */
 
 /**
- * Variable declaration types
+ * Clear behavior for variable declarations
+ * Determines when a variable's value is cleared
+ */
+const ClearBehavior = {
+    NONE: 'none',       // : or :: (persistent, never cleared)
+    ON_CLEAR: 'onClear', // <- (cleared by Clear button)
+    ON_SOLVE: 'onSolve'  // -> or ->> (cleared by Clear button AND before solving)
+};
+
+/**
+ * Legacy VarType enum - kept for backwards compatibility
+ * Maps to ClearBehavior:
+ *   STANDARD -> ClearBehavior.NONE
+ *   INPUT -> ClearBehavior.ON_CLEAR
+ *   OUTPUT -> ClearBehavior.ON_SOLVE
+ *   FULL_PRECISION -> depends on marker (:: -> NONE, ->> -> ON_SOLVE)
  */
 const VarType = {
     STANDARD: 'standard',      // varname:
@@ -11,6 +26,22 @@ const VarType = {
     OUTPUT: 'output',          // varname-> or varname->>
     FULL_PRECISION: 'full'     // varname:: or varname->>
 };
+
+/**
+ * Extract base variable name and format from a name that may have $ or % suffix
+ * e.g., "pmt$" -> { baseName: "pmt", format: "money" }
+ *       "rate%" -> { baseName: "rate", format: "percent" }
+ *       "x" -> { baseName: "x", format: null }
+ */
+function parseVarNameAndFormat(nameWithSuffix) {
+    if (nameWithSuffix.endsWith('$')) {
+        return { baseName: nameWithSuffix.slice(0, -1), format: 'money' };
+    }
+    if (nameWithSuffix.endsWith('%')) {
+        return { baseName: nameWithSuffix.slice(0, -1), format: 'percent' };
+    }
+    return { baseName: nameWithSuffix, format: null };
+}
 
 /**
  * Parse a single line to extract variable declaration
@@ -22,119 +53,127 @@ function parseVariableLine(line) {
 
     // Variable declaration patterns (order matters - check more specific patterns first)
     // Note: \w+[$%]? allows optional $ or % suffix for money/percentage variables
+    // The suffix is stripped from the name and stored in format
     const patterns = [
         // With search limits: var[low:high]: value
         {
             regex: /^(\w+[$%]?)\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\]\s*:\s*(.*)$/,
-            handler: (m) => ({
-                name: m[1],
-                type: VarType.STANDARD,
-                limits: { lowExpr: m[2].trim(), highExpr: m[3].trim() },
-                valueText: m[4].trim(),
-                base: 10,
-                confirm: false,
-                fullPrecision: false,
-                marker: ':',
-                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
-            })
+            handler: (m) => {
+                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                return {
+                    name: baseName,
+                    type: VarType.STANDARD,
+                    clearBehavior: ClearBehavior.NONE,
+                    limits: { lowExpr: m[2].trim(), highExpr: m[3].trim() },
+                    valueText: m[4].trim(),
+                    base: 10,
+                    fullPrecision: false,
+                    marker: ':',
+                    format
+                };
+            }
         },
         // Input variable: var<-
         {
             regex: /^(\w+[$%]?)\s*<-\s*(.*)$/,
-            handler: (m) => ({
-                name: m[1],
-                type: VarType.INPUT,
-                valueText: m[2].trim(),
-                base: 10,
-                confirm: false,
-                fullPrecision: false,
-                marker: '<-',
-                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
-            })
+            handler: (m) => {
+                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                return {
+                    name: baseName,
+                    type: VarType.INPUT,
+                    clearBehavior: ClearBehavior.ON_CLEAR,
+                    valueText: m[2].trim(),
+                    base: 10,
+                    fullPrecision: false,
+                    marker: '<-',
+                    format
+                };
+            }
         },
         // Full precision output: var->>
         {
             regex: /^(\w+[$%]?)\s*->>\s*(.*)$/,
-            handler: (m) => ({
-                name: m[1],
-                type: VarType.OUTPUT,
-                valueText: m[2].trim(),
-                base: 10,
-                confirm: false,
-                fullPrecision: true,
-                marker: '->>',
-                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
-            })
+            handler: (m) => {
+                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                return {
+                    name: baseName,
+                    type: VarType.OUTPUT,
+                    clearBehavior: ClearBehavior.ON_SOLVE,
+                    valueText: m[2].trim(),
+                    base: 10,
+                    fullPrecision: true,
+                    marker: '->>',
+                    format
+                };
+            }
         },
         // Output variable: var->
         {
             regex: /^(\w+[$%]?)\s*->\s*(.*)$/,
-            handler: (m) => ({
-                name: m[1],
-                type: VarType.OUTPUT,
-                valueText: m[2].trim(),
-                base: 10,
-                confirm: false,
-                fullPrecision: false,
-                marker: '->',
-                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
-            })
+            handler: (m) => {
+                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                return {
+                    name: baseName,
+                    type: VarType.OUTPUT,
+                    clearBehavior: ClearBehavior.ON_SOLVE,
+                    valueText: m[2].trim(),
+                    base: 10,
+                    fullPrecision: false,
+                    marker: '->',
+                    format
+                };
+            }
         },
         // Full precision: var::
         {
             regex: /^(\w+[$%]?)\s*::\s*(.*)$/,
-            handler: (m) => ({
-                name: m[1],
-                type: VarType.STANDARD,
-                valueText: m[2].trim(),
-                base: 10,
-                confirm: false,
-                fullPrecision: true,
-                marker: '::',
-                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
-            })
-        },
-        // Confirmation: var?:
-        {
-            regex: /^(\w+[$%]?)\s*\?\s*:\s*(.*)$/,
-            handler: (m) => ({
-                name: m[1],
-                type: VarType.STANDARD,
-                valueText: m[2].trim(),
-                base: 10,
-                confirm: true,
-                fullPrecision: false,
-                marker: '?:',
-                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
-            })
+            handler: (m) => {
+                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                return {
+                    name: baseName,
+                    type: VarType.STANDARD,
+                    clearBehavior: ClearBehavior.NONE,
+                    valueText: m[2].trim(),
+                    base: 10,
+                    fullPrecision: true,
+                    marker: '::',
+                    format
+                };
+            }
         },
         // Integer base: var#base:
         {
             regex: /^(\w+[$%]?)\s*#\s*(\d+)\s*:\s*(.*)$/,
-            handler: (m) => ({
-                name: m[1],
-                type: VarType.STANDARD,
-                valueText: m[3].trim(),
-                base: parseInt(m[2]),
-                confirm: false,
-                fullPrecision: false,
-                marker: `#${m[2]}:`,
-                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
-            })
+            handler: (m) => {
+                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                return {
+                    name: baseName,
+                    type: VarType.STANDARD,
+                    clearBehavior: ClearBehavior.NONE,
+                    valueText: m[3].trim(),
+                    base: parseInt(m[2]),
+                    fullPrecision: false,
+                    marker: `#${m[2]}:`,
+                    format
+                };
+            }
         },
         // Standard: var:
         {
             regex: /^(\w+[$%]?)\s*:\s*(.*)$/,
-            handler: (m) => ({
-                name: m[1],
-                type: VarType.STANDARD,
-                valueText: m[2].trim(),
-                base: 10,
-                confirm: false,
-                fullPrecision: false,
-                marker: ':',
-                format: m[1].endsWith('$') ? 'money' : m[1].endsWith('%') ? 'percent' : null
-            })
+            handler: (m) => {
+                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                return {
+                    name: baseName,
+                    type: VarType.STANDARD,
+                    clearBehavior: ClearBehavior.NONE,
+                    valueText: m[2].trim(),
+                    base: 10,
+                    fullPrecision: false,
+                    marker: ':',
+                    format
+                };
+            }
         }
     ];
 
@@ -149,83 +188,163 @@ function parseVariableLine(line) {
 }
 
 /**
+ * Find all variable names in an AST expression
+ * Used to detect if an expression is a constant (no variables)
+ */
+function findVariablesInExpression(node) {
+    const vars = new Set();
+
+    function walk(n) {
+        if (!n) return;
+        switch (n.type) {
+            case 'VARIABLE':
+                vars.add(n.name);
+                break;
+            case 'BINARY_OP':
+                walk(n.left);
+                walk(n.right);
+                break;
+            case 'UNARY_OP':
+                walk(n.operand);
+                break;
+            case 'FUNCTION_CALL':
+                n.args.forEach(walk);
+                break;
+        }
+    }
+
+    walk(node);
+    return vars;
+}
+
+/**
  * Parse all variable declarations from text
  * Returns map of variable name -> { declaration, lineIndex, value }
  */
 function parseAllVariables(text) {
     const lines = text.split('\n');
-    const variables = new Map();
+    const declarations = [];
 
     for (let i = 0; i < lines.length; i++) {
         const decl = parseVariableLine(lines[i]);
         if (decl) {
-            // Try to parse the value
+            // Parse numeric literals only (no expression evaluation)
+            // Expressions stay as valueText for display
             let value = null;
             if (decl.valueText) {
-                let textToParse = decl.valueText;
-
-                // Handle money format: $1,234.56 or -$1,234.56
-                const moneyMatch = textToParse.match(/^(-?)\$(.+)$/);
-                if (moneyMatch) {
-                    textToParse = moneyMatch[1] + moneyMatch[2];
-                }
-
-                // Handle percentage format: 7.5% becomes 0.075 (divide by 100)
-                // Also treat as percent if variable name ends with %
-                let isPercent = decl.name.endsWith('%');
-                const percentMatch = textToParse.match(/^(.+)%$/);
-                if (percentMatch) {
-                    textToParse = percentMatch[1];
-                    isPercent = true;
-                }
-
-                // Check if value is a simple number (allow commas as digit grouping)
-                const numMatch = textToParse.match(/^-?[\d,]+\.?\d*(?:[eE][+-]?\d+)?$/);
-                if (numMatch) {
-                    value = parseFloat(textToParse.replace(/,/g, ''));
-                } else if (textToParse.match(/^0x[0-9a-fA-F]+$/)) {
-                    value = parseInt(textToParse, 16);
-                } else if (textToParse.match(/^0b[01]+$/)) {
-                    value = parseInt(textToParse.slice(2), 2);
-                } else if (textToParse.match(/^0o[0-7]+$/)) {
-                    value = parseInt(textToParse.slice(2), 8);
-                }
-
-                // Convert percentage display value to decimal (7.5% -> 0.075)
-                if (isPercent && value !== null) {
-                    value = value / 100;
-                }
+                value = parseNumericValue(decl.valueText, decl.format);
             }
 
-            // Don't overwrite a variable that has a value or valueText expression with one that doesn't
-            const existing = variables.get(decl.name);
-            const existingHasValue = existing && (existing.value !== null || existing.declaration?.valueText);
-            const newHasValue = value !== null || decl.valueText;
-            if (existingHasValue && !newHasValue) {
-                // Keep existing value/expression but update declaration info for output variable
-                existing.declaration = decl;
-                existing.lineIndex = i;
-            } else if (existingHasValue && newHasValue && existing.declaration?.valueText && !decl.valueText) {
-                // New has a numeric value but existing has an expression - keep the expression
-                // but use the new numeric value if it exists
-                existing.declaration = decl;
-                existing.lineIndex = i;
-                if (value !== null) {
-                    existing.value = value;
-                }
-            } else {
-                variables.set(decl.name, {
-                    declaration: decl,
-                    lineIndex: i,
-                    value: value,
-                    // Preserve valueText from input declaration if output declaration has none
-                    valueText: decl.valueText || existing?.declaration?.valueText
-                });
-            }
+            declarations.push({
+                name: decl.name,
+                declaration: decl,
+                lineIndex: i,
+                value: value,
+                valueText: decl.valueText
+            });
         }
     }
 
-    return variables;
+    return declarations;
+}
+
+/**
+ * Parse a numeric value from text (handles $, %, hex, etc.)
+ * Returns null if the text is an expression (not a simple numeric literal)
+ * @param {string} valueText - The text to parse
+ * @param {string} varFormat - 'money', 'percent', or null
+ */
+function parseNumericValue(valueText, varFormat = null) {
+    let textToParse = valueText;
+
+    // Handle money format: $1,234.56 or -$1,234.56
+    const moneyMatch = textToParse.match(/^(-?)\$(.+)$/);
+    if (moneyMatch) {
+        textToParse = moneyMatch[1] + moneyMatch[2];
+    }
+
+    // Handle percentage format: 7.5% becomes 0.075 (divide by 100)
+    // Also treat as percent if variable format is percent
+    let isPercent = varFormat === 'percent';
+    const percentMatch = textToParse.match(/^(.+)%$/);
+    if (percentMatch) {
+        textToParse = percentMatch[1];
+        isPercent = true;
+    }
+
+    // Remove commas (digit grouping)
+    textToParse = textToParse.replace(/,/g, '');
+
+    let value = null;
+
+    // Check if value is a simple number
+    const numMatch = textToParse.match(/^-?\d+\.?\d*(?:[eE][+-]?\d+)?$/);
+    if (numMatch) {
+        value = parseFloat(textToParse);
+    } else if (textToParse.match(/^0x[0-9a-fA-F]+$/)) {
+        value = parseInt(textToParse, 16);
+    } else if (textToParse.match(/^0b[01]+$/)) {
+        value = parseInt(textToParse.slice(2), 2);
+    } else if (textToParse.match(/^0o[0-7]+$/)) {
+        value = parseInt(textToParse.slice(2), 8);
+    }
+    // If not a numeric literal, return null (it's an expression)
+
+    // Convert percentage display value to decimal (7.5% -> 0.075)
+    if (isPercent && value !== null) {
+        value = value / 100;
+    }
+
+    return value;
+}
+
+/**
+ * Format a variable value for display
+ * Handles full precision $/% formatting
+ * @param {number} value - The numeric value
+ * @param {string} varFormat - 'money', 'percent', or null
+ * @param {boolean} fullPrecision - Whether to use full precision (for ->> and ::)
+ * @param {object} format - Format options: { places, stripZeros, numberFormat, base, groupDigits }
+ * @returns {string} Formatted value string
+ */
+function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
+    const places = fullPrecision ? 15 : (format.places ?? 4);
+    const stripZeros = format.stripZeros !== false;
+    const numberFormat = format.numberFormat || 'float';
+    const base = format.base || 10;
+    const groupDigits = format.groupDigits || false;
+
+    // Handle money format
+    if (varFormat === 'money') {
+        const absValue = Math.abs(value);
+        if (fullPrecision) {
+            const formatted = formatNumber(absValue, places, stripZeros, numberFormat, 10, groupDigits, null);
+            return value < 0 ? '-$' + formatted : '$' + formatted;
+        } else {
+            // Use 2 decimal places for money by default
+            const formatted = absValue.toFixed(2);
+            const parts = formatted.split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            const result = parts.join('.');
+            return value < 0 ? '-$' + result : '$' + result;
+        }
+    }
+
+    // Handle percent format
+    if (varFormat === 'percent') {
+        const percent = value * 100;
+        if (fullPrecision) {
+            const formatted = formatNumber(percent, places, stripZeros, numberFormat, 10, false, null);
+            return formatted + '%';
+        } else {
+            // Use 2 decimal places for percent, strip trailing zeros
+            const formatted = percent.toFixed(2).replace(/\.?0+$/, '');
+            return formatted + '%';
+        }
+    }
+
+    // Regular number formatting
+    return formatNumber(value, places, stripZeros, numberFormat, base, groupDigits, null);
 }
 
 /**
@@ -252,10 +371,13 @@ function setVariableValue(text, varName, value, format = {}) {
         if (decl.valueText) continue;
 
         const line = lines[i];
-        // Use full precision (15 places) for ->> and :: declarations, otherwise use regularPlaces
-        // Don't apply $/%  formatting for full precision - show raw value
-        const places = decl.fullPrecision ? 15 : regularPlaces;
-        const formattedValue = formatNumber(value, places, stripZeros, numberFormat, decl.base, groupDigits, decl.fullPrecision ? null : varName);
+        const formattedValue = formatVariableValue(value, decl.format, decl.fullPrecision, {
+            places: regularPlaces,
+            stripZeros,
+            numberFormat,
+            base: decl.base,
+            groupDigits
+        });
 
         // Find the position to insert the value (after the marker)
         const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
@@ -295,8 +417,8 @@ function setVariableValue(text, varName, value, format = {}) {
 /**
  * Clear variable values based on type
  * Clears ALL matching declarations, not just one per variable
- * clearType: 'input' clears input variables (<-)
- *            'output' clears output variables (-> and ->>)
+ * clearType: 'input' clears input variables (<-) and output variables (-> and ->>)
+ *            'output' clears output variables only (-> and ->>)
  *            'all' clears all variables
  */
 function clearVariables(text, clearType = 'input') {
@@ -306,10 +428,17 @@ function clearVariables(text, clearType = 'input') {
         const decl = parseVariableLine(lines[i]);
         if (!decl) continue;
 
+        // Use ClearBehavior for logic, with VarType fallback for compatibility
+        const clearBehavior = decl.clearBehavior || (
+            decl.type === VarType.INPUT ? ClearBehavior.ON_CLEAR :
+            decl.type === VarType.OUTPUT ? ClearBehavior.ON_SOLVE :
+            ClearBehavior.NONE
+        );
+
         const shouldClear =
             clearType === 'all' ||
-            (clearType === 'input' && decl.type === VarType.INPUT) ||
-            (clearType === 'output' && decl.type === VarType.OUTPUT);
+            (clearType === 'input' && (clearBehavior === ClearBehavior.ON_CLEAR || clearBehavior === ClearBehavior.ON_SOLVE)) ||
+            (clearType === 'output' && clearBehavior === ClearBehavior.ON_SOLVE);
 
         if (shouldClear && decl.valueText) {
             const line = lines[i];
@@ -535,6 +664,56 @@ function parseFunctionsRecord(text) {
 }
 
 /**
+ * Create an EvalContext with constants and user functions loaded
+ * @param {Array} records - Array of all records (to find Constants and Functions records)
+ * @param {Object} settings - Settings object with degreesMode
+ * @param {string} localText - Optional text of current record for local function definitions
+ * @returns {EvalContext} Configured evaluation context
+ */
+function createEvalContext(records, settings, localText = null) {
+    const context = new EvalContext();
+    context.degreesMode = settings?.degreesMode || false;
+
+    // Load constants from Constants record
+    const constantsRecord = records.find(r => r.title === 'Constants');
+    if (constantsRecord) {
+        const constants = parseConstantsRecord(constantsRecord.text);
+        for (const [name, value] of constants) {
+            context.setConstant(name, value);
+        }
+    }
+
+    // Load user functions from Functions record
+    const functionsRecord = records.find(r => r.title === 'Functions');
+    if (functionsRecord) {
+        const functions = parseFunctionsRecord(functionsRecord.text);
+        for (const [name, { params, bodyText }] of functions) {
+            try {
+                const bodyAST = parseExpression(bodyText);
+                context.setUserFunction(name, params, bodyAST);
+            } catch (e) {
+                console.warn(`Error parsing function ${name}:`, e);
+            }
+        }
+    }
+
+    // Also load functions defined in the current record (overrides Functions record)
+    if (localText) {
+        const localFunctions = parseFunctionsRecord(localText);
+        for (const [name, { params, bodyText }] of localFunctions) {
+            try {
+                const bodyAST = parseExpression(bodyText);
+                context.setUserFunction(name, params, bodyAST);
+            } catch (e) {
+                console.warn(`Error parsing local function ${name}:`, e);
+            }
+        }
+    }
+
+    return context;
+}
+
+/**
  * Helper: escape special regex characters
  */
 function escapeRegex(str) {
@@ -547,9 +726,9 @@ function escapeRegex(str) {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        VarType, parseVariableLine, parseAllVariables,
+        VarType, ClearBehavior, parseVariableLine, parseAllVariables,
         setVariableValue, clearVariables, findEquations,
         findInlineEvaluations, replaceInlineEvaluation,
-        parseConstantsRecord, parseFunctionsRecord
+        parseConstantsRecord, parseFunctionsRecord, createEvalContext
     };
 }

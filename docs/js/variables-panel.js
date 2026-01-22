@@ -10,59 +10,73 @@ class VariablesPanel {
         this.container = container;
         this.record = record;
         this.editor = editor;
-        this.variables = new Map();
+        this.declarations = new Map(); // keyed by lineIndex
         this.changeListeners = [];
         this.inputElements = new Map();
     }
 
     /**
      * Update variables panel from text
+     * Shows one row per declaration line
      */
     updateFromText(text) {
-        const newVariables = parseAllVariables(text);
+        const newDeclarations = parseAllVariables(text);
 
-        // Diff and update only changed variables
+        // Build map keyed by lineIndex for diffing
+        const newDeclMap = new Map();
+        for (const info of newDeclarations) {
+            newDeclMap.set(info.lineIndex, info);
+        }
+
+        // Diff and update only changed declarations
         const toAdd = [];
         const toUpdate = [];
         const toRemove = [];
 
-        for (const [name, info] of newVariables) {
-            if (!this.variables.has(name)) {
-                toAdd.push({ name, info });
+        for (const [lineIndex, info] of newDeclMap) {
+            if (!this.declarations.has(lineIndex)) {
+                toAdd.push(info);
             } else {
-                const existing = this.variables.get(name);
-                if (this.variableChanged(existing, info)) {
-                    toUpdate.push({ name, info });
+                const existing = this.declarations.get(lineIndex);
+                // If name or marker changed, remove old row and add new one
+                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker) {
+                    toRemove.push(lineIndex);
+                    toAdd.push(info);
+                } else if (this.declarationChanged(existing, info)) {
+                    toUpdate.push(info);
                 }
             }
         }
 
-        for (const name of this.variables.keys()) {
-            if (!newVariables.has(name)) {
-                toRemove.push(name);
+        for (const lineIndex of this.declarations.keys()) {
+            if (!newDeclMap.has(lineIndex)) {
+                toRemove.push(lineIndex);
             }
         }
 
-        // Apply changes
-        toRemove.forEach(name => this.removeVariableRow(name));
-        toAdd.forEach(({ name, info }) => this.addVariableRow(name, info));
-        toUpdate.forEach(({ name, info }) => this.updateVariableRow(name, info));
+        // Apply changes - remove first, then add, then update
+        toRemove.forEach(lineIndex => this.removeVariableRow(lineIndex));
+        toAdd.forEach(info => this.addVariableRow(info));
+        toUpdate.forEach(info => this.updateVariableRow(info));
 
-        this.variables = newVariables;
+        this.declarations = newDeclMap;
     }
 
     /**
      * Add a variable row to the panel
      */
-    addVariableRow(name, info) {
+    addVariableRow(info) {
         const row = document.createElement('div');
         row.className = 'variable-row';
-        row.dataset.varName = name;
+        row.dataset.lineIndex = info.lineIndex;
 
-        // Set data-type for CSS styling
-        if (info.declaration.type === VarType.INPUT) {
+        const decl = info.declaration;
+        const clearBehavior = decl.clearBehavior;
+
+        // Set data-type for CSS styling based on clear behavior
+        if (clearBehavior === ClearBehavior.ON_CLEAR || decl.type === VarType.INPUT) {
             row.dataset.type = 'input';
-        } else if (info.declaration.type === VarType.OUTPUT) {
+        } else if (clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT) {
             row.dataset.type = 'output';
         } else {
             row.dataset.type = 'standard';
@@ -71,37 +85,39 @@ class VariablesPanel {
         // Type indicator
         const typeIndicator = document.createElement('span');
         typeIndicator.className = 'variable-type-indicator';
-        if (info.declaration.type === VarType.INPUT) {
+        if (clearBehavior === ClearBehavior.ON_CLEAR || decl.type === VarType.INPUT) {
             typeIndicator.textContent = '\u2190'; // left arrow
-            typeIndicator.title = 'Input variable';
-        } else if (info.declaration.type === VarType.OUTPUT) {
+            typeIndicator.title = 'Input variable (cleared on Clear)';
+        } else if (clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT) {
             typeIndicator.textContent = '\u2192'; // right arrow
-            typeIndicator.title = 'Output variable';
+            typeIndicator.title = 'Output variable (cleared on Solve)';
         } else {
             typeIndicator.textContent = '';
         }
 
-        // Variable name label
+        // Variable name label (includes marker to distinguish declarations)
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
-        nameLabel.textContent = name;
+        nameLabel.textContent = info.name + (decl.marker || ':');
 
         // Value input or display
-        const isEditable = info.declaration.type !== VarType.OUTPUT;
+        // Output types (-> and ->>) are read-only
+        const isOutput = clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
+        const isEditable = !isOutput;
         let valueElement;
 
         if (isEditable) {
             valueElement = document.createElement('input');
             valueElement.type = 'text';
             valueElement.className = 'variable-value-input';
-            valueElement.value = this.formatValueForDisplay(name, info);
-            valueElement.addEventListener('change', (e) => this.handleValueChange(name, e.target.value));
+            valueElement.value = this.formatValueForDisplay(info);
+            valueElement.addEventListener('input', (e) => this.handleValueChange(info.lineIndex, e.target.value));
             valueElement.addEventListener('focus', (e) => e.target.select());
-            this.inputElements.set(name, valueElement);
+            this.inputElements.set(info.lineIndex, valueElement);
         } else {
             valueElement = document.createElement('span');
             valueElement.className = 'variable-value-readonly';
-            valueElement.textContent = this.formatValueForDisplay(name, info);
+            valueElement.textContent = this.formatValueForDisplay(info);
         }
 
         row.appendChild(typeIndicator);
@@ -115,13 +131,13 @@ class VariablesPanel {
     /**
      * Update an existing variable row
      */
-    updateVariableRow(name, info) {
-        const row = this.container.querySelector(`[data-var-name="${name}"]`);
+    updateVariableRow(info) {
+        const row = this.container.querySelector(`[data-line-index="${info.lineIndex}"]`);
         if (!row) return;
 
         const valueElement = row.querySelector('.variable-value-input, .variable-value-readonly');
         if (valueElement && document.activeElement !== valueElement) {
-            const newValue = this.formatValueForDisplay(name, info);
+            const newValue = this.formatValueForDisplay(info);
             if (valueElement.tagName === 'INPUT') {
                 valueElement.value = newValue;
             } else {
@@ -133,108 +149,95 @@ class VariablesPanel {
     /**
      * Remove a variable row
      */
-    removeVariableRow(name) {
-        const row = this.container.querySelector(`[data-var-name="${name}"]`);
+    removeVariableRow(lineIndex) {
+        const row = this.container.querySelector(`[data-line-index="${lineIndex}"]`);
         if (row) row.remove();
-        this.inputElements.delete(name);
+        this.inputElements.delete(lineIndex);
     }
 
     /**
      * Handle value change from input
      */
-    handleValueChange(varName, newValue) {
-        // Parse the new value
-        const parsedValue = this.parseInputValue(varName, newValue);
-        if (parsedValue === null) return;
+    handleValueChange(lineIndex, newValue) {
+        // Get the declaration info for this line
+        const info = this.declarations.get(lineIndex);
+        if (!info) return;
 
-        // Format the value for display in formulas, preserving user's input precision
-        const formattedValue = this.formatInputForFormulas(varName, newValue, parsedValue);
+        const varName = info.name;
+        const decl = info.declaration;
 
-        // Get current text and update
+        // Try to parse the new value as a number
+        const parsedValue = this.parseInputValue(decl.format, newValue);
+
+        // Format the value for display in formulas
+        // If it's a number, format it; otherwise use the raw input (allows expressions)
+        let formattedValue;
+        if (parsedValue !== null) {
+            formattedValue = this.formatInputForFormulas(decl.format, newValue, parsedValue);
+        } else {
+            // Not a number - use the raw input (could be an expression like sqrt(3))
+            formattedValue = newValue.trim();
+            if (!formattedValue) return; // Don't allow empty values
+        }
+
+        // Get current text and update the specific line
         let text = this.editor.getValue();
+        const lines = text.split('\n');
 
-        // First check if the variable has a declaration with no value
-        const variables = parseAllVariables(text);
-        const varInfo = variables.get(varName);
+        if (lineIndex >= 0 && lineIndex < lines.length) {
+            const line = lines[lineIndex];
+            const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
 
-        if (varInfo && !varInfo.declaration.valueText) {
-            // Use setVariableValue to fill in empty declaration
-            // But we need to use our formatted value, so do it manually
-            const lines = text.split('\n');
-            const decl = varInfo.declaration;
-            const lineIndex = varInfo.lineIndex;
-
-            if (lineIndex >= 0 && lineIndex < lines.length) {
-                const line = lines[lineIndex];
-                const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
-
-                let markerIndex;
-                if (decl.limits) {
-                    const bracketMatch = cleanLine.match(/\w+[$%]?\s*\[[^\]]+\]\s*:/);
-                    if (bracketMatch) {
-                        markerIndex = bracketMatch.index + bracketMatch[0].length;
-                    }
-                } else {
-                    const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}\\s*(${escapeRegex(decl.marker)})`));
-                    if (markerMatch) {
-                        markerIndex = markerMatch.index + markerMatch[0].length;
-                    }
+            let markerIndex;
+            if (decl.limits) {
+                const bracketMatch = cleanLine.match(/\w+[$%]?\s*\[[^\]]+\]\s*:/);
+                if (bracketMatch) {
+                    markerIndex = bracketMatch.index + bracketMatch[0].length;
                 }
-
-                if (markerIndex !== undefined) {
-                    const commentMatch = line.match(/"[^"]*"$/);
-                    const comment = commentMatch ? ' ' + commentMatch[0] : '';
-                    const beforeValue = line.substring(0, markerIndex);
-                    lines[lineIndex] = beforeValue + ' ' + formattedValue + comment;
-                    text = lines.join('\n');
+            } else {
+                const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}\\s*(${escapeRegex(decl.marker)})`));
+                if (markerMatch) {
+                    markerIndex = markerMatch.index + markerMatch[0].length;
                 }
             }
-        } else if (varInfo) {
-            // Need to replace existing value - find and replace the value portion
-            const lines = text.split('\n');
-            const decl = varInfo.declaration;
-            const lineIndex = varInfo.lineIndex;
 
-            if (lineIndex >= 0 && lineIndex < lines.length) {
-                const line = lines[lineIndex];
-
-                // Find the marker position and reconstruct line
-                const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
-                let markerPattern;
-                if (decl.limits) {
-                    markerPattern = new RegExp(`(${escapeRegex(varName)}\\s*\\[[^\\]]+\\]\\s*:)\\s*(.*?)(?:\\s*"[^"]*")?$`);
-                } else {
-                    markerPattern = new RegExp(`(${escapeRegex(varName)}\\s*${escapeRegex(decl.marker)})\\s*(.*?)(?:\\s*"[^"]*")?$`);
-                }
-
-                // Find trailing comment
+            if (markerIndex !== undefined) {
                 const commentMatch = line.match(/"[^"]*"$/);
                 const comment = commentMatch ? ' ' + commentMatch[0] : '';
-
-                // Find marker in the original line
-                const match = cleanLine.match(markerPattern);
-                if (match) {
-                    const beforeMarker = line.substring(0, match.index + match[1].length);
-                    lines[lineIndex] = beforeMarker + ' ' + formattedValue + comment;
-                    text = lines.join('\n');
-                }
+                const beforeValue = line.substring(0, markerIndex);
+                lines[lineIndex] = beforeValue + ' ' + formattedValue + comment;
+                text = lines.join('\n');
             }
         }
+
+        // Save focus state before notifying listeners
+        const inputElement = this.inputElements.get(lineIndex);
+        const selectionStart = inputElement?.selectionStart;
+        const selectionEnd = inputElement?.selectionEnd;
 
         // Notify listeners
         for (const listener of this.changeListeners) {
             listener(varName, parsedValue, text);
         }
+
+        // Restore focus to the input element
+        if (inputElement) {
+            inputElement.focus();
+            if (selectionStart !== undefined) {
+                inputElement.setSelectionRange(selectionStart, selectionEnd);
+            }
+        }
     }
 
     /**
      * Format user input for writing back to formulas, preserving precision
+     * @param {string} varFormat - 'money', 'percent', or null
      */
-    formatInputForFormulas(varName, inputText, parsedValue) {
+    formatInputForFormulas(varFormat, inputText, parsedValue) {
         let text = inputText.trim();
 
         // Handle money variables
-        if (varName.endsWith('$') || text.includes('$')) {
+        if (varFormat === 'money' || text.includes('$')) {
             // Format as money: $1,234.56
             const absValue = Math.abs(parsedValue);
             // Detect decimal places from input
@@ -250,7 +253,7 @@ class VariablesPanel {
         }
 
         // Handle percentage variables
-        if (varName.endsWith('%') || text.endsWith('%')) {
+        if (varFormat === 'percent' || text.endsWith('%')) {
             // If user included %, return as-is
             if (text.endsWith('%')) {
                 return text;
@@ -265,33 +268,34 @@ class VariablesPanel {
 
     /**
      * Format a value for display in the panel
-     * Uses the original text value when available to preserve full precision
+     * Uses the computed numeric value when available, falls back to raw text
      */
-    formatValueForDisplay(name, info) {
-        if (info.value === null || info.value === undefined) return '';
-
-        // If we have the original value text, use it directly to preserve precision
-        // This handles cases like 6.125% which would otherwise round to 6.13%
-        if (info.declaration.valueText) {
-            return info.declaration.valueText;
+    formatValueForDisplay(info) {
+        // If we have a computed numeric value, format and display it
+        if (info.value !== null && info.value !== undefined) {
+            return formatVariableValue(info.value, info.declaration.format, info.declaration.fullPrecision, {
+                places: this.record.places,
+                stripZeros: this.record.stripZeros,
+                numberFormat: this.record.format,
+                base: info.declaration.base,
+                groupDigits: this.record.groupDigits
+            });
         }
 
-        // Fallback to formatting from numeric value with high precision
-        return formatNumber(
-            info.value,
-            14,  // Use high precision to preserve value
-            true, // Strip trailing zeros
-            this.record.format || 'float',
-            info.declaration.base || 10,
-            this.record.groupDigits || false,
-            name
-        );
+        // No computed value - show the raw valueText if available
+        // This handles expressions with unknown variables that can't be evaluated yet
+        if (info.valueText) {
+            return info.valueText;
+        }
+
+        return '';
     }
 
     /**
      * Parse user input value (handling $, %, commas)
+     * @param {string} varFormat - 'money', 'percent', or null
      */
-    parseInputValue(varName, inputText) {
+    parseInputValue(varFormat, inputText) {
         let text = inputText.trim();
         if (!text) return null;
 
@@ -303,11 +307,11 @@ class VariablesPanel {
         }
 
         // Handle percentage format: 7.5%
-        // Also check if variable name ends with % (percentage variable)
+        // Also check if variable format is percent
         if (text.endsWith('%')) {
             text = text.slice(0, -1);
             multiplier = 0.01; // Convert percentage display to decimal
-        } else if (varName.endsWith('%')) {
+        } else if (varFormat === 'percent') {
             // Variable is percentage type but user didn't include %
             // Assume they entered as display value (e.g., 7.5 for 7.5%)
             multiplier = 0.01;
@@ -328,12 +332,13 @@ class VariablesPanel {
     }
 
     /**
-     * Check if a variable has changed
+     * Check if a declaration has changed
      */
-    variableChanged(existing, newInfo) {
+    declarationChanged(existing, newInfo) {
         return existing.value !== newInfo.value ||
+               existing.valueText !== newInfo.valueText ||
                existing.declaration.type !== newInfo.declaration.type ||
-               existing.lineIndex !== newInfo.lineIndex;
+               existing.name !== newInfo.name;
     }
 
     /**
@@ -344,9 +349,8 @@ class VariablesPanel {
         let inserted = false;
 
         for (const existingRow of rows) {
-            const existingName = existingRow.dataset.varName;
-            const existingInfo = this.variables.get(existingName);
-            if (existingInfo && existingInfo.lineIndex > lineIndex) {
+            const existingLineIndex = parseInt(existingRow.dataset.lineIndex, 10);
+            if (existingLineIndex > lineIndex) {
                 this.container.insertBefore(row, existingRow);
                 inserted = true;
                 break;

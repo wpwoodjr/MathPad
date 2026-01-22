@@ -3,7 +3,7 @@
  */
 
 const STORAGE_KEY = 'mathpad_data';
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 
 /**
  * Default data structure
@@ -30,7 +30,6 @@ fv$: $0.00 "future value"
 yint%: 7.5% "annual interest rate"
 n: 360 "number of payments (30 years)"`,
                 category: 'Finance',
-                secret: false,
                 places: 2,
                 stripZeros: true,
                 groupDigits: false,
@@ -53,7 +52,6 @@ disc->
 x1->
 x2->`,
                 category: 'Math',
-                secret: false,
                 places: 2,
                 stripZeros: true,
                 groupDigits: false,
@@ -72,7 +70,6 @@ kB: 1.380649e-23 "Boltzmann constant"
 NA: 6.02214076e23 "Avogadro number"
 golden: 1.61803398874989 "golden ratio"`,
                 category: 'Reference',
-                secret: false,
                 places: 2,
                 stripZeros: true,
                 groupDigits: false,
@@ -97,7 +94,6 @@ hypot(a;b) = sqrt(a**2 + b**2)
 "Quadratic discriminant"
 disc(a;b;c) = b**2 - 4*a*c`,
                 category: 'Reference',
-                secret: false,
                 places: 2,
                 stripZeros: true,
                 groupDigits: false,
@@ -160,7 +156,25 @@ function saveData(data) {
  * Migrate old data format to new
  */
 function migrateData(data) {
-    // Add any migration logic here for future versions
+    // Migration from version 1 to version 2
+    if (!data.version || data.version < 2) {
+        for (const record of data.records || []) {
+            // Convert places: 14 (old default) to places: 4 (new default)
+            if (record.places === 14) {
+                record.places = 4;
+            }
+            // Remove dead secret field
+            delete record.secret;
+            // Add missing format and groupDigits fields
+            if (record.format === undefined) {
+                record.format = 'float';
+            }
+            if (record.groupDigits === undefined) {
+                record.groupDigits = false;
+            }
+        }
+    }
+
     data.version = STORAGE_VERSION;
     return data;
 }
@@ -190,7 +204,13 @@ function exportToText(data) {
     for (const record of data.records) {
         // Record metadata
         lines.push(`Category = "${record.category || 'Unfiled'}"; Secret = ${record.secret ? 1 : 0}`);
-        lines.push(`Places = ${record.places || 14}; StripZeros = ${record.stripZeros ? 1 : 0}`);
+        lines.push(`Places = ${record.places ?? 4}; StripZeros = ${record.stripZeros ? 1 : 0}`);
+        lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}`);
+        if (record.status) {
+            // Escape quotes in status message
+            const escapedStatus = record.status.replace(/"/g, '\\"');
+            lines.push(`Status = "${escapedStatus}"; StatusIsError = ${record.statusIsError ? 1 : 0}`);
+        }
 
         // Record title as first line comment
         if (record.title) {
@@ -226,12 +246,16 @@ function importFromText(text, existingData = null) {
         const lines = trimmed.split('\n');
         let category = 'Unfiled';
         let secret = false;
-        let places = 14;
+        let places = 4;
         let stripZeros = true;
+        let format = 'float';
+        let groupDigits = false;
+        let status = '';
+        let statusIsError = false;
         let contentStart = 0;
 
         // Parse metadata lines
-        for (let i = 0; i < Math.min(3, lines.length); i++) {
+        for (let i = 0; i < Math.min(4, lines.length); i++) {
             const line = lines[i].trim();
 
             // Category and Secret line
@@ -248,6 +272,25 @@ function importFromText(text, existingData = null) {
             if (placesMatch) {
                 places = parseInt(placesMatch[1]);
                 stripZeros = placesMatch[2] === '1';
+                contentStart = i + 1;
+                continue;
+            }
+
+            // Format and GroupDigits line (new in v2)
+            const formatMatch = line.match(/Format\s*=\s*"([^"]*)"\s*;\s*GroupDigits\s*=\s*(\d+)/i);
+            if (formatMatch) {
+                format = formatMatch[1];
+                groupDigits = formatMatch[2] === '1';
+                contentStart = i + 1;
+                continue;
+            }
+
+            // Status line (new in v3)
+            const statusMatch = line.match(/Status\s*=\s*"(.*)"\s*;\s*StatusIsError\s*=\s*(\d+)/i);
+            if (statusMatch) {
+                // Unescape quotes in status message
+                status = statusMatch[1].replace(/\\"/g, '"');
+                statusIsError = statusMatch[2] === '1';
                 contentStart = i + 1;
                 continue;
             }
@@ -285,10 +328,12 @@ function importFromText(text, existingData = null) {
             title: title,
             text: content,
             category: category,
-            secret: secret,
             places: places,
             stripZeros: stripZeros,
-            format: 'float'
+            groupDigits: groupDigits,
+            format: format,
+            status: status,
+            statusIsError: statusIsError
         });
     }
 
@@ -362,11 +407,12 @@ function createRecord(title = 'New Record', category = 'Unfiled') {
         title: title,
         text: `"${title}"\n\n`,
         category: category,
-        secret: false,
-        places: 14,
+        places: 4,
         stripZeros: true,
         groupDigits: false,
-        format: 'float'
+        format: 'float',
+        status: '',
+        statusIsError: false
     };
 }
 

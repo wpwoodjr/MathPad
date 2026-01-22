@@ -217,6 +217,12 @@ button {
     letter-spacing: 0.5px;
 }
 
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
 .category-group {
     margin-bottom: 2px;
 }
@@ -721,6 +727,7 @@ button {
     padding: 4px 8px;
     gap: 8px;
     border-radius: 3px;
+    min-height: 35px;
 }
 
 .variable-row:hover {
@@ -730,7 +737,7 @@ button {
 .variable-type-indicator {
     width: 20px;
     text-align: center;
-    font-size: 12px;
+    font-size: 14px;
     color: var(--text-muted);
     flex-shrink: 0;
 }
@@ -746,7 +753,7 @@ button {
 .variable-name {
     min-width: 100px;
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 15px;
     color: var(--syn-variable-def);
 }
 
@@ -756,14 +763,14 @@ button {
 
 .variable-value-input {
     flex: 1;
-    max-width: 200px;
+    max-width: 300px;
     padding: 4px 8px;
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: 3px;
     color: var(--text-primary);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 15px;
     line-height: 1.4;
     min-height: 27px;
     box-sizing: border-box;
@@ -776,14 +783,14 @@ button {
 
 .variable-value-readonly {
     flex: 1;
-    max-width: 200px;
+    max-width: 300px;
     padding: 4px 8px;
     color: var(--text-secondary);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 15px;
     font-style: italic;
-    line-height: 1.4;
-    min-height: 27px;
+    line-height: 27px;
+    height: 27px;
     box-sizing: border-box;
 }
 
