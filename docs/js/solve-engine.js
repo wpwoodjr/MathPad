@@ -48,7 +48,7 @@ function findVariablesInAST(node) {
 /**
  * Solve a single equation in context
  */
-function solveEquationInContext(eqText, context, variables, substitutions = new Map()) {
+function solveEquationInContext(eqText, eqLine, context, variables, substitutions = new Map()) {
     // Parse the equation: left = right
     const eqMatch = eqText.match(/^(.+)=(.+)$/);
     if (!eqMatch) {
@@ -82,9 +82,18 @@ function solveEquationInContext(eqText, context, variables, substitutions = new 
 
     // If multiple unknowns, try applying substitutions
     if (unknowns.length > 1 && substitutions.size > 0) {
+        // Filter out substitutions derived from this equation (they would create an identity)
+        // and extract just the AST from each substitution entry
+        const applicableSubs = new Map();
+        for (const [varName, sub] of substitutions) {
+            if (sub.sourceLine !== eqLine) {
+                applicableSubs.set(varName, sub.ast);
+            }
+        }
+
         // Apply substitutions to reduce unknowns
-        leftAST = substituteInAST(leftAST, substitutions);
-        rightAST = substituteInAST(rightAST, substitutions);
+        leftAST = substituteInAST(leftAST, applicableSubs);
+        rightAST = substituteInAST(rightAST, applicableSubs);
 
         // Re-find variables after substitution
         leftVars = findVariablesInAST(leftAST);
@@ -145,7 +154,7 @@ function solveEquationInContext(eqText, context, variables, substitutions = new 
             value: value
         };
     } catch (e) {
-        // Solving failed (e.g., degenerate equation where both sides are identical)
+        // Solving failed (e.g., couldn't bracket root)
         return { solved: false };
     }
 }
@@ -194,7 +203,9 @@ function solveEquations(text, context, declarations) {
                 if (incompleteMatch) {
                     try {
                         let ast = parseExpression(incompleteMatch[1].trim());
-                        ast = substituteInAST(ast, substitutions);
+                        // Extract just the ASTs from substitutions for evaluation
+                        const subAsts = new Map([...substitutions].map(([k, v]) => [k, v.ast]));
+                        ast = substituteInAST(ast, subAsts);
                         const value = evaluate(ast, context);
                         // Store result but don't modify text
                         computedValues.set(`__incomplete_${eq.line}`, value);
@@ -227,7 +238,9 @@ function solveEquations(text, context, declarations) {
                     // If RHS is fully known, evaluate and set variable
                     if (rhsUnknowns.length === 0) {
                         try {
-                            let ast = substituteInAST(def.expressionAST, substitutions);
+                            // Extract just the ASTs from substitutions for evaluation
+                            const subAsts = new Map([...substitutions].map(([k, v]) => [k, v.ast]));
+                            let ast = substituteInAST(def.expressionAST, subAsts);
                             const value = evaluate(ast, context);
                             context.setVariable(def.variable, value);
                             computedValues.set(def.variable, value);
@@ -242,18 +255,8 @@ function solveEquations(text, context, declarations) {
                     if (!userProvidedVars.has(def.variable) && !context.hasVariable(def.variable)) continue;
                 }
 
-                // Skip equations used for algebraic substitutions
-                if (!def) {
-                    const derived = deriveSubstitution(eq.text, context);
-                    if (derived && substitutions.has(derived.variable)) {
-                        const derivedVars = findVariablesInAST(derived.expressionAST);
-                        const derivedUnknowns = [...derivedVars].filter(v => !context.hasVariable(v));
-                        if (derivedUnknowns.length > 0) continue;
-                    }
-                }
-
-                // Try to solve the equation numerically
-                const result = solveEquationInContext(eq.text, context, variables, substitutions);
+                // Try to solve the equation numerically (substitutions will be applied)
+                const result = solveEquationInContext(eq.text, eq.startLine, context, variables, substitutions);
                 if (result.solved) {
                     context.setVariable(result.variable, result.value);
                     computedValues.set(result.variable, result.value);

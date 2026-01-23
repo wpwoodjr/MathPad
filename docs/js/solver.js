@@ -608,7 +608,9 @@ function buildSubstitutionMap(equations, context, errors = []) {
         // (unless that variable is known in context)
         const hasSubstitutedVar = [...exprVars].some(v => substitutions.has(v) && !context.hasVariable(v));
         if (!hasSubstitutedVar) {
-            substitutions.set(def.variable, def.expressionAST);
+            // Store both the AST and the source equation's line number
+            // so we don't apply a substitution back to its own source equation
+            substitutions.set(def.variable, { ast: def.expressionAST, sourceLine: eq.startLine });
             dependencies.set(def.variable, exprVars);
         }
     }
