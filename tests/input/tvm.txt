@@ -1,0 +1,18 @@
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Time Value of Money"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: "monthly payment"
+pv$: $100,000 "loan amount"
+fv$: 0 "future value (baloon payment)"
+yint%: 6.125% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

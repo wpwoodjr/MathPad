@@ -75,6 +75,10 @@ function initUI(data) {
  * Render the sidebar with categories and records
  */
 function renderSidebar() {
+    // Preserve scroll position
+    const sidebarContent = UI.sidebar.querySelector('.sidebar-content');
+    const scrollTop = sidebarContent ? sidebarContent.scrollTop : 0;
+
     const groups = getRecordsByCategory(UI.data);
     let html = '<div class="sidebar-header">Records</div>';
     html += '<div class="sidebar-content">';
@@ -96,7 +100,7 @@ function renderSidebar() {
 
         for (const record of records) {
             const isActive = record.id === UI.currentRecordId;
-            const isSpecial = record.title === 'Constants' || record.title === 'Functions';
+            const isSpecial = record.title === 'Constants' || record.title === 'Functions' || record.title === 'Default Settings';
             html += `
                 <div class="record-item ${isActive ? 'active' : ''} ${isSpecial ? 'special' : ''}"
                      data-record-id="${record.id}"
@@ -122,6 +126,12 @@ function renderSidebar() {
     `;
 
     UI.sidebar.innerHTML = html;
+
+    // Restore scroll position
+    const newSidebarContent = UI.sidebar.querySelector('.sidebar-content');
+    if (newSidebarContent) {
+        newSidebarContent.scrollTop = scrollTop;
+    }
 }
 
 /**
@@ -391,6 +401,22 @@ function renderDetailsPanel() {
             </label>
         </div>
 
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" id="detail-degrees" ${record.degreesMode ? 'checked' : ''}
+                       onchange="updateRecordDetail('degreesMode', this.checked)">
+                Degrees mode (vs radians)
+            </label>
+        </div>
+
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" id="detail-shadow" ${record.shadowConstants ? 'checked' : ''}
+                       onchange="updateRecordDetail('shadowConstants', this.checked)">
+                Shadow constants
+            </label>
+        </div>
+
         <div class="details-actions">
             <button onclick="duplicateCurrentRecord()" class="btn-secondary">Duplicate</button>
             <button onclick="deleteCurrentRecord()" class="btn-danger">Delete</button>
@@ -419,7 +445,7 @@ function updateRecordDetail(field, value) {
  * Create a new record
  */
 function createNewRecord() {
-    const record = createRecord('New Record', 'Unfiled');
+    const record = createRecord(UI.data);
     UI.data.records.push(record);
     saveData(UI.data);
 
@@ -456,7 +482,7 @@ function renameRecord(recordId) {
  */
 function updateRecordTitleFromContent(record) {
     // Don't auto-update title for special records
-    if (record.title === 'Constants' || record.title === 'Functions') {
+    if (record.title === 'Constants' || record.title === 'Functions' || record.title === 'Default Settings') {
         return;
     }
     const firstLine = record.text.split('\n')[0].trim();
@@ -561,12 +587,6 @@ function setupEventListeners() {
     // Clear Input button
     document.getElementById('btn-clear')?.addEventListener('click', handleClearInput);
 
-    // Degrees/Radians toggle
-    document.getElementById('toggle-degrees')?.addEventListener('change', (e) => {
-        UI.data.settings.degreesMode = e.target.checked;
-        saveData(UI.data);
-    });
-
     // File input for import
     document.getElementById('file-input')?.addEventListener('change', handleFileSelect);
 
@@ -599,10 +619,13 @@ async function handleFileSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Ask user whether to clear existing records
+    const clearExisting = confirm('Clear existing records before importing?\n\nOK = Clear all and import\nCancel = Merge with existing records');
+
     try {
         setStatus('Importing...', false, false);
         const text = await readTextFile(file);
-        UI.data = importFromText(text, UI.data);
+        UI.data = importFromText(text, UI.data, { clearExisting });
         saveData(UI.data);
         renderSidebar();
         setStatus(`Imported from ${file.name}`, false, false);
@@ -654,7 +677,7 @@ function handleSolve() {
         text = clearVariables(text, 'output');
 
         // Create evaluation context with constants and user functions
-        const context = createEvalContext(UI.data.records, UI.data.settings, text);
+        const context = createEvalContext(UI.data.records, record, text);
 
         // Solve the record
         const result = solveRecord(text, context, record);

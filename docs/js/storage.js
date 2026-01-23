@@ -15,25 +15,27 @@ function createDefaultData() {
             {
                 id: generateId(),
                 title: 'Example: TVM',
-                text: `"Time Value of Money calculation"
-
-"Monthly interest rate from annual"
-mint = yint% / 12
+                text: `"Time Value of Money"
 
 "Payment calculation"
-pmt$ = -(pv$ + fv$ / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
 
-"Variables (example: compute monthly payment for loan of $100,000 for 30 years at 7.5%)"
+"Variables"
 pmt$: "monthly payment"
-pv$: $100,000.00 "present value"
-fv$: $0.00 "future value"
-yint%: 7.5% "annual interest rate"
-n: 360 "number of payments (30 years)"`,
+pv$: $100,000 "loan amount"
+fv$: 0 "future value (balloon payment)"
+yint%: 6.125% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12`,
                 category: 'Finance',
                 places: 2,
                 stripZeros: true,
                 groupDigits: false,
-                format: 'float'
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: false
             },
             {
                 id: generateId(),
@@ -55,7 +57,9 @@ x2->`,
                 places: 2,
                 stripZeros: true,
                 groupDigits: false,
-                format: 'float'
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: true
             },
             {
                 id: generateId(),
@@ -73,7 +77,9 @@ golden: 1.61803398874989 "golden ratio"`,
                 places: 2,
                 stripZeros: true,
                 groupDigits: false,
-                format: 'float'
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: true
             },
             {
                 id: generateId(),
@@ -97,13 +103,27 @@ disc(a;b;c) = b**2 - 4*a*c`,
                 places: 2,
                 stripZeros: true,
                 groupDigits: false,
-                format: 'float'
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: false
+            },
+            {
+                id: generateId(),
+                title: 'Default Settings',
+                text: `"New Record"
+"Template for new records"
+"First line becomes the default title"`,
+                category: 'Reference',
+                places: 4,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: false
             }
         ],
         categories: ['Unfiled', 'Finance', 'Math', 'Science', 'Reference', 'Personal'],
-        settings: {
-            degreesMode: false
-        }
+        settings: {}
     };
 }
 
@@ -126,6 +146,8 @@ function loadData() {
             if (!data.version || data.version < STORAGE_VERSION) {
                 return migrateData(data);
             }
+            // Ensure Default Settings exists even for current version
+            ensureDefaultSettingsRecord(data);
             return data;
         }
     } catch (e) {
@@ -175,8 +197,37 @@ function migrateData(data) {
         }
     }
 
+    // Ensure Default Settings record exists
+    ensureDefaultSettingsRecord(data);
+
     data.version = STORAGE_VERSION;
     return data;
+}
+
+/**
+ * Ensure Default Settings record exists
+ */
+function ensureDefaultSettingsRecord(data) {
+    if (!data.records) {
+        data.records = [];
+    }
+    const hasDefaultSettings = data.records.some(r => r.title === 'Default Settings');
+    if (!hasDefaultSettings) {
+        data.records.push({
+            id: generateId(),
+            title: 'Default Settings',
+            text: `"New Record"
+"Template for new records"
+"First line becomes the default title"`,
+            category: 'Reference',
+            places: 4,
+            stripZeros: true,
+            groupDigits: true,
+            format: 'float',
+            degreesMode: false,
+            shadowConstants: false
+        });
+    }
 }
 
 /**
@@ -205,7 +256,7 @@ function exportToText(data) {
         // Record metadata
         lines.push(`Category = "${record.category || 'Unfiled'}"; Secret = ${record.secret ? 1 : 0}`);
         lines.push(`Places = ${record.places ?? 4}; StripZeros = ${record.stripZeros ? 1 : 0}`);
-        lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}`);
+        lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}; ShadowConstants = ${record.shadowConstants ? 1 : 0}`);
         if (record.status) {
             // Escape quotes in status message
             const escapedStatus = record.status.replace(/"/g, '\\"');
@@ -221,8 +272,8 @@ function exportToText(data) {
             }
         }
 
-        // Record content
-        lines.push(record.text);
+        // Record content (strip trailing blank lines for consistency with import)
+        lines.push(record.text.trimEnd());
 
         // Separator
         lines.push(SEPARATOR);
@@ -233,8 +284,12 @@ function exportToText(data) {
 
 /**
  * Import data from MpExport text format
+ * @param {string} text - The text to import
+ * @param {object} existingData - Existing data to merge with (or null for new)
+ * @param {object} options - Import options
+ * @param {boolean} options.clearExisting - If true, clear existing records before import
  */
-function importFromText(text, existingData = null) {
+function importFromText(text, existingData = null, options = {}) {
     const SEPARATOR = '~~~~~~~~~~~~~~~~~~~~~~~~~~~';
     const records = [];
     const chunks = text.split(SEPARATOR);
@@ -250,6 +305,8 @@ function importFromText(text, existingData = null) {
         let stripZeros = true;
         let format = 'float';
         let groupDigits = false;
+        let degreesMode = false;
+        let shadowConstants = false;
         let status = '';
         let statusIsError = false;
         let contentStart = 0;
@@ -276,11 +333,17 @@ function importFromText(text, existingData = null) {
                 continue;
             }
 
-            // Format and GroupDigits line (new in v2)
-            const formatMatch = line.match(/Format\s*=\s*"([^"]*)"\s*;\s*GroupDigits\s*=\s*(\d+)/i);
+            // Format, GroupDigits, DegreesMode, ShadowConstants line (later fields optional)
+            const formatMatch = line.match(/Format\s*=\s*"([^"]*)"\s*;\s*GroupDigits\s*=\s*(\d+)(?:\s*;\s*DegreesMode\s*=\s*(\d+))?(?:\s*;\s*ShadowConstants\s*=\s*(\d+))?/i);
             if (formatMatch) {
                 format = formatMatch[1];
                 groupDigits = formatMatch[2] === '1';
+                if (formatMatch[3] !== undefined) {
+                    degreesMode = formatMatch[3] === '1';
+                }
+                if (formatMatch[4] !== undefined) {
+                    shadowConstants = formatMatch[4] === '1';
+                }
                 contentStart = i + 1;
                 continue;
             }
@@ -332,6 +395,8 @@ function importFromText(text, existingData = null) {
             stripZeros: stripZeros,
             groupDigits: groupDigits,
             format: format,
+            degreesMode: degreesMode,
+            shadowConstants: shadowConstants,
             status: status,
             statusIsError: statusIsError
         });
@@ -348,8 +413,12 @@ function importFromText(text, existingData = null) {
             }
         }
 
-        // Add records
-        existingData.records = [...existingData.records, ...records];
+        // Clear existing records if requested, otherwise append
+        if (options.clearExisting) {
+            existingData.records = records;
+        } else {
+            existingData.records = [...existingData.records, ...records];
+        }
         return existingData;
     }
 
@@ -399,18 +468,45 @@ function readTextFile(file) {
 }
 
 /**
- * Create a new record
+ * Create a new record using Default Settings as template if available
  */
-function createRecord(title = 'New Record', category = 'Unfiled') {
-    return {
-        id: generateId(),
-        title: title,
-        text: `"${title}"\n\n`,
-        category: category,
+function createRecord(data = null) {
+    // Look for Default Settings record to use as template
+    let defaults = {
+        title: 'New Record',
         places: 4,
         stripZeros: true,
-        groupDigits: false,
+        groupDigits: true,
         format: 'float',
+        degreesMode: false,
+        shadowConstants: false
+    };
+
+    if (data && data.records) {
+        const defaultSettings = data.records.find(r => r.title === 'Default Settings');
+        if (defaultSettings) {
+            // Use Default Settings values as template
+            defaults.title = defaultSettings.text.split('\n')[0].replace(/^"|"$/g, '') || 'New Record';
+            defaults.places = defaultSettings.places ?? 4;
+            defaults.stripZeros = defaultSettings.stripZeros ?? true;
+            defaults.groupDigits = defaultSettings.groupDigits ?? true;
+            defaults.format = defaultSettings.format || 'float';
+            defaults.degreesMode = defaultSettings.degreesMode ?? false;
+            defaults.shadowConstants = defaultSettings.shadowConstants ?? false;
+        }
+    }
+
+    return {
+        id: generateId(),
+        title: defaults.title,
+        text: `"${defaults.title}"\n\n`,
+        category: 'Unfiled',  // Always Unfiled for new records
+        places: defaults.places,
+        stripZeros: defaults.stripZeros,
+        groupDigits: defaults.groupDigits,
+        format: defaults.format,
+        degreesMode: defaults.degreesMode,
+        shadowConstants: defaults.shadowConstants,
         status: '',
         statusIsError: false
     };

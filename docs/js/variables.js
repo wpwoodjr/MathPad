@@ -356,8 +356,13 @@ function discoverVariables(text, context, record) {
                     errors.push(`Line ${i + 1}: Variable "${name}" is already defined`);
                     continue;
                 }
-                if (context.hasVariable(name)) {
+                if (context.variables.has(name)) {
                     errors.push(`Line ${i + 1}: Variable "${name}" is already defined`);
+                    continue;
+                }
+                // Check if shadowing a constant (only allowed if record.shadowConstants is true)
+                if (context.constants.has(name) && !record.shadowConstants) {
+                    errors.push(`Line ${i + 1}: Variable "${name}" conflicts with a constant`);
                     continue;
                 }
                 definedVars.add(name);
@@ -810,13 +815,13 @@ function parseFunctionsRecord(text) {
 /**
  * Create an EvalContext with constants and user functions loaded
  * @param {Array} records - Array of all records (to find Constants and Functions records)
- * @param {Object} settings - Settings object with degreesMode
+ * @param {Object} record - Current record (uses record.degreesMode)
  * @param {string} localText - Optional text of current record for local function definitions
  * @returns {EvalContext} Configured evaluation context
  */
-function createEvalContext(records, settings, localText = null) {
+function createEvalContext(records, record, localText = null) {
     const context = new EvalContext();
-    context.degreesMode = settings?.degreesMode || false;
+    context.degreesMode = record?.degreesMode || false;
 
     // Load constants from Constants record
     const constantsRecord = records.find(r => r.title === 'Constants');
@@ -871,6 +876,7 @@ function escapeRegex(str) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         VarType, ClearBehavior, parseVariableLine, parseAllVariables,
+        discoverVariables, getInlineEvalFormat, formatVariableValue,
         setVariableValue, clearVariables, findEquations,
         findInlineEvaluations, replaceInlineEvaluation,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext

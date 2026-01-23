@@ -189,8 +189,14 @@ class SimpleEditor {
         this.textarea.spellcheck = false;
         this.textarea.value = options.value || '';
 
+        // Hidden element to measure line heights
+        this.measureElement = document.createElement('div');
+        this.measureElement.className = 'editor-measure';
+        this.measureElement.setAttribute('aria-hidden', 'true');
+
         this.editorArea.appendChild(this.highlightLayer);
         this.editorArea.appendChild(this.textarea);
+        this.editorArea.appendChild(this.measureElement);
 
         this.element.appendChild(this.lineNumbers);
         this.element.appendChild(this.editorArea);
@@ -201,6 +207,10 @@ class SimpleEditor {
         this.textarea.addEventListener('input', () => this.onInput());
         this.textarea.addEventListener('scroll', () => this.onScroll());
         this.textarea.addEventListener('keydown', (e) => this.onKeyDown(e));
+
+        // Update line numbers on resize (affects wrapping)
+        this.resizeObserver = new ResizeObserver(() => this.updateLineNumbers());
+        this.resizeObserver.observe(this.editorArea);
 
         // Initial render
         this.updateHighlighting();
@@ -281,8 +291,13 @@ class SimpleEditor {
     updateLineNumbers() {
         const lines = this.textarea.value.split('\n');
         let html = '';
-        for (let i = 1; i <= lines.length; i++) {
-            html += `<div class="line-number">${i}</div>`;
+
+        // Measure each line's rendered height to handle wrapping
+        for (let i = 0; i < lines.length; i++) {
+            // Use non-breaking space for empty lines to get correct height
+            this.measureElement.textContent = lines[i] || '\u00A0';
+            const height = this.measureElement.offsetHeight;
+            html += `<div class="line-number" style="height:${height}px">${i + 1}</div>`;
         }
         this.lineNumbers.innerHTML = html;
     }
