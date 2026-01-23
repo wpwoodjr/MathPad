@@ -620,7 +620,8 @@ async function handleFileSelect(e) {
 function handleExport() {
     try {
         const text = exportToText(UI.data);
-        const timestamp = new Date().toISOString().slice(0, 10);
+        const d = new Date();
+        const timestamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         downloadTextFile(text, `mathpad_export_${timestamp}.txt`);
         setStatus('Exported successfully', false, false);
     } catch (err) {
