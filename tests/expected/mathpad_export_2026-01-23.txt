@@ -508,23 +508,6 @@ x->> 6.626070149999999
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Nothing to solve"; StatusIsError = 0
-"05 Parsing: Number bases not working"
-
-hex: 15
-hex-> 15
-hex->> 15
-
-hex#16-> F#16
-hex#16->> F#16
-
-hex2: ff#16
-hex2-> 255
-hex2#16-> FF#16
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Solved with errors: Variable 'a' has no value to output"; StatusIsError = 1
 "11 Solver: a and b have no value to output - should be error?"
 

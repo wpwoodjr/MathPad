@@ -527,23 +527,6 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"05 Parsing: Number bases not working"
-
-hex: 15
-hex->
-hex->>
-
-hex#16->
-hex#16->>
-
-hex2: ff#16
-hex2->
-hex2#16->
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Input and output variables cleared"; StatusIsError = 0
 "11 Solver: a and b have no value to output - should be error?"
 
 a->
