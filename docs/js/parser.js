@@ -92,48 +92,12 @@ class Tokenizer {
         const startLine = this.line;
         const startCol = this.col;
         let value = '';
-        let base = 10;
 
-        // Check for base prefix: 0x (hex), 0b (binary), 0o (octal)
-        if (this.peek() === '0' && this.peek(1)) {
-            const prefix = this.peek(1).toLowerCase();
-            if (prefix === 'x') {
-                base = 16;
-                this.advance(); // 0
-                this.advance(); // x
-                while (this.isHexDigit(this.peek())) {
-                    value += this.advance();
-                }
-                if (value === '') {
-                    return this.makeToken(TokenType.ERROR, 'Invalid hex number', startLine, startCol);
-                }
-                return this.makeToken(TokenType.NUMBER, { value: parseInt(value, 16), base: 16, raw: '0x' + value }, startLine, startCol);
-            } else if (prefix === 'b') {
-                base = 2;
-                this.advance(); // 0
-                this.advance(); // b
-                while (this.peek() === '0' || this.peek() === '1') {
-                    value += this.advance();
-                }
-                if (value === '') {
-                    return this.makeToken(TokenType.ERROR, 'Invalid binary number', startLine, startCol);
-                }
-                return this.makeToken(TokenType.NUMBER, { value: parseInt(value, 2), base: 2, raw: '0b' + value }, startLine, startCol);
-            } else if (prefix === 'o') {
-                base = 8;
-                this.advance(); // 0
-                this.advance(); // o
-                while (this.peek() && /[0-7]/.test(this.peek())) {
-                    value += this.advance();
-                }
-                if (value === '') {
-                    return this.makeToken(TokenType.ERROR, 'Invalid octal number', startLine, startCol);
-                }
-                return this.makeToken(TokenType.NUMBER, { value: parseInt(value, 8), base: 8, raw: '0o' + value }, startLine, startCol);
-            }
-        }
+        // Note: Base prefixes (0x, 0b, 0o) and suffix notation (value#base) are
+        // expanded to decimal by expandLiterals() before parsing, so we only
+        // need to handle decimal numbers here.
 
-        // Regular decimal number (possibly floating point with scientific notation)
+        // Decimal number (possibly floating point with scientific notation)
         // Allow commas as digit grouping (ignored)
         while (this.isDigit(this.peek()) || this.peek() === ',') {
             const ch = this.advance();
@@ -171,11 +135,6 @@ class Tokenizer {
         let value = '';
 
         while (this.isAlphaNum(this.peek())) {
-            value += this.advance();
-        }
-
-        // Allow $ or % suffix for money/percentage variable names
-        if (this.peek() === '$' || this.peek() === '%') {
             value += this.advance();
         }
 
@@ -223,7 +182,7 @@ class Tokenizer {
         }
 
         // Single-character operators
-        const singleCharOps = ['+', '-', '*', '/', '%', '&', '|', '^', '~', '!', '<', '>', '=', '?', '#', '\\'];
+        const singleCharOps = ['+', '-', '*', '/', '%', '&', '|', '^', '~', '!', '<', '>', '=', '?', '\\'];
         if (singleCharOps.includes(ch)) {
             this.advance();
             return this.makeToken(TokenType.OPERATOR, ch, startLine, startCol);
@@ -335,8 +294,9 @@ class Tokenizer {
                 continue;
             }
 
-            // Unknown character - skip it
+            // Unknown character - generate error token
             this.advance();
+            this.tokens.push(this.makeToken(TokenType.ERROR, `Unexpected character '${ch}'`, startLine, startCol));
         }
 
         this.tokens.push(this.makeToken(TokenType.EOF, null, this.line, this.col));
@@ -362,10 +322,18 @@ class Parser {
         return this.tokens[this.pos++];
     }
 
+    // Format a token value for display in error messages
+    formatTokenValue(token) {
+        if (token.type === TokenType.NUMBER) {
+            return token.value.raw || token.value.value;
+        }
+        return token.value;
+    }
+
     expect(type, value = null) {
         const token = this.peek();
         if (token.type !== type || (value !== null && token.value !== value)) {
-            throw new ParseError(`Expected ${type}${value ? ` '${value}'` : ''}, got ${token.type} '${token.value}'`, token.line, token.col);
+            throw new ParseError(`Expected ${type}${value ? ` '${value}'` : ''}, got ${token.type} '${this.formatTokenValue(token)}'`, token.line, token.col);
         }
         return this.advance();
     }
@@ -543,7 +511,7 @@ class Parser {
             return { type: NodeType.VARIABLE, name };
         }
 
-        throw new ParseError(`Unexpected token: ${token.type} '${token.value}'`, token.line, token.col);
+        throw new ParseError(`Unexpected token: ${token.type} '${this.formatTokenValue(token)}'`, token.line, token.col);
     }
 
     parse() {
@@ -553,7 +521,7 @@ class Parser {
         const expr = this.parseExpression();
         if (this.peek().type !== TokenType.EOF) {
             const token = this.peek();
-            throw new ParseError(`Unexpected token after expression: ${token.type} '${token.value}'`, token.line, token.col);
+            throw new ParseError(`Unexpected token after expression: ${token.type} '${this.formatTokenValue(token)}'`, token.line, token.col);
         }
         return expr;
     }
@@ -586,261 +554,14 @@ function parseExpression(text) {
     return parser.parse();
 }
 
-/**
- * Parse a line to extract variable declarations
- * Returns { name, type, value, limits, base, confirm } or null
- */
-function parseVariableDeclaration(line) {
-    // Remove comments
-    let cleanLine = line.replace(/"[^"]*"/g, '');
-
-    // Patterns for different variable types
-    // varname[low:high]: value  - with search limits
-    // varname<- value          - input variable
-    // varname-> value          - output variable
-    // varname:: value          - full precision
-    // varname->> value         - full precision output
-    // varname?: value          - confirmation breakpoint
-    // varname#base: value      - integer base output
-    // varname: value           - standard variable
-
-    const patterns = [
-        // With search limits: var[low:high]:
-        /^(\w+)\s*\[\s*([^:\]]+)\s*:\s*([^:\]]+)\s*\]\s*:\s*(.*)$/,
-        // Input variable: var<-
-        /^(\w+)\s*<-\s*(.*)$/,
-        // Full precision output: var->>
-        /^(\w+)\s*->>\s*(.*)$/,
-        // Output variable: var->
-        /^(\w+)\s*->\s*(.*)$/,
-        // Full precision: var::
-        /^(\w+)\s*::\s*(.*)$/,
-        // Confirmation: var?:
-        /^(\w+)\s*\?\s*:\s*(.*)$/,
-        // Integer base: var#base:
-        /^(\w+)\s*#\s*(\d+)\s*:\s*(.*)$/,
-        // Standard: var:
-        /^(\w+)\s*:\s*(.*)$/
-    ];
-
-    // Try pattern with search limits
-    let match = cleanLine.match(patterns[0]);
-    if (match) {
-        return {
-            name: match[1],
-            type: 'standard',
-            limits: { low: match[2].trim(), high: match[3].trim() },
-            valueText: match[4].trim(),
-            base: 10,
-            confirm: false,
-            fullPrecision: false
-        };
-    }
-
-    // Input variable
-    match = cleanLine.match(patterns[1]);
-    if (match) {
-        return {
-            name: match[1],
-            type: 'input',
-            valueText: match[2].trim(),
-            base: 10,
-            confirm: false,
-            fullPrecision: false
-        };
-    }
-
-    // Full precision output
-    match = cleanLine.match(patterns[2]);
-    if (match) {
-        return {
-            name: match[1],
-            type: 'output',
-            valueText: match[2].trim(),
-            base: 10,
-            confirm: false,
-            fullPrecision: true
-        };
-    }
-
-    // Output variable
-    match = cleanLine.match(patterns[3]);
-    if (match) {
-        return {
-            name: match[1],
-            type: 'output',
-            valueText: match[2].trim(),
-            base: 10,
-            confirm: false,
-            fullPrecision: false
-        };
-    }
-
-    // Full precision
-    match = cleanLine.match(patterns[4]);
-    if (match) {
-        return {
-            name: match[1],
-            type: 'standard',
-            valueText: match[2].trim(),
-            base: 10,
-            confirm: false,
-            fullPrecision: true
-        };
-    }
-
-    // Confirmation
-    match = cleanLine.match(patterns[5]);
-    if (match) {
-        return {
-            name: match[1],
-            type: 'standard',
-            valueText: match[2].trim(),
-            base: 10,
-            confirm: true,
-            fullPrecision: false
-        };
-    }
-
-    // Integer base
-    match = cleanLine.match(patterns[6]);
-    if (match) {
-        return {
-            name: match[1],
-            type: 'standard',
-            valueText: match[3].trim(),
-            base: parseInt(match[2]),
-            confirm: false,
-            fullPrecision: false
-        };
-    }
-
-    // Standard
-    match = cleanLine.match(patterns[7]);
-    if (match) {
-        return {
-            name: match[1],
-            type: 'standard',
-            valueText: match[2].trim(),
-            base: 10,
-            confirm: false,
-            fullPrecision: false
-        };
-    }
-
-    return null;
-}
-
-/**
- * Find equations in text
- * Returns array of { text, startLine, endLine, isBraced }
- */
-function findEquations(text) {
-    const lines = text.split('\n');
-    const equations = [];
-    let inBrace = false;
-    let braceStart = -1;
-    let braceContent = [];
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const cleanLine = line.replace(/"[^"]*"/g, ''); // Remove comments
-
-        // Check for brace equations
-        if (cleanLine.includes('{')) {
-            inBrace = true;
-            braceStart = i;
-            braceContent = [];
-            const afterBrace = cleanLine.substring(cleanLine.indexOf('{') + 1);
-            if (afterBrace.includes('}')) {
-                // Single-line braced equation
-                const content = afterBrace.substring(0, afterBrace.indexOf('}'));
-                equations.push({
-                    text: content.trim(),
-                    startLine: i,
-                    endLine: i,
-                    isBraced: true
-                });
-                inBrace = false;
-            } else {
-                braceContent.push(afterBrace);
-            }
-            continue;
-        }
-
-        if (inBrace) {
-            if (cleanLine.includes('}')) {
-                const beforeBrace = cleanLine.substring(0, cleanLine.indexOf('}'));
-                braceContent.push(beforeBrace);
-                equations.push({
-                    text: braceContent.join(' ').trim(),
-                    startLine: braceStart,
-                    endLine: i,
-                    isBraced: true
-                });
-                inBrace = false;
-            } else {
-                braceContent.push(cleanLine);
-            }
-            continue;
-        }
-
-        // Check for regular equation (contains = but not in a variable declaration)
-        // A line is an equation if it has = and doesn't have : before the =
-        if (cleanLine.includes('=')) {
-            const eqIndex = cleanLine.indexOf('=');
-            const colonIndex = cleanLine.indexOf(':');
-            const arrowIndex = cleanLine.indexOf('<-');
-            const outIndex = cleanLine.indexOf('->');
-
-            // Check if this is an equation (= comes before : or no :)
-            // Also check it's not == (equality comparison in standalone expression)
-            if (cleanLine[eqIndex + 1] !== '=' && cleanLine[eqIndex - 1] !== '=' &&
-                cleanLine[eqIndex - 1] !== '!' && cleanLine[eqIndex - 1] !== '<' && cleanLine[eqIndex - 1] !== '>') {
-                // It's a potential equation if = is not part of a comparison
-                // and not after a variable declaration marker
-                if ((colonIndex === -1 || eqIndex < colonIndex) &&
-                    (arrowIndex === -1 || eqIndex < arrowIndex) &&
-                    (outIndex === -1 || eqIndex < outIndex)) {
-                    equations.push({
-                        text: cleanLine.trim(),
-                        startLine: i,
-                        endLine: i,
-                        isBraced: false
-                    });
-                }
-            }
-        }
-    }
-
-    return equations;
-}
-
-/**
- * Find inline evaluations: \ expression \
- */
-function findInlineEvaluations(text) {
-    const results = [];
-    const regex = /\\([^\\]+)\\/g;
-    let match;
-
-    while ((match = regex.exec(text)) !== null) {
-        results.push({
-            fullMatch: match[0],
-            expression: match[1].trim(),
-            start: match.index,
-            end: match.index + match[0].length
-        });
-    }
-
-    return results;
-}
+// Note: parseVariableDeclaration, findEquations, and findInlineEvaluations
+// have been consolidated into variables.js to eliminate duplication.
+// Use parseVariableLine, findEquations, findInlineEvaluations from variables.js instead.
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         TokenType, NodeType, Tokenizer, Parser, ParseError,
-        tokenize, parseExpression, parseVariableDeclaration,
-        findEquations, findInlineEvaluations
+        tokenize, parseExpression
     };
 }

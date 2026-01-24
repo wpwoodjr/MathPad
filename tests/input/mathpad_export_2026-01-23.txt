@@ -1,0 +1,688 @@
+Category = "Math"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Quadratic equation solver"
+"ax^2 + bx + c = 0"
+
+disc = b**2 - 4*a*c
+x1 = (-b + sqrt(disc)) / (2*a)
+x2 = (-b - sqrt(disc)) / (2*a)
+
+a: 1
+b: -5
+c: 6
+disc->
+x1->
+x2->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Functions"
+"User-defined functions"
+
+"Compound interest"
+compound(p;r;n;t) = p * (1 + r/n)**(n*t)
+
+"Celsius to Fahrenheit"
+ctof(c) = c * 9/5 + 32
+
+"Fahrenheit to Celsius"
+ftoc(f) = (f - 32) * 5/9
+
+"Hypotenuse"
+hypot(a;b) = sqrt(a**2 + b**2)
+
+"Quadratic discriminant"
+disc(a;b;c) = b**2 - 4*a*c
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Constants"
+"Physical and mathematical constants"
+pi: 3.14159265358979
+e: 2.71828182845905
+c: 299792458 "speed of light m/s"
+G: 6.67430e-11 "gravitational constant"
+h: 6.62607015e-34 "Planck constant"
+kB: 1.380649e-23 "Boltzmann constant"
+NA: 6.02214076e23 "Avogadro number"
+golden: 1.61803398874989 "golden ratio"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Solver: ratio defined as variable"
+
+  height/width = ratio
+  diag = sqrt(width**2 + height**2)
+
+  ratio: 16/9
+  diag: 6.3
+
+  height->
+  width->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Time Value of Money"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$:  "monthly payment"
+pv$: $100,000 "loan amount"
+fv$: 0 "future value (baloon payment)" 
+yint%: 6.125% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"02 Solver: mint on LHS"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables (example: loan of $100,000 for 30 years at 7.5%)"
+pmt$-> "monthly payment"
+pv$: $100,000.00 "present value"
+fv$: $0.00 "future value"
+yint%: 7.5% "annual interest rate"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"03 Solver: mint on RHS"
+
+"Time Value of Money calculation"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables (example: loan of $100,000 for 30 years at 7.5%)"
+pmt$-> "monthly payment"
+pv$: $100,000.00 "present value"
+fv$: $0.00 "future value"
+yint%: 7.5% "annual interest rate"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+yint / 12 = mint
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"04 Solver: ratio defined as equation"
+
+  height/width = ratio
+  diag = sqrt(width**2 + height**2)
+
+  ratio = 16/9
+  diag: 6.3
+
+  height->
+  width->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"05 Solver: Circular dependency detected: height → height → width"
+  height = width * 16/9
+  width * height = 1000
+
+height->
+width->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"06 Solver: precision error if mint-> vs mint->>"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables (example: loan of $100,000 for 30 years at 7.5%)"
+pmt$-> "monthly payment"
+pv$: $100,000.00 "present value"
+fv$: $0.00 "future value"
+yint%: 7.5% "annual interest rate"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+
+mint->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Formula Pane: wrapping lines"
+"long line: skdj skdjskd skds djskd sjkd sjdks djks djskd sjkd sjkd sjdks djksd js hi there this is a test"
+
+"Time Value of Money calculation"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables (example: loan of $100,000 for 30 years at 7.5%)"
+pmt$-> "monthly payment"
+pv$: $100,000.00 "present value"
+fv$: -$5000.00 "future value"
+yint%: 7.5% "annual interest rate"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+mint->
+mint->>
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"07 Solver: Check all widths get solved"
+
+width * width * 16/9 = 1000
+width->
+
+(width1 * width1) * 16/9 = 1000
+width1->
+
+width2 * (width2 * 16/9) = 1000
+width2->
+
+1000 = width3 * (width3 * 16/9)
+width3->
+
+1000 = width4 * width4 * 16/9
+width4->
+
+1000 = (width5 * width5) * 16/9
+width5->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 6; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 \expr\: Inline eval error: Undefined variable: a"
+
+a: cos(1)
+
+b = \a\
+
+a->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"08 Solver: Solved with errors: Variable 'height' has no value to output"
+
+  height/width = ratio
+  diag = sqrt(width**2 + height**2)
+
+  16/9 = ratio
+  diag: 6.3
+
+  height->
+  width->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"02 \expr\: \a$\ doesn't preserve $ formatting"
+
+a$: $10.994
+
+b = \a$\
+
+a$->
+a$->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Formatting"
+
+x$: 2.996
+x->
+x->>
+x$->
+x$->>
+
+z%: 6.725%
+z->
+z->>
+z%->
+z%->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Error: Solved with errors: Equation doesn't balance: y=x+1 (0 != 2)"
+
+x=y+1
+y=x+1
+x: 1
+
+x->
+y->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"09 Solver: Solved with errors: Equation doesn't balance: (height + margin) / width = 16/9 (0.4824172960000001 ≠ 1.7777777777777777)"
+
+margin: 0
+(height + margin) / width = 16/9
+width * height = 1000
+
+height->
+width->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Variables Pane: Only shows a$-> in Variables pane, not a$->> - need better display"
+
+a$: $10.994
+a$->
+a$->>
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"02 Variables Pane: x is not populated in variables pane"
+
+  height/width = ratio
+  diag = sqrt(width**2 + height**2)
+
+  ratio: 16/9
+  diag: 6.3
+
+  height->
+  width->
+
+  x: ratio
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Parsing: Check parsing phase for constant evals"
+
+a: 2*3
+b: a+1
+b->
+c2: cos(a)
+
+d: pi
+d->
+d->>
+
+"check formatting"
+g: h "h from Constants"
+g->
+g->>
+
+        x: 3
+        x2<-
+        x3: 16/9
+        x3->
+        x4<-
+        x4->
+        x5: sqrt(3)
+        x5->
+
+        "If y already has a value, then other variables can be set using it:"
+            y: pi
+            x6: y
+            y2: y**2
+            y2->>
+        "But not this, because y is not set until after x:"
+            x7: y3
+            y3: 2
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Input and output variables cleared"; StatusIsError = 0
+"03 Variables Pane: d not updating properly in Variables pane. updates on refresh of web page but not when typing the value in the formula pane"
+
+a: 2*3
+b: a+1
+c: cos(a)
+d: xyzzy
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Constants: Value of pi is not updating after return from editing Constants record"
+"will only update on refresh"
+
+d: pi
+y: d/2
+y->
+d->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"04 Variables Pane: Value of d in Variables pane is not updating properly"
+"when changing d:, d-> in variables pane does not update - as designed? Yes"
+
+d: 455
+d-> 333
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"02 Parsing: no error for x: dd if dd is defined after x"
+
+x: dd/2
+dd: 5
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"05 Variables Pane: Should see all 3 outputs in Variables panel.  -> and ->> outputs not editable, x: is"
+"Variables panel should show name of variable and marker (:, <-, ->>, etc)"
+
+x: sqrt(3)
+x->
+x->>
+
+y: 8
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"03 Parsing: A variable can't be defined more than once, x:: 34 and x<- are errors (see arch.md)"
+
+x: 3/2*8.11111111
+x->
+x->>
+x:: 34
+x<-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"10 Solver: clear pmt, then solve, then solve again, get:"
+"Solved with errors: Equation doesn't balance: mint = yint / 12 (0.005104166726620151 ≠ 0.005104166666666667)"
+"Time Value of Money"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$602.75 "monthly payment"
+pv$: $99,999.86 "loan amount"
+fv$: -5000 "future value (baloon payment)" 
+yint%: 6.125% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"04 Parsing: LHS="
+
+y: 45
+y*8=
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"06 Variables Pane: Updates to x: in the variables panel doesn't update formula"
+
+x: sqrt(76)
+x->
+x->>
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"07 Variables Pane: Moving and deleting lines in the formulas panel does not update the variables panel correctly"
+"after deleting the y: 3 line, the variables panel shows dd: 5 and y: 5"
+
+dd: 5
+y: 3
+dd->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"08 Variables Pane: Variables pane not properly formatted for ->"
+"not showing as 4 decimal places for g-> as expected per record default"
+"it is showing as full precision: →g->6.62610000000000e-34"
+
+g: h
+g->
+g->>
+
+x: g*1e34
+x->
+x->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"11 Solver: a and b have no value to output - should be error?"
+
+a->
+
+b: 
+b->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"06 Parsing: Check rates are handled properly"
+
+rate: 7.5
+rate->
+rate%->
+
+rate2: 7.5%
+rate2->
+rate2%->
+
+rate3%: 7.5
+rate3->
+rate3%->
+
+rate4%: 7.5%
+rate4->
+rate4%->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"09 Variables Pane: b not being cleared when clear it in variables pane"
+
+b: 2
+b->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"12 Solver: yint is not calculated when solving"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$602.75 "monthly payment"
+pv$: $99,999.86 "loan amount"
+fv$: -5000 "future value (baloon payment)" 
+yint%: "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"13 Solver: Solved with errors: Variable 'height' has no value to output"
+
+margin: 0
+width*16/9 = (height + margin)
+width * height = 1000
+
+height->
+width->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"14 Solver: Solved with errors: Equation doesn't balance: height / width = 16/9 (3.4485002817314917e-7 ≠ 1.7777777777777777)"
+
+height / width = 16/9
+width * height = 1000
+
+height->
+width->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"15 Solver: Solved with errors: Equation doesn't balance: height / width = 16/9 (3.4485002817314917e-7 ≠ 1.7777777777777777) (copy)"
+
+height / width = 16/9
+height * width = 1000
+
+height->
+width->
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Shadowing: check no shadowing"
+e: 3
+e->>
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Default Settings"
+"New Record"
+"Template for new records"
+"First line becomes the default title"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Input and output variables cleared"; StatusIsError = 0
+"02 Shadowing: check there is shadowing"
+e: 3
+e->>
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Todo"
+
+"Equations like x+y= should be re-evaluated and cleared"
+"May need new syntax y*8-> or y*8->>"
+y: 45
+y*8=
+
+"Importing - overwrite constants and functions, adds new records..."
+"Maybe merge records?  Or have overwrite/merge option?"
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 1; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Deg/Rad: degrees"
+
+a: cos(45)
+a->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"02 Deg/Rad: radians"
+
+a: cos(pi/4)
+a->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

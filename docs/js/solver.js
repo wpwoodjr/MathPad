@@ -394,6 +394,7 @@ function deepCopyAST(node) {
 /**
  * Check if an equation is a simple definition: variable = expression
  * Returns { variable, expression AST } or null
+ * Note: expects eqText to already have literals expanded by expandLiterals()
  */
 function isDefinitionEquation(eqText) {
     const eqMatch = eqText.match(/^(.+)=(.+)$/);
@@ -422,6 +423,7 @@ function isDefinitionEquation(eqText) {
  * Try to algebraically derive a substitution from an equation
  * Handles cases like: a/b = c => a = b*c, a + b = c => a = c - b, etc.
  * Returns { variable, expressionAST } or null
+ * Note: expects eqText to already have literals expanded by expandLiterals()
  */
 function deriveSubstitution(eqText, context) {
     const eqMatch = eqText.match(/^(.+)=(.+)$/);
@@ -578,32 +580,125 @@ function invertOperation(op, result, other, varOnLeft) {
  * Build a substitution map from definition equations
  * Only includes definitions where the variable has no value in context
  * Now includes algebraically derived substitutions
+ * Detects cycles and returns them in the errors array
  */
-function buildSubstitutionMap(equations, context) {
+function buildSubstitutionMap(equations, context, errors = []) {
     const substitutions = new Map();
+    const dependencies = new Map(); // variable -> Set of variables it depends on
 
     for (const eq of equations) {
-        // First try simple definition
-        const def = isDefinitionEquation(eq.text);
-        if (def && !context.hasVariable(def.variable)) {
-            substitutions.set(def.variable, def.expressionAST);
-            continue;
-        }
+        try {
+            // Expand literals before parsing
+            const expandedText = expandLiterals(eq.text);
 
-        // Try algebraic derivation
-        const derived = deriveSubstitution(eq.text, context);
-        if (derived && !context.hasVariable(derived.variable) && !substitutions.has(derived.variable)) {
-            // Don't add if expression contains a variable already in substitution map
-            // This prevents circular substitution chains
-            const exprVars = findVariablesInAST(derived.expressionAST);
-            const hasSubstitutedVar = [...exprVars].some(v => substitutions.has(v));
-            if (!hasSubstitutedVar) {
-                substitutions.set(derived.variable, derived.expressionAST);
+            // First try simple definition
+            let def = isDefinitionEquation(expandedText);
+            if (!def || context.hasVariable(def.variable)) {
+                // Try algebraic derivation
+                def = deriveSubstitution(expandedText, context);
             }
+
+            if (!def || context.hasVariable(def.variable) || substitutions.has(def.variable)) {
+                continue;
+            }
+
+            const exprVars = findVariablesInAST(def.expressionAST);
+
+            // Check for cycle before adding (skip silently - numerical solving can still work)
+            const cycleVars = detectCycle(def.variable, exprVars, dependencies);
+            if (cycleVars) {
+                continue;
+            }
+
+            // Don't add if expression contains a variable already in substitution map
+            // (unless that variable is known in context)
+            const hasSubstitutedVar = [...exprVars].some(v => substitutions.has(v) && !context.hasVariable(v));
+            if (!hasSubstitutedVar) {
+                // Store both the AST and the source equation's line number
+                // so we don't apply a substitution back to its own source equation
+                substitutions.set(def.variable, { ast: def.expressionAST, sourceLine: eq.startLine });
+                dependencies.set(def.variable, exprVars);
+            }
+        } catch (e) {
+            // Add error with line number and continue processing other equations
+            errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
         }
     }
 
     return substitutions;
+}
+
+/**
+ * Detect if adding a variable with given dependencies would create a cycle
+ * Uses DFS to check if any dependency leads back to the variable
+ */
+function detectCycle(variable, directDeps, dependencies) {
+    const visited = new Set();
+    const path = [];
+
+    function dfs(v) {
+        if (v === variable) {
+            return true; // Found cycle back to original variable
+        }
+        if (visited.has(v)) {
+            return false; // Already visited, no cycle through this path
+        }
+        visited.add(v);
+        path.push(v);
+
+        const deps = dependencies.get(v);
+        if (deps) {
+            for (const dep of deps) {
+                if (dfs(dep)) {
+                    return true;
+                }
+            }
+        }
+        path.pop();
+        return false;
+    }
+
+    // Check if any direct dependency leads back to the variable
+    for (const dep of directDeps) {
+        if (dep === variable) {
+            return [variable]; // Direct self-reference
+        }
+        path.length = 0;
+        visited.clear();
+        if (dfs(dep)) {
+            return [dep, ...path];
+        }
+    }
+    return null;
+}
+
+/**
+ * Find variables in an AST (local copy for solver module)
+ */
+function findVariablesInAST(node) {
+    const vars = new Set();
+
+    function walk(n) {
+        if (!n) return;
+        switch (n.type) {
+            case 'VARIABLE':
+                vars.add(n.name);
+                break;
+            case 'BINARY_OP':
+                walk(n.left);
+                walk(n.right);
+                break;
+            case 'UNARY_OP':
+                walk(n.operand);
+                break;
+            case 'FUNCTION_CALL':
+                n.args.forEach(walk);
+                break;
+        }
+    }
+
+    walk(node);
+    return vars;
 }
 
 /**
@@ -632,8 +727,8 @@ function createEquationFunction(leftAST, rightAST, unknownVar, context) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         SolverError, brent, bracket, solveEquation,
-        parseEquation, findVariables, createEquationFunction,
+        parseEquation, findVariables, findVariablesInAST, createEquationFunction,
         substituteInAST, deepCopyAST, isDefinitionEquation,
-        deriveSubstitution, invertOperation, buildSubstitutionMap
+        deriveSubstitution, invertOperation, buildSubstitutionMap, detectCycle
     };
 }

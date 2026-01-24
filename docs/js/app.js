@@ -17,11 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize the UI
     initUI(data);
 
-    // Set up degrees mode toggle
-    const degreesToggle = document.getElementById('toggle-degrees');
-    if (degreesToggle) {
-        degreesToggle.checked = data.settings.degreesMode;
-    }
+    // Degrees toggle is now per-record, initialized by openRecord()
 
     console.log('MathPad ready');
 });

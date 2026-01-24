@@ -3,19 +3,38 @@
  */
 
 /**
- * UI State
+ * Application state (separate from DOM references)
+ */
+const UIState = {
+    data: null,              // Persisted data from storage
+    currentRecordId: null,   // Currently active record
+    openTabs: [],            // List of open tab record IDs
+    editors: new Map(),      // Map of recordId -> editor info
+    collapsedCategories: new Set() // Collapsed category names in sidebar
+};
+
+/**
+ * DOM references (cached for performance)
  */
 const UI = {
-    data: null,
-    currentRecordId: null,
-    openTabs: [],
-    editors: new Map(),
+    // Legacy accessor for state - allows UI.data, UI.currentRecordId, etc.
+    get data() { return UIState.data; },
+    set data(v) { UIState.data = v; },
+    get currentRecordId() { return UIState.currentRecordId; },
+    set currentRecordId(v) { UIState.currentRecordId = v; },
+    get openTabs() { return UIState.openTabs; },
+    set openTabs(v) { UIState.openTabs = v; },
+    get editors() { return UIState.editors; },
+    set editors(v) { UIState.editors = v; },
+    get collapsedCategories() { return UIState.collapsedCategories; },
+    set collapsedCategories(v) { UIState.collapsedCategories = v; },
+
+    // DOM elements (populated in initUI)
     sidebar: null,
     tabBar: null,
     editorContainer: null,
     detailsPanel: null,
-    statusBar: null,
-    collapsedCategories: new Set()
+    statusBar: null
 };
 
 /**
@@ -56,8 +75,13 @@ function initUI(data) {
  * Render the sidebar with categories and records
  */
 function renderSidebar() {
+    // Preserve scroll position
+    const sidebarContent = UI.sidebar.querySelector('.sidebar-content');
+    const scrollTop = sidebarContent ? sidebarContent.scrollTop : 0;
+
     const groups = getRecordsByCategory(UI.data);
     let html = '<div class="sidebar-header">Records</div>';
+    html += '<div class="sidebar-content">';
 
     for (const [category, records] of groups) {
         const isCollapsed = UI.collapsedCategories.has(category);
@@ -76,7 +100,7 @@ function renderSidebar() {
 
         for (const record of records) {
             const isActive = record.id === UI.currentRecordId;
-            const isSpecial = record.title === 'Constants' || record.title === 'Functions';
+            const isSpecial = record.title === 'Constants' || record.title === 'Functions' || record.title === 'Default Settings';
             html += `
                 <div class="record-item ${isActive ? 'active' : ''} ${isSpecial ? 'special' : ''}"
                      data-record-id="${record.id}"
@@ -93,6 +117,8 @@ function renderSidebar() {
         `;
     }
 
+    html += '</div>'; // close sidebar-content
+
     html += `
         <div class="sidebar-actions">
             <button onclick="createNewRecord()" class="btn-new-record">+ New Record</button>
@@ -100,6 +126,12 @@ function renderSidebar() {
     `;
 
     UI.sidebar.innerHTML = html;
+
+    // Restore scroll position
+    const newSidebarContent = UI.sidebar.querySelector('.sidebar-content');
+    if (newSidebarContent) {
+        newSidebarContent.scrollTop = scrollTop;
+    }
 }
 
 /**
@@ -164,6 +196,15 @@ function openRecord(recordId) {
 
     // Show the editor
     showEditor(recordId);
+
+    // Restore status from record
+    if (record.status) {
+        UI.statusBar.textContent = record.status;
+        UI.statusBar.className = 'status-bar' + (record.statusIsError ? ' error' : '');
+    } else {
+        UI.statusBar.textContent = 'Ready';
+        UI.statusBar.className = 'status-bar';
+    }
 
     // Update UI
     renderTabBar();
@@ -360,6 +401,22 @@ function renderDetailsPanel() {
             </label>
         </div>
 
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" id="detail-degrees" ${record.degreesMode ? 'checked' : ''}
+                       onchange="updateRecordDetail('degreesMode', this.checked)">
+                Degrees mode (vs radians)
+            </label>
+        </div>
+
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" id="detail-shadow" ${record.shadowConstants ? 'checked' : ''}
+                       onchange="updateRecordDetail('shadowConstants', this.checked)">
+                Shadow constants
+            </label>
+        </div>
+
         <div class="details-actions">
             <button onclick="duplicateCurrentRecord()" class="btn-secondary">Duplicate</button>
             <button onclick="deleteCurrentRecord()" class="btn-danger">Delete</button>
@@ -388,7 +445,7 @@ function updateRecordDetail(field, value) {
  * Create a new record
  */
 function createNewRecord() {
-    const record = createRecord('New Record', 'Unfiled');
+    const record = createRecord(UI.data);
     UI.data.records.push(record);
     saveData(UI.data);
 
@@ -425,7 +482,7 @@ function renameRecord(recordId) {
  */
 function updateRecordTitleFromContent(record) {
     // Don't auto-update title for special records
-    if (record.title === 'Constants' || record.title === 'Functions') {
+    if (record.title === 'Constants' || record.title === 'Functions' || record.title === 'Default Settings') {
         return;
     }
     const firstLine = record.text.split('\n')[0].trim();
@@ -495,10 +552,23 @@ function deleteCurrentRecord() {
 
 /**
  * Set status message
+ * @param {string} message - The status message
+ * @param {boolean} isError - Whether this is an error message
+ * @param {boolean} persist - Whether to save to the record (default true)
  */
-function setStatus(message, isError = false) {
+function setStatus(message, isError = false, persist = true) {
     UI.statusBar.textContent = message;
     UI.statusBar.className = 'status-bar' + (isError ? ' error' : '');
+
+    // Save status to current record (unless persist is false)
+    if (persist && UI.currentRecordId) {
+        const record = findRecord(UI.data, UI.currentRecordId);
+        if (record) {
+            record.status = message;
+            record.statusIsError = isError;
+            debouncedSave(UI.data);
+        }
+    }
 }
 
 /**
@@ -516,12 +586,6 @@ function setupEventListeners() {
 
     // Clear Input button
     document.getElementById('btn-clear')?.addEventListener('click', handleClearInput);
-
-    // Degrees/Radians toggle
-    document.getElementById('toggle-degrees')?.addEventListener('change', (e) => {
-        UI.data.settings.degreesMode = e.target.checked;
-        saveData(UI.data);
-    });
 
     // File input for import
     document.getElementById('file-input')?.addEventListener('change', handleFileSelect);
@@ -555,15 +619,18 @@ async function handleFileSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Ask user whether to clear existing records
+    const clearExisting = confirm('Clear existing records before importing?\n\nOK = Clear all and import\nCancel = Merge with existing records');
+
     try {
-        setStatus('Importing...');
+        setStatus('Importing...', false, false);
         const text = await readTextFile(file);
-        UI.data = importFromText(text, UI.data);
+        UI.data = importFromText(text, UI.data, { clearExisting });
         saveData(UI.data);
         renderSidebar();
-        setStatus(`Imported from ${file.name}`);
+        setStatus(`Imported from ${file.name}`, false, false);
     } catch (err) {
-        setStatus('Import failed: ' + err.message, true);
+        setStatus('Import failed: ' + err.message, true, false);
     }
 
     // Reset file input
@@ -576,11 +643,12 @@ async function handleFileSelect(e) {
 function handleExport() {
     try {
         const text = exportToText(UI.data);
-        const timestamp = new Date().toISOString().slice(0, 10);
+        const d = new Date();
+        const timestamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         downloadTextFile(text, `mathpad_export_${timestamp}.txt`);
-        setStatus('Exported successfully');
+        setStatus('Exported successfully', false, false);
     } catch (err) {
-        setStatus('Export failed: ' + err.message, true);
+        setStatus('Export failed: ' + err.message, true, false);
     }
 }
 
@@ -608,45 +676,8 @@ function handleSolve() {
         // Clear output variables first so they become unknowns
         text = clearVariables(text, 'output');
 
-        // Create evaluation context
-        const context = new EvalContext();
-        context.degreesMode = UI.data.settings.degreesMode;
-        context.places = record.places || 14;
-        context.stripZeros = record.stripZeros !== false;
-
-        // Load constants from Constants record
-        const constantsRecord = UI.data.records.find(r => r.title === 'Constants');
-        if (constantsRecord) {
-            const constants = parseConstantsRecord(constantsRecord.text);
-            for (const [name, value] of constants) {
-                context.setConstant(name, value);
-            }
-        }
-
-        // Load user functions from Functions record
-        const functionsRecord = UI.data.records.find(r => r.title === 'Functions');
-        if (functionsRecord) {
-            const functions = parseFunctionsRecord(functionsRecord.text);
-            for (const [name, { params, bodyText }] of functions) {
-                try {
-                    const bodyAST = parseExpression(bodyText);
-                    context.setUserFunction(name, params, bodyAST);
-                } catch (e) {
-                    console.warn(`Error parsing function ${name}:`, e);
-                }
-            }
-        }
-
-        // Also load functions defined in the current record (overrides Functions record)
-        const localFunctions = parseFunctionsRecord(text);
-        for (const [name, { params, bodyText }] of localFunctions) {
-            try {
-                const bodyAST = parseExpression(bodyText);
-                context.setUserFunction(name, params, bodyAST);
-            } catch (e) {
-                console.warn(`Error parsing local function ${name}:`, e);
-            }
-        }
+        // Create evaluation context with constants and user functions
+        const context = createEvalContext(UI.data.records, record, text);
 
         // Solve the record
         const result = solveRecord(text, context, record);
@@ -703,500 +734,6 @@ function handleClearInput() {
     }
 
     setStatus('Input and output variables cleared');
-}
-
-/**
- * Get format settings for an inline evaluation expression
- * Looks up variable's format property for $ (money) and % (percentage) formatting
- */
-function getInlineEvalFormat(expression, record, variables = null) {
-    const trimmed = expression.trim();
-    let varName = null;
-
-    // If expression is a simple variable name, look up its format from the variables map
-    if (variables && /^[a-zA-Z_]\w*[$%]?$/.test(trimmed)) {
-        const varInfo = variables.get(trimmed);
-        if (varInfo && varInfo.declaration && varInfo.declaration.format) {
-            // Variable has a format property - use it
-            varName = trimmed;  // Pass varName so formatNumber applies special formatting
-        }
-    }
-
-    // Fallback: detect $ or % suffix in expression itself
-    if (!varName && (trimmed.endsWith('$') || trimmed.endsWith('%'))) {
-        varName = trimmed;
-    }
-
-    return {
-        places: record.places || 2,
-        stripZeros: record.stripZeros !== false,
-        groupDigits: record.groupDigits || false,
-        format: record.format || 'float',
-        varName: varName
-    };
-}
-
-/**
- * Solve a record's equations
- */
-function solveRecord(text, context, record) {
-    const errors = [];
-    let solved = 0;
-    let maxIterations = 50; // Prevent infinite loops
-
-    // First pass: process inline evaluations that don't need variables
-    // This allows y: \3+4\ to become y: 7 before variable parsing
-    let inlineEvals = findInlineEvaluations(text);
-    for (let i = inlineEvals.length - 1; i >= 0; i--) {
-        const evalInfo = inlineEvals[i];
-        try {
-            const ast = parseExpression(evalInfo.expression);
-            const value = evaluate(ast, context);
-            const format = getInlineEvalFormat(evalInfo.expression, record);
-            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits, format.varName);
-            text = text.substring(0, evalInfo.start) +
-                   formatted +
-                   text.substring(evalInfo.end);
-        } catch (e) {
-            // Silently skip - will try again after equation solving
-        }
-    }
-
-    // Extract all variable values
-    const variables = parseAllVariables(text);
-    for (const [name, info] of variables) {
-        // Check both declaration.valueText and preserved info.valueText (for merged declarations)
-        const valueText = info.declaration?.valueText || info.valueText;
-        if (info.value !== null) {
-            context.setVariable(name, info.value);
-        } else if (valueText) {
-            // Try to evaluate expressions like "9/16" or "cos(1)"
-            try {
-                const ast = parseExpression(valueText);
-                const exprVars = findVariablesInAST(ast);
-                // Only evaluate if all variables in the expression are known
-                if ([...exprVars].every(v => context.hasVariable(v))) {
-                    const value = evaluate(ast, context);
-                    context.setVariable(name, value);
-                    info.value = value;
-                }
-            } catch (e) {
-                // Ignore parse/eval errors - will be solved later
-            }
-        }
-    }
-
-    // Second pass: try again now that more variables may be known
-    for (const [name, info] of variables) {
-        const valueText = info.declaration?.valueText || info.valueText;
-        if (!context.hasVariable(name) && valueText) {
-            try {
-                const ast = parseExpression(valueText);
-                const exprVars = findVariablesInAST(ast);
-                if ([...exprVars].every(v => context.hasVariable(v))) {
-                    const value = evaluate(ast, context);
-                    context.setVariable(name, value);
-                    info.value = value;
-                }
-            } catch (e) {
-                // Ignore
-            }
-        }
-    }
-
-    // Track variables with user-provided values (before any computation)
-    // Only count INPUT declarations (: syntax), not OUTPUT declarations (-> syntax)
-    // This distinguishes user input from computed values that get displayed/rounded
-    const userProvidedVars = new Set();
-    for (const [varName, varInfo] of variables) {
-        if (varInfo.value !== null && varInfo.declaration?.type !== 'output') {
-            userProvidedVars.add(varName);
-        }
-    }
-
-    // Solve equations iteratively
-    let changed = true;
-    while (changed && maxIterations-- > 0) {
-        changed = false;
-
-        // Find equations
-        const equations = findEquations(text);
-
-        // Build substitution map from definition equations (var = expr)
-        const substitutions = buildSubstitutionMap(equations, context);
-
-        for (const eq of equations) {
-            try {
-                // Check for unevaluated inline expressions in equation
-                const inlineMatch = eq.text.match(/\\([^\\]+)\\/);
-                if (inlineMatch) {
-                    // Try to evaluate it
-                    try {
-                        let ast = parseExpression(inlineMatch[1]);
-                        // Apply substitutions (for variables defined in equations like x = 7)
-                        ast = substituteInAST(ast, substitutions);
-                        const value = evaluate(ast, context);
-                        const format = getInlineEvalFormat(inlineMatch[1], record, variables);
-                        const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits, format.varName);
-                        // Replace in text and mark as changed
-                        const fullMatch = inlineMatch[0];
-                        const matchIndex = text.indexOf(fullMatch);
-                        if (matchIndex !== -1) {
-                            text = text.substring(0, matchIndex) + formatted + text.substring(matchIndex + fullMatch.length);
-                            changed = true;
-                        }
-                    } catch (e) {
-                        // Don't report error - may succeed on later iteration
-                        // Second pass will catch truly failed inline evals
-                    }
-                    continue; // Re-find equations on next iteration
-                }
-
-                // Check for incomplete equation (expr =) - evaluate and insert result
-                const incompleteMatch = eq.text.match(/^(.+?)\s*=\s*$/);
-                if (incompleteMatch) {
-                    try {
-                        let ast = parseExpression(incompleteMatch[1].trim());
-                        ast = substituteInAST(ast, substitutions);
-                        const value = evaluate(ast, context);
-                        const format = {
-                            places: record.places || 2,
-                            stripZeros: record.stripZeros !== false,
-                            groupDigits: record.groupDigits || false,
-                            format: record.format || 'float'
-                        };
-                        const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
-                        // Find and replace in text: "expr =" becomes "expr = result"
-                        const eqPattern = eq.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        text = text.replace(new RegExp(eqPattern), eq.text + ' ' + formatted);
-                        changed = true;
-                        solved++;
-                    } catch (e) {
-                        // Can't evaluate - may have unknown variables, leave untouched
-                    }
-                    continue;
-                }
-
-                // Handle definition equations (var = expr)
-                const def = isDefinitionEquation(eq.text);
-                if (def) {
-                    const varInfo = variables.get(def.variable);
-                    const rhsVars = findVariablesInAST(def.expressionAST);
-                    const rhsUnknowns = [...rhsVars].filter(v => !context.hasVariable(v));
-
-                    // If variable has a user-provided value and RHS has unknowns,
-                    // let it go through normal solving (equation can solve for RHS unknowns)
-                    // Only use user-provided values, not computed values that got displayed/rounded
-                    if (varInfo && varInfo.value !== null && userProvidedVars.has(def.variable)) {
-                        context.setVariable(def.variable, varInfo.value);
-                        // Only skip if RHS has no unknowns (nothing to solve)
-                        if (rhsUnknowns.length === 0) {
-                            continue;
-                        }
-                        // Otherwise fall through to normal equation solving
-                    }
-
-                    if (rhsUnknowns.length === 0) {
-                        // RHS is fully known - evaluate and set the variable
-                        try {
-                            let ast = def.expressionAST;
-                            ast = substituteInAST(ast, substitutions);
-                            const value = evaluate(ast, context);
-
-                            // Update context
-                            context.setVariable(def.variable, value);
-
-                            // Always iterate when we compute a new value
-                            changed = true;
-
-                            // If variable has a declaration without value, update it in text
-                            if (varInfo && !varInfo.declaration.valueText) {
-                                const format = {
-                                    places: record.places || 2,
-                                    stripZeros: record.stripZeros !== false,
-                                    groupDigits: record.groupDigits || false,
-                                    format: record.format || 'float'
-                                };
-                                text = setVariableValue(text, def.variable, value, format);
-
-                                // Re-parse variables after update
-                                const newVars = parseAllVariables(text);
-                                variables.clear();
-                                for (const [n, i] of newVars) {
-                                    variables.set(n, i);
-                                }
-                                solved++;
-                            }
-                        } catch (e) {
-                            // Evaluation failed, skip
-                        }
-                        continue;
-                    }
-                    // If RHS has unknowns and no user-provided value, skip for now
-                    // Will be evaluated when unknowns are resolved by other equations
-                    // But if user provided a value, fall through to solve for RHS unknowns
-                    if (!userProvidedVars.has(def.variable)) {
-                        continue;
-                    }
-                }
-
-                // Skip equations that were used to derive algebraic substitutions
-                // (e.g., height/width = 16/9 => derived height = width * 16/9)
-                // But NOT simple definition equations - those should fall through to solving
-                if (!def) {
-                    const derived = deriveSubstitution(eq.text, context);
-                    if (derived && substitutions.has(derived.variable)) {
-                        // Check if the derived expression has unknowns
-                        const derivedVars = findVariablesInAST(derived.expressionAST);
-                        const derivedUnknowns = [...derivedVars].filter(v => !context.hasVariable(v));
-                        if (derivedUnknowns.length > 0) {
-                            continue;
-                        }
-                    }
-                }
-
-                const result = solveEquationInContext(eq.text, context, variables, substitutions);
-
-                if (result.solved) {
-                    // Update the variable value in text
-                    const format = {
-                        places: record.places || 2,
-                        stripZeros: record.stripZeros !== false,
-                        groupDigits: record.groupDigits || false,
-                        format: record.format || 'float'
-                    };
-
-                    text = setVariableValue(text, result.variable, result.value, format);
-                    context.setVariable(result.variable, result.value);
-
-                    // Re-parse variables after update
-                    const newVars = parseAllVariables(text);
-                    variables.clear();
-                    for (const [n, i] of newVars) {
-                        variables.set(n, i);
-                    }
-
-                    solved++;
-                    changed = true;
-                }
-            } catch (e) {
-                errors.push(e.message);
-            }
-        }
-    }
-
-    // Check for inconsistent equations (all variables known but equation doesn't balance)
-    const finalEquations = findEquations(text);
-    for (const eq of finalEquations) {
-        try {
-            const eqMatch = eq.text.match(/^(.+)=(.+)$/);
-            if (!eqMatch) continue;
-
-            const leftText = eqMatch[1].trim();
-            const rightText = eqMatch[2].trim();
-
-            const leftAST = parseExpression(leftText);
-            const rightAST = parseExpression(rightText);
-
-            // Check if all variables are known
-            const allVars = new Set([...findVariablesInAST(leftAST), ...findVariablesInAST(rightAST)]);
-            const unknowns = [...allVars].filter(v => !context.hasVariable(v));
-
-            if (unknowns.length === 0) {
-                // All variables known - check if equation balances
-                const leftVal = evaluate(leftAST, context);
-                const rightVal = evaluate(rightAST, context);
-                const diff = Math.abs(leftVal - rightVal);
-
-                // Use display precision for tolerance: if any variable ends with $, use 2 decimal places
-                // (money always displays with 2 decimals), otherwise use record.places
-                const hasMoney = [...allVars].some(v => v.endsWith('$'));
-                const displayPlaces = hasMoney ? 2 : (record.places || 2);
-                const displayTolerance = 0.5 * Math.pow(10, -displayPlaces);
-                const tolerance = Math.max(displayTolerance, Math.max(Math.abs(leftVal), Math.abs(rightVal)) * 1e-10);
-
-                if (diff > tolerance) {
-                    errors.push(`Equation doesn't balance: ${eq.text} (${leftVal.toFixed(4)} ≠ ${rightVal.toFixed(4)})`);
-                }
-            }
-        } catch (e) {
-            // Ignore errors during consistency check
-        }
-    }
-
-    // Second pass: process remaining inline evaluations (those needing equation-derived variables)
-    // Rebuild substitutions from final equations
-    const finalSubstitutions = buildSubstitutionMap(finalEquations, context);
-    const remainingEvals = findInlineEvaluations(text);
-    for (let i = remainingEvals.length - 1; i >= 0; i--) {
-        const evalInfo = remainingEvals[i];
-        try {
-            let ast = parseExpression(evalInfo.expression);
-            ast = substituteInAST(ast, finalSubstitutions);
-            const value = evaluate(ast, context);
-            const finalVars = parseAllVariables(text);
-            const format = getInlineEvalFormat(evalInfo.expression, record, finalVars);
-            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits, format.varName);
-            text = text.substring(0, evalInfo.start) +
-                   formatted +
-                   text.substring(evalInfo.end);
-        } catch (e) {
-            errors.push(`Inline eval error: ${e.message}`);
-        }
-    }
-
-    // Fill in any empty variable declarations with known values
-    // setVariableValue handles skipping declarations that already have values
-    // and uses full precision for ->> and :: declarations
-    const finalVariables = parseAllVariables(text);
-    for (const [name, info] of finalVariables) {
-        if (context.hasVariable(name)) {
-            const value = context.getVariable(name);
-            const format = {
-                places: record.places || 2,
-                stripZeros: record.stripZeros !== false,
-                groupDigits: record.groupDigits || false,
-                format: record.format || 'float'
-            };
-            text = setVariableValue(text, name, value, format);
-        }
-    }
-
-    return { text, solved, errors };
-}
-
-/**
- * Solve a single equation in context
- */
-function solveEquationInContext(eqText, context, variables, substitutions = new Map()) {
-    // Parse the equation: left = right
-    const eqMatch = eqText.match(/^(.+)=(.+)$/);
-    if (!eqMatch) {
-        throw new Error('Invalid equation format');
-    }
-
-    const leftText = eqMatch[1].trim();
-    const rightText = eqMatch[2].trim();
-
-    // Parse both sides
-    let leftAST = parseExpression(leftText);
-    let rightAST = parseExpression(rightText);
-
-    // Find variables in equation
-    let leftVars = findVariablesInAST(leftAST);
-    let rightVars = findVariablesInAST(rightAST);
-    let allVars = new Set([...leftVars, ...rightVars]);
-
-    // Find unknowns (variables without values in context)
-    let unknowns = [...allVars].filter(v => !context.hasVariable(v));
-
-    if (unknowns.length === 0) {
-        // All variables known - just evaluate to check
-        const leftVal = evaluate(leftAST, context);
-        const rightVal = evaluate(rightAST, context);
-        if (Math.abs(leftVal - rightVal) > 1e-10) {
-            // Equation doesn't balance - might be an error
-        }
-        return { solved: false };
-    }
-
-    // If multiple unknowns, try applying substitutions
-    if (unknowns.length > 1 && substitutions.size > 0) {
-        // Apply substitutions to reduce unknowns
-        leftAST = substituteInAST(leftAST, substitutions);
-        rightAST = substituteInAST(rightAST, substitutions);
-
-        // Re-find variables after substitution
-        leftVars = findVariablesInAST(leftAST);
-        rightVars = findVariablesInAST(rightAST);
-        allVars = new Set([...leftVars, ...rightVars]);
-        unknowns = [...allVars].filter(v => !context.hasVariable(v));
-    }
-
-    if (unknowns.length === 0) {
-        // All variables known after substitution
-        return { solved: false };
-    }
-
-    if (unknowns.length > 1) {
-        // Still too many unknowns after substitution
-        return { solved: false };
-    }
-
-    // Exactly one unknown - solve for it
-    const unknown = unknowns[0];
-
-    // Get search limits if specified
-    let limits = null;
-    const varInfo = variables.get(unknown);
-    if (varInfo?.declaration?.limits) {
-        try {
-            const lowAST = parseExpression(varInfo.declaration.limits.lowExpr);
-            const highAST = parseExpression(varInfo.declaration.limits.highExpr);
-            limits = {
-                low: evaluate(lowAST, context),
-                high: evaluate(highAST, context)
-            };
-        } catch (e) {
-            // Ignore limit parsing errors
-        }
-    }
-
-    // Create equation function: f(x) = left - right = 0
-    const f = (x) => {
-        const ctx = context.clone();
-        ctx.setVariable(unknown, x);
-        try {
-            const leftVal = evaluate(leftAST, ctx);
-            const rightVal = evaluate(rightAST, ctx);
-            return leftVal - rightVal;
-        } catch (e) {
-            return NaN;
-        }
-    };
-
-    // Solve
-    try {
-        const value = solveEquation(f, limits);
-
-        return {
-            solved: true,
-            variable: unknown,
-            value: value
-        };
-    } catch (e) {
-        // Solving failed (e.g., degenerate equation where both sides are identical)
-        return { solved: false };
-    }
-}
-
-/**
- * Find variables in an AST
- */
-function findVariablesInAST(node) {
-    const vars = new Set();
-
-    function walk(n) {
-        if (!n) return;
-        switch (n.type) {
-            case 'VARIABLE':
-                vars.add(n.name);
-                break;
-            case 'BINARY_OP':
-                walk(n.left);
-                walk(n.right);
-                break;
-            case 'UNARY_OP':
-                walk(n.operand);
-                break;
-            case 'FUNCTION_CALL':
-                n.args.forEach(walk);
-                break;
-        }
-    }
-
-    walk(node);
-    return vars;
 }
 
 /**

@@ -1,0 +1,45 @@
+Category = "Reference"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Constants"
+pi: 3.14159265358979
+e: 2.71828182845905
+c: 299792458 "speed of light m/s"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Math"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 3 equations"; StatusIsError = 0
+"Quadratic equation solver"
+"ax^2 + bx + c = 0"
+
+disc = b**2 - 4*a*c
+x1 = (-b + sqrt(disc)) / (2*a)
+x2 = (-b - sqrt(disc)) / (2*a)
+
+a: 1
+b: -5
+c: 6
+disc-> 1
+x1-> 3
+x2-> 2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Math"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 10: Variable \"c\" conflicts with a constant"; StatusIsError = 1
+"Quadratic without shadow"
+"Should error because c conflicts with constant"
+
+disc = b**2 - 4*a*c
+x1 = (-b + sqrt(disc)) / (2*a)
+x2 = (-b - sqrt(disc)) / (2*a)
+
+a: 1
+b: -5
+c: 6
+disc-> -1199169807
+x1-> NaN
+x2-> NaN
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

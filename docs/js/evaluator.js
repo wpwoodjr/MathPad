@@ -11,8 +11,6 @@ class EvalContext {
         this.constants = new Map();
         this.userFunctions = new Map();
         this.degreesMode = false; // false = radians, true = degrees
-        this.places = 14;
-        this.stripZeros = true;
     }
 
     setVariable(name, value) {
@@ -51,8 +49,6 @@ class EvalContext {
         ctx.constants = this.constants;
         ctx.userFunctions = this.userFunctions;
         ctx.degreesMode = this.degreesMode;
-        ctx.places = this.places;
-        ctx.stripZeros = this.stripZeros;
         return ctx;
     }
 }
@@ -347,10 +343,15 @@ function evaluate(node, context) {
 
         case 'VARIABLE': {
             const value = context.getVariable(node.name);
-            if (value === undefined) {
-                throw new EvalError(`Undefined variable: ${node.name}`);
+            if (value !== undefined) {
+                return value;
             }
-            return value;
+            // Check if it's a zero-arg builtin function like pi
+            const builtin = builtinFunctions[node.name.toLowerCase()];
+            if (builtin) {
+                return builtin([], context);
+            }
+            throw new EvalError(`Undefined variable: ${node.name}`);
         }
 
         case 'UNARY_OP': {
@@ -471,17 +472,11 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
         }
     }
 
-    // Integer base output
+    // Integer base output: use value#base suffix notation (e.g., FF#16, 77#8)
     if (base !== 10 && Number.isInteger(value)) {
         const intVal = Math.trunc(value);
-        let str;
-        switch (base) {
-            case 2: str = '0b' + intVal.toString(2); break;
-            case 8: str = '0o' + intVal.toString(8); break;
-            case 16: str = '0x' + intVal.toString(16).toUpperCase(); break;
-            default: str = intVal.toString(base);
-        }
-        return str;
+        const str = intVal.toString(base).toUpperCase();
+        return str + '#' + base;
     }
 
     let str;

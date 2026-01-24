@@ -1,0 +1,52 @@
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Number base formatting"
+
+hex: 15
+hex->
+hex->>
+
+hex#16->
+hex#16->>
+
+hexx: ff#16
+hexx->
+hexx#16->
+
+octal: 0o77
+octal->
+octal#2->
+octal#8->
+octal#8->>
+octal#16->
+octal#16->>
+octal#17->
+octal#32->
+
+binary: 0b111
+binary->
+
+hex1: 0xff
+hex1->
+hex1#32->>
+hex2 = hex1
+hex2#32:
+hex3 = hex1
+hex3#32: 7V#32
+
+x#16: 77#8
+x->
+x#16->
+x#8->
+
+z = 3
+z::
+z->
+z#2->>
+
+y = ff#16
+y::
+y->
+y->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
