@@ -49,6 +49,9 @@ function findVariablesInAST(node) {
  * Solve a single equation in context
  */
 function solveEquationInContext(eqText, eqLine, context, variables, substitutions = new Map()) {
+    // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
+    eqText = expandLiterals(eqText);
+
     // Parse the equation: left = right
     const eqMatch = eqText.match(/^(.+)=(.+)$/);
     if (!eqMatch) {
@@ -199,7 +202,9 @@ function solveEquations(text, context, declarations) {
                 if (eq.text.includes('\\')) continue;
 
                 // Handle incomplete equations (expr =)
-                const incompleteMatch = eq.text.match(/^(.+?)\s*=\s*$/);
+                // Expand literals before matching
+                const expandedEqText = expandLiterals(eq.text);
+                const incompleteMatch = expandedEqText.match(/^(.+?)\s*=\s*$/);
                 if (incompleteMatch) {
                     try {
                         let ast = parseExpression(incompleteMatch[1].trim());
@@ -217,7 +222,8 @@ function solveEquations(text, context, declarations) {
                 }
 
                 // Handle definition equations (var = expr)
-                const def = isDefinitionEquation(eq.text);
+                // Note: expandedEqText is already expanded above for incomplete equations
+                const def = isDefinitionEquation(expandedEqText);
                 if (def) {
                     const varInfo = variables.get(def.variable);
                     const rhsVars = findVariablesInAST(def.expressionAST);
@@ -273,7 +279,9 @@ function solveEquations(text, context, declarations) {
     const finalEquations = findEquations(text);
     for (const eq of finalEquations) {
         try {
-            const eqMatch = eq.text.match(/^(.+)=(.+)$/);
+            // Expand literals before parsing
+            const expandedText = expandLiterals(eq.text);
+            const eqMatch = expandedText.match(/^(.+)=(.+)$/);
             if (!eqMatch) continue;
 
             const leftAST = parseExpression(eqMatch[1].trim());
@@ -339,7 +347,9 @@ function formatOutput(text, declarations, context, record) {
     // Handle incomplete equations (expr =)
     const equations = findEquations(text);
     for (const eq of equations) {
-        const incompleteMatch = eq.text.match(/^(.+?)\s*=\s*$/);
+        // Expand literals before parsing
+        const expandedText = expandLiterals(eq.text);
+        const incompleteMatch = expandedText.match(/^(.+?)\s*=\s*$/);
         if (incompleteMatch) {
             try {
                 const ast = parseExpression(incompleteMatch[1].trim());

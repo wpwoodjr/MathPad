@@ -28,19 +28,83 @@ const VarType = {
 };
 
 /**
- * Extract base variable name and format from a name that may have $ or % suffix
- * e.g., "pmt$" -> { baseName: "pmt", format: "money" }
- *       "rate%" -> { baseName: "rate", format: "percent" }
- *       "x" -> { baseName: "x", format: null }
+ * Expand literal notations to decimal values in text
+ * Handles: $num (money), num% (percent), 0x/0b/0o (base prefix), value#base (base suffix)
+ * @param {string} text - Text to expand
+ * @returns {string} Text with literals expanded to decimal
+ */
+function expandLiterals(text) {
+    // Expand 0x, 0b, 0o prefix notation
+    text = text.replace(/\b0x([0-9a-fA-F]+)\b/g, (_, v) => parseInt(v, 16));
+    text = text.replace(/\b0b([01]+)\b/g, (_, v) => parseInt(v, 2));
+    text = text.replace(/\b0o([0-7]+)\b/g, (_, v) => parseInt(v, 8));
+    // Expand value#base suffix notation (e.g., ff#16 -> 255, 101#2 -> 5)
+    text = text.replace(/\b([0-9a-zA-Z]+)#(\d+)\b/g, (m, v, b) => {
+        const base = parseInt(b);
+        if (base < 2 || base > 36) return m;
+        const parsed = parseInt(v, base);
+        return isNaN(parsed) ? m : parsed;
+    });
+    // Expand $num money literals (e.g., $100 -> 100, $1,000.50 -> 1000.50)
+    text = text.replace(/\$([0-9,]+\.?[0-9]*)\b/g, (_, v) => v.replace(/,/g, ''));
+    // Expand num% percent literals (e.g., 5% -> 0.05, 7.5% -> 0.075)
+    text = text.replace(/\b([0-9]+\.?[0-9]*)%/g, (_, v) => parseFloat(v) / 100);
+    return text;
+}
+
+/**
+ * Expand literals in a single line, handling declarations specially
+ * For declarations: only expand in the value portion (after the marker)
+ * For equations/expressions: expand entire line
+ * @param {string} line - Line to expand
+ * @returns {string} Line with literals expanded
+ */
+function expandLineLiterals(line) {
+    // Check if line is a declaration (has marker like :, ::, <-, ->, ->>)
+    // Pattern captures: varName (with optional $, %, or #base suffix), marker, value portion
+    const declMatch = line.match(/^(\w+(?:[$%]|#\d+)?)\s*(:|::|<-|->|->>) *(.*)$/);
+    if (declMatch) {
+        // Only expand in value portion (group 3)
+        const [, varPart, marker, valuePart] = declMatch;
+        const expandedValue = expandLiterals(valuePart);
+        // Preserve spacing after marker
+        const spacing = valuePart.length > 0 && expandedValue.length > 0 ? ' ' : '';
+        return varPart + marker + spacing + expandedValue;
+    }
+    // Also check for declarations with limits: var[low:high]: value
+    const limitsMatch = line.match(/^(\w+[$%]?\s*\[[^\]]+\])\s*:\s*(.*)$/);
+    if (limitsMatch) {
+        const [, varPart, valuePart] = limitsMatch;
+        const expandedValue = expandLiterals(valuePart);
+        const spacing = valuePart.length > 0 && expandedValue.length > 0 ? ' ' : '';
+        return varPart + ':' + spacing + expandedValue;
+    }
+    // Not a declaration - expand entire line
+    return expandLiterals(line);
+}
+
+/**
+ * Extract base variable name, format, and numeric base from a name that may have suffixes
+ * e.g., "pmt$" -> { baseName: "pmt", format: "money", base: 10 }
+ *       "rate%" -> { baseName: "rate", format: "percent", base: 10 }
+ *       "hex#16" -> { baseName: "hex", format: null, base: 16 }
+ *       "x" -> { baseName: "x", format: null, base: 10 }
  */
 function parseVarNameAndFormat(nameWithSuffix) {
+    // Check for #base suffix: var#16
+    const baseMatch = nameWithSuffix.match(/^(\w+)#(\d+)$/);
+    if (baseMatch) {
+        return { baseName: baseMatch[1], format: null, base: parseInt(baseMatch[2]) };
+    }
+    // Check for $ suffix
     if (nameWithSuffix.endsWith('$')) {
-        return { baseName: nameWithSuffix.slice(0, -1), format: 'money' };
+        return { baseName: nameWithSuffix.slice(0, -1), format: 'money', base: 10 };
     }
+    // Check for % suffix
     if (nameWithSuffix.endsWith('%')) {
-        return { baseName: nameWithSuffix.slice(0, -1), format: 'percent' };
+        return { baseName: nameWithSuffix.slice(0, -1), format: 'percent', base: 10 };
     }
-    return { baseName: nameWithSuffix, format: null };
+    return { baseName: nameWithSuffix, format: null, base: 10 };
 }
 
 /**
@@ -57,13 +121,13 @@ function replaceValueOnLine(line, varName, marker, hasLimits, newValue) {
 
     let markerIndex;
     if (hasLimits) {
-        const bracketMatch = cleanLine.match(/\w+[$%]?\s*\[[^\]]+\]\s*:/);
+        const bracketMatch = cleanLine.match(/\w+(?:[$%]|#\d+)?\s*\[[^\]]+\]\s*:/);
         if (bracketMatch) {
             markerIndex = bracketMatch.index + bracketMatch[0].length;
         }
     } else {
-        // varName doesn't include $ or % suffix, but text may have it
-        const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}[$%]?\\s*(${escapeRegex(marker)})`));
+        // varName doesn't include $, %, or #base suffix, but text may have it
+        const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}(?:[$%]|#\\d+)?\\s*(${escapeRegex(marker)})`));
         if (markerMatch) {
             markerIndex = markerMatch.index + markerMatch[0].length;
         }
@@ -92,21 +156,21 @@ function parseVariableLine(line) {
     const cleanLine = line.replace(/"[^"]*"/g, '').trim();
 
     // Variable declaration patterns (order matters - check more specific patterns first)
-    // Note: \w+[$%]? allows optional $ or % suffix for money/percentage variables
-    // The suffix is stripped from the name and stored in format
+    // Note: \w+(?:[$%]|#\d+)? allows optional $, %, or #base suffix
+    // The suffix is stripped from the name and stored in format/base
     const patterns = [
         // With search limits: var[low:high]: value
         {
-            regex: /^(\w+[$%]?)\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\]\s*:\s*(.*)$/,
+            regex: /^(\w+(?:[$%]|#\d+)?)\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\]\s*:\s*(.*)$/,
             handler: (m) => {
-                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
                     name: baseName,
                     type: VarType.STANDARD,
                     clearBehavior: ClearBehavior.NONE,
                     limits: { lowExpr: m[2].trim(), highExpr: m[3].trim() },
                     valueText: m[4].trim(),
-                    base: 10,
+                    base,
                     fullPrecision: false,
                     marker: ':',
                     format
@@ -115,15 +179,15 @@ function parseVariableLine(line) {
         },
         // Input variable: var<-
         {
-            regex: /^(\w+[$%]?)\s*<-\s*(.*)$/,
+            regex: /^(\w+(?:[$%]|#\d+)?)\s*<-\s*(.*)$/,
             handler: (m) => {
-                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
                     name: baseName,
                     type: VarType.INPUT,
                     clearBehavior: ClearBehavior.ON_CLEAR,
                     valueText: m[2].trim(),
-                    base: 10,
+                    base,
                     fullPrecision: false,
                     marker: '<-',
                     format
@@ -132,15 +196,15 @@ function parseVariableLine(line) {
         },
         // Full precision output: var->>
         {
-            regex: /^(\w+[$%]?)\s*->>\s*(.*)$/,
+            regex: /^(\w+(?:[$%]|#\d+)?)\s*->>\s*(.*)$/,
             handler: (m) => {
-                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
                     name: baseName,
                     type: VarType.OUTPUT,
                     clearBehavior: ClearBehavior.ON_SOLVE,
                     valueText: m[2].trim(),
-                    base: 10,
+                    base,
                     fullPrecision: true,
                     marker: '->>',
                     format
@@ -149,15 +213,15 @@ function parseVariableLine(line) {
         },
         // Output variable: var->
         {
-            regex: /^(\w+[$%]?)\s*->\s*(.*)$/,
+            regex: /^(\w+(?:[$%]|#\d+)?)\s*->\s*(.*)$/,
             handler: (m) => {
-                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
                     name: baseName,
                     type: VarType.OUTPUT,
                     clearBehavior: ClearBehavior.ON_SOLVE,
                     valueText: m[2].trim(),
-                    base: 10,
+                    base,
                     fullPrecision: false,
                     marker: '->',
                     format
@@ -166,49 +230,32 @@ function parseVariableLine(line) {
         },
         // Full precision: var::
         {
-            regex: /^(\w+[$%]?)\s*::\s*(.*)$/,
+            regex: /^(\w+(?:[$%]|#\d+)?)\s*::\s*(.*)$/,
             handler: (m) => {
-                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
                     name: baseName,
                     type: VarType.STANDARD,
                     clearBehavior: ClearBehavior.NONE,
                     valueText: m[2].trim(),
-                    base: 10,
+                    base,
                     fullPrecision: true,
                     marker: '::',
                     format
                 };
             }
         },
-        // Integer base: var#base:
-        {
-            regex: /^(\w+[$%]?)\s*#\s*(\d+)\s*:\s*(.*)$/,
-            handler: (m) => {
-                const { baseName, format } = parseVarNameAndFormat(m[1]);
-                return {
-                    name: baseName,
-                    type: VarType.STANDARD,
-                    clearBehavior: ClearBehavior.NONE,
-                    valueText: m[3].trim(),
-                    base: parseInt(m[2]),
-                    fullPrecision: false,
-                    marker: `#${m[2]}:`,
-                    format
-                };
-            }
-        },
         // Standard: var:
         {
-            regex: /^(\w+[$%]?)\s*:\s*(.*)$/,
+            regex: /^(\w+(?:[$%]|#\d+)?)\s*:\s*(.*)$/,
             handler: (m) => {
-                const { baseName, format } = parseVarNameAndFormat(m[1]);
+                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
                     name: baseName,
                     type: VarType.STANDARD,
                     clearBehavior: ClearBehavior.NONE,
                     valueText: m[2].trim(),
-                    base: 10,
+                    base,
                     fullPrecision: false,
                     marker: ':',
                     format
@@ -272,7 +319,9 @@ function parseAllVariables(text) {
             // Expressions stay as valueText for display
             let value = null;
             if (decl.valueText) {
-                value = parseNumericValue(decl.valueText, decl.format);
+                // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
+                const expandedValue = expandLiterals(decl.valueText);
+                value = parseNumericValue(expandedValue);
             }
 
             declarations.push({
@@ -329,6 +378,8 @@ function discoverVariables(text, context, record) {
                 if (exprToParse.endsWith('$') || exprToParse.endsWith('%')) {
                     exprToParse = exprToParse.slice(0, -1);
                 }
+                // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
+                exprToParse = expandLiterals(exprToParse);
                 const ast = parseExpression(exprToParse);
                 const value = evaluate(ast, context);
                 const format = getInlineEvalFormat(evalInfo.expression, record, null);
@@ -373,13 +424,16 @@ function discoverVariables(text, context, record) {
             let valueText = decl.valueText;
 
             if (valueText && !isOutput) {
+                // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
+                const expandedValue = expandLiterals(valueText);
+
                 // Try to parse as numeric literal first
-                value = parseNumericValue(valueText, decl.format);
+                value = parseNumericValue(expandedValue);
 
                 // If not a numeric literal, try to evaluate as expression
                 if (value === null) {
                     try {
-                        const ast = parseExpression(valueText);
+                        const ast = parseExpression(expandedValue);
                         value = evaluate(ast, context);
                     } catch (e) {
                         errors.push(`Line ${i + 1}: Cannot evaluate "${valueText}" - ${e.message}`);
@@ -410,53 +464,24 @@ function discoverVariables(text, context, record) {
 }
 
 /**
- * Parse a numeric value from text (handles $, %, hex, etc.)
+ * Parse a numeric value from text
  * Returns null if the text is an expression (not a simple numeric literal)
- * @param {string} valueText - The text to parse
- * @param {string} varFormat - 'money', 'percent', or null
+ * Note: Assumes literals ($num, num%, 0x, 0b, 0o, value#base) have already been
+ * expanded by expandLiterals() before calling this function.
+ * @param {string} valueText - The text to parse (already expanded)
  */
-function parseNumericValue(valueText, varFormat = null) {
-    let textToParse = valueText;
-
-    // Handle money format: $1,234.56 or -$1,234.56
-    const moneyMatch = textToParse.match(/^(-?)\$(.+)$/);
-    if (moneyMatch) {
-        textToParse = moneyMatch[1] + moneyMatch[2];
-    }
-
-    // Handle percentage format: 7.5% becomes 0.075 (divide by 100)
-    // Also treat as percent if variable format is percent
-    let isPercent = varFormat === 'percent';
-    const percentMatch = textToParse.match(/^(.+)%$/);
-    if (percentMatch) {
-        textToParse = percentMatch[1];
-        isPercent = true;
-    }
-
+function parseNumericValue(valueText) {
     // Remove commas (digit grouping)
-    textToParse = textToParse.replace(/,/g, '');
+    const textToParse = valueText.replace(/,/g, '');
 
-    let value = null;
-
-    // Check if value is a simple number
+    // Check if value is a simple number (decimal, with optional scientific notation)
     const numMatch = textToParse.match(/^-?\d+\.?\d*(?:[eE][+-]?\d+)?$/);
     if (numMatch) {
-        value = parseFloat(textToParse);
-    } else if (textToParse.match(/^0x[0-9a-fA-F]+$/)) {
-        value = parseInt(textToParse, 16);
-    } else if (textToParse.match(/^0b[01]+$/)) {
-        value = parseInt(textToParse.slice(2), 2);
-    } else if (textToParse.match(/^0o[0-7]+$/)) {
-        value = parseInt(textToParse.slice(2), 8);
-    }
-    // If not a numeric literal, return null (it's an expression)
-
-    // Convert percentage display value to decimal (7.5% -> 0.075)
-    if (isPercent && value !== null) {
-        value = value / 100;
+        return parseFloat(textToParse);
     }
 
-    return value;
+    // Not a numeric literal (it's an expression)
+    return null;
 }
 
 /**
@@ -875,7 +900,8 @@ function escapeRegex(str) {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        VarType, ClearBehavior, parseVariableLine, parseAllVariables,
+        VarType, ClearBehavior, expandLiterals, expandLineLiterals,
+        parseVarNameAndFormat, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         setVariableValue, clearVariables, findEquations,
         findInlineEvaluations, replaceInlineEvaluation,

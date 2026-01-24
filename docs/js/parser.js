@@ -92,48 +92,12 @@ class Tokenizer {
         const startLine = this.line;
         const startCol = this.col;
         let value = '';
-        let base = 10;
 
-        // Check for base prefix: 0x (hex), 0b (binary), 0o (octal)
-        if (this.peek() === '0' && this.peek(1)) {
-            const prefix = this.peek(1).toLowerCase();
-            if (prefix === 'x') {
-                base = 16;
-                this.advance(); // 0
-                this.advance(); // x
-                while (this.isHexDigit(this.peek())) {
-                    value += this.advance();
-                }
-                if (value === '') {
-                    return this.makeToken(TokenType.ERROR, 'Invalid hex number', startLine, startCol);
-                }
-                return this.makeToken(TokenType.NUMBER, { value: parseInt(value, 16), base: 16, raw: '0x' + value }, startLine, startCol);
-            } else if (prefix === 'b') {
-                base = 2;
-                this.advance(); // 0
-                this.advance(); // b
-                while (this.peek() === '0' || this.peek() === '1') {
-                    value += this.advance();
-                }
-                if (value === '') {
-                    return this.makeToken(TokenType.ERROR, 'Invalid binary number', startLine, startCol);
-                }
-                return this.makeToken(TokenType.NUMBER, { value: parseInt(value, 2), base: 2, raw: '0b' + value }, startLine, startCol);
-            } else if (prefix === 'o') {
-                base = 8;
-                this.advance(); // 0
-                this.advance(); // o
-                while (this.peek() && /[0-7]/.test(this.peek())) {
-                    value += this.advance();
-                }
-                if (value === '') {
-                    return this.makeToken(TokenType.ERROR, 'Invalid octal number', startLine, startCol);
-                }
-                return this.makeToken(TokenType.NUMBER, { value: parseInt(value, 8), base: 8, raw: '0o' + value }, startLine, startCol);
-            }
-        }
+        // Note: Base prefixes (0x, 0b, 0o) and suffix notation (value#base) are
+        // expanded to decimal by expandLiterals() before parsing, so we only
+        // need to handle decimal numbers here.
 
-        // Regular decimal number (possibly floating point with scientific notation)
+        // Decimal number (possibly floating point with scientific notation)
         // Allow commas as digit grouping (ignored)
         while (this.isDigit(this.peek()) || this.peek() === ',') {
             const ch = this.advance();
