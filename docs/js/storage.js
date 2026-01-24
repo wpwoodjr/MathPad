@@ -290,6 +290,9 @@ function exportToText(data) {
  * @param {boolean} options.clearExisting - If true, clear existing records before import
  */
 function importFromText(text, existingData = null, options = {}) {
+    // Normalize line endings: \r\n (Windows) and \r (classic Mac) to \n (Unix)
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
     const SEPARATOR = '~~~~~~~~~~~~~~~~~~~~~~~~~~~';
     const records = [];
     const chunks = text.split(SEPARATOR);
