@@ -270,7 +270,7 @@ function solveEquations(text, context, declarations) {
                     changed = true;
                 }
             } catch (e) {
-                errors.push(e.message);
+                errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
             }
         }
     }
@@ -299,7 +299,7 @@ function solveEquations(text, context, declarations) {
                 const relError = maxVal > 0 ? diff / maxVal : diff;
 
                 if (relError > 1e-10) {
-                    errors.push(`Equation doesn't balance: ${eq.text} (${leftVal} ≠ ${rightVal})`);
+                    errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eq.text} (${leftVal} ≠ ${rightVal})`);
                 }
             }
         } catch (e) {
@@ -338,7 +338,7 @@ function formatOutput(text, declarations, context, record) {
                 const decl = info.declaration;
                 const isOutput = decl.clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
                 if (isOutput) {
-                    errors.push(`Variable '${info.name}' has no value to output`);
+                    errors.push(`Line ${info.lineIndex + 1}: Variable '${info.name}' has no value to output`);
                 }
             }
         }

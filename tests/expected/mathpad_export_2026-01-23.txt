@@ -283,7 +283,7 @@ z%->> 6.724999999999999%
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Equation doesn't balance: y=x+1 (0 ≠ 2)"; StatusIsError = 1
+Status = "Solved with errors: Line 4: Equation doesn't balance: y=x+1 (0 ≠ 2)"; StatusIsError = 1
 "01 Error: Solved with errors: Equation doesn't balance: y=x+1 (0 != 2)"
 
 x=y+1
@@ -441,7 +441,7 @@ x<- 12.1667
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Equation doesn't balance: mint = yint / 12 (0.005104166726620151 ≠ 0.005104166666666667)"; StatusIsError = 1
+Status = "Solved with errors: Line 16: Equation doesn't balance: mint = yint / 12 (0.005104166726620151 ≠ 0.005104166666666667)"; StatusIsError = 1
 "10 Solver: clear pmt, then solve, then solve again, get:"
 "Solved with errors: Equation doesn't balance: mint = yint / 12 (0.005104166726620151 ≠ 0.005104166666666667)"
 "Time Value of Money"
@@ -508,7 +508,7 @@ x->> 6.626070149999999
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Variable 'a' has no value to output"; StatusIsError = 1
+Status = "Solved with errors: Line 3: Variable 'a' has no value to output"; StatusIsError = 1
 "11 Solver: a and b have no value to output - should be error?"
 
 a->
