@@ -587,36 +587,41 @@ function buildSubstitutionMap(equations, context, errors = []) {
     const dependencies = new Map(); // variable -> Set of variables it depends on
 
     for (const eq of equations) {
-        // Expand literals before parsing
-        const expandedText = expandLiterals(eq.text);
+        try {
+            // Expand literals before parsing
+            const expandedText = expandLiterals(eq.text);
 
-        // First try simple definition
-        let def = isDefinitionEquation(expandedText);
-        if (!def || context.hasVariable(def.variable)) {
-            // Try algebraic derivation
-            def = deriveSubstitution(expandedText, context);
-        }
+            // First try simple definition
+            let def = isDefinitionEquation(expandedText);
+            if (!def || context.hasVariable(def.variable)) {
+                // Try algebraic derivation
+                def = deriveSubstitution(expandedText, context);
+            }
 
-        if (!def || context.hasVariable(def.variable) || substitutions.has(def.variable)) {
-            continue;
-        }
+            if (!def || context.hasVariable(def.variable) || substitutions.has(def.variable)) {
+                continue;
+            }
 
-        const exprVars = findVariablesInAST(def.expressionAST);
+            const exprVars = findVariablesInAST(def.expressionAST);
 
-        // Check for cycle before adding (skip silently - numerical solving can still work)
-        const cycleVars = detectCycle(def.variable, exprVars, dependencies);
-        if (cycleVars) {
-            continue;
-        }
+            // Check for cycle before adding (skip silently - numerical solving can still work)
+            const cycleVars = detectCycle(def.variable, exprVars, dependencies);
+            if (cycleVars) {
+                continue;
+            }
 
-        // Don't add if expression contains a variable already in substitution map
-        // (unless that variable is known in context)
-        const hasSubstitutedVar = [...exprVars].some(v => substitutions.has(v) && !context.hasVariable(v));
-        if (!hasSubstitutedVar) {
-            // Store both the AST and the source equation's line number
-            // so we don't apply a substitution back to its own source equation
-            substitutions.set(def.variable, { ast: def.expressionAST, sourceLine: eq.startLine });
-            dependencies.set(def.variable, exprVars);
+            // Don't add if expression contains a variable already in substitution map
+            // (unless that variable is known in context)
+            const hasSubstitutedVar = [...exprVars].some(v => substitutions.has(v) && !context.hasVariable(v));
+            if (!hasSubstitutedVar) {
+                // Store both the AST and the source equation's line number
+                // so we don't apply a substitution back to its own source equation
+                substitutions.set(def.variable, { ast: def.expressionAST, sourceLine: eq.startLine });
+                dependencies.set(def.variable, exprVars);
+            }
+        } catch (e) {
+            // Add error with line number and continue processing other equations
+            errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
         }
     }
 

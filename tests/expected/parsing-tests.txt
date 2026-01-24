@@ -1,0 +1,88 @@
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Need to fix export, re-import"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"01 percent parsing"
+
+w = 10%
+w:: 0.1
+w-> 0.1
+w$-> $0.10
+w%-> 10%
+w->> 0.1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 4: Unexpected token after expression: ERROR 'Unexpected character '$''"; StatusIsError = 1
+"01 Illegal variable name pmt$"
+
+pmt$: 4
+x = pmt$
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"03 variable name rate with % after it"
+
+x = rate% 3
+rate: 4
+
+x-> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 4: Invalid constant \"hex#16\" - \"hex\" is not valid in base 16"; StatusIsError = 1
+"01 Illegal constant hex#16"
+
+  hex#16: 10
+  y = hex#16 + 1
+  y->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"01 base parsing, variable name is ff"
+
+ff#16: f#16
+ff-> 15
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 4 equations"; StatusIsError = 0
+"01 constant evals"
+
+x = ff#16
+x-> 255
+
+y = 12
+y#16: C#16
+y#8-> 14#8
+
+zz = hex#21
+zz-> 371
+
+q: hex#36
+q#36-> HEX#36
+
+w = 10%
+w%: 10%
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 3: Cannot evaluate \"hex#88\" - Invalid base in \"hex#88\" - base must be between 2 and 36"; StatusIsError = 1
+"02 Illegal constant hex#88"
+
+r: hex#88
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

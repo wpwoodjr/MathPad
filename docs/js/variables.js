@@ -41,9 +41,14 @@ function expandLiterals(text) {
     // Expand value#base suffix notation (e.g., ff#16 -> 255, 101#2 -> 5)
     text = text.replace(/\b([0-9a-zA-Z]+)#(\d+)\b/g, (m, v, b) => {
         const base = parseInt(b);
-        if (base < 2 || base > 36) return m;
+        if (base < 2 || base > 36) {
+            throw new Error(`Invalid base in "${m}" - base must be between 2 and 36`);
+        }
         const parsed = parseInt(v, base);
-        return isNaN(parsed) ? m : parsed;
+        if (isNaN(parsed)) {
+            throw new Error(`Invalid constant "${m}" - "${v}" is not valid in base ${base}`);
+        }
+        return parsed;
     });
     // Expand $num money literals (e.g., $100 -> 100, $1,000.50 -> 1000.50)
     text = text.replace(/\$([0-9,]+\.?[0-9]*)\b/g, (_, v) => v.replace(/,/g, ''));
@@ -319,9 +324,9 @@ function parseAllVariables(text) {
             // Expressions stay as valueText for display
             let value = null;
             if (decl.valueText) {
-                // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
-                const expandedValue = expandLiterals(decl.valueText);
-                value = parseNumericValue(expandedValue);
+                // Note: We don't expand literals here - this is just for UI display
+                // The solve phase will expand and report errors
+                value = parseNumericValue(decl.valueText);
             }
 
             declarations.push({
@@ -424,20 +429,20 @@ function discoverVariables(text, context, record) {
             let valueText = decl.valueText;
 
             if (valueText && !isOutput) {
-                // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
-                const expandedValue = expandLiterals(valueText);
+                try {
+                    // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
+                    const expandedValue = expandLiterals(valueText);
 
-                // Try to parse as numeric literal first
-                value = parseNumericValue(expandedValue);
+                    // Try to parse as numeric literal first
+                    value = parseNumericValue(expandedValue);
 
-                // If not a numeric literal, try to evaluate as expression
-                if (value === null) {
-                    try {
+                    // If not a numeric literal, try to evaluate as expression
+                    if (value === null) {
                         const ast = parseExpression(expandedValue);
                         value = evaluate(ast, context);
-                    } catch (e) {
-                        errors.push(`Line ${i + 1}: Cannot evaluate "${valueText}" - ${e.message}`);
                     }
+                } catch (e) {
+                    errors.push(`Line ${i + 1}: Cannot evaluate "${valueText}" - ${e.message}`);
                 }
 
                 // Add to context for subsequent lines

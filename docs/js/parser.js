@@ -138,11 +138,6 @@ class Tokenizer {
             value += this.advance();
         }
 
-        // Allow $ or % suffix for money/percentage variable names
-        if (this.peek() === '$' || this.peek() === '%') {
-            value += this.advance();
-        }
-
         return this.makeToken(TokenType.IDENTIFIER, value, startLine, startCol);
     }
 
@@ -187,7 +182,7 @@ class Tokenizer {
         }
 
         // Single-character operators
-        const singleCharOps = ['+', '-', '*', '/', '%', '&', '|', '^', '~', '!', '<', '>', '=', '?', '#', '\\'];
+        const singleCharOps = ['+', '-', '*', '/', '%', '&', '|', '^', '~', '!', '<', '>', '=', '?', '\\'];
         if (singleCharOps.includes(ch)) {
             this.advance();
             return this.makeToken(TokenType.OPERATOR, ch, startLine, startCol);
@@ -299,8 +294,9 @@ class Tokenizer {
                 continue;
             }
 
-            // Unknown character - skip it
+            // Unknown character - generate error token
             this.advance();
+            this.tokens.push(this.makeToken(TokenType.ERROR, `Unexpected character '${ch}'`, startLine, startCol));
         }
 
         this.tokens.push(this.makeToken(TokenType.EOF, null, this.line, this.col));
@@ -326,10 +322,18 @@ class Parser {
         return this.tokens[this.pos++];
     }
 
+    // Format a token value for display in error messages
+    formatTokenValue(token) {
+        if (token.type === TokenType.NUMBER) {
+            return token.value.raw || token.value.value;
+        }
+        return token.value;
+    }
+
     expect(type, value = null) {
         const token = this.peek();
         if (token.type !== type || (value !== null && token.value !== value)) {
-            throw new ParseError(`Expected ${type}${value ? ` '${value}'` : ''}, got ${token.type} '${token.value}'`, token.line, token.col);
+            throw new ParseError(`Expected ${type}${value ? ` '${value}'` : ''}, got ${token.type} '${this.formatTokenValue(token)}'`, token.line, token.col);
         }
         return this.advance();
     }
@@ -507,7 +511,7 @@ class Parser {
             return { type: NodeType.VARIABLE, name };
         }
 
-        throw new ParseError(`Unexpected token: ${token.type} '${token.value}'`, token.line, token.col);
+        throw new ParseError(`Unexpected token: ${token.type} '${this.formatTokenValue(token)}'`, token.line, token.col);
     }
 
     parse() {
@@ -517,7 +521,7 @@ class Parser {
         const expr = this.parseExpression();
         if (this.peek().type !== TokenType.EOF) {
             const token = this.peek();
-            throw new ParseError(`Unexpected token after expression: ${token.type} '${token.value}'`, token.line, token.col);
+            throw new ParseError(`Unexpected token after expression: ${token.type} '${this.formatTokenValue(token)}'`, token.line, token.col);
         }
         return expr;
     }

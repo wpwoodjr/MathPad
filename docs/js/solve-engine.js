@@ -213,7 +213,7 @@ function solveEquations(text, context, declarations) {
                         ast = substituteInAST(ast, subAsts);
                         const value = evaluate(ast, context);
                         // Store result but don't modify text
-                        computedValues.set(`__incomplete_${eq.line}`, value);
+                        computedValues.set(`__incomplete_${eq.startLine}`, value);
                         solved++;
                     } catch (e) {
                         // Unknown variables - skip
@@ -315,10 +315,11 @@ function solveEquations(text, context, declarations) {
  * @param {string} text - The formula text
  * @param {Array} declarations - Parsed declarations
  * @param {EvalContext} context - Context with all computed values
+ * @param {Map} computedValues - Pre-computed values from solveEquations
  * @param {object} record - Record settings for formatting
  * @returns {{ text: string, errors: Array }} Formatted text and any errors
  */
-function formatOutput(text, declarations, context, record) {
+function formatOutput(text, declarations, context, computedValues, record) {
     const errors = [];
     const format = {
         places: record.places ?? 4,
@@ -344,22 +345,15 @@ function formatOutput(text, declarations, context, record) {
         }
     }
 
-    // Handle incomplete equations (expr =)
+    // Handle incomplete equations (expr =) using pre-computed values
     const equations = findEquations(text);
     for (const eq of equations) {
-        // Expand literals before parsing
-        const expandedText = expandLiterals(eq.text);
-        const incompleteMatch = expandedText.match(/^(.+?)\s*=\s*$/);
-        if (incompleteMatch) {
-            try {
-                const ast = parseExpression(incompleteMatch[1].trim());
-                const value = evaluate(ast, context);
-                const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
-                const eqPattern = eq.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                text = text.replace(new RegExp(eqPattern), eq.text + ' ' + formatted);
-            } catch (e) {
-                // Skip - can't evaluate
-            }
+        const key = `__incomplete_${eq.startLine}`;
+        if (computedValues.has(key)) {
+            const value = computedValues.get(key);
+            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
+            const eqPattern = eq.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            text = text.replace(new RegExp(eqPattern), eq.text + ' ' + formatted);
         }
     }
 
@@ -381,7 +375,7 @@ function solveRecord(text, context, record) {
     errors.push(...solveResult.errors);
 
     // Pass 3: Format Output (inserts values into text)
-    const formatResult = formatOutput(text, declarations, context, record);
+    const formatResult = formatOutput(text, declarations, context, solveResult.computedValues, record);
     text = formatResult.text;
     errors.push(...formatResult.errors);
 
