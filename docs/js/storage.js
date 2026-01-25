@@ -247,14 +247,20 @@ function debouncedSave(data, delay = 500) {
 /**
  * Export data to MpExport text format
  * Compatible with original MathPad export format
+ * @param {object} data - The data to export
+ * @param {object} options - Export options
+ * @param {number} options.selectedRecordId - ID of currently selected record (optional)
  */
-function exportToText(data) {
+function exportToText(data, options = {}) {
     const SEPARATOR = '~~~~~~~~~~~~~~~~~~~~~~~~~~~';
     const lines = [];
+    const { selectedRecordId } = options;
 
     for (const record of data.records) {
         // Record metadata
-        lines.push(`Category = "${record.category || 'Unfiled'}"; Secret = ${record.secret ? 1 : 0}`);
+        const isSelected = selectedRecordId && record.id === selectedRecordId;
+        const selectedFlag = isSelected ? '; Selected = 1' : '';
+        lines.push(`Category = "${record.category || 'Unfiled'}"; Secret = ${record.secret ? 1 : 0}${selectedFlag}`);
         lines.push(`Places = ${record.places ?? 4}; StripZeros = ${record.stripZeros ? 1 : 0}`);
         lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}; ShadowConstants = ${record.shadowConstants ? 1 : 0}`);
         if (record.status) {
@@ -296,6 +302,7 @@ function importFromText(text, existingData = null, options = {}) {
     const SEPARATOR = '~~~~~~~~~~~~~~~~~~~~~~~~~~~';
     const records = [];
     const chunks = text.split(SEPARATOR);
+    let selectedRecordIndex = -1;
 
     for (const chunk of chunks) {
         const trimmed = chunk.trim();
@@ -304,6 +311,7 @@ function importFromText(text, existingData = null, options = {}) {
         const lines = trimmed.split('\n');
         let category = 'Unfiled';
         let secret = false;
+        let selected = false;
         let places = 4;
         let stripZeros = true;
         let format = 'float';
@@ -318,11 +326,12 @@ function importFromText(text, existingData = null, options = {}) {
         for (let i = 0; i < Math.min(4, lines.length); i++) {
             const line = lines[i].trim();
 
-            // Category and Secret line
-            const catMatch = line.match(/Category\s*=\s*"([^"]*)"\s*;\s*Secret\s*=\s*(\d+)/i);
+            // Category, Secret, and optional Selected flag
+            const catMatch = line.match(/Category\s*=\s*"([^"]*)"\s*;\s*Secret\s*=\s*(\d+)(?:\s*;\s*Selected\s*=\s*(\d+))?/i);
             if (catMatch) {
                 category = catMatch[1];
                 secret = catMatch[2] === '1';
+                selected = catMatch[3] === '1';
                 contentStart = i + 1;
                 continue;
             }
@@ -396,8 +405,12 @@ function importFromText(text, existingData = null, options = {}) {
             }
         }
 
+        const recordId = generateId();
+        if (selected) {
+            selectedRecordIndex = records.length;
+        }
         records.push({
-            id: generateId(),
+            id: recordId,
             title: title,
             text: textContent,
             category: category,
@@ -411,6 +424,9 @@ function importFromText(text, existingData = null, options = {}) {
             statusIsError: statusIsError
         });
     }
+
+    // Get the selected record ID if one was marked
+    const selectedRecordId = selectedRecordIndex >= 0 ? records[selectedRecordIndex].id : null;
 
     // Merge with existing data or create new
     if (existingData) {
@@ -429,6 +445,11 @@ function importFromText(text, existingData = null, options = {}) {
         } else {
             existingData.records = [...existingData.records, ...records];
         }
+        // Store selected record ID for UI to use
+        if (selectedRecordId) {
+            existingData.settings = existingData.settings || {};
+            existingData.settings.lastRecordId = selectedRecordId;
+        }
         return existingData;
     }
 
@@ -445,7 +466,8 @@ function importFromText(text, existingData = null, options = {}) {
         records: records,
         categories: [...categories],
         settings: {
-            degreesMode: false
+            degreesMode: false,
+            lastRecordId: selectedRecordId
         }
     };
 }

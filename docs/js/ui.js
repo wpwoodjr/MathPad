@@ -301,6 +301,12 @@ function showEditor(recordId) {
     for (const [id, { container }] of UI.editors) {
         container.style.display = id === recordId ? 'flex' : 'none';
     }
+
+    // Hide the "no editor" message when showing an editor
+    const noEditorMsg = document.querySelector('.no-editor-message');
+    if (noEditorMsg) {
+        noEditorMsg.style.display = recordId ? 'none' : 'block';
+    }
 }
 
 /**
@@ -622,13 +628,17 @@ async function handleFileSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Ask user whether to clear existing records
-    const clearExisting = confirm('Clear existing records before importing?\n\nOK = Clear all and import\nCancel = Merge with existing records');
+    // Warn user that import will replace all records
+    const confirmed = confirm('This will replace all existing records.\n\nContinue?');
+    if (!confirmed) {
+        e.target.value = '';
+        return;
+    }
 
     try {
         setStatus('Importing...', false, false);
         const text = await readTextFile(file);
-        UI.data = importFromText(text, UI.data, { clearExisting });
+        UI.data = importFromText(text, UI.data, { clearExisting: true });
         saveData(UI.data);
 
         // Clear all editors since records may have changed
@@ -643,6 +653,20 @@ async function handleFileSelect(e) {
         renderSidebar();
         renderTabBar();
         renderDetailsPanel();
+
+        // Open the selected record from the imported file, or first record
+        const selectedId = UI.data.settings?.lastRecordId;
+        const recordToOpen = selectedId ? findRecord(UI.data, selectedId) : null;
+        if (recordToOpen) {
+            openRecord(recordToOpen.id);
+        } else if (UI.data.records.length > 0) {
+            openRecord(UI.data.records[0].id);
+        } else {
+            // No records - show the "no editor" message
+            const noEditorMsg = document.querySelector('.no-editor-message');
+            if (noEditorMsg) noEditorMsg.style.display = 'block';
+        }
+
         setStatus(`Imported from ${file.name}`, false, false);
     } catch (err) {
         setStatus('Import failed: ' + err.message, true, false);
@@ -657,7 +681,7 @@ async function handleFileSelect(e) {
  */
 function handleExport() {
     try {
-        const text = exportToText(UI.data);
+        const text = exportToText(UI.data, { selectedRecordId: UI.currentRecordId });
         const d = new Date();
         const timestamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         downloadTextFile(text, `mathpad_export_${timestamp}.txt`);
@@ -694,6 +718,12 @@ function handleReset() {
         renderSidebar();
         renderTabBar();
         renderDetailsPanel();
+
+        // Open the first record
+        if (UI.data.records.length > 0) {
+            openRecord(UI.data.records[0].id);
+        }
+
         setStatus('Reset to default records', false, false);
     }
 }
