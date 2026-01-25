@@ -1,0 +1,49 @@
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Constants"
+"Test constants for shadow tests"
+e: 2.71828182845905
+h: 6.62607015e-34 "Planck constant"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Input and output variables cleared"; StatusIsError = 0
+"01 Shadow h - solve for height"
+
+w/h = 9/16
+d = sqrt(w*w + h*h)
+
+d: 6.3
+w->
+h->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"02 No shadow - use Planck constant"
+
+x = h * 1e34
+x->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Input and output variables cleared"; StatusIsError = 0
+"03 Shadow e - override with local value"
+
+e: 3
+e->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 14; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"04 No shadow e - conflict error but output works"
+
+e: 3
+e->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

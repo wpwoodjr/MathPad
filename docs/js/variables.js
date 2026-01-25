@@ -407,6 +407,19 @@ function discoverVariables(text, context, record) {
             const name = decl.name;
             const isOutput = decl.clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
 
+            // Check if shadowing a constant
+            if (context.constants.has(name)) {
+                if (record.shadowConstants) {
+                    // Shadow the constant by removing it from context
+                    context.constants.delete(name);
+                } else if (!isOutput) {
+                    // Input declarations conflict with constants (unless shadowConstants enabled)
+                    errors.push(`Line ${i + 1}: Variable "${name}" conflicts with a constant`);
+                    continue;
+                }
+                // Output declarations can output constant values without conflict
+            }
+
             // Check for duplicate input declarations
             if (!isOutput) {
                 if (definedVars.has(name)) {
@@ -415,11 +428,6 @@ function discoverVariables(text, context, record) {
                 }
                 if (context.variables.has(name)) {
                     errors.push(`Line ${i + 1}: Variable "${name}" is already defined`);
-                    continue;
-                }
-                // Check if shadowing a constant (only allowed if record.shadowConstants is true)
-                if (context.constants.has(name) && !record.shadowConstants) {
-                    errors.push(`Line ${i + 1}: Variable "${name}" conflicts with a constant`);
                     continue;
                 }
                 definedVars.add(name);
