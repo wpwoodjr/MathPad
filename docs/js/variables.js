@@ -163,10 +163,11 @@ function parseVariableLine(line) {
     // Variable declaration patterns (order matters - check more specific patterns first)
     // Note: \w+(?:[$%]|#\d+)? allows optional $, %, or #base suffix
     // The suffix is stripped from the name and stored in format/base
+    // Patterns use .* at start to allow label text before the variable (e.g., "Enter FiO2<-")
     const patterns = [
         // With search limits: var[low:high]: value
         {
-            regex: /^(\w+(?:[$%]|#\d+)?)\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\]\s*:\s*(.*)$/,
+            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\]\s*:\s*(.*)$/,
             handler: (m) => {
                 const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
@@ -184,7 +185,7 @@ function parseVariableLine(line) {
         },
         // Input variable: var<-
         {
-            regex: /^(\w+(?:[$%]|#\d+)?)\s*<-\s*(.*)$/,
+            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*<-\s*(.*)$/,
             handler: (m) => {
                 const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
@@ -201,7 +202,7 @@ function parseVariableLine(line) {
         },
         // Full precision output: var->>
         {
-            regex: /^(\w+(?:[$%]|#\d+)?)\s*->>\s*(.*)$/,
+            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*->>\s*(.*)$/,
             handler: (m) => {
                 const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
@@ -218,7 +219,7 @@ function parseVariableLine(line) {
         },
         // Output variable: var->
         {
-            regex: /^(\w+(?:[$%]|#\d+)?)\s*->\s*(.*)$/,
+            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*->\s*(.*)$/,
             handler: (m) => {
                 const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
@@ -235,7 +236,7 @@ function parseVariableLine(line) {
         },
         // Full precision: var::
         {
-            regex: /^(\w+(?:[$%]|#\d+)?)\s*::\s*(.*)$/,
+            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*::\s*(.*)$/,
             handler: (m) => {
                 const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
@@ -252,7 +253,7 @@ function parseVariableLine(line) {
         },
         // Standard: var:
         {
-            regex: /^(\w+(?:[$%]|#\d+)?)\s*:\s*(.*)$/,
+            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*:\s*(.*)$/,
             handler: (m) => {
                 const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
