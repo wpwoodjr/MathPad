@@ -53,7 +53,7 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
     eqText = expandLiterals(eqText);
 
     // Parse the equation: left = right
-    const eqMatch = eqText.match(/^(.+)=(.+)$/);
+    const eqMatch = eqText.match(/^(.+?)=(.+)$/);
     if (!eqMatch) {
         throw new Error('Invalid equation format');
     }
@@ -281,7 +281,7 @@ function solveEquations(text, context, declarations) {
         try {
             // Expand literals before parsing
             const expandedText = expandLiterals(eq.text);
-            const eqMatch = expandedText.match(/^(.+)=(.+)$/);
+            const eqMatch = expandedText.match(/^(.+?)=(.+)$/);
             if (!eqMatch) continue;
 
             const leftAST = parseExpression(eqMatch[1].trim());

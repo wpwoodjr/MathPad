@@ -397,7 +397,7 @@ function deepCopyAST(node) {
  * Note: expects eqText to already have literals expanded by expandLiterals()
  */
 function isDefinitionEquation(eqText) {
-    const eqMatch = eqText.match(/^(.+)=(.+)$/);
+    const eqMatch = eqText.match(/^(.+?)=(.+)$/);
     if (!eqMatch) return null;
 
     const leftText = eqMatch[1].trim();
@@ -426,7 +426,7 @@ function isDefinitionEquation(eqText) {
  * Note: expects eqText to already have literals expanded by expandLiterals()
  */
 function deriveSubstitution(eqText, context) {
-    const eqMatch = eqText.match(/^(.+)=(.+)$/);
+    const eqMatch = eqText.match(/^(.+?)=(.+)$/);
     if (!eqMatch) return null;
 
     const leftText = eqMatch[1].trim();
