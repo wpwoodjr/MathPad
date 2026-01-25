@@ -370,10 +370,17 @@ function importFromText(text, existingData = null, options = {}) {
 
         // Extract title from first comment line if present
         let title = '';
+        let textContent = content;
         const firstLine = contentLines[0]?.trim() || '';
         const titleMatch = firstLine.match(/^"([^"]+)"$/);
         if (titleMatch) {
             title = titleMatch[1];
+            // For reference records, remove title line from content to avoid duplication
+            // (export adds the title line, so we remove it on import)
+            const isReferenceRecord = title === 'Constants' || title === 'Functions' || title === 'Default Settings';
+            if (isReferenceRecord) {
+                textContent = contentLines.slice(1).join('\n').trim();
+            }
         } else {
             // Use first few words of first non-empty, non-comment line
             for (const line of contentLines) {
@@ -392,7 +399,7 @@ function importFromText(text, existingData = null, options = {}) {
         records.push({
             id: generateId(),
             title: title,
-            text: content,
+            text: textContent,
             category: category,
             places: places,
             stripZeros: stripZeros,
