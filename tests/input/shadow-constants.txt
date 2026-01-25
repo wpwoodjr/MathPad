@@ -24,6 +24,19 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
+"01 No shadow h - solve for height"
+
+w/h = 9/16
+d = sqrt(w*w + h*h)
+
+d: 6.3
+w->
+h->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
 "02 No shadow - use Planck constant"
 
 x = h * 1e34
