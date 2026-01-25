@@ -630,7 +630,19 @@ async function handleFileSelect(e) {
         const text = await readTextFile(file);
         UI.data = importFromText(text, UI.data, { clearExisting });
         saveData(UI.data);
+
+        // Clear all editors since records may have changed
+        for (const [id, { container }] of UI.editors) {
+            container.remove();
+        }
+        UI.editors.clear();
+        UI.openTabs = [];
+        UI.currentRecordId = null;
+
+        // Re-render UI
         renderSidebar();
+        renderTabBar();
+        renderDetailsPanel();
         setStatus(`Imported from ${file.name}`, false, false);
     } catch (err) {
         setStatus('Import failed: ' + err.message, true, false);
