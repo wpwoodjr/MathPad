@@ -581,6 +581,9 @@ function setupEventListeners() {
     // Export button
     document.getElementById('btn-export')?.addEventListener('click', handleExport);
 
+    // Reset button
+    document.getElementById('btn-reset')?.addEventListener('click', handleReset);
+
     // Solve button
     document.getElementById('btn-solve')?.addEventListener('click', handleSolve);
 
@@ -649,6 +652,37 @@ function handleExport() {
         setStatus('Exported successfully', false, false);
     } catch (err) {
         setStatus('Export failed: ' + err.message, true, false);
+    }
+}
+
+/**
+ * Handle reset to defaults
+ */
+function handleReset() {
+    const confirmed = confirm(
+        'Reset to default records?\n\n' +
+        'This will DELETE ALL your records and restore the original examples.\n\n' +
+        'Consider exporting your records first if you want to keep them.'
+    );
+
+    if (confirmed) {
+        // Clear all editors
+        for (const [id, { container }] of UI.editors) {
+            container.remove();
+        }
+        UI.editors.clear();
+        UI.openTabs = [];
+        UI.currentRecordId = null;
+
+        // Reset data to defaults
+        UI.data = createDefaultData();
+        saveData(UI.data);
+
+        // Re-render UI
+        renderSidebar();
+        renderTabBar();
+        renderDetailsPanel();
+        setStatus('Reset to default records', false, false);
     }
 }
 
