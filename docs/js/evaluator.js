@@ -467,6 +467,19 @@ function evaluate(node, context) {
                 return evaluate(userFunc.body, funcContext);
             }
 
+            // Special handling for 'if' - lazy evaluation to support recursion
+            if (funcName === 'if') {
+                if (node.args.length < 2) {
+                    throw new EvalError('if() requires at least 2 arguments');
+                }
+                const condition = evaluate(node.args[0], context);
+                if (condition) {
+                    return evaluate(node.args[1], context);
+                } else {
+                    return node.args.length > 2 ? evaluate(node.args[2], context) : 0;
+                }
+            }
+
             // Check built-in functions
             const builtin = builtinFunctions[funcName];
             if (builtin) {

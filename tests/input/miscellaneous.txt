@@ -1,0 +1,14 @@
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Factorial"
+
+fac(n) = if(n <= 1; n; n*fac(n - 1))
+
+a: 170
+x: fac(a)
+x->
+
+y: fact(a)
+y->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,0 +1,15 @@
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Factorial"
+
+fac(n) = if(n <= 1; n; n*fac(n - 1))
+
+a: 170
+x: fac(a)
+x-> 7.26e+306
+
+y: fact(a)
+y-> 7.26e+306
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
