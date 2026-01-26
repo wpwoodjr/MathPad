@@ -47,3 +47,44 @@ h->
 w-> "width"
 c->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Braced Equations"
+
+Label: { x + 5 = y }
+
+x: 10
+y->
+
+Example { xmax(a;b) = if(a>b; a; b) }
+ymax(a;b) = if(a>b; a; b)
+
+z: xmax(4;5)
+z->
+
+w: ymax(5;6)
+w->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Braced Equations on multiple lines"
+
+Label: { x + 5
+ = y }
+
+x: 10
+y->
+
+Example { xmax(a;b)
+ = if(a>b; a; b) }
+
+ymax(a;b) = if(a>b; a; b)
+
+z: xmax(4;5)
+z->
+
+w: ymax(5;6)
+w->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

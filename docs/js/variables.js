@@ -259,12 +259,16 @@ function parseVariableLine(line) {
         {
             regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*:\s*(.*)$/,
             handler: (m) => {
+                // If value starts with {, it's a braced equation label, not a declaration
+                const valueText = m[2].trim();
+                if (valueText.startsWith('{')) return null;
+
                 const { baseName, format, base } = parseVarNameAndFormat(m[1]);
                 return {
                     name: baseName,
                     type: VarType.STANDARD,
                     clearBehavior: ClearBehavior.NONE,
-                    valueText: m[2].trim(),
+                    valueText: valueText,
                     base,
                     fullPrecision: false,
                     marker: ':',
@@ -278,8 +282,10 @@ function parseVariableLine(line) {
         const match = cleanLine.match(pattern.regex);
         if (match) {
             const result = pattern.handler(match);
-            result.comment = comment;
-            return result;
+            if (result) {
+                result.comment = comment;
+                return result;
+            }
         }
     }
 
@@ -835,13 +841,12 @@ function parseFunctionsRecord(text) {
     const functions = new Map();
     const lines = text.split('\n');
 
-    for (const line of lines) {
-        // Remove comments for parsing
-        const cleanLine = line.replace(/"[^"]*"/g, '').trim();
-        if (!cleanLine) continue;
-
+    // Helper to extract function definition from text
+    function extractFunction(content, sourceText) {
+        // Normalize whitespace (multi-line braces may have newlines)
+        content = content.replace(/\s+/g, ' ').trim();
         // Pattern: funcname(arg1;arg2;...) = expression
-        const match = cleanLine.match(/^(\w+)\s*\(\s*([^)]*)\s*\)\s*=\s*(.+)$/);
+        const match = content.match(/(\w+)\s*\(\s*([^)]*)\s*\)\s*=\s*(.+)$/);
         if (match) {
             const name = match[1].toLowerCase();
             const paramsText = match[2].trim();
@@ -850,10 +855,52 @@ function parseFunctionsRecord(text) {
             const params = paramsText ?
                 paramsText.split(';').map(p => p.trim()) : [];
 
-            // Preserve original source text (without leading/trailing whitespace)
-            const sourceText = line.trim();
-
             functions.set(name, { params, bodyText, sourceText });
+        }
+    }
+
+    let inBrace = false;
+    let braceContent = [];
+    let braceSourceLines = [];
+
+    for (const line of lines) {
+        // Remove comments for parsing
+        const cleanLine = line.replace(/"[^"]*"/g, '').trim();
+
+        if (inBrace) {
+            const closeIdx = cleanLine.indexOf('}');
+            if (closeIdx !== -1) {
+                braceContent.push(cleanLine.substring(0, closeIdx));
+                braceSourceLines.push(line);
+                extractFunction(braceContent.join(' '), braceSourceLines.join('\n').trim());
+                inBrace = false;
+                braceContent = [];
+                braceSourceLines = [];
+            } else {
+                braceContent.push(cleanLine);
+                braceSourceLines.push(line);
+            }
+            continue;
+        }
+
+        if (!cleanLine) continue;
+
+        const openIdx = cleanLine.indexOf('{');
+        if (openIdx !== -1) {
+            const afterBrace = cleanLine.substring(openIdx + 1);
+            const closeIdx = afterBrace.indexOf('}');
+            if (closeIdx !== -1) {
+                // Single-line braced content
+                extractFunction(afterBrace.substring(0, closeIdx).trim(), line.trim());
+            } else {
+                // Multi-line brace starts
+                inBrace = true;
+                braceContent = [afterBrace];
+                braceSourceLines = [line];
+            }
+        } else {
+            // Try matching function definition at start of line
+            extractFunction(cleanLine, line.trim());
         }
     }
 

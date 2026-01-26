@@ -56,3 +56,46 @@ c-> 299,792,458
 c: 299792458 "speed of light m/s"
 hypot(a;b) = sqrt(a**2 + b**2) "hypotenuse"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 1 equation"; StatusIsError = 0
+"Braced Equations"
+
+Label: { x + 5 = y }
+
+x: 10
+y-> 15
+
+Example { xmax(a;b) = if(a>b; a; b) }
+ymax(a;b) = if(a>b; a; b)
+
+z: xmax(4;5)
+z-> 5
+
+w: ymax(5;6)
+w-> 6
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 1 equation"; StatusIsError = 0
+"Braced Equations on multiple lines"
+
+Label: { x + 5
+ = y }
+
+x: 10
+y-> 15
+
+Example { xmax(a;b)
+ = if(a>b; a; b) }
+
+ymax(a;b) = if(a>b; a; b)
+
+z: xmax(4;5)
+z-> 5
+
+w: ymax(5;6)
+w-> 6
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

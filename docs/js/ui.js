@@ -521,12 +521,17 @@ function duplicateCurrentRecord() {
     const newTitle = record.title + ' (copy)';
     let newText = record.text;
 
-    // Update the title comment in the text if present
+    // Update the title in the text if present (quoted or unquoted)
     const lines = newText.split('\n');
     const firstLine = lines[0].trim();
     const titleMatch = firstLine.match(/^"([^"]+)"$/);
     if (titleMatch && titleMatch[1] === record.title) {
+        // Quoted title - update with quotes
         lines[0] = `"${newTitle}"`;
+        newText = lines.join('\n');
+    } else if (firstLine === record.title) {
+        // Unquoted title - update without quotes
+        lines[0] = newTitle;
         newText = lines.join('\n');
     }
 
@@ -758,6 +763,11 @@ function handleSolve() {
         // Get current text from editor
         let text = editorInfo.editor.getValue();
 
+        // Remember cursor line position
+        const cursorPos = editorInfo.editor.getCursorPosition();
+        const textBeforeCursor = text.substring(0, cursorPos);
+        const cursorLine = textBeforeCursor.split('\n').length - 1;
+
         // Clear output variables first so they become unknowns
         text = clearVariables(text, 'output');
 
@@ -772,6 +782,16 @@ function handleSolve() {
         editorInfo.editor.setValue(text, true);
         record.text = text;
         debouncedSave(UI.data);
+
+        // Restore cursor to end of same line
+        const newLines = text.split('\n');
+        const targetLine = Math.min(cursorLine, newLines.length - 1);
+        let newPos = 0;
+        for (let i = 0; i < targetLine; i++) {
+            newPos += newLines[i].length + 1; // +1 for newline
+        }
+        newPos += newLines[targetLine].length; // end of line
+        editorInfo.editor.setCursorPosition(newPos);
 
         // Update variables panel
         if (editorInfo.variablesManager) {
@@ -805,6 +825,12 @@ function handleClearInput() {
     if (!editorInfo) return;
 
     let text = editorInfo.editor.getValue();
+
+    // Remember cursor line position
+    const cursorPos = editorInfo.editor.getCursorPosition();
+    const textBeforeCursor = text.substring(0, cursorPos);
+    const cursorLine = textBeforeCursor.split('\n').length - 1;
+
     text = clearVariables(text, 'input');
     text = clearVariables(text, 'output');
 
@@ -815,6 +841,16 @@ function handleClearInput() {
     editorInfo.editor.setValue(text, true);
     record.text = text;
     debouncedSave(UI.data);
+
+    // Restore cursor to end of same line
+    const newLines = text.split('\n');
+    const targetLine = Math.min(cursorLine, newLines.length - 1);
+    let newPos = 0;
+    for (let i = 0; i < targetLine; i++) {
+        newPos += newLines[i].length + 1; // +1 for newline
+    }
+    newPos += newLines[targetLine].length; // end of line
+    editorInfo.editor.setCursorPosition(newPos);
 
     // Update variables panel
     if (editorInfo.variablesManager) {
