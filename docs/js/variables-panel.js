@@ -45,8 +45,8 @@ class VariablesPanel {
                 toAdd.push(info);
             } else {
                 const existing = this.declarations.get(lineIndex);
-                // If name or marker changed, remove old row and add new one
-                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker) {
+                // If name, marker, or comment changed, remove old row and add new one
+                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || existing.declaration.comment !== info.declaration.comment) {
                     toRemove.push(lineIndex);
                     toAdd.push(info);
                 } else if (this.declarationChanged(existing, info)) {
@@ -66,6 +66,13 @@ class VariablesPanel {
         toAdd.forEach(info => this.addVariableRow(info));
         toUpdate.forEach(info => this.updateVariableRow(info));
 
+        // Remove separator if no reference items remain
+        const hasRefItems = [...newDeclMap.values()].some(info => info.lineIndex > refSectionLineIndex);
+        if (!hasRefItems) {
+            const separator = this.container.querySelector('.variable-section-separator');
+            if (separator) separator.remove();
+        }
+
         this.declarations = newDeclMap;
     }
 
@@ -83,6 +90,14 @@ class VariablesPanel {
         // Check if this is in the references section
         const isInRefSection = info.lineIndex > this.refSectionLineIndex;
 
+        // Add separator before first reference section item
+        if (isInRefSection && !this.container.querySelector('.variable-section-separator')) {
+            const separator = document.createElement('div');
+            separator.className = 'variable-section-separator';
+            separator.textContent = 'Reference Constants';
+            this.container.appendChild(separator);
+        }
+
         // Set data-type for CSS styling based on clear behavior
         if (isInRefSection) {
             row.dataset.type = 'reference';
@@ -94,27 +109,19 @@ class VariablesPanel {
             row.dataset.type = 'standard';
         }
 
-        // Type indicator
-        const typeIndicator = document.createElement('span');
-        typeIndicator.className = 'variable-type-indicator';
-        if (isInRefSection) {
-            typeIndicator.textContent = '\u2139'; // info symbol
-            typeIndicator.title = 'Reference (from Constants/Functions)';
-        } else if (clearBehavior === ClearBehavior.ON_CLEAR || decl.type === VarType.INPUT) {
-            typeIndicator.textContent = '\u2190'; // left arrow
-            typeIndicator.title = 'Input variable (cleared on Clear)';
-        } else if (clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT) {
-            typeIndicator.textContent = '\u2192'; // right arrow
-            typeIndicator.title = 'Output variable (cleared on Solve)';
-        } else {
-            typeIndicator.textContent = '';
-        }
-
         // Variable name label (includes format suffix and marker to distinguish declarations)
         const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
         nameLabel.textContent = info.name + formatSuffix + (decl.marker || ':');
+        // Add tooltip explaining variable type
+        if (isInRefSection) {
+            nameLabel.title = 'Reference (from Constants/Functions)';
+        } else if (clearBehavior === ClearBehavior.ON_CLEAR || decl.type === VarType.INPUT) {
+            nameLabel.title = 'Input variable (cleared on Clear)';
+        } else if (clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT) {
+            nameLabel.title = 'Output variable (cleared on Solve)';
+        }
 
         // Value input or display
         // Output types (-> and ->>) are read-only
@@ -137,12 +144,11 @@ class VariablesPanel {
             valueElement.textContent = this.formatValueForDisplay(info);
         }
 
-        row.appendChild(typeIndicator);
         row.appendChild(nameLabel);
         row.appendChild(valueElement);
 
-        // Add comment for reference section items
-        if (isInRefSection && decl.comment) {
+        // Add comment if present
+        if (decl.comment) {
             const commentElement = document.createElement('span');
             commentElement.className = 'variable-comment';
             commentElement.textContent = decl.comment;

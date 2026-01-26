@@ -753,31 +753,28 @@ button {
     background: var(--bg-hover);
 }
 
-.variable-type-indicator {
-    width: 20px;
-    text-align: center;
-    font-size: 14px;
-    color: var(--text-muted);
-    flex-shrink: 0;
-}
-
-.variable-row[data-type="input"] .variable-type-indicator {
-    color: var(--success-color);
-}
-
-.variable-row[data-type="output"] .variable-type-indicator {
-    color: var(--accent-primary);
-}
-
 .variable-name {
     min-width: 100px;
     font-family: var(--font-mono);
     font-size: 15px;
-    color: var(--syn-variable-def);
+    color: var(--success-color);
 }
 
-.variable-row[data-type="input"] .variable-name {
-    color: var(--success-color);
+.variable-row[data-type="output"] .variable-name {
+    color: var(--accent-primary);
+}
+
+.variable-row[data-type="reference"] .variable-name {
+    color: var(--text-primary);
+}
+
+.variable-section-separator {
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-style: italic;
+    font-size: 13px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 4px;
 }
 
 .variable-value-input {
@@ -804,7 +801,7 @@ button {
     flex: 1;
     max-width: 300px;
     padding: 4px 8px;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-family: var(--font-mono);
     font-size: 15px;
     font-style: italic;
@@ -814,7 +811,7 @@ button {
 }
 
 .variable-comment {
-    color: var(--text-muted);
+    color: var(--text-primary);
     font-size: 13px;
     font-style: italic;
     padding-left: 8px;
