@@ -164,6 +164,20 @@ function parseVariableLine(line) {
     // Remove comments (text in double quotes) and trim leading/trailing whitespace
     const cleanLine = line.replace(/"[^"]*"/g, '').trim();
 
+    // Check if this line looks like an expression output (has math operators before a marker)
+    // Expression outputs are handled separately, not as variable declarations
+    // Look for operators like +, -, *, /, **, ( before the marker
+    // cleanLine already has comments removed
+    const markerMatch = cleanLine.match(/^(.*?)(:|::|<-|->|->>) *(.*)$/);
+    if (markerMatch) {
+        const beforeMarker = markerMatch[1];
+        // If the part before the marker contains math operators, it's an expression output
+        // (not a simple label like "Enter x:")
+        if (/[+\-*\/\(\)\^]/.test(beforeMarker)) {
+            return null;
+        }
+    }
+
     // Variable declaration patterns (order matters - check more specific patterns first)
     // Note: \w+(?:[$%]|#\d+)? allows optional $, %, or #base suffix
     // The suffix is stripped from the name and stored in format/base
@@ -670,6 +684,100 @@ function clearVariables(text, clearType = 'input') {
         }
     }
 
+    let result = lines.join('\n');
+
+    // Also clear expression outputs (expr-> and expr->>) when clearing output or input types
+    if (clearType === 'output' || clearType === 'input' || clearType === 'all') {
+        result = clearExpressionOutputs(result);
+    }
+
+    return result;
+}
+
+/**
+ * Find expression outputs in text: expr:, expr::, expr->, expr->>
+ * These are expressions (not simple variable names) followed by output markers
+ * Returns array of { text, marker, startLine, fullPrecision, recalculates }
+ */
+function findExpressionOutputs(text) {
+    const lines = text.split('\n');
+    const outputs = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        // Remove comments for matching
+        const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+
+        // Match patterns: expr->> expr-> expr:: expr: (check longer markers first)
+        // The expr part must contain something that's not just a variable name
+        const patterns = [
+            { regex: /^(.+?)(->>) *(.*)$/, marker: '->>', fullPrecision: true, recalculates: true },
+            { regex: /^(.+?)(->) *(.*)$/, marker: '->', fullPrecision: false, recalculates: true },
+            { regex: /^(.+?)(::) *(.*)$/, marker: '::', fullPrecision: true, recalculates: false },
+            { regex: /^(.+?)(:) *(.*)$/, marker: ':', fullPrecision: false, recalculates: false }
+        ];
+
+        for (const pattern of patterns) {
+            const match = cleanLine.match(pattern.regex);
+            if (match) {
+                const exprPart = match[1].trim();
+                const valuePart = match[3].trim();
+
+                // Skip if this looks like a variable declaration (expr is just a variable name)
+                // Variable names: word chars, optionally ending with $, %, or #digits
+                // Also allow optional limits [low:high] for declarations
+                if (/^\w+(?:[$%]|#\d+)?(?:\s*\[[^\]]+\])?$/.test(exprPart)) {
+                    break; // This is a variable declaration, not an expression output
+                }
+
+                // Skip if expr part starts with { (braced equation label)
+                if (exprPart.includes('{')) {
+                    break;
+                }
+
+                // This is an expression output
+                outputs.push({
+                    text: exprPart,
+                    marker: pattern.marker,
+                    startLine: i,
+                    fullPrecision: pattern.fullPrecision,
+                    recalculates: pattern.recalculates,
+                    existingValue: valuePart
+                });
+                break; // Only match one pattern per line
+            }
+        }
+    }
+
+    return outputs;
+}
+
+/**
+ * Clear expression output values for recalculating outputs (-> and ->>)
+ */
+function clearExpressionOutputs(text) {
+    const lines = text.split('\n');
+    const outputs = findExpressionOutputs(text);
+
+    for (const output of outputs) {
+        if (output.recalculates && output.existingValue) {
+            // Clear the value portion for -> and ->> outputs
+            const line = lines[output.startLine];
+            const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+
+            // Find the marker position and clear everything after it (except comments)
+            const markerIdx = cleanLine.lastIndexOf(output.marker);
+            if (markerIdx !== -1) {
+                const beforeMarker = line.substring(0, markerIdx + output.marker.length);
+                // Preserve trailing comment if any
+                const afterMarker = line.substring(markerIdx + output.marker.length);
+                const commentMatch = afterMarker.match(/"[^"]*"\s*$/);
+                const comment = commentMatch ? ' ' + commentMatch[0].trim() : '';
+                lines[output.startLine] = beforeMarker + comment;
+            }
+        }
+    }
+
     return lines.join('\n');
 }
 
@@ -979,6 +1087,7 @@ if (typeof module !== 'undefined' && module.exports) {
         parseVarNameAndFormat, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         setVariableValue, clearVariables, findEquations,
+        findExpressionOutputs, clearExpressionOutputs,
         findInlineEvaluations, replaceInlineEvaluation,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext
     };

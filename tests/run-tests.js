@@ -70,6 +70,8 @@ function loadModules() {
     global.discoverVariables = variables.discoverVariables;
     global.getInlineEvalFormat = variables.getInlineEvalFormat;
     global.formatVariableValue = variables.formatVariableValue;
+    global.findExpressionOutputs = variables.findExpressionOutputs;
+    global.clearExpressionOutputs = variables.clearExpressionOutputs;
 
     // Storage (minimal dependencies)
     const storage = require(path.join(jsPath, 'storage.js'));

@@ -3,6 +3,7 @@ Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Nothing to solve"; StatusIsError = 0
 "Constants"
+pi: 3.14159265358979
 e: 2.71828182845905
 c: 299792458 "speed of light m/s"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -117,4 +118,30 @@ f5-> 120
 fac(n) = prod(x; x; 1; n)
 z: fac(5)
 z-> 120
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"Expression Outputs"
+
+2**32 - 1 = 4294967295
+
+"One-time outputs (like = but with different markers)"
+x: 10
+y: 5
+x + y + pi: 18.14
+x * y * pi:: 157.079632679489492
+9 + 16= 25
+
+"Recalculating outputs (-> and ->>)"
+a: 3
+b: 4
+a + b + pi-> 10.14
+a * b * pi->> 37.699111843077482
+a**2 + b**2-> 25
+fact(9)-> 362880
+
+"--- Reference Constants and Functions ---"
+pi: 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

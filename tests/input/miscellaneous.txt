@@ -2,6 +2,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 "Constants"
+pi: 3.14159265358979
 e: 2.71828182845905
 c: 299792458 "speed of light m/s"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -105,4 +106,26 @@ f5->
 fac(n) = prod(x; x; 1; n)
 z: fac(5)
 z->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Expression Outputs"
+
+2**32 - 1 =
+
+"One-time outputs (like = but with different markers)"
+x: 10
+y: 5
+x + y + pi:
+x * y * pi::
+9 + 16=
+
+"Recalculating outputs (-> and ->>)"
+a: 3
+b: 4
+a + b + pi->
+a * b * pi->>
+a**2 + b**2->
+fact(9)->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

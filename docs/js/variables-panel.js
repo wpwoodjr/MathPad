@@ -17,7 +17,7 @@ class VariablesPanel {
 
     /**
      * Update variables panel from text
-     * Shows one row per declaration line
+     * Shows one row per declaration line and expression output
      */
     updateFromText(text) {
         // Find where references section starts (if present)
@@ -33,6 +33,29 @@ class VariablesPanel {
         const newDeclMap = new Map();
         for (const info of newDeclarations) {
             newDeclMap.set(info.lineIndex, info);
+        }
+
+        // Also include expression outputs (expr:, expr::, expr->, expr->>)
+        if (typeof findExpressionOutputs === 'function') {
+            const exprOutputs = findExpressionOutputs(text);
+            for (const output of exprOutputs) {
+                // Convert expression output to declaration-like format
+                newDeclMap.set(output.startLine, {
+                    name: output.text,  // The expression text
+                    declaration: {
+                        marker: output.marker,
+                        type: output.recalculates ? VarType.OUTPUT : VarType.STANDARD,
+                        clearBehavior: output.recalculates ? ClearBehavior.ON_SOLVE : ClearBehavior.NONE,
+                        fullPrecision: output.fullPrecision,
+                        format: null,
+                        comment: null
+                    },
+                    lineIndex: output.startLine,
+                    value: null,
+                    valueText: output.existingValue,
+                    isExpressionOutput: true
+                });
+            }
         }
 
         // Diff and update only changed declarations
@@ -126,8 +149,10 @@ class VariablesPanel {
         // Value input or display
         // Output types (-> and ->>) are read-only
         // References section values are also read-only (auto-generated)
+        // Expression outputs are always read-only
         const isOutput = clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
-        const isEditable = !isOutput && !isInRefSection;
+        const isExpressionOutput = info.isExpressionOutput || false;
+        const isEditable = !isOutput && !isInRefSection && !isExpressionOutput;
         let valueElement;
 
         if (isEditable) {

@@ -275,6 +275,24 @@ function solveEquations(text, context, declarations) {
         }
     }
 
+    // Evaluate expression outputs (expr:, expr::, expr->, expr->>)
+    const exprOutputs = findExpressionOutputs(text);
+    for (const output of exprOutputs) {
+        try {
+            const expandedExpr = expandLiterals(output.text);
+            const ast = parseExpression(expandedExpr);
+            const value = evaluate(ast, context);
+            // Store with marker info for formatting
+            computedValues.set(`__exprout_${output.startLine}`, {
+                value,
+                fullPrecision: output.fullPrecision,
+                marker: output.marker
+            });
+        } catch (e) {
+            // Expression has unknowns or other error - skip
+        }
+    }
+
     // Check equation consistency
     const finalEquations = findEquations(text);
     for (const eq of finalEquations) {
@@ -364,6 +382,33 @@ function formatOutput(text, declarations, context, computedValues, record) {
         }
     }
 
+    // Handle expression outputs (expr:, expr::, expr->, expr->>) using pre-computed values
+    const exprOutputs = findExpressionOutputs(text);
+    const lines = text.split('\n');
+    for (const output of exprOutputs) {
+        const key = `__exprout_${output.startLine}`;
+        if (computedValues.has(key)) {
+            const { value, fullPrecision, marker } = computedValues.get(key);
+            const places = fullPrecision ? 15 : format.places;
+            const formatted = formatNumber(value, places, format.stripZeros, format.format, 10, format.groupDigits);
+
+            // Find the marker in the line and insert the value after it
+            const line = lines[output.startLine];
+            const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+            const markerIdx = cleanLine.lastIndexOf(marker);
+
+            if (markerIdx !== -1) {
+                const beforeMarker = line.substring(0, markerIdx + marker.length);
+                const afterMarker = line.substring(markerIdx + marker.length);
+                // Preserve trailing comment if any
+                const commentMatch = afterMarker.match(/"[^"]*"\s*$/);
+                const comment = commentMatch ? ' ' + commentMatch[0].trim() : '';
+                lines[output.startLine] = beforeMarker + ' ' + formatted + comment;
+            }
+        }
+    }
+    text = lines.join('\n');
+
     return { text, errors };
 }
 
@@ -428,6 +473,9 @@ function appendReferencesSection(text, context) {
 function solveRecord(text, context, record) {
     // Remove any existing references section before solving
     text = removeReferencesSection(text);
+
+    // Clear expression outputs that recalculate (-> and ->>)
+    text = clearExpressionOutputs(text);
 
     // Clear usage tracking from any previous solve
     context.clearUsageTracking();
