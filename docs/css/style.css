@@ -800,21 +800,21 @@ button {
 .variable-value-readonly {
     flex: 1;
     max-width: 300px;
-    padding: 4px 8px;
+    padding: 0 8px;
     color: var(--text-primary);
     font-family: var(--font-mono);
     font-size: 15px;
     font-style: italic;
     line-height: 27px;
-    height: 27px;
-    box-sizing: border-box;
 }
 
 .variable-comment {
     color: var(--text-primary);
-    font-size: 13px;
+    font-family: var(--font-mono);
+    font-size: 15px;
     font-style: italic;
     padding-left: 8px;
+    line-height: 27px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
