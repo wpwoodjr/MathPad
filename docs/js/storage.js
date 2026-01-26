@@ -71,19 +71,16 @@ x2->`,
 
 "Basel series is the sum of 1/n**2 where n goes from 1 to infinity"
 "It is equal to pi**2/6"
-  s: pi**2/6
-  s->
+  pi**2/6->
 
 "Here we develop a recursive solution"
 "We are limited to how high n can go by the recursion limit"
   basel(low; high) = if(low > high; 0; 1/low**2 + basel(low+1; high))
-  x: basel(1; 2000)
-  x->
+  basel(1; 2000)->
 
 "Here we develop a solution using the built-in sum function"
 "Since sum is not subject to recursion limits we can sum to much higher n"
-  y: sum(1/n**2; n; 1; 10000000)
-  y->`,
+  sum(1/n**2; n; 1; 10000000)->`,
                 category: 'Math',
                 places: 10,
                 stripZeros: true,
@@ -103,16 +100,13 @@ x2->`,
 
 "Here we develop a recursive solution"
   fac(n) = if(n <= 1; 1; n * fac(n - 1))
-  x: fac(170)
-  x->
+  fac(170)->
 
 "Here we develop a solution using the built-in prod function"
-  y: prod(k; k; 1; 170)
-  y->
+  prod(k; k; 1; 170)->
 
 "There is also a built-in fact function"
-  z: fact(170)
-  z->`,
+  fact(170)->`,
                 category: 'Math',
                 places: 2,
                 stripZeros: true,

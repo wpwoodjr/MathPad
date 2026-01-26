@@ -153,156 +153,130 @@ function replaceValueOnLine(line, varName, marker, hasLimits, newValue) {
 }
 
 /**
- * Parse a single line to extract variable declaration
- * Returns declaration info or null if not a variable declaration
+ * Parse a line with a marker (:, ::, ->, ->>, <-)
+ * Returns { kind: 'declaration' | 'expression-output', ... } or null
+ *
+ * Unified model:
+ * - <-: always declaration (input variable, requires single variable LHS)
+ * - :, :: with single variable LHS: declaration
+ * - ->, ->> with single variable LHS: output variable declaration
+ * - :, ::, ->, ->> with expression LHS: expression output
  */
-function parseVariableLine(line) {
+function parseMarkedLine(line) {
     // Extract trailing comment (text in double quotes at end of line) before cleaning
     const trailingCommentMatch = line.match(/"([^"]*)"\s*$/);
     const comment = trailingCommentMatch ? trailingCommentMatch[1] : null;
 
     // Remove comments (text in double quotes) and trim leading/trailing whitespace
     const cleanLine = line.replace(/"[^"]*"/g, '').trim();
+    if (!cleanLine) return null;
 
-    // Check if this line looks like an expression output (has math operators before a marker)
-    // Expression outputs are handled separately, not as variable declarations
-    // Look for operators like +, -, *, /, **, ( before the marker
-    // cleanLine already has comments removed
-    const markerMatch = cleanLine.match(/^(.*?)(:|::|<-|->|->>) *(.*)$/);
-    if (markerMatch) {
-        const beforeMarker = markerMatch[1];
-        // If the part before the marker contains math operators, it's an expression output
-        // (not a simple label like "Enter x:")
-        if (/[+\-*\/\(\)\^]/.test(beforeMarker)) {
-            return null;
-        }
-    }
-
-    // Variable declaration patterns (order matters - check more specific patterns first)
-    // Note: \w+(?:[$%]|#\d+)? allows optional $, %, or #base suffix
-    // The suffix is stripped from the name and stored in format/base
-    // Patterns use .* at start to allow label text before the variable (e.g., "Enter FiO2<-")
-    const patterns = [
-        // With search limits: var[low:high]: value
-        {
-            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\]\s*:\s*(.*)$/,
-            handler: (m) => {
-                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
-                return {
-                    name: baseName,
-                    type: VarType.STANDARD,
-                    clearBehavior: ClearBehavior.NONE,
-                    limits: { lowExpr: m[2].trim(), highExpr: m[3].trim() },
-                    valueText: m[4].trim(),
-                    base,
-                    fullPrecision: false,
-                    marker: ':',
-                    format
-                };
-            }
-        },
-        // Input variable: var<-
-        {
-            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*<-\s*(.*)$/,
-            handler: (m) => {
-                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
-                return {
-                    name: baseName,
-                    type: VarType.INPUT,
-                    clearBehavior: ClearBehavior.ON_CLEAR,
-                    valueText: m[2].trim(),
-                    base,
-                    fullPrecision: false,
-                    marker: '<-',
-                    format
-                };
-            }
-        },
-        // Full precision output: var->>
-        {
-            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*->>\s*(.*)$/,
-            handler: (m) => {
-                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
-                return {
-                    name: baseName,
-                    type: VarType.OUTPUT,
-                    clearBehavior: ClearBehavior.ON_SOLVE,
-                    valueText: m[2].trim(),
-                    base,
-                    fullPrecision: true,
-                    marker: '->>',
-                    format
-                };
-            }
-        },
-        // Output variable: var->
-        {
-            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*->\s*(.*)$/,
-            handler: (m) => {
-                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
-                return {
-                    name: baseName,
-                    type: VarType.OUTPUT,
-                    clearBehavior: ClearBehavior.ON_SOLVE,
-                    valueText: m[2].trim(),
-                    base,
-                    fullPrecision: false,
-                    marker: '->',
-                    format
-                };
-            }
-        },
-        // Full precision: var::
-        {
-            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*::\s*(.*)$/,
-            handler: (m) => {
-                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
-                return {
-                    name: baseName,
-                    type: VarType.STANDARD,
-                    clearBehavior: ClearBehavior.NONE,
-                    valueText: m[2].trim(),
-                    base,
-                    fullPrecision: true,
-                    marker: '::',
-                    format
-                };
-            }
-        },
-        // Standard: var:
-        {
-            regex: /.*?\b(\w+(?:[$%]|#\d+)?)\s*:\s*(.*)$/,
-            handler: (m) => {
-                // If value starts with {, it's a braced equation label, not a declaration
-                const valueText = m[2].trim();
-                if (valueText.startsWith('{')) return null;
-
-                const { baseName, format, base } = parseVarNameAndFormat(m[1]);
-                return {
-                    name: baseName,
-                    type: VarType.STANDARD,
-                    clearBehavior: ClearBehavior.NONE,
-                    valueText: valueText,
-                    base,
-                    fullPrecision: false,
-                    marker: ':',
-                    format
-                };
-            }
-        }
+    // Match markers (check longer markers first to avoid partial matches)
+    const markerPatterns = [
+        { regex: /^(.+?)(->>) *(.*)$/, marker: '->>', fullPrecision: true, recalculates: true },
+        { regex: /^(.+?)(->) *(.*)$/, marker: '->', fullPrecision: false, recalculates: true },
+        { regex: /^(.+?)(::) *(.*)$/, marker: '::', fullPrecision: true, recalculates: false },
+        { regex: /^(.+?)(<-) *(.*)$/, marker: '<-', fullPrecision: false, recalculates: false },
+        { regex: /^(.+?)(:) *(.*)$/, marker: ':', fullPrecision: false, recalculates: false }
     ];
 
-    for (const pattern of patterns) {
+    for (const pattern of markerPatterns) {
         const match = cleanLine.match(pattern.regex);
-        if (match) {
-            const result = pattern.handler(match);
-            if (result) {
-                result.comment = comment;
-                return result;
+        if (!match) continue;
+
+        const lhs = match[1].trim();
+        const marker = pattern.marker;
+        const rhs = match[3].trim();
+
+        // Skip if RHS starts with { (braced equation label like "Label: { x = y }")
+        if (rhs.startsWith('{')) continue;
+
+        // Check if LHS is a single variable (possibly with label text before it)
+        // Single variable: word chars, optionally ending with $, %, or #digits
+        // May have optional [limits] for declarations
+        // Allow label text before (e.g., "Enter x<-")
+        // Match the variable at the END of the LHS (after any label text)
+        const varMatch = lhs.match(/\b(\w+(?:[$%]|#\d+)?)(\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\])?$/);
+        const hasOperators = /[+\-*\/\(\)\^]/.test(lhs);
+        const isSingleVar = varMatch && !hasOperators;
+
+        if (marker === '<-') {
+            // Input variable - MUST be single variable
+            if (!isSingleVar) return null;
+
+            const { baseName, format, base } = parseVarNameAndFormat(varMatch[1]);
+            return {
+                kind: 'declaration',
+                name: baseName,
+                type: VarType.INPUT,
+                clearBehavior: ClearBehavior.ON_CLEAR,
+                valueText: rhs,
+                base,
+                fullPrecision: false,
+                marker: '<-',
+                format,
+                comment
+            };
+        }
+
+        if (isSingleVar) {
+            // Declaration (single variable LHS)
+            const { baseName, format, base } = parseVarNameAndFormat(varMatch[1]);
+            const hasLimits = varMatch[2];
+            const limits = hasLimits ? { lowExpr: varMatch[3].trim(), highExpr: varMatch[4].trim() } : null;
+
+            // Determine type based on marker
+            let type, clearBehavior;
+            if (marker === '->' || marker === '->>') {
+                type = VarType.OUTPUT;
+                clearBehavior = ClearBehavior.ON_SOLVE;
+            } else {
+                type = VarType.STANDARD;
+                clearBehavior = ClearBehavior.NONE;
             }
+
+            return {
+                kind: 'declaration',
+                name: baseName,
+                type,
+                clearBehavior,
+                limits,
+                valueText: rhs,
+                base,
+                fullPrecision: pattern.fullPrecision,
+                marker,
+                format,
+                comment
+            };
+        } else {
+            // Expression output (expression LHS)
+            return {
+                kind: 'expression-output',
+                expression: lhs,
+                marker,
+                valueText: rhs,
+                fullPrecision: pattern.fullPrecision,
+                recalculates: pattern.recalculates,
+                comment
+            };
         }
     }
 
+    return null;
+}
+
+/**
+ * Parse a single line to extract variable declaration
+ * Returns declaration info or null if not a variable declaration
+ * (Wrapper around parseMarkedLine for backwards compatibility)
+ */
+function parseVariableLine(line) {
+    const result = parseMarkedLine(line);
+    if (result && result.kind === 'declaration') {
+        // Remove 'kind' field for backwards compatibility
+        const { kind, ...declaration } = result;
+        return declaration;
+    }
     return null;
 }
 
@@ -697,55 +671,24 @@ function clearVariables(text, clearType = 'input') {
 /**
  * Find expression outputs in text: expr:, expr::, expr->, expr->>
  * These are expressions (not simple variable names) followed by output markers
- * Returns array of { text, marker, startLine, fullPrecision, recalculates }
+ * Returns array of { text, marker, startLine, fullPrecision, recalculates, existingValue }
+ * (Wrapper around parseMarkedLine for backwards compatibility)
  */
 function findExpressionOutputs(text) {
     const lines = text.split('\n');
     const outputs = [];
 
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        // Remove comments for matching
-        const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
-
-        // Match patterns: expr->> expr-> expr:: expr: (check longer markers first)
-        // The expr part must contain something that's not just a variable name
-        const patterns = [
-            { regex: /^(.+?)(->>) *(.*)$/, marker: '->>', fullPrecision: true, recalculates: true },
-            { regex: /^(.+?)(->) *(.*)$/, marker: '->', fullPrecision: false, recalculates: true },
-            { regex: /^(.+?)(::) *(.*)$/, marker: '::', fullPrecision: true, recalculates: false },
-            { regex: /^(.+?)(:) *(.*)$/, marker: ':', fullPrecision: false, recalculates: false }
-        ];
-
-        for (const pattern of patterns) {
-            const match = cleanLine.match(pattern.regex);
-            if (match) {
-                const exprPart = match[1].trim();
-                const valuePart = match[3].trim();
-
-                // Skip if this looks like a variable declaration (expr is just a variable name)
-                // Variable names: word chars, optionally ending with $, %, or #digits
-                // Also allow optional limits [low:high] for declarations
-                if (/^\w+(?:[$%]|#\d+)?(?:\s*\[[^\]]+\])?$/.test(exprPart)) {
-                    break; // This is a variable declaration, not an expression output
-                }
-
-                // Skip if expr part starts with { (braced equation label)
-                if (exprPart.includes('{')) {
-                    break;
-                }
-
-                // This is an expression output
-                outputs.push({
-                    text: exprPart,
-                    marker: pattern.marker,
-                    startLine: i,
-                    fullPrecision: pattern.fullPrecision,
-                    recalculates: pattern.recalculates,
-                    existingValue: valuePart
-                });
-                break; // Only match one pattern per line
-            }
+        const result = parseMarkedLine(lines[i]);
+        if (result && result.kind === 'expression-output') {
+            outputs.push({
+                text: result.expression,
+                marker: result.marker,
+                startLine: i,
+                fullPrecision: result.fullPrecision,
+                recalculates: result.recalculates,
+                existingValue: result.valueText
+            });
         }
     }
 
@@ -1084,7 +1027,7 @@ function escapeRegex(str) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         VarType, ClearBehavior, expandLiterals, expandLineLiterals,
-        parseVarNameAndFormat, parseVariableLine, parseAllVariables,
+        parseVarNameAndFormat, parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         setVariableValue, clearVariables, findEquations,
         findExpressionOutputs, clearExpressionOutputs,
