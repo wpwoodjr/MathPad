@@ -99,3 +99,22 @@ z-> 5
 w: ymax(5;6)
 w-> 6
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 10; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Sum and Product functions"
+
+"Basel series: sum(1/n**2; n; 1; 2000)"
+basel: sum(1/n**2; n; 1; 2000)
+basel-> 1.6444341918
+
+"Factorial via product: prod(k; k; 1; 5)"
+f5: prod(k; k; 1; 5)
+f5-> 120
+
+"Factorial function using prod"
+fac(n) = prod(x; x; 1; n)
+z: fac(5)
+z-> 120
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

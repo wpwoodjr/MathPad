@@ -88,3 +88,21 @@ z->
 w: ymax(5;6)
 w->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 10; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Sum and Product functions"
+
+"Basel series: sum(1/n**2; n; 1; 2000)"
+basel: sum(1/n**2; n; 1; 2000)
+basel->
+
+"Factorial via product: prod(k; k; 1; 5)"
+f5: prod(k; k; 1; 5)
+f5->
+
+"Factorial function using prod"
+fac(n) = prod(x; x; 1; n)
+z: fac(5)
+z->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

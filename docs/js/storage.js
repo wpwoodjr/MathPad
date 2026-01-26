@@ -9,11 +9,14 @@ const STORAGE_VERSION = 2;
  * Default data structure
  */
 function createDefaultData() {
+    // Generate TVM record ID first so we can set it as the initial record
+    const tvmRecordId = generateId();
+
     return {
         version: STORAGE_VERSION,
         records: [
             {
-                id: generateId(),
+                id: tvmRecordId,
                 title: 'Example: TVM',
                 text: `"Time Value of Money"
 
@@ -53,6 +56,63 @@ c: 6
 disc->
 x1->
 x2->`,
+                category: 'Math',
+                places: 2,
+                stripZeros: true,
+                groupDigits: false,
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: true
+            },
+            {
+                id: generateId(),
+                title: 'Example: Basel Series',
+                text: `"Basel Series (recursive and non-recursive solutions)"
+
+"Basel series is the sum of 1/n**2 where n goes from 1 to infinity"
+"It is equal to pi**2/6"
+  s: pi**2/6
+  s->
+
+"Here we develop a recursive solution"
+"We are limited to how high n can go by the recursion limit"
+  basel(low; high) = if(low > high; 0; 1/low**2 + basel(low+1; high))
+  x: basel(1; 2000)
+  x->
+
+"Here we develop a solution using the built-in sum function"
+"Since sum is not subject to recursion limits we can sum to much higher n"
+  y: sum(1/n**2; n; 1; 10000000)
+  y->`,
+                category: 'Math',
+                places: 10,
+                stripZeros: true,
+                groupDigits: false,
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: true
+            },
+            {
+                id: generateId(),
+                title: 'Example: Factorial',
+                text: `"Factorial (recursive and non-recursive solutions)"
+
+"Factorial of n is the product of all integers from 1 to n"
+"n! = 1 * 2 * 3 * ... * n"
+"Note: 170! is the largest factorial that fits in a floating point number"
+
+"Here we develop a recursive solution"
+  fac(n) = if(n <= 1; 1; n * fac(n - 1))
+  x: fac(170)
+  x->
+
+"Here we develop a solution using the built-in prod function"
+  y: prod(k; k; 1; 170)
+  y->
+
+"There is also a built-in fact function"
+  z: fact(170)
+  z->`,
                 category: 'Math',
                 places: 2,
                 stripZeros: true,
@@ -123,7 +183,9 @@ disc(a;b;c) = b**2 - 4*a*c`,
             }
         ],
         categories: ['Unfiled', 'Finance', 'Math', 'Science', 'Reference', 'Personal'],
-        settings: {}
+        settings: {
+            lastRecordId: tvmRecordId
+        }
     };
 }
 

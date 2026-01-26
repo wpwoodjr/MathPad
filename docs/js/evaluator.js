@@ -480,6 +480,68 @@ function evaluate(node, context) {
                 }
             }
 
+            // Special handling for 'sum' - sum(expr; var; start; end)
+            if (funcName === 'sum') {
+                if (node.args.length !== 4) {
+                    throw new EvalError('sum() requires 4 arguments: sum(expr; var; start; end)');
+                }
+                const exprNode = node.args[0];
+                const varNode = node.args[1];
+                if (varNode.type !== 'VARIABLE') {
+                    throw new EvalError('sum() second argument must be a variable name');
+                }
+                const varName = varNode.name;
+                const start = Math.floor(evaluate(node.args[2], context));
+                const end = Math.floor(evaluate(node.args[3], context));
+
+                if (!isFinite(start) || !isFinite(end)) {
+                    throw new EvalError('sum() start and end must be finite numbers');
+                }
+                const iterations = end - start + 1;
+                if (iterations > 10000000) {
+                    throw new EvalError(`sum() too many iterations (${iterations}). Max is 10,000,000`);
+                }
+
+                let total = 0;
+                const sumContext = context.clone();
+                for (let i = start; i <= end; i++) {
+                    sumContext.setVariable(varName, i);
+                    total += evaluate(exprNode, sumContext);
+                }
+                return total;
+            }
+
+            // Special handling for 'prod' - prod(expr; var; start; end)
+            if (funcName === 'prod') {
+                if (node.args.length !== 4) {
+                    throw new EvalError('prod() requires 4 arguments: prod(expr; var; start; end)');
+                }
+                const exprNode = node.args[0];
+                const varNode = node.args[1];
+                if (varNode.type !== 'VARIABLE') {
+                    throw new EvalError('prod() second argument must be a variable name');
+                }
+                const varName = varNode.name;
+                const start = Math.floor(evaluate(node.args[2], context));
+                const end = Math.floor(evaluate(node.args[3], context));
+
+                if (!isFinite(start) || !isFinite(end)) {
+                    throw new EvalError('prod() start and end must be finite numbers');
+                }
+                const iterations = end - start + 1;
+                if (iterations > 10000000) {
+                    throw new EvalError(`prod() too many iterations (${iterations}). Max is 10,000,000`);
+                }
+
+                let total = 1;
+                const prodContext = context.clone();
+                for (let i = start; i <= end; i++) {
+                    prodContext.setVariable(varName, i);
+                    total *= evaluate(exprNode, prodContext);
+                }
+                return total;
+            }
+
             // Check built-in functions
             const builtin = builtinFunctions[funcName];
             if (builtin) {
