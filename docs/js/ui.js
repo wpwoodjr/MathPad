@@ -484,7 +484,7 @@ function renameRecord(recordId) {
 }
 
 /**
- * Update record title from content (first comment)
+ * Update record title from content (first line, with or without quotes)
  */
 function updateRecordTitleFromContent(record) {
     // Don't auto-update title for special records
@@ -492,9 +492,18 @@ function updateRecordTitleFromContent(record) {
         return;
     }
     const firstLine = record.text.split('\n')[0].trim();
+
+    // Extract title: strip quotes if present, otherwise use first line
     const match = firstLine.match(/^"([^"]+)"$/);
-    if (match && match[1] !== record.title) {
-        record.title = match[1];
+    let newTitle = match ? match[1] : (firstLine || 'Untitled');
+
+    // Truncate long titles
+    if (newTitle.length > 30) {
+        newTitle = newTitle.substring(0, 30) + '...';
+    }
+
+    if (newTitle !== record.title) {
+        record.title = newTitle;
         renderSidebar();
         renderTabBar();
     }

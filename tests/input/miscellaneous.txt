@@ -1,3 +1,16 @@
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Constants"
+e: 2.71828182845905
+c: 299792458 "speed of light m/s"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Functions"
+hypot(a;b) = sqrt(a**2 + b**2) "hypotenuse"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
@@ -11,4 +24,26 @@ x->
 
 y: fact(a)
 y->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Choose"
+
+x: Choose(3; 5; 10; 15; 20; 25)
+x->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
+"Screen Size with e-> output"
+
+h/w = 16/9
+"d*d = w*w + h*h"
+d = hypot(w; h)
+
+Enter d: 1234567890.3456 "diagonal"
+h->
+w-> "width"
+c->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
