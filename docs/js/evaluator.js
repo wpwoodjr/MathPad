@@ -9,8 +9,12 @@ class EvalContext {
     constructor() {
         this.variables = new Map();
         this.constants = new Map();
+        this.constantComments = new Map(); // Store comments for constants
+        this.shadowedConstants = new Set(); // Constants shadowed by local declarations
         this.userFunctions = new Map();
         this.degreesMode = false; // false = radians, true = degrees
+        this.usedConstants = new Set();
+        this.usedFunctions = new Set();
     }
 
     setVariable(name, value) {
@@ -21,34 +25,70 @@ class EvalContext {
         if (this.variables.has(name)) {
             return this.variables.get(name);
         }
-        if (this.constants.has(name)) {
+        // Return constant value only if not shadowed
+        if (this.constants.has(name) && !this.shadowedConstants.has(name)) {
+            this.usedConstants.add(name); // Track constant usage
             return this.constants.get(name);
         }
         return undefined;
     }
 
     hasVariable(name) {
+        // Shadowed constants don't count as "having" a variable
+        if (this.shadowedConstants.has(name)) {
+            return this.variables.has(name);
+        }
         return this.variables.has(name) || this.constants.has(name);
     }
 
-    setConstant(name, value) {
-        this.constants.set(name, value);
+    shadowConstant(name) {
+        if (this.constants.has(name)) {
+            this.shadowedConstants.add(name);
+        }
     }
 
-    setUserFunction(name, params, body) {
-        this.userFunctions.set(name.toLowerCase(), { params, body });
+    setConstant(name, value, comment = null) {
+        this.constants.set(name, value);
+        if (comment) {
+            this.constantComments.set(name, comment);
+        }
+    }
+
+    setUserFunction(name, params, body, sourceText = null) {
+        this.userFunctions.set(name.toLowerCase(), { params, body, sourceText });
     }
 
     getUserFunction(name) {
-        return this.userFunctions.get(name.toLowerCase());
+        const func = this.userFunctions.get(name.toLowerCase());
+        if (func) {
+            this.usedFunctions.add(name.toLowerCase()); // Track function usage
+        }
+        return func;
+    }
+
+    getUsedConstants() {
+        return this.usedConstants;
+    }
+
+    getUsedFunctions() {
+        return this.usedFunctions;
+    }
+
+    clearUsageTracking() {
+        this.usedConstants.clear();
+        this.usedFunctions.clear();
     }
 
     clone() {
         const ctx = new EvalContext();
         ctx.variables = new Map(this.variables);
         ctx.constants = this.constants;
+        ctx.constantComments = this.constantComments;
+        ctx.shadowedConstants = this.shadowedConstants; // Share shadowing with parent
         ctx.userFunctions = this.userFunctions;
         ctx.degreesMode = this.degreesMode;
+        ctx.usedConstants = this.usedConstants; // Share tracking with parent
+        ctx.usedFunctions = this.usedFunctions;
         return ctx;
     }
 }

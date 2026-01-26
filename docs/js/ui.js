@@ -799,6 +799,9 @@ function handleClearInput() {
     text = clearVariables(text, 'input');
     text = clearVariables(text, 'output');
 
+    // Remove references section
+    text = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
+
     // Use undoable so Ctrl+Z works
     editorInfo.editor.setValue(text, true);
     record.text = text;
@@ -809,7 +812,7 @@ function handleClearInput() {
         editorInfo.variablesManager.updateFromText(text);
     }
 
-    setStatus('Input and output variables cleared');
+    setStatus('Cleared');
 }
 
 /**

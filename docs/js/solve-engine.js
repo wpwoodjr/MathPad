@@ -328,11 +328,18 @@ function formatOutput(text, declarations, context, computedValues, record) {
         format: record.format || 'float'
     };
 
-    // Fill empty variable declarations with computed values
+    // Fill empty variable declarations with computed values (or constants)
     for (const info of declarations) {
         if (!info.valueText) {
-            if (context.hasVariable(info.name)) {
-                const value = context.getVariable(info.name);
+            if (context.variables.has(info.name)) {
+                // Has a computed/solved value - use it
+                const value = context.variables.get(info.name);
+                text = setVariableValue(text, info.name, value, format);
+            } else if (context.constants.has(info.name)) {
+                // No computed value but constant exists - output the constant
+                // (even if shadowed, we can still output the constant value)
+                const value = context.constants.get(info.name);
+                context.usedConstants.add(info.name); // Track usage
                 text = setVariableValue(text, info.name, value, format);
             } else {
                 // Output declaration with no value is an error
@@ -361,9 +368,70 @@ function formatOutput(text, declarations, context, computedValues, record) {
 }
 
 /**
+ * Remove existing references section from text
+ */
+function removeReferencesSection(text) {
+    // Remove everything from "--- Reference Constants and Functions ---" to end
+    const pattern = /\n*"--- Reference Constants and Functions ---"[\s\S]*$/;
+    return text.replace(pattern, '');
+}
+
+/**
+ * Append references section showing used constants and functions
+ */
+function appendReferencesSection(text, context) {
+    const usedConstants = context.getUsedConstants();
+    const usedFunctions = context.getUsedFunctions();
+
+    // Skip if nothing was used from Constants/Functions records
+    if (usedConstants.size === 0 && usedFunctions.size === 0) {
+        return text;
+    }
+
+    const lines = ['"--- Reference Constants and Functions ---"'];
+
+    // Add constants (skip those shadowed by local variables)
+    for (const name of [...usedConstants].sort()) {
+        // Skip if local variable shadows this constant
+        if (context.variables.has(name)) {
+            continue;
+        }
+        const value = context.constants.get(name);
+        const comment = context.constantComments.get(name);
+        if (value !== undefined) {
+            let line = `${name}: ${value}`;
+            if (comment) {
+                line += ` "${comment}"`;
+            }
+            lines.push(line);
+        }
+    }
+
+    // Add functions
+    for (const name of [...usedFunctions].sort()) {
+        const func = context.userFunctions.get(name);
+        if (func && func.sourceText) {
+            lines.push(func.sourceText);
+        }
+    }
+
+    if (lines.length > 1) {
+        text = text.trimEnd() + '\n\n' + lines.join('\n');
+    }
+
+    return text;
+}
+
+/**
  * Main solve function - orchestrates discovery, solving, and formatting
  */
 function solveRecord(text, context, record) {
+    // Remove any existing references section before solving
+    text = removeReferencesSection(text);
+
+    // Clear usage tracking from any previous solve
+    context.clearUsageTracking();
+
     // Pass 1: Variable Discovery (evaluates \expr\, parses declarations)
     const discovery = discoverVariables(text, context, record);
     text = discovery.text;
@@ -378,6 +446,13 @@ function solveRecord(text, context, record) {
     const formatResult = formatOutput(text, declarations, context, solveResult.computedValues, record);
     text = formatResult.text;
     errors.push(...formatResult.errors);
+
+    // Pass 4: Append references section showing used constants and functions
+    // Skip for reference records (Constants, Functions, Default Settings)
+    const isReferenceRecord = record.category === 'Reference';
+    if (!isReferenceRecord) {
+        text = appendReferencesSection(text, context);
+    }
 
     return { text, solved: solveResult.solved, errors };
 }

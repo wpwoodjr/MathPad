@@ -7,6 +7,14 @@ Status = "Nothing to solve"; StatusIsError = 0
 e: 2.71828182845905
 h: 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Functions"
+"User-defined functions"
+hypot(a;b) = sqrt(a**2 + b**2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
@@ -32,6 +40,9 @@ d = sqrt(w*w + h*h)
 d: 6.3
 w-> 0
 h-> 6.6261e-34
+
+"--- Reference Constants and Functions ---"
+h: 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -41,6 +52,9 @@ Status = "Solved 1 equation"; StatusIsError = 0
 
 x = h * 1e34
 x-> 6.6261
+
+"--- Reference Constants and Functions ---"
+h: 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -59,4 +73,26 @@ Status = "Solved with errors: Line 3: Variable \"e\" conflicts with a constant";
 
 e: 3
 e->> 2.71828182845905
+
+"--- Reference Constants and Functions ---"
+e: 2.71828182845905
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0; Selected = 1
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 3 equations"; StatusIsError = 0
+"Screen Size with e-> output"
+
+h/w = 16/9
+"d*d = w*w + h*h"
+d = hypot(w; h)
+
+d = 6.3
+h-> 5.4909
+w-> 3.0886
+e-> 2.7183
+
+"--- Reference Constants and Functions ---"
+e: 2.71828182845905
+hypot(a;b) = sqrt(a**2 + b**2)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

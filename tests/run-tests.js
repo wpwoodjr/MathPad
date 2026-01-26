@@ -207,7 +207,9 @@ function runTest(inputPath, expectedPath) {
     // Export result
     let actualText;
     try {
-        actualText = exportToText(data);
+        // Get selected record ID from settings (set during import from Selected = 1 flag)
+        const selectedRecordId = data.settings?.lastRecordId;
+        actualText = exportToText(data, { selectedRecordId });
     } catch (e) {
         return { name: testName, passed: false, error: `Export failed: ${e.message}` };
     }

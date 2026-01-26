@@ -42,4 +42,7 @@ c: 6
 disc-> -1199169807
 x1-> NaN
 x2-> NaN
+
+"--- Reference Constants and Functions ---"
+c: 299792458 "speed of light m/s"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -20,6 +20,13 @@ class VariablesPanel {
      * Shows one row per declaration line
      */
     updateFromText(text) {
+        // Find where references section starts (if present)
+        const refSectionStart = text.indexOf('"--- Reference Constants and Functions ---"');
+        const refSectionLineIndex = refSectionStart >= 0
+            ? text.substring(0, refSectionStart).split('\n').length - 1
+            : Infinity;
+        this.refSectionLineIndex = refSectionLineIndex;
+
         const newDeclarations = parseAllVariables(text);
 
         // Build map keyed by lineIndex for diffing
@@ -73,8 +80,13 @@ class VariablesPanel {
         const decl = info.declaration;
         const clearBehavior = decl.clearBehavior;
 
+        // Check if this is in the references section
+        const isInRefSection = info.lineIndex > this.refSectionLineIndex;
+
         // Set data-type for CSS styling based on clear behavior
-        if (clearBehavior === ClearBehavior.ON_CLEAR || decl.type === VarType.INPUT) {
+        if (isInRefSection) {
+            row.dataset.type = 'reference';
+        } else if (clearBehavior === ClearBehavior.ON_CLEAR || decl.type === VarType.INPUT) {
             row.dataset.type = 'input';
         } else if (clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT) {
             row.dataset.type = 'output';
@@ -85,7 +97,10 @@ class VariablesPanel {
         // Type indicator
         const typeIndicator = document.createElement('span');
         typeIndicator.className = 'variable-type-indicator';
-        if (clearBehavior === ClearBehavior.ON_CLEAR || decl.type === VarType.INPUT) {
+        if (isInRefSection) {
+            typeIndicator.textContent = '\u2139'; // info symbol
+            typeIndicator.title = 'Reference (from Constants/Functions)';
+        } else if (clearBehavior === ClearBehavior.ON_CLEAR || decl.type === VarType.INPUT) {
             typeIndicator.textContent = '\u2190'; // left arrow
             typeIndicator.title = 'Input variable (cleared on Clear)';
         } else if (clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT) {
@@ -103,8 +118,9 @@ class VariablesPanel {
 
         // Value input or display
         // Output types (-> and ->>) are read-only
+        // References section values are also read-only (auto-generated)
         const isOutput = clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
-        const isEditable = !isOutput;
+        const isEditable = !isOutput && !isInRefSection;
         let valueElement;
 
         if (isEditable) {
@@ -125,6 +141,15 @@ class VariablesPanel {
         row.appendChild(nameLabel);
         row.appendChild(valueElement);
 
+        // Add comment for reference section items
+        if (isInRefSection && decl.comment) {
+            const commentElement = document.createElement('span');
+            commentElement.className = 'variable-comment';
+            commentElement.textContent = decl.comment;
+            commentElement.title = decl.comment;
+            row.appendChild(commentElement);
+        }
+
         // Insert in order (by line number)
         this.insertRowInOrder(row, info.lineIndex);
     }
@@ -137,6 +162,7 @@ class VariablesPanel {
         if (!row) return;
 
         const valueElement = row.querySelector('.variable-value-input, .variable-value-readonly');
+        // Skip update if element has focus (to not disrupt typing)
         if (valueElement && document.activeElement !== valueElement) {
             const newValue = this.formatValueForDisplay(info);
             if (valueElement.tagName === 'INPUT') {

@@ -813,6 +813,16 @@ button {
     box-sizing: border-box;
 }
 
+.variable-comment {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+    padding-left: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* Print styles */
 @media print {
     .app-header,

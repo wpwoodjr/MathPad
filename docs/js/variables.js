@@ -157,6 +157,10 @@ function replaceValueOnLine(line, varName, marker, hasLimits, newValue) {
  * Returns declaration info or null if not a variable declaration
  */
 function parseVariableLine(line) {
+    // Extract trailing comment (text in double quotes at end of line) before cleaning
+    const trailingCommentMatch = line.match(/"([^"]*)"\s*$/);
+    const comment = trailingCommentMatch ? trailingCommentMatch[1] : null;
+
     // Remove comments (text in double quotes) and trim leading/trailing whitespace
     const cleanLine = line.replace(/"[^"]*"/g, '').trim();
 
@@ -273,7 +277,9 @@ function parseVariableLine(line) {
     for (const pattern of patterns) {
         const match = cleanLine.match(pattern.regex);
         if (match) {
-            return pattern.handler(match);
+            const result = pattern.handler(match);
+            result.comment = comment;
+            return result;
         }
     }
 
@@ -410,8 +416,8 @@ function discoverVariables(text, context, record) {
             // Check if shadowing a constant
             if (context.constants.has(name)) {
                 if (record.shadowConstants) {
-                    // Shadow the constant by removing it from context
-                    context.constants.delete(name);
+                    // Shadow the constant (it remains available for output if no computed value)
+                    context.shadowConstant(name);
                 } else if (!isOutput) {
                     // Input declarations conflict with constants (unless shadowConstants enabled)
                     errors.push(`Line ${i + 1}: Variable "${name}" conflicts with a constant`);
@@ -813,7 +819,7 @@ function parseConstantsRecord(text) {
         if (decl && decl.valueText) {
             const value = parseFloat(decl.valueText);
             if (!isNaN(value)) {
-                constants.set(decl.name, value);
+                constants.set(decl.name, { value, comment: decl.comment });
             }
         }
     }
@@ -830,7 +836,7 @@ function parseFunctionsRecord(text) {
     const lines = text.split('\n');
 
     for (const line of lines) {
-        // Remove comments
+        // Remove comments for parsing
         const cleanLine = line.replace(/"[^"]*"/g, '').trim();
         if (!cleanLine) continue;
 
@@ -844,7 +850,10 @@ function parseFunctionsRecord(text) {
             const params = paramsText ?
                 paramsText.split(';').map(p => p.trim()) : [];
 
-            functions.set(name, { params, bodyText });
+            // Preserve original source text (without leading/trailing whitespace)
+            const sourceText = line.trim();
+
+            functions.set(name, { params, bodyText, sourceText });
         }
     }
 
@@ -866,8 +875,8 @@ function createEvalContext(records, record, localText = null) {
     const constantsRecord = records.find(r => r.title === 'Constants');
     if (constantsRecord) {
         const constants = parseConstantsRecord(constantsRecord.text);
-        for (const [name, value] of constants) {
-            context.setConstant(name, value);
+        for (const [name, { value, comment }] of constants) {
+            context.setConstant(name, value, comment);
         }
     }
 
@@ -875,10 +884,10 @@ function createEvalContext(records, record, localText = null) {
     const functionsRecord = records.find(r => r.title === 'Functions');
     if (functionsRecord) {
         const functions = parseFunctionsRecord(functionsRecord.text);
-        for (const [name, { params, bodyText }] of functions) {
+        for (const [name, { params, bodyText, sourceText }] of functions) {
             try {
                 const bodyAST = parseExpression(bodyText);
-                context.setUserFunction(name, params, bodyAST);
+                context.setUserFunction(name, params, bodyAST, sourceText);
             } catch (e) {
                 console.warn(`Error parsing function ${name}:`, e);
             }
@@ -886,12 +895,17 @@ function createEvalContext(records, record, localText = null) {
     }
 
     // Also load functions defined in the current record (overrides Functions record)
+    // These are local functions, not from the Functions record, so don't track them
     if (localText) {
-        const localFunctions = parseFunctionsRecord(localText);
-        for (const [name, { params, bodyText }] of localFunctions) {
+        // Strip any existing references section before parsing local functions
+        // This prevents function definitions in the references section from being treated as local
+        const strippedText = localText.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
+        const localFunctions = parseFunctionsRecord(strippedText);
+        for (const [name, { params, bodyText, sourceText }] of localFunctions) {
             try {
                 const bodyAST = parseExpression(bodyText);
-                context.setUserFunction(name, params, bodyAST);
+                // Pass null for sourceText to indicate local function (shouldn't be shown in references)
+                context.setUserFunction(name, params, bodyAST, null);
             } catch (e) {
                 console.warn(`Error parsing local function ${name}:`, e);
             }

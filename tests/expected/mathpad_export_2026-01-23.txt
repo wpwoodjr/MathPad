@@ -370,6 +370,10 @@ g->> 6.626070150000000e-34
         "But not this, because y is not set until after x:"
             x7: y3
             y3: 2
+
+"--- Reference Constants and Functions ---"
+h: 6.62607015e-34 "Planck constant"
+pi: 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -393,6 +397,9 @@ d: pi
 y: d/2
 y-> 1.5708
 d-> 3.1416
+
+"--- Reference Constants and Functions ---"
+pi: 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -504,6 +511,9 @@ g->> 6.626070150000000e-34
 x: g*1e34
 x-> 6.6261
 x->> 6.626070149999999
+
+"--- Reference Constants and Functions ---"
+h: 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -610,6 +620,9 @@ Status = "Solved with errors: Line 2: Variable \"e\" conflicts with a constant";
 "01 Shadowing: check no shadowing"
 e: 3
 e->> 2.71828182845905
+
+"--- Reference Constants and Functions ---"
+e: 2.71828182845905
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
@@ -659,4 +672,7 @@ Status = "Nothing to solve"; StatusIsError = 0
 
 a: cos(pi/4)
 a->> 0.707106781186548
+
+"--- Reference Constants and Functions ---"
+pi: 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
