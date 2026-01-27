@@ -25,6 +25,13 @@ class VariablesPanel {
         const refSectionLineIndex = refSectionStart >= 0
             ? text.substring(0, refSectionStart).split('\n').length - 1
             : Infinity;
+
+        // If reference section moved, remove separator so it gets recreated in the right place
+        const existingSeparator = this.container.querySelector('.variable-section-separator');
+        if (existingSeparator && this.refSectionLineIndex !== refSectionLineIndex) {
+            existingSeparator.remove();
+        }
+
         this.refSectionLineIndex = refSectionLineIndex;
 
         const newDeclarations = parseAllVariables(text);
@@ -118,6 +125,8 @@ class VariablesPanel {
             const separator = document.createElement('div');
             separator.className = 'variable-section-separator';
             separator.textContent = 'Reference Constants';
+            // Give separator a line index so insertRowInOrder works correctly
+            separator.dataset.lineIndex = this.refSectionLineIndex;
             this.container.appendChild(separator);
         }
 
