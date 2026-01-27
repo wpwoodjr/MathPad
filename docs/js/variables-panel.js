@@ -169,8 +169,15 @@ class VariablesPanel {
             valueElement.type = 'text';
             valueElement.className = 'variable-value-input';
             valueElement.value = this.formatValueForDisplay(info);
-            valueElement.addEventListener('input', (e) => this.handleValueChange(info.lineIndex, e.target.value));
+            // Update formula pane on blur (when user is done typing), not during typing
+            valueElement.addEventListener('blur', (e) => this.handleValueChange(info.lineIndex, e.target.value));
             valueElement.addEventListener('focus', (e) => e.target.select());
+            // Also handle Enter key to commit the value
+            valueElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.target.blur();
+                }
+            });
             this.inputElements.set(info.lineIndex, valueElement);
         } else {
             valueElement = document.createElement('span');
@@ -247,6 +254,9 @@ class VariablesPanel {
             formattedValue = newValue.trim();
         }
 
+        // Update cached declaration so diff works correctly after Solve
+        info.valueText = formattedValue;
+
         // Get current text and update the specific line
         let text = this.editor.getValue();
         const lines = text.split('\n');
@@ -259,22 +269,15 @@ class VariablesPanel {
             }
         }
 
-        // Save focus state before notifying listeners
-        const inputElement = this.inputElements.get(lineIndex);
-        const selectionStart = inputElement?.selectionStart;
-        const selectionEnd = inputElement?.selectionEnd;
-
         // Notify listeners
         for (const listener of this.changeListeners) {
             listener(varName, parsedValue, text);
         }
 
-        // Restore focus to the input element
+        // Update the input element to show the formatted value
+        const inputElement = this.inputElements.get(lineIndex);
         if (inputElement) {
-            inputElement.focus();
-            if (selectionStart !== undefined) {
-                inputElement.setSelectionRange(selectionStart, selectionEnd);
-            }
+            inputElement.value = formattedValue;
         }
     }
 
