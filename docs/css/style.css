@@ -307,6 +307,19 @@ button {
     border-style: solid;
 }
 
+.sidebar-actions-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.sidebar-actions-row button {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
+
 /* Editor Main Area */
 .editor-main {
     flex: 1;
@@ -323,6 +336,7 @@ button {
     border-bottom: 1px solid var(--border-color);
     min-height: var(--tab-height);
     overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .tab {
@@ -663,20 +677,197 @@ button {
     background: var(--border-light);
 }
 
+/* Mobile: Hamburger button (hidden by default) */
+.hamburger-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 20px;
+    padding: 8px;
+    margin-right: 8px;
+}
+
+.hamburger-btn:hover {
+    background-color: var(--bg-hover);
+}
+
+/* Mobile: Settings button (hidden by default) */
+.settings-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 18px;
+    padding: 8px;
+}
+
+.settings-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+/* Mobile: Sidebar overlay */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    top: var(--header-height);
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+}
+
+.sidebar-overlay.visible {
+    display: block;
+}
+
+/* Mobile: Settings modal */
+.settings-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 200;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.settings-modal.visible {
+    display: flex;
+}
+
+.settings-modal-content {
+    background: var(--bg-secondary);
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 90%;
+    width: 280px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+}
+
+.settings-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.settings-modal-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.settings-modal-close {
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 20px;
+    padding: 4px 8px;
+    line-height: 1;
+}
+
+.settings-modal-close:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.settings-modal-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 16px 0;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .details-panel {
         display: none;
     }
+
+    .settings-btn {
+        display: flex;
+    }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+    /* Slide-out sidebar drawer */
     .sidebar {
-        width: 180px;
+        position: fixed;
+        left: -220px;
+        top: var(--header-height);
+        height: calc(100vh - var(--header-height));
+        z-index: 100;
+        transition: left 0.3s ease;
+        width: var(--sidebar-width);
     }
 
+    .sidebar.open {
+        left: 0;
+    }
+
+    /* Show hamburger button */
+    .hamburger-btn {
+        display: flex;
+    }
+
+    /* Larger touch targets for buttons */
+    .app-header button {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 8px 12px;
+    }
+
+
+    /* Adjust header spacing */
     .header-center {
+        gap: 8px;
+    }
+
+    .header-right {
+        gap: 4px;
+    }
+
+    /* Hide Import/Export/Reset on mobile - access via sidebar */
+    #btn-import,
+    #btn-export,
+    #btn-reset {
         display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Hide subtitle on small screens */
+    .app-subtitle {
+        display: none;
+    }
+
+    /* Smaller line numbers */
+    .line-numbers {
+        width: 35px;
+        font-size: 11px;
+    }
+
+    .line-number {
+        padding: 0 6px 0 4px;
+    }
+
+    /* Adjust header padding */
+    .app-header {
+        padding: 0 8px;
+    }
+
+    .header-left {
+        gap: 8px;
+    }
+
+    .app-title {
+        font-size: 16px;
     }
 }
 
@@ -711,6 +902,12 @@ button {
 .panel-divider:hover,
 .panel-divider.dragging {
     background: var(--accent-primary);
+}
+
+/* Force cursor during panel resize */
+body.panel-resizing,
+body.panel-resizing * {
+    cursor: row-resize !important;
 }
 
 .variables-panel {

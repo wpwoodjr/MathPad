@@ -122,6 +122,11 @@ function renderSidebar() {
     html += `
         <div class="sidebar-actions">
             <button onclick="createNewRecord()" class="btn-new-record">+ New Record</button>
+            <div class="sidebar-actions-row">
+                <button onclick="handleImport()" class="btn-secondary">Import</button>
+                <button onclick="handleExport()" class="btn-secondary">Export</button>
+                <button onclick="handleReset()" class="btn-secondary">Reset</button>
+            </div>
         </div>
     `;
 
@@ -168,6 +173,12 @@ function renderTabBar() {
     }
 
     UI.tabBar.innerHTML = html;
+
+    // Scroll active tab into view
+    const activeTab = UI.tabBar.querySelector('.tab.active');
+    if (activeTab) {
+        activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
 }
 
 /**
@@ -176,6 +187,9 @@ function renderTabBar() {
 function openRecord(recordId) {
     const record = findRecord(UI.data, recordId);
     if (!record) return;
+
+    // Close sidebar on mobile
+    closeSidebar();
 
     // Add to open tabs if not already there
     if (!UI.openTabs.includes(recordId)) {
@@ -369,7 +383,7 @@ function renderDetailsPanel() {
     ).join('');
 
     UI.detailsPanel.innerHTML = `
-        <div class="details-header">Details</div>
+        <div class="details-header">Record Settings</div>
 
         <div class="detail-group">
             <label>Category</label>
@@ -592,6 +606,122 @@ function setStatus(message, isError = false, persist = true) {
 }
 
 /**
+ * Toggle sidebar visibility (for mobile)
+ */
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('visible');
+}
+
+/**
+ * Close sidebar (for mobile)
+ */
+function closeSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    sidebar.classList.remove('open');
+    overlay.classList.remove('visible');
+}
+
+/**
+ * Toggle settings modal visibility
+ */
+function toggleSettings() {
+    const modal = document.getElementById('settings-modal');
+    const isVisible = modal.classList.contains('visible');
+
+    if (!isVisible) {
+        // Populate the modal with current settings
+        renderSettingsModal();
+    }
+
+    modal.classList.toggle('visible');
+}
+
+/**
+ * Render settings modal content
+ */
+function renderSettingsModal() {
+    const body = document.getElementById('settings-modal-body');
+    if (!UI.currentRecordId) {
+        body.innerHTML = '<div class="no-record">No record selected</div>';
+        return;
+    }
+
+    const record = findRecord(UI.data, UI.currentRecordId);
+    if (!record) return;
+
+    const categoryOptions = UI.data.categories.map(cat =>
+        `<option value="${escapeAttr(cat)}" ${cat === record.category ? 'selected' : ''}>${escapeHtmlText(cat)}</option>`
+    ).join('');
+
+    const formatOptions = ['float', 'sci', 'eng'].map(fmt =>
+        `<option value="${fmt}" ${fmt === record.format ? 'selected' : ''}>${fmt.charAt(0).toUpperCase() + fmt.slice(1)}</option>`
+    ).join('');
+
+    body.innerHTML = `
+        <div class="detail-group">
+            <label>Category</label>
+            <select onchange="updateRecordDetail('category', this.value); renderSettingsModal();">
+                ${categoryOptions}
+            </select>
+        </div>
+
+        <div class="detail-group">
+            <label>Decimal Places</label>
+            <input type="number" min="0" max="15" value="${record.places ?? 2}"
+                   onchange="updateRecordDetail('places', parseInt(this.value))">
+        </div>
+
+        <div class="detail-group">
+            <label>Format</label>
+            <select onchange="updateRecordDetail('format', this.value)">
+                ${formatOptions}
+            </select>
+        </div>
+
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" ${record.stripZeros ? 'checked' : ''}
+                       onchange="updateRecordDetail('stripZeros', this.checked)">
+                Strip trailing zeros
+            </label>
+        </div>
+
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" ${record.groupDigits ? 'checked' : ''}
+                       onchange="updateRecordDetail('groupDigits', this.checked)">
+                Group digits with commas
+            </label>
+        </div>
+
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" ${record.degreesMode ? 'checked' : ''}
+                       onchange="updateRecordDetail('degreesMode', this.checked)">
+                Degrees mode (vs radians)
+            </label>
+        </div>
+
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" ${record.shadowConstants ? 'checked' : ''}
+                       onchange="updateRecordDetail('shadowConstants', this.checked)">
+                Shadow constants
+            </label>
+        </div>
+
+        <div class="details-actions">
+            <button onclick="duplicateCurrentRecord(); toggleSettings();" class="btn-secondary">Duplicate</button>
+            <button onclick="deleteCurrentRecord(); toggleSettings();" class="btn-danger">Delete</button>
+        </div>
+    `;
+}
+
+/**
  * Setup event listeners
  */
 function setupEventListeners() {
@@ -613,6 +743,25 @@ function setupEventListeners() {
     // File input for import
     document.getElementById('file-input')?.addEventListener('change', handleFileSelect);
 
+    // Mobile: Hamburger button
+    document.getElementById('hamburger-btn')?.addEventListener('click', toggleSidebar);
+
+    // Mobile: Sidebar overlay click to close
+    document.getElementById('sidebar-overlay')?.addEventListener('click', closeSidebar);
+
+    // Mobile: Settings button
+    document.getElementById('settings-btn')?.addEventListener('click', toggleSettings);
+
+    // Mobile: Settings modal close button
+    document.getElementById('settings-modal-close')?.addEventListener('click', toggleSettings);
+
+    // Mobile: Settings modal overlay click to close
+    document.getElementById('settings-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'settings-modal') {
+            toggleSettings();
+        }
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         // Ctrl/Cmd + Enter to solve
@@ -624,6 +773,17 @@ function setupEventListeners() {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
             setStatus('All changes auto-saved');
+        }
+        // Escape to close modals/sidebar
+        if (e.key === 'Escape') {
+            const settingsModal = document.getElementById('settings-modal');
+            if (settingsModal?.classList.contains('visible')) {
+                toggleSettings();
+            }
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar?.classList.contains('open')) {
+                closeSidebar();
+            }
         }
     });
 }
@@ -886,6 +1046,7 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
         startY = e.clientY;
         startHeight = bottomPanel.offsetHeight;
         divider.classList.add('dragging');
+        document.body.classList.add('panel-resizing');
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
         e.preventDefault();
@@ -902,6 +1063,7 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
 
     function onMouseUp() {
         divider.classList.remove('dragging');
+        document.body.classList.remove('panel-resizing');
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
 
@@ -946,6 +1108,13 @@ window.createNewRecord = createNewRecord;
 window.updateRecordDetail = updateRecordDetail;
 window.duplicateCurrentRecord = duplicateCurrentRecord;
 window.deleteCurrentRecord = deleteCurrentRecord;
+window.toggleSidebar = toggleSidebar;
+window.closeSidebar = closeSidebar;
+window.toggleSettings = toggleSettings;
+window.renderSettingsModal = renderSettingsModal;
+window.handleImport = handleImport;
+window.handleExport = handleExport;
+window.handleReset = handleReset;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

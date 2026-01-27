@@ -11,6 +11,7 @@
         <!-- Header -->
         <header class="app-header">
             <div class="header-left">
+                <button class="hamburger-btn" id="hamburger-btn" title="Toggle sidebar">&#9776;</button>
                 <h1 class="app-title">MathPad</h1>
                 <span class="app-subtitle">Algebraic Equation Solver</span>
             </div>
@@ -24,20 +25,37 @@
             </div>
             <div class="header-right">
                 <button id="btn-import" class="btn-icon" title="Import records from file">
-                    Import
+                    <span class="btn-text">Import</span><span class="btn-icon-only" style="display:none">&#8593;</span>
                 </button>
                 <button id="btn-export" class="btn-icon" title="Export records to file">
-                    Export
+                    <span class="btn-text">Export</span><span class="btn-icon-only" style="display:none">&#8595;</span>
                 </button>
                 <button id="btn-reset" class="btn-icon" title="Reset to default records">
-                    Reset
+                    <span class="btn-text">Reset</span><span class="btn-icon-only" style="display:none">&#8634;</span>
                 </button>
                 <button onclick="showHelp()" class="btn-icon" title="Help">
                     ?
                 </button>
+                <button class="settings-btn" id="settings-btn" title="Record Settings">&#9881;</button>
             </div>
             <input type="file" id="file-input" accept=".txt,.pdb" style="display: none">
         </header>
+
+        <!-- Sidebar Overlay (for mobile) -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- Settings Modal (for mobile) -->
+        <div class="settings-modal" id="settings-modal">
+            <div class="settings-modal-content">
+                <div class="settings-modal-header">
+                    <h3>Record Settings</h3>
+                    <button class="settings-modal-close" id="settings-modal-close">&times;</button>
+                </div>
+                <div class="settings-modal-body" id="settings-modal-body">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
 
         <!-- Main Content -->
         <div class="main-content">
