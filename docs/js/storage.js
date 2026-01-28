@@ -117,6 +117,43 @@ x2->`,
             },
             {
                 id: generateId(),
+                title: 'Example: Fifth Degree Polynomial',
+                text: `"Fifth degree polynomial"
+"Compute all 5 roots"
+
+c5: 1
+c4: -2
+c3: -10
+c2: 20
+c1: 9
+c0: -14
+
+f(x) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
+
+f(x1) = 0
+x1->
+
+f(x2) = 0
+x2[2:2.5]->
+
+f(x3) = 0
+x3[2.5:3]->
+
+f(x4) = 0
+x4[-1:0]->
+
+f(x5) = 0
+x5[-4:-2]->`,
+                category: 'Math',
+                places: 4,
+                stripZeros: true,
+                groupDigits: false,
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: true
+            },
+            {
+                id: generateId(),
                 title: 'Constants',
                 text: `"Physical and mathematical constants"
 pi: 3.14159265358979
