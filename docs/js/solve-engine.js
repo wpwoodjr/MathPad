@@ -158,7 +158,7 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
         };
     } catch (e) {
         // Solving failed (e.g., couldn't bracket root)
-        return { solved: false };
+        return { solved: false, error: e.message, variable: unknown };
     }
 }
 
@@ -167,11 +167,12 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
  * @param {string} text - The formula text (with \expr\ already evaluated)
  * @param {EvalContext} context - Context with known variables
  * @param {Array} declarations - Parsed declarations from discoverVariables
- * @returns {{ computedValues: Map, solved: number, errors: Array }}
+ * @returns {{ computedValues: Map, solved: number, errors: Array, solveFailures: Map }}
  */
 function solveEquations(text, context, declarations) {
     const errors = [];
     const computedValues = new Map();
+    const solveFailures = new Map(); // Track last failure per variable
     let solved = 0;
 
     // Build variables map for lookup
@@ -266,8 +267,12 @@ function solveEquations(text, context, declarations) {
                 if (result.solved) {
                     context.setVariable(result.variable, result.value);
                     computedValues.set(result.variable, result.value);
+                    solveFailures.delete(result.variable); // Clear any previous failure
                     solved++;
                     changed = true;
+                } else if (result.error && result.variable) {
+                    // Track the failure for this variable (line number for error reporting)
+                    solveFailures.set(result.variable, { error: result.error, line: eq.startLine });
                 }
             } catch (e) {
                 errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
@@ -325,7 +330,7 @@ function solveEquations(text, context, declarations) {
         }
     }
 
-    return { computedValues, solved, errors };
+    return { computedValues, solved, errors, solveFailures };
 }
 
 /**
@@ -337,7 +342,7 @@ function solveEquations(text, context, declarations) {
  * @param {object} record - Record settings for formatting
  * @returns {{ text: string, errors: Array }} Formatted text and any errors
  */
-function formatOutput(text, declarations, context, computedValues, record) {
+function formatOutput(text, declarations, context, computedValues, record, solveFailures = new Map()) {
     const errors = [];
     const format = {
         places: record.places ?? 4,
@@ -364,7 +369,13 @@ function formatOutput(text, declarations, context, computedValues, record) {
                 const decl = info.declaration;
                 const isOutput = decl.clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
                 if (isOutput) {
-                    errors.push(`Line ${info.lineIndex + 1}: Variable '${info.name}' has no value to output`);
+                    // Use specific solve failure message if available
+                    const failure = solveFailures.get(info.name);
+                    if (failure) {
+                        errors.push(`Line ${failure.line + 1}: ${failure.error} for '${info.name}'`);
+                    } else {
+                        errors.push(`Line ${info.lineIndex + 1}: Variable '${info.name}' has no value to output`);
+                    }
                 }
             }
         }
@@ -491,7 +502,7 @@ function solveRecord(text, context, record) {
     errors.push(...solveResult.errors);
 
     // Pass 3: Format Output (inserts values into text)
-    const formatResult = formatOutput(text, declarations, context, solveResult.computedValues, record);
+    const formatResult = formatOutput(text, declarations, context, solveResult.computedValues, record, solveResult.solveFailures);
     text = formatResult.text;
     errors.push(...formatResult.errors);
 
