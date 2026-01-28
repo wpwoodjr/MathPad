@@ -448,7 +448,7 @@ x<- 12.1667
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 16: Equation doesn't balance: mint = yint / 12 (0.005104166726620151 ≠ 0.005104166666666667)"; StatusIsError = 1
+Status = "Solved with errors: Line 16: Equation doesn't balance: mint = yint / 12 (0.005104166726622282 ≠ 0.005104166666666667)"; StatusIsError = 1
 "10 Solver: clear pmt, then solve, then solve again, get:"
 "Solved with errors: Equation doesn't balance: mint = yint / 12 (0.005104166726620151 ≠ 0.005104166666666667)"
 "Time Value of Money"

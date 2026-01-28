@@ -31,14 +31,14 @@ h-> 5.4909
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 3: Equation doesn't balance: w/h = 9/16 (0 ≠ 0.5625)"; StatusIsError = 1
+Status = "Solved with errors: Line 3: Equation doesn't balance: w/h = 9/16 (9.507898131745555e+33 ≠ 0.5625)"; StatusIsError = 1
 "01 No shadow h - solve for height"
 
 w/h = 9/16
 d = sqrt(w*w + h*h)
 
 d: 6.3
-w-> 0
+w-> 6.3
 h-> 6.6261e-34
 
 "--- Reference Constants and Functions ---"

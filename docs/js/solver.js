@@ -51,9 +51,17 @@ function brent(f, a, b, tol = 1e-12, maxIter = 100) {
     let mflag = true;
 
     for (let iter = 0; iter < maxIter; iter++) {
-        // Check for convergence
-        if (Math.abs(fb) < tol || Math.abs(b - a) < tol) {
+        // Check for convergence - must actually be near a root, not just bracket collapse
+        if (Math.abs(fb) < tol) {
             return b;
+        }
+        // If bracket has collapsed, check if we're close enough to a root
+        // Use a looser tolerance (1e-6) since bracket collapse may happen before strict convergence
+        if (Math.abs(b - a) < tol) {
+            if (Math.abs(fb) < 1e-6) {
+                return b;
+            }
+            throw new SolverError('Bracket collapsed without finding root');
         }
 
         let s;
@@ -107,53 +115,65 @@ function brent(f, a, b, tol = 1e-12, maxIter = 100) {
 }
 
 /**
- * Find a bracketing interval for the root
- * Searches outward from an initial guess, preferring positive values
- *
- * @param {Function} f - Function to bracket
- * @param {number} guess - Initial guess (default: 1)
- * @param {number} low - Lower limit for search (default: -1e10)
- * @param {number} high - Upper limit for search (default: 1e10)
- * @returns {[number, number]} Bracketing interval [a, b]
+ * Safely evaluate a function, returning NaN on error
  */
-function bracket(f, guess = 1, low = -1e10, high = 1e10) {
-    // Try to find a bracket preferring positive values
+function safeEval(f, x) {
+    try {
+        return f(x);
+    } catch (e) {
+        return NaN;
+    }
+}
+
+/**
+ * Find a bracket using uniform grid search within [low, high]
+ * Returns [a, b] where f(a) and f(b) have opposite signs, or null if not found
+ */
+function gridSearch(f, low, high, numPoints = 20) {
+    const step = (high - low) / numPoints;
+    let prevX = low;
+    let prevF = safeEval(f, low);
+
+    for (let i = 1; i <= numPoints; i++) {
+        const x = low + i * step;
+        const fx = safeEval(f, x);
+
+        if (isFinite(prevF) && isFinite(fx) && prevF * fx < 0) {
+            return [prevX, x];
+        }
+
+        prevX = x;
+        prevF = fx;
+    }
+
+    return null;
+}
+
+/**
+ * Find a bracket by expanding outward from a guess
+ * Used when no explicit limits are provided
+ * Returns [a, b] or null if not found
+ */
+function expandFromGuess(f, guess = 1) {
     const FACTOR = 1.6;
     const MAX_TRIES = 50;
 
-    // First, try around the guess
     let a = guess > 0 ? guess / 2 : guess - 1;
     let b = guess > 0 ? guess * 2 : guess + 1;
 
-    // Clamp to limits
-    a = Math.max(a, low);
-    b = Math.min(b, high);
+    let fa = safeEval(f, a);
+    let fb = safeEval(f, b);
 
-    let fa, fb;
-
-    try {
-        fa = f(a);
-        fb = f(b);
-    } catch (e) {
-        // If evaluation fails, try different starting points
-        a = 0.01;
-        b = 1;
-        fa = f(a);
-        fb = f(b);
-    }
-
-    // Expand the bracket until we find a sign change
     for (let i = 0; i < MAX_TRIES; i++) {
-        if (!isFinite(fa) || !isFinite(fb)) {
-            // Try to recover from NaN/Infinity
-            if (!isFinite(fa)) {
-                a = (a + b) / 2;
-                fa = f(a);
-            }
-            if (!isFinite(fb)) {
-                b = (a + b) / 2;
-                fb = f(b);
-            }
+        // Handle NaN/Infinity by shrinking toward midpoint
+        if (!isFinite(fa)) {
+            a = (a + b) / 2;
+            fa = safeEval(f, a);
+            continue;
+        }
+        if (!isFinite(fb)) {
+            b = (a + b) / 2;
+            fb = safeEval(f, b);
             continue;
         }
 
@@ -164,72 +184,81 @@ function bracket(f, guess = 1, low = -1e10, high = 1e10) {
         // Expand in the direction of smaller |f|
         if (Math.abs(fa) < Math.abs(fb)) {
             a = a - FACTOR * (b - a);
-            a = Math.max(a, low);
-            try {
-                fa = f(a);
-            } catch (e) {
-                fa = Infinity;
-            }
+            fa = safeEval(f, a);
         } else {
             b = b + FACTOR * (b - a);
-            b = Math.min(b, high);
-            try {
-                fb = f(b);
-            } catch (e) {
-                fb = Infinity;
-            }
+            fb = safeEval(f, b);
         }
     }
 
-    // Try a grid search as last resort
-    const gridPoints = 20;
-    const step = (high - low) / gridPoints;
-    let prevX = low;
-    let prevF;
-    try {
-        prevF = f(low);
-    } catch (e) {
-        prevF = NaN;
-    }
-
-    for (let i = 1; i <= gridPoints; i++) {
-        const x = low + i * step;
-        let fx;
-        try {
-            fx = f(x);
-        } catch (e) {
-            fx = NaN;
-        }
-
-        if (isFinite(prevF) && isFinite(fx) && prevF * fx < 0) {
-            return [prevX, x];
-        }
-
-        prevX = x;
-        prevF = fx;
-    }
-
-    throw new SolverError('Could not find a bracketing interval');
+    return null;
 }
 
 /**
  * Solve an equation for a single unknown variable
  *
- * @param {Function} makeEquationFunc - Function that takes (unknownValue) and returns f(unknownValue)
- *                                      where f(x) = 0 is the equation to solve
+ * @param {Function} f - Function where f(x) = 0 is the equation to solve
  * @param {Object} limits - Optional search limits { low, high }
- * @param {number} guess - Optional initial guess
+ * @param {number} guess - Optional initial guess (used when no limits)
  * @returns {number} Solution value
  */
-function solveEquation(makeEquationFunc, limits = null, guess = 1) {
-    const low = limits?.low ?? -1e10;
-    const high = limits?.high ?? 1e10;
+function solveEquation(f, limits = null, guess = 1) {
+    const hasLimits = limits && isFinite(limits.low) && isFinite(limits.high);
 
-    // Find bracketing interval
-    const [a, b] = bracket(makeEquationFunc, guess, low, high);
+    // With explicit limits: user knows where to look, just grid search there
+    if (hasLimits) {
+        const bracket = gridSearch(f, limits.low, limits.high);
+        if (bracket) {
+            return brent(f, bracket[0], bracket[1]);
+        }
+        throw new SolverError('Could not find a root in specified range');
+    }
 
-    // Solve using Brent's method
-    return brent(makeEquationFunc, a, b);
+    // No limits: try logarithmic points first (covers wide range efficiently)
+    const logPoints = [0, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8];
+    const testPoints = [
+        ...logPoints.slice(1).map(x => -x).reverse(),
+        ...logPoints
+    ];
+
+    // Evaluate and find sign changes
+    const values = testPoints
+        .map(x => ({ x, fx: safeEval(f, x) }))
+        .filter(v => isFinite(v.fx));
+
+    // Find all brackets and solve each
+    const roots = [];
+    for (let i = 0; i < values.length - 1; i++) {
+        if (values[i].fx * values[i + 1].fx < 0) {
+            try {
+                const root = brent(f, values[i].x, values[i + 1].x);
+                if (isFinite(root)) {
+                    roots.push(root);
+                }
+            } catch (e) {
+                // This bracket didn't work, try next
+            }
+        }
+    }
+
+    // Return best root: prefer smallest positive
+    if (roots.length > 0) {
+        const positiveRoots = roots.filter(r => r > 0);
+        if (positiveRoots.length > 0) {
+            positiveRoots.sort((a, b) => a - b);
+            return positiveRoots[0];
+        }
+        roots.sort((a, b) => Math.abs(a) - Math.abs(b));
+        return roots[0];
+    }
+
+    // Fallback: expand outward from guess
+    const bracket = expandFromGuess(f, guess);
+    if (bracket) {
+        return brent(f, bracket[0], bracket[1]);
+    }
+
+    throw new SolverError('Could not find a root');
 }
 
 /**
@@ -726,7 +755,7 @@ function createEquationFunction(leftAST, rightAST, unknownVar, context) {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        SolverError, brent, bracket, solveEquation,
+        SolverError, brent, gridSearch, expandFromGuess, solveEquation,
         parseEquation, findVariables, findVariablesInAST, createEquationFunction,
         substituteInAST, deepCopyAST, isDefinitionEquation,
         deriveSubstitution, invertOperation, buildSubstitutionMap, detectCycle

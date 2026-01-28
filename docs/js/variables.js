@@ -126,7 +126,8 @@ function replaceValueOnLine(line, varName, marker, hasLimits, newValue) {
 
     let markerIndex;
     if (hasLimits) {
-        const bracketMatch = cleanLine.match(/\w+(?:[$%]|#\d+)?\s*\[[^\]]+\]\s*:/);
+        // Match variable with limits and any marker type (longer markers first)
+        const bracketMatch = cleanLine.match(new RegExp(`\\w+(?:[$%]|#\\d+)?\\s*\\[[^\\]]+\\]\\s*${escapeRegex(marker)}`));
         if (bracketMatch) {
             markerIndex = bracketMatch.index + bracketMatch[0].length;
         }
@@ -170,6 +171,47 @@ function parseMarkedLine(line) {
     // Remove comments (text in double quotes) and trim leading/trailing whitespace
     const cleanLine = line.replace(/"[^"]*"/g, '').trim();
     if (!cleanLine) return null;
+
+    // Handle variables with limits specially: var[low:high]<marker> value
+    // The colon inside brackets must not be matched as a marker
+    // Supports all markers: :, ::, ->, ->>, <-
+    const limitsMatch = cleanLine.match(/^(\w+(?:[$%]|#\d+)?)\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\]\s*(->>|->|::|:|<-)\s*(.*)$/);
+    if (limitsMatch) {
+        const { baseName, format, base } = parseVarNameAndFormat(limitsMatch[1]);
+        const limits = { lowExpr: limitsMatch[2].trim(), highExpr: limitsMatch[3].trim() };
+        const marker = limitsMatch[4];
+        const rhs = limitsMatch[5].trim();
+
+        // Determine type and behavior based on marker
+        let type, clearBehavior, fullPrecision;
+        if (marker === '->' || marker === '->>') {
+            type = VarType.OUTPUT;
+            clearBehavior = ClearBehavior.ON_SOLVE;
+            fullPrecision = marker === '->>';
+        } else if (marker === '<-') {
+            type = VarType.INPUT;
+            clearBehavior = ClearBehavior.ON_CLEAR;
+            fullPrecision = false;
+        } else {
+            type = VarType.STANDARD;
+            clearBehavior = ClearBehavior.NONE;
+            fullPrecision = marker === '::';
+        }
+
+        return {
+            kind: 'declaration',
+            name: baseName,
+            type,
+            clearBehavior,
+            limits,
+            valueText: rhs,
+            base,
+            fullPrecision,
+            marker,
+            format,
+            comment
+        };
+    }
 
     // Match markers (check longer markers first to avoid partial matches)
     const markerPatterns = [

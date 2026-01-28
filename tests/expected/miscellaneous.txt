@@ -145,3 +145,41 @@ fact(9)-> 362880
 "--- Reference Constants and Functions ---"
 pi: 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"Time Value of Money - Solve for yint"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$607.61 "monthly payment"
+pv$: $100,000.00 "loan amount"
+fv$: $0.00 "future value (balloon payment)"
+yint%: 6.12% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+yint = mint * 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"Time Value of Money - Solve for yint with limits"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$607.61 "monthly payment"
+pv$: $100,000.00 "loan amount"
+fv$: $0.00 "future value (balloon payment)"
+yint%[0:0.5]: 6.12% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+yint = mint * 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
