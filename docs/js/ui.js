@@ -940,6 +940,8 @@ function handleSolve() {
 
         // Update editor with results (undoable so Ctrl+Z works)
         editorInfo.editor.setValue(text, true);
+        // Don't leave focus in the textarea
+        editorInfo.editor.textarea.blur();
         record.text = text;
         debouncedSave(UI.data);
 
