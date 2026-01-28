@@ -940,12 +940,8 @@ function handleSolve() {
 
         // Update editor with results (undoable so Ctrl+Z works)
         editorInfo.editor.setValue(text, true);
-        // Don't leave focus in the textarea
-        editorInfo.editor.textarea.blur();
-        record.text = text;
-        debouncedSave(UI.data);
 
-        // Restore cursor to end of same line
+        // Restore cursor to end of same line (keeps scroll position)
         const newLines = text.split('\n');
         const targetLine = Math.min(cursorLine, newLines.length - 1);
         let newPos = 0;
@@ -954,6 +950,11 @@ function handleSolve() {
         }
         newPos += newLines[targetLine].length; // end of line
         editorInfo.editor.setCursorPosition(newPos);
+
+        // Don't leave focus in the textarea
+        editorInfo.editor.textarea.blur();
+        record.text = text;
+        debouncedSave(UI.data);
 
         // Update variables panel
         if (editorInfo.variablesManager) {
@@ -1001,10 +1002,8 @@ function handleClearInput() {
 
     // Use undoable so Ctrl+Z works
     editorInfo.editor.setValue(text, true);
-    record.text = text;
-    debouncedSave(UI.data);
 
-    // Restore cursor to end of same line
+    // Restore cursor to end of same line (keeps scroll position)
     const newLines = text.split('\n');
     const targetLine = Math.min(cursorLine, newLines.length - 1);
     let newPos = 0;
@@ -1013,6 +1012,11 @@ function handleClearInput() {
     }
     newPos += newLines[targetLine].length; // end of line
     editorInfo.editor.setCursorPosition(newPos);
+
+    // Don't leave focus in the textarea
+    editorInfo.editor.textarea.blur();
+    record.text = text;
+    debouncedSave(UI.data);
 
     // Update variables panel
     if (editorInfo.variablesManager) {
