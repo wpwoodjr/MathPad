@@ -292,7 +292,8 @@ class VariablesPanel {
         info.valueText = formattedValue;
 
         // Get current text and update the specific line
-        let text = this.editor.getValue();
+        const oldText = this.editor.getValue();
+        let text = oldText;
         const lines = text.split('\n');
 
         if (lineIndex >= 0 && lineIndex < lines.length) {
@@ -303,9 +304,11 @@ class VariablesPanel {
             }
         }
 
-        // Notify listeners
-        for (const listener of this.changeListeners) {
-            listener(varName, parsedValue, text);
+        // Only notify listeners if text actually changed
+        if (text !== oldText) {
+            for (const listener of this.changeListeners) {
+                listener(varName, parsedValue, text);
+            }
         }
 
         // Update the input element to show the formatted value
