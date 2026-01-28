@@ -13,6 +13,38 @@ class VariablesPanel {
         this.declarations = new Map(); // keyed by lineIndex
         this.changeListeners = [];
         this.inputElements = new Map();
+
+        // Handle Tab key to cycle through inputs
+        this.container.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab' && e.target.classList.contains('variable-value-input')) {
+                e.preventDefault();
+                const nextInput = this.getNextInput(e.target, e.shiftKey);
+                // Blur first (triggers undo logic), then focus next
+                e.target.blur();
+                if (nextInput) {
+                    nextInput.focus();
+                }
+            }
+        });
+    }
+
+    /**
+     * Get next/previous input in the variables panel (wraps around)
+     */
+    getNextInput(currentInput, reverse = false) {
+        const inputs = Array.from(this.container.querySelectorAll('.variable-value-input'));
+        if (inputs.length === 0) return null;
+
+        const currentIndex = inputs.indexOf(currentInput);
+        let nextIndex;
+
+        if (reverse) {
+            nextIndex = currentIndex <= 0 ? inputs.length - 1 : currentIndex - 1;
+        } else {
+            nextIndex = currentIndex >= inputs.length - 1 ? 0 : currentIndex + 1;
+        }
+
+        return inputs[nextIndex];
     }
 
     /**
