@@ -165,3 +165,29 @@ n: 360 "number of payments (30 years)"
 "Monthly interest rate from annual"
 yint = mint * 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Fifth degree polynomial (test for f(x) = 0 being read as an equation, not fn definition)"
+
+c5: 1
+c4: -2
+c3: -10
+c2: 20
+c1: 9
+c0: -14
+
+f(x) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x*x + c1*x + c0
+
+f(x) = 0
+x->
+
+0 = f(x0)
+x0->
+
+f(x1) = 0
+x1->
+
+0 = f(x2)
+x2->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

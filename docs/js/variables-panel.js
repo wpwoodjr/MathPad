@@ -75,8 +75,9 @@ class VariablesPanel {
                 toAdd.push(info);
             } else {
                 const existing = this.declarations.get(lineIndex);
-                // If name, marker, or comment changed, remove old row and add new one
-                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || existing.declaration.comment !== info.declaration.comment) {
+                // If name, marker, limits, or comment changed, remove old row and add new one
+                const limitsChanged = JSON.stringify(existing.declaration.limits) !== JSON.stringify(info.declaration.limits);
+                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || limitsChanged || existing.declaration.comment !== info.declaration.comment) {
                     toRemove.push(lineIndex);
                     toAdd.push(info);
                 } else if (this.declarationChanged(existing, info)) {
@@ -141,11 +142,12 @@ class VariablesPanel {
             row.dataset.type = 'standard';
         }
 
-        // Variable name label (includes format suffix and marker to distinguish declarations)
+        // Variable name label (includes format suffix, limits, and marker)
         const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : '';
+        const limitsStr = decl.limits ? `[${decl.limits.lowExpr}:${decl.limits.highExpr}]` : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
-        nameLabel.textContent = info.name + formatSuffix + (decl.marker || ':');
+        nameLabel.textContent = info.name + formatSuffix + limitsStr + (decl.marker || ':');
         // Add tooltip explaining variable type
         if (isInRefSection) {
             nameLabel.title = 'Reference (from Constants/Functions)';

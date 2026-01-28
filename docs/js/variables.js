@@ -945,6 +945,10 @@ function parseFunctionsRecord(text) {
             const paramsText = match[2].trim();
             const bodyText = match[3].trim();
 
+            // Don't redefine an existing function - that's an equation, not a definition
+            // e.g., if f(x) = x**2 exists, then f(z) = 0 is an equation to solve
+            if (functions.has(name)) return;
+
             const params = paramsText ?
                 paramsText.split(';').map(p => p.trim()) : [];
 
