@@ -1064,10 +1064,9 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
 
     function onMouseMove(e) {
         const delta = startY - e.clientY;
-        const newHeight = Math.max(80, Math.min(
-            bottomPanel.parentElement.offsetHeight * 0.6,
-            startHeight + delta
-        ));
+        // Min 80px for variables panel, leave at least 40px for formulas panel
+        const maxHeight = bottomPanel.parentElement.offsetHeight - 40;
+        const newHeight = Math.max(80, Math.min(maxHeight, startHeight + delta));
         bottomPanel.style.height = newHeight + 'px';
     }
 
