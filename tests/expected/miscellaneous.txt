@@ -186,7 +186,7 @@ yint = mint * 12
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 12: Equation doesn't balance: f(x) = 0 (-1.4566126083082054e-13 ≠ 0)"; StatusIsError = 1
+Status = "Solved with errors: Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) = 0 (-1.4566126083082054e-13 ≠ 0)"; StatusIsError = 1
 "Fifth degree polynomial (test for f(x) = 0 being read as an equation, not fn definition)"
 
 c5: 1
@@ -196,32 +196,32 @@ c2: 20
 c1: 9
 c0: -14
 
-f(x) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x*x + c1*x + c0
+f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 
-f(x) = 0
+f(x; c5; c4; c3; c2; c1; c0) = 0
 x-> 0.7805
 
-0 = f(x0)
+0 = f(x0; c5; c4; c3; c2; c1; c0)
 x0-> 0.7805
 
-f(x1) = 0
+f(x1; c5; c4; c3; c2; c1; c0) = 0
 x1-> 0.7805
 
-0 = f(x2)
+0 = f(x2; c5; c4; c3; c2; c1; c0)
 x2-> 0.7805
 
 "Evaluate polynomial at specific points"
-f(1)->> 4
-f(-2)->> 64
-f(-3.1)->> -22.785709999999991
-f(3.5)->> 58.84375
-f(1.5)->> 8.21875
+f(1; c5; c4; c3; c2; c1; c0)->> 4
+f(-2; c5; c4; c3; c2; c1; c0)->> 64
+f(-3.1; c5; c4; c3; c2; c1; c0)->> -22.785709999999991
+f(3.5; c5; c4; c3; c2; c1; c0)->> 58.84375
+f(1.5; c5; c4; c3; c2; c1; c0)->> 8.21875
 
 "Find other roots using limits"
-f(x3) = 0
+f(x3; c5; c4; c3; c2; c1; c0) = 0
 x3[2:2.5]-> 2.2501
 
-f(x4) = 0
+f(x4; c5; c4; c3; c2; c1; c0) = 0
 x4[2.5:3]-> 2.8979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -237,9 +237,9 @@ c2: 20
 c1: 9
 c0: -14
 
-f(x) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x*x + c1*x + c0
+f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 
-0 = f(x1)
+0 = f(x1; c5; c4; c3; c2; c1; c0)
 x1[10:20]->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0

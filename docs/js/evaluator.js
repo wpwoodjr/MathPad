@@ -91,6 +91,24 @@ class EvalContext {
         ctx.usedFunctions = this.usedFunctions;
         return ctx;
     }
+
+    /**
+     * Create a context for user function evaluation.
+     * Functions can only access constants, built-in functions, and other user functions.
+     * They cannot access variables from the calling environment.
+     */
+    cloneForFunction() {
+        const ctx = new EvalContext();
+        // No variables - only function parameters will be added
+        ctx.constants = this.constants;
+        ctx.constantComments = this.constantComments;
+        // No shadowing in function context - constants are always visible
+        ctx.userFunctions = this.userFunctions;
+        ctx.degreesMode = this.degreesMode;
+        ctx.usedConstants = this.usedConstants; // Share tracking with parent
+        ctx.usedFunctions = this.usedFunctions;
+        return ctx;
+    }
 }
 
 /**
@@ -454,11 +472,11 @@ function evaluate(node, context) {
             // Check for user-defined function first
             const userFunc = context.getUserFunction(funcName);
             if (userFunc) {
-                // Evaluate arguments
+                // Evaluate arguments in the calling context
                 const argValues = node.args.map(arg => evaluate(arg, context));
 
-                // Create new context with parameters bound to arguments
-                const funcContext = context.clone();
+                // Create function context with only constants and user functions (no variables)
+                const funcContext = context.cloneForFunction();
                 for (let i = 0; i < userFunc.params.length; i++) {
                     funcContext.setVariable(userFunc.params[i], argValues[i] !== undefined ? argValues[i] : 0);
                 }
