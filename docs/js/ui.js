@@ -380,7 +380,7 @@ function renderDetailsPanel() {
 
     const categoryOptions = UI.data.categories.map(cat =>
         `<option value="${escapeAttr(cat)}" ${cat === record.category ? 'selected' : ''}>${escapeHtmlText(cat)}</option>`
-    ).join('');
+    ).join('') + '<option value="__new__">+ Add new...</option>';
 
     const formatOptions = ['float', 'sci', 'eng'].map(fmt =>
         `<option value="${fmt}" ${fmt === record.format ? 'selected' : ''}>${fmt.charAt(0).toUpperCase() + fmt.slice(1)}</option>`
@@ -457,11 +457,30 @@ function updateRecordDetail(field, value) {
     const record = findRecord(UI.data, UI.currentRecordId);
     if (!record) return;
 
+    // Handle adding a new category
+    if (field === 'category' && value === '__new__') {
+        const newCategory = prompt('Enter new category name:');
+        if (newCategory && newCategory.trim()) {
+            const trimmed = newCategory.trim();
+            if (!UI.data.categories.includes(trimmed)) {
+                UI.data.categories.push(trimmed);
+            }
+            value = trimmed;
+        } else {
+            // User cancelled - revert to current category
+            renderDetailsPanel();
+            renderSettingsModal();
+            return;
+        }
+    }
+
     record[field] = value;
     debouncedSave(UI.data);
 
     if (field === 'category') {
         renderSidebar();
+        renderDetailsPanel();
+        renderSettingsModal();
     }
 }
 
@@ -659,7 +678,7 @@ function renderSettingsModal() {
 
     const categoryOptions = UI.data.categories.map(cat =>
         `<option value="${escapeAttr(cat)}" ${cat === record.category ? 'selected' : ''}>${escapeHtmlText(cat)}</option>`
-    ).join('');
+    ).join('') + '<option value="__new__">+ Add new...</option>';
 
     const formatOptions = ['float', 'sci', 'eng'].map(fmt =>
         `<option value="${fmt}" ${fmt === record.format ? 'selected' : ''}>${fmt.charAt(0).toUpperCase() + fmt.slice(1)}</option>`
