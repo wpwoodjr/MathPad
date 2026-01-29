@@ -433,12 +433,9 @@ function formatOutput(text, declarations, context, computedValues, record, solve
             const markerIdx = cleanLine.lastIndexOf(marker);
 
             if (markerIdx !== -1) {
-                const beforeMarker = line.substring(0, markerIdx + marker.length);
-                const afterMarker = line.substring(markerIdx + marker.length);
-                // Preserve trailing comment if any
-                const commentMatch = afterMarker.match(/"[^"]*"\s*$/);
-                const comment = commentMatch ? ' ' + commentMatch[0].trim() : '';
-                lines[output.startLine] = beforeMarker + ' ' + formatted + comment;
+                const markerEndIndex = markerIdx + marker.length;
+                const commentInfo = { comment: output.comment, commentUnquoted: output.commentUnquoted };
+                lines[output.startLine] = buildOutputLine(line, markerEndIndex, formatted, commentInfo);
             }
         }
     }

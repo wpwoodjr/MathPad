@@ -72,6 +72,7 @@ function loadModules() {
     global.formatVariableValue = variables.formatVariableValue;
     global.findExpressionOutputs = variables.findExpressionOutputs;
     global.clearExpressionOutputs = variables.clearExpressionOutputs;
+    global.buildOutputLine = variables.buildOutputLine;
 
     // Storage (minimal dependencies)
     const storage = require(path.join(jsPath, 'storage.js'));

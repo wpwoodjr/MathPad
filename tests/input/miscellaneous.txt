@@ -288,3 +288,22 @@ x+y->> 8
 Result x+y:: 8
 x+y:: 8
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"A-a Gradient"
+    these equations calculate the alveolar oxygen tension (which can range from 100mm on RA to 673mm on 100% oxygen) and the alveolar-arterial oxygen gradient.
+
+--Input--
+Enter FiO2<-1
+Enter PaCO2<-23
+Enter PaO2<-3
+
+PAO2=(FiO2*(760-47))-(PaCO2/0.8)
+AaDO2=PAO2-PaO2
+
+--Output--
+PAO2-> 275 mm Hg
+AaDO2-> 122 mm Hg
+PAO2 + AaDO2-> mm Hg
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

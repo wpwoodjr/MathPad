@@ -121,7 +121,41 @@ function parseVarNameAndFormat(nameWithSuffix) {
  * @param {string} newValue - The new value to insert (empty string to clear)
  * @returns {string|null} The modified line, or null if marker not found
  */
-function replaceValueOnLine(line, varName, marker, hasLimits, newValue) {
+/**
+ * Build an output line by replacing the value after the marker
+ * Used by both variable outputs and expression outputs
+ * @param {string} line - The original line
+ * @param {number} markerEndIndex - Position after the marker (where value starts)
+ * @param {string} newValue - The new value to insert (or empty to clear)
+ * @param {object} commentInfo - { comment, commentUnquoted } or null
+ * @returns {string} The rebuilt line
+ */
+function buildOutputLine(line, markerEndIndex, newValue, commentInfo = null) {
+    // Determine trailing comment/unit text
+    let trailingPart = '';
+    if (commentInfo && commentInfo.comment) {
+        // Use provided comment info from parsing
+        if (commentInfo.commentUnquoted) {
+            trailingPart = ' ' + commentInfo.comment;
+        } else {
+            trailingPart = ' "' + commentInfo.comment + '"';
+        }
+    } else {
+        // Fall back to extracting quoted comment from line (for backwards compatibility)
+        const afterMarker = line.substring(markerEndIndex);
+        const quotedCommentMatch = afterMarker.match(/"[^"]*"\s*$/);
+        if (quotedCommentMatch) {
+            trailingPart = ' ' + quotedCommentMatch[0].trim();
+        }
+    }
+
+    const beforeValue = line.substring(0, markerEndIndex);
+    const valuePart = newValue ? ' ' + newValue : '';
+
+    return beforeValue + valuePart + trailingPart;
+}
+
+function replaceValueOnLine(line, varName, marker, hasLimits, newValue, commentInfo = null) {
     const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
 
     let markerIndex;
@@ -141,16 +175,40 @@ function replaceValueOnLine(line, varName, marker, hasLimits, newValue) {
 
     if (markerIndex === undefined) return null;
 
-    // Preserve any trailing comment (allow trailing whitespace after comment)
-    const afterMarker = line.substring(markerIndex);
-    const commentMatch = afterMarker.match(/"[^"]*"\s*$/);
-    const comment = commentMatch ? commentMatch[0].trim() : '';
+    return buildOutputLine(line, markerIndex, newValue, commentInfo);
+}
 
-    const beforeValue = line.substring(0, markerIndex);
-    const valuePart = newValue ? ' ' + newValue : '';
-    const commentPart = comment ? ' ' + comment : '';
+/**
+ * Extract numeric value and trailing unit text from output value
+ * For output variables, trailing text like "mm Hg" is treated as a unit comment
+ * @param {string} rhs - The right-hand side text after the marker
+ * @returns {{ valueText: string, unitComment: string|null }}
+ */
+function extractValueAndUnit(rhs) {
+    if (!rhs) return { valueText: '', unitComment: null };
 
-    return beforeValue + valuePart + commentPart;
+    // Match a numeric value at the start:
+    // - Optional negative sign
+    // - Optional $ for money
+    // - Digits with optional commas (grouping)
+    // - Optional decimal part
+    // - Optional % for percentage
+    // - Optional scientific notation
+    // - OR base notation like F#16, 101#2
+    const numMatch = rhs.match(/^(-?\$?[\d,]+(?:\.\d+)?%?(?:[eE][+-]?\d+)?|[0-9a-zA-Z]+#\d+)\s*(.*)$/);
+
+    if (numMatch) {
+        const valueText = numMatch[1];
+        const trailing = numMatch[2].trim();
+        return {
+            valueText,
+            unitComment: trailing || null
+        };
+    }
+
+    // No numeric value found - treat entire rhs as unit comment (for cleared output variables)
+    // This handles cases like "PAO2-> mm Hg" where the value was cleared but unit remains
+    return { valueText: '', unitComment: rhs.trim() || null };
 }
 
 /**
@@ -184,10 +242,22 @@ function parseMarkedLine(line) {
 
         // Determine type and behavior based on marker
         let type, clearBehavior, fullPrecision;
+        let valueText = rhs;
+        let finalComment = comment;
+        let commentUnquoted = false;
+
         if (marker === '->' || marker === '->>') {
             type = VarType.OUTPUT;
             clearBehavior = ClearBehavior.ON_SOLVE;
             fullPrecision = marker === '->>';
+
+            // For output variables, extract trailing unit text as comment
+            const { valueText: extractedValue, unitComment } = extractValueAndUnit(rhs);
+            valueText = extractedValue;
+            if (!finalComment && unitComment) {
+                finalComment = unitComment;
+                commentUnquoted = true;
+            }
         } else if (marker === '<-') {
             type = VarType.INPUT;
             clearBehavior = ClearBehavior.ON_CLEAR;
@@ -204,12 +274,13 @@ function parseMarkedLine(line) {
             type,
             clearBehavior,
             limits,
-            valueText: rhs,
+            valueText,
             base,
             fullPrecision,
             marker,
             format,
-            comment
+            comment: finalComment,
+            commentUnquoted
         };
     }
 
@@ -269,9 +340,22 @@ function parseMarkedLine(line) {
 
             // Determine type based on marker
             let type, clearBehavior;
+            let valueText = rhs;
+            let finalComment = comment;
+            let commentUnquoted = false;
+
             if (marker === '->' || marker === '->>') {
                 type = VarType.OUTPUT;
                 clearBehavior = ClearBehavior.ON_SOLVE;
+
+                // For output variables, extract trailing unit text as comment
+                const { valueText: extractedValue, unitComment } = extractValueAndUnit(rhs);
+                valueText = extractedValue;
+                // Prefer quoted comment if present, otherwise use unit comment
+                if (!finalComment && unitComment) {
+                    finalComment = unitComment;
+                    commentUnquoted = true;
+                }
             } else {
                 type = VarType.STANDARD;
                 clearBehavior = ClearBehavior.NONE;
@@ -283,12 +367,13 @@ function parseMarkedLine(line) {
                 type,
                 clearBehavior,
                 limits,
-                valueText: rhs,
+                valueText,
                 base,
                 fullPrecision: pattern.fullPrecision,
                 marker,
                 format,
-                comment
+                comment: finalComment,
+                commentUnquoted
             };
         } else {
             // Expression output (expression LHS)
@@ -307,14 +392,29 @@ function parseMarkedLine(line) {
                     expression = lhs.substring(exprStart).trim();
                 }
             }
+
+            // For output markers, extract trailing unit text as comment
+            let valueText = rhs;
+            let finalComment = comment;
+            let commentUnquoted = false;
+            if (marker === '->' || marker === '->>') {
+                const { valueText: extractedValue, unitComment } = extractValueAndUnit(rhs);
+                valueText = extractedValue;
+                if (!finalComment && unitComment) {
+                    finalComment = unitComment;
+                    commentUnquoted = true;
+                }
+            }
+
             return {
                 kind: 'expression-output',
                 expression: expression,
                 marker,
-                valueText: rhs,
+                valueText,
                 fullPrecision: pattern.fullPrecision,
                 recalculates: pattern.recalculates,
-                comment
+                comment: finalComment,
+                commentUnquoted
             };
         }
     }
@@ -671,7 +771,8 @@ function setVariableValue(text, varName, value, format = {}) {
             groupDigits
         });
 
-        const newLine = replaceValueOnLine(lines[i], varName, decl.marker, !!decl.limits, formattedValue);
+        const commentInfo = { comment: decl.comment, commentUnquoted: decl.commentUnquoted };
+        const newLine = replaceValueOnLine(lines[i], varName, decl.marker, !!decl.limits, formattedValue, commentInfo);
         if (newLine !== null) {
             lines[i] = newLine;
             modified = true;
@@ -708,7 +809,8 @@ function clearVariables(text, clearType = 'input') {
             (clearType === 'output' && clearBehavior === ClearBehavior.ON_SOLVE);
 
         if (shouldClear && decl.valueText) {
-            const newLine = replaceValueOnLine(lines[i], decl.name, decl.marker, !!decl.limits, '');
+            const commentInfo = { comment: decl.comment, commentUnquoted: decl.commentUnquoted };
+            const newLine = replaceValueOnLine(lines[i], decl.name, decl.marker, !!decl.limits, '', commentInfo);
             if (newLine !== null) {
                 lines[i] = newLine;
             }
@@ -744,7 +846,9 @@ function findExpressionOutputs(text) {
                 startLine: i,
                 fullPrecision: result.fullPrecision,
                 recalculates: result.recalculates,
-                existingValue: result.valueText
+                existingValue: result.valueText,
+                comment: result.comment,
+                commentUnquoted: result.commentUnquoted
             });
         }
     }
@@ -769,11 +873,16 @@ function clearExpressionOutputs(text) {
             const markerIdx = cleanLine.lastIndexOf(output.marker);
             if (markerIdx !== -1) {
                 const beforeMarker = line.substring(0, markerIdx + output.marker.length);
-                // Preserve trailing comment if any
-                const afterMarker = line.substring(markerIdx + output.marker.length);
-                const commentMatch = afterMarker.match(/"[^"]*"\s*$/);
-                const comment = commentMatch ? ' ' + commentMatch[0].trim() : '';
-                lines[output.startLine] = beforeMarker + comment;
+                // Use parsed comment info
+                let trailingText = '';
+                if (output.comment) {
+                    if (output.commentUnquoted) {
+                        trailingText = ' ' + output.comment;
+                    } else {
+                        trailingText = ' "' + output.comment + '"';
+                    }
+                }
+                lines[output.startLine] = beforeMarker + trailingText;
             }
         }
     }
@@ -1090,7 +1199,7 @@ if (typeof module !== 'undefined' && module.exports) {
         VarType, ClearBehavior, expandLiterals, expandLineLiterals,
         parseVarNameAndFormat, parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
-        setVariableValue, clearVariables, findEquations,
+        buildOutputLine, setVariableValue, clearVariables, findEquations,
         findExpressionOutputs, clearExpressionOutputs,
         findInlineEvaluations, replaceInlineEvaluation,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext
