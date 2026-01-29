@@ -301,8 +301,13 @@ function solveEquations(text, context, declarations) {
     }
 
     // Evaluate expression outputs (expr:, expr::, expr->, expr->>)
+    // For : and :: (non-recalculating), skip if there's already a value
     const exprOutputs = findExpressionOutputs(text);
     for (const output of exprOutputs) {
+        // Skip non-recalculating outputs that already have a value
+        if (!output.recalculates && output.existingValue) {
+            continue;
+        }
         try {
             const expandedExpr = expandLiterals(output.text);
             const ast = parseExpression(expandedExpr);

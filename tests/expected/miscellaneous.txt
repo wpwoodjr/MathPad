@@ -261,3 +261,52 @@ n: 360 "number of payments (30 years)"
 "Monthly interest rate from annual"
 yint = mint * 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test text on line before equation output"
+
+Enter x<- 7
+Enter y: 3
+
+Result x+y: 10
+x+y: 10
+
+Result x+y-> 10
+x+y-> 10
+
+Result x+y->> 10
+x+y->> 10
+
+Result x+y:: 10
+x+y:: 10
+
+h/w = 16/9
+d*d = w*w + h*h
+
+Enter d: 6.6 "diagonal"
+height h-> 5.75
+width w->> 3.235724181574889
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test : and :: preserve value on expression output"
+
+Enter x: 7
+Enter y: 3
+
+Result x+y: 8
+x+y: 8
+
+Result x+y-> 10
+x+y-> 10
+
+Result x+y->> 10
+x+y->> 10
+
+Result x+y:: 8
+x+y:: 8
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

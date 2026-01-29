@@ -292,9 +292,24 @@ function parseMarkedLine(line) {
             };
         } else {
             // Expression output (expression LHS)
+            // Extract just the expression part if there's label text before it
+            // Find the first operator to locate where the expression starts
+            const operatorMatch = lhs.match(/[+\-*\/\(\)\^]/);
+            let expression = lhs;
+            if (operatorMatch) {
+                const opIdx = operatorMatch.index;
+                // Look back from the operator to find the start of the expression
+                // (the identifier or number immediately before the operator)
+                const beforeOp = lhs.substring(0, opIdx);
+                const tokenMatch = beforeOp.match(/(\w+(?:[$%]|#\d+)?|\d+\.?\d*)\s*$/);
+                if (tokenMatch) {
+                    const exprStart = beforeOp.length - tokenMatch[0].length;
+                    expression = lhs.substring(exprStart).trim();
+                }
+            }
             return {
                 kind: 'expression-output',
-                expression: lhs,
+                expression: expression,
                 marker,
                 valueText: rhs,
                 fullPrecision: pattern.fullPrecision,
