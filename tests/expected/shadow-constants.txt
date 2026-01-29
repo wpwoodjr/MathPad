@@ -80,7 +80,7 @@ e: 2.71828182845905
 Category = "Unfiled"; Secret = 0; Selected = 1
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved 3 equations"; StatusIsError = 0
+Status = "Solved with errors: Line 10: Variable 'e' has no value to output"; StatusIsError = 1
 "Screen Size with e-> output"
 
 h/w = 16/9
@@ -90,9 +90,40 @@ d = hypot(w; h)
 d = 6.3
 h-> 5.4909
 w-> 3.0886
-e-> 2.7183
+e->
 
 "--- Reference Constants and Functions ---"
-e: 2.71828182845905
 hypot(a;b) = sqrt(a**2 + b**2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"Shadowing"
+
+h/w = 16/9
+d = hypot(w; h)
+
+d: 6.4 "diagonal"
+h-> 5.5781
+w-> 3.1377 "width"
+
+"--- Reference Constants and Functions ---"
+hypot(a;b) = sqrt(a**2 + b**2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 3: Variable 'h' has no value to output"; StatusIsError = 1
+"test h-> with shadow constants on"
+
+h->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"test h: with no value and shadow constants on"
+
+h:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

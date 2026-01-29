@@ -378,9 +378,8 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                 // Has a computed/solved value - use it
                 const value = context.variables.get(info.name);
                 text = setVariableValue(text, info.name, value, format);
-            } else if (context.constants.has(info.name)) {
-                // No computed value but constant exists - output the constant
-                // (even if shadowed, we can still output the constant value)
+            } else if (context.constants.has(info.name) && !context.shadowedConstants.has(info.name)) {
+                // No computed value but constant exists and is not shadowed - output the constant
                 const value = context.constants.get(info.name);
                 context.usedConstants.add(info.name); // Track usage
                 text = setVariableValue(text, info.name, value, format);
