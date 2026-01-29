@@ -121,12 +121,12 @@ x2->`,
                 text: `"Fifth degree polynomial"
 "Compute all 5 roots"
 
-c5: 1
-c4: -2
-c3: -10
-c2: 20
-c1: 9
-c0: -14
+c5 = 1
+c4 = -2
+c3 = -10
+c2 = 20
+c1 = 9
+c0 = -14
 
 f(x) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 

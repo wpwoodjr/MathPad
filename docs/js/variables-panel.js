@@ -12,6 +12,7 @@ class VariablesPanel {
         this.editor = editor;
         this.declarations = new Map(); // keyed by lineIndex
         this.changeListeners = [];
+        this.solveCallback = null;
         this.inputElements = new Map();
 
         // Handle Tab key to cycle through inputs
@@ -107,9 +108,10 @@ class VariablesPanel {
                 toAdd.push(info);
             } else {
                 const existing = this.declarations.get(lineIndex);
-                // If name, marker, limits, or comment changed, remove old row and add new one
+                // If name, marker, format, limits, or comment changed, remove old row and add new one
                 const limitsChanged = JSON.stringify(existing.declaration.limits) !== JSON.stringify(info.declaration.limits);
-                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || limitsChanged || existing.declaration.comment !== info.declaration.comment) {
+                const formatChanged = existing.declaration.format !== info.declaration.format;
+                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment) {
                     toRemove.push(lineIndex);
                     toAdd.push(info);
                 } else if (this.declarationChanged(existing, info)) {
@@ -217,6 +219,30 @@ class VariablesPanel {
             valueElement = document.createElement('span');
             valueElement.className = 'variable-value-readonly';
             valueElement.textContent = this.formatValueForDisplay(info);
+        }
+
+        // Add solve button for editable variables with values (before name)
+        if (isEditable && info.valueText) {
+            const solveBtn = document.createElement('button');
+            solveBtn.className = 'variable-solve-btn';
+            solveBtn.textContent = '⟲';
+            solveBtn.title = 'Clear and solve';
+            solveBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Clear the value
+                valueElement.value = '';
+                this.handleValueChange(info.lineIndex, '');
+                // Trigger solve
+                if (this.solveCallback) {
+                    this.solveCallback();
+                }
+            });
+            row.appendChild(solveBtn);
+        } else {
+            // Placeholder for alignment
+            const placeholder = document.createElement('span');
+            placeholder.className = 'variable-solve-btn-placeholder';
+            row.appendChild(placeholder);
         }
 
         row.appendChild(nameLabel);
@@ -402,6 +428,13 @@ class VariablesPanel {
      */
     onValueChange(callback) {
         this.changeListeners.push(callback);
+    }
+
+    /**
+     * Register a callback for solve requests
+     */
+    onSolve(callback) {
+        this.solveCallback = callback;
     }
 
     /**

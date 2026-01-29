@@ -976,7 +976,7 @@ body.panel-resizing * {
 
 .variable-value-input {
     flex: 1;
-    max-width: 300px;
+    max-width: 200px;
     padding: 4px 8px;
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
@@ -996,7 +996,7 @@ body.panel-resizing * {
 
 .variable-value-readonly {
     flex: 1;
-    max-width: 300px;
+    max-width: 200px;
     padding: 0 8px;
     color: var(--text-primary);
     font-family: var(--font-mono);
@@ -1015,6 +1015,37 @@ body.panel-resizing * {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.variable-solve-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    margin-right: 2px;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: opacity 0.15s, background 0.15s;
+    width: 20px;
+    flex-shrink: 0;
+}
+
+.variable-solve-btn-placeholder {
+    width: 20px;
+    flex-shrink: 0;
+    margin-right: 2px;
+}
+
+.variable-solve-btn:hover {
+    opacity: 1;
+    background: var(--bg-tertiary);
+}
+
+.variable-solve-btn:active {
+    background: var(--accent-primary);
+    color: white;
 }
 
 /* Print styles */

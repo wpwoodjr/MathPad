@@ -293,6 +293,10 @@ function createEditorForRecord(record) {
         editor.setCursorPosition(Math.max(0, cursorPos + delta));
     });
 
+    variablesManager.onSolve(() => {
+        handleSolve();
+    });
+
     // Set up divider drag
     setupPanelResizer(divider, formulasPanel, variablesPanel);
 
