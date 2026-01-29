@@ -76,6 +76,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh; /* Dynamic viewport height - adjusts for mobile URL bar */
 }
 
 /* Header */
@@ -802,6 +803,7 @@ button {
         left: -220px;
         top: var(--header-height);
         height: calc(100vh - var(--header-height));
+        height: calc(100dvh - var(--header-height)); /* Dynamic viewport height */
         z-index: 100;
         transition: left 0.3s ease;
         width: var(--sidebar-width);
