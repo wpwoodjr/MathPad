@@ -866,9 +866,19 @@ button {
         padding: 0 6px 0 4px;
     }
 
-    /* Adjust header padding */
+    /* Keep header fixed at top on mobile */
     .app-header {
         padding: 0 8px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+    }
+
+    /* Add padding to account for fixed header */
+    .main-content {
+        padding-top: var(--header-height);
     }
 
     .header-left {
