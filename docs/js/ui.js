@@ -768,6 +768,7 @@ function setupEventListeners() {
         if (editorInfo) {
             editorInfo.editor.textarea.focus();
             document.execCommand('undo');
+            editorInfo.editor.textarea.blur();
         }
     });
 
@@ -777,6 +778,7 @@ function setupEventListeners() {
         if (editorInfo) {
             editorInfo.editor.textarea.focus();
             document.execCommand('redo');
+            editorInfo.editor.textarea.blur();
         }
     });
 

@@ -209,8 +209,11 @@ class SimpleEditor {
         this.textarea.addEventListener('keydown', (e) => this.onKeyDown(e));
         this.textarea.addEventListener('focus', () => {
             // Scroll into view after keyboard appears on mobile
+            // Only scroll if still focused (skip for programmatic focus/blur)
             setTimeout(() => {
-                this.textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (document.activeElement === this.textarea) {
+                    this.textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }, 300);
         });
 
