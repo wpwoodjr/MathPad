@@ -330,3 +330,39 @@ PAO2-> 684.25 mm Hg
 AaDO2-> 681.25 mm Hg
 PAO2 + AaDO2-> 1365.5 mm Hg
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"BSA/BMI"
+
+--Input--
+Enter height (in)    ht<-62.5
+Enter weight (lb)    wt<-139.5
+
+BSA=sqrt((ht*wt)/3131)
+BMI=(wt*703)/(ht*ht)
+
+--Output--
+BSA-> 1.67 m2
+BMI-> 25.11 kg/m2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 1 equation"; StatusIsError = 0
+"Label text with parentheses vs expressions"
+
+"Labels with parentheses - should be variable declarations"
+Input (test) a<- 5
+Value (m/s) b: 10
+Result (%) c-> 15
+
+"Expressions - should be expression outputs"
+sqrt(a)-> 2.24
+a + b-> 15
+(a * b)-> 50
+
+"Mixed - equation then labeled output"
+c = a + b
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

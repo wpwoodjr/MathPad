@@ -307,11 +307,23 @@ function parseMarkedLine(line) {
         // Check if LHS is a single variable (possibly with label text before it)
         // Single variable: word chars, optionally ending with $, %, or #digits
         // May have optional [limits] for declarations
-        // Allow label text before (e.g., "Enter x<-")
+        // Allow label text before (e.g., "Enter x<-" or "Enter height (in) ht<-")
         // Match the variable at the END of the LHS (after any label text)
         const varMatch = lhs.match(/\b(\w+(?:[$%]|#\d+)?)(\s*\[\s*([^\]]+)\s*:\s*([^\]]+)\s*\])?$/);
-        const hasOperators = /[+\-*\/\(\)\^]/.test(lhs);
-        const isSingleVar = varMatch && !hasOperators;
+
+        // Check if this is an expression (has operators connecting to the variable)
+        // vs just label text with parentheses like "Enter height (in) ht"
+        // An expression has a math operator or opening paren immediately before the variable
+        // Note: ) alone doesn't count - "Enter height (in) ht" has ) then space then variable
+        let isExpression = false;
+        if (varMatch && marker !== '<-') {
+            // Only check for expressions on non-input markers (input <- is always a declaration)
+            const beforeVar = lhs.substring(0, varMatch.index).trimEnd();
+            // Check for: math operators OR opening paren (function call like func(x))
+            // Opening paren indicates function call; closing paren with no space before var is ok
+            isExpression = /[+\-*\/\^(]$/.test(beforeVar);
+        }
+        const isSingleVar = varMatch && !isExpression;
 
         if (marker === '<-') {
             // Input variable - MUST be single variable
