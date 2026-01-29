@@ -76,7 +76,7 @@ x2->`,
 "Here we develop a recursive solution"
 "We are limited to how high n can go by the recursion limit"
   basel(low; high) = if(low > high; 0; 1/low**2 + basel(low+1; high))
-  basel(1; 2000)->
+  basel(1; 750)->
 
 "Here we develop a solution using the built-in sum function"
 "Since sum is not subject to recursion limits we can sum to much higher n"

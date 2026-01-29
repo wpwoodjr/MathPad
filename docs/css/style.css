@@ -841,6 +841,7 @@ button {
     #btn-reset {
         display: none;
     }
+
 }
 
 @media (max-width: 480px) {
@@ -892,7 +893,7 @@ button {
 }
 
 .panel-divider {
-    height: 6px;
+    height: 9px;
     background: var(--bg-tertiary);
     cursor: row-resize;
     border-top: 1px solid var(--border-color);
@@ -904,6 +905,24 @@ button {
 .panel-divider:hover,
 .panel-divider.dragging {
     background: var(--accent-primary);
+}
+
+/* Larger touch target for panel divider on mobile */
+@media (max-width: 768px) {
+    .panel-divider {
+        height: 12px;
+        position: relative;
+    }
+
+    /* Extended touch area using pseudo-element */
+    .panel-divider::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -10px;
+        bottom: -10px;
+    }
 }
 
 /* Force cursor during panel resize */
