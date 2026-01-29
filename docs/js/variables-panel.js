@@ -88,7 +88,8 @@ class VariablesPanel {
                         clearBehavior: output.recalculates ? ClearBehavior.ON_SOLVE : ClearBehavior.NONE,
                         fullPrecision: output.fullPrecision,
                         format: null,
-                        comment: null
+                        comment: output.comment,
+                        commentUnquoted: output.commentUnquoted
                     },
                     lineIndex: output.startLine,
                     value: null,
