@@ -221,17 +221,19 @@ class VariablesPanel {
             valueElement.textContent = this.formatValueForDisplay(info);
         }
 
-        // Add solve button for editable variables with values (before name)
-        if (isEditable && info.valueText) {
+        // Add solve button for editable variables (before name)
+        if (isEditable) {
             const solveBtn = document.createElement('button');
             solveBtn.className = 'variable-solve-btn';
             solveBtn.textContent = '⟲';
             solveBtn.title = 'Clear and solve';
             solveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                // Clear the value
-                valueElement.value = '';
-                this.handleValueChange(info.lineIndex, '');
+                // Clear the value if present
+                if (info.valueText) {
+                    valueElement.value = '';
+                    this.handleValueChange(info.lineIndex, '');
+                }
                 // Trigger solve
                 if (this.solveCallback) {
                     this.solveCallback();
@@ -239,7 +241,7 @@ class VariablesPanel {
             });
             row.appendChild(solveBtn);
         } else {
-            // Placeholder for alignment
+            // Placeholder for alignment (non-editable variables)
             const placeholder = document.createElement('span');
             placeholder.className = 'variable-solve-btn-placeholder';
             row.appendChild(placeholder);

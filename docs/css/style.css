@@ -1035,6 +1035,7 @@ body.panel-resizing * {
 .variable-solve-btn-placeholder {
     width: 20px;
     flex-shrink: 0;
+    padding: 2px 4px;
     margin-right: 2px;
 }
 

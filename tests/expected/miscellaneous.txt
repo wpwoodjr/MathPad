@@ -242,3 +242,22 @@ f(x) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x*x + c1*x + c0
 0 = f(x1)
 x1[10:20]->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 14: Computed value 0.0612499165601951 is outside limits [0, 0.01] for 'yint'"; StatusIsError = 1
+"Time Value of Money - Limits too narrow (error expected)"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$607.61 "monthly payment"
+pv$: $100,000.00 "loan amount"
+fv$: $0.00 "future value (balloon payment)"
+yint%[0:.01]: "annual interest rate % (limits 0-1% too narrow for 6.12%)"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+yint = mint * 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

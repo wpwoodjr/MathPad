@@ -249,6 +249,26 @@ function solveEquations(text, context, declarations) {
                             const subAsts = new Map([...substitutions].map(([k, v]) => [k, v.ast]));
                             let ast = substituteInAST(def.expressionAST, subAsts);
                             const value = evaluate(ast, context);
+
+                            // Check limits if defined
+                            if (varInfo?.declaration?.limits) {
+                                try {
+                                    const lowAST = parseExpression(varInfo.declaration.limits.lowExpr);
+                                    const highAST = parseExpression(varInfo.declaration.limits.highExpr);
+                                    const low = evaluate(lowAST, context);
+                                    const high = evaluate(highAST, context);
+                                    if (value < low || value > high) {
+                                        solveFailures.set(def.variable, {
+                                            error: `Computed value ${value} is outside limits [${low}, ${high}]`,
+                                            line: eq.startLine
+                                        });
+                                        continue;
+                                    }
+                                } catch (e) {
+                                    // Ignore limit evaluation errors
+                                }
+                            }
+
                             context.setVariable(def.variable, value);
                             computedValues.set(def.variable, value);
                             changed = true;
@@ -365,15 +385,15 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                 context.usedConstants.add(info.name); // Track usage
                 text = setVariableValue(text, info.name, value, format);
             } else {
-                // Output declaration with no value is an error
-                const decl = info.declaration;
-                const isOutput = decl.clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
-                if (isOutput) {
-                    // Use specific solve failure message if available
-                    const failure = solveFailures.get(info.name);
-                    if (failure) {
-                        errors.push(`Line ${failure.line + 1}: ${failure.error} for '${info.name}'`);
-                    } else {
+                // Check if there was a solve failure for this variable (e.g., limits violation)
+                const failure = solveFailures.get(info.name);
+                if (failure) {
+                    errors.push(`Line ${failure.line + 1}: ${failure.error} for '${info.name}'`);
+                } else {
+                    // Output declaration with no value is an error
+                    const decl = info.declaration;
+                    const isOutput = decl.clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
+                    if (isOutput) {
                         errors.push(`Line ${info.lineIndex + 1}: Variable '${info.name}' has no value to output`);
                     }
                 }
