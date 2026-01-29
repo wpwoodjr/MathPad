@@ -207,7 +207,13 @@ class VariablesPanel {
             valueElement.value = this.formatValueForDisplay(info);
             // Update formula pane on blur (when user is done typing), not during typing
             valueElement.addEventListener('blur', (e) => this.handleValueChange(info.lineIndex, e.target.value));
-            valueElement.addEventListener('focus', (e) => e.target.select());
+            valueElement.addEventListener('focus', (e) => {
+                e.target.select();
+                // Scroll into view after keyboard appears on mobile
+                setTimeout(() => {
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            });
             // Also handle Enter key to commit the value
             valueElement.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {

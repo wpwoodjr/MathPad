@@ -928,7 +928,7 @@ body.panel-resizing * {
     height: 50%;
     min-height: 80px;
     background: var(--bg-secondary);
-    overflow-y: auto;
+    overflow: auto;
     border-top: 1px solid var(--border-color);
     flex-shrink: 0;
 }
@@ -957,6 +957,7 @@ body.panel-resizing * {
     gap: 8px;
     border-radius: 3px;
     min-height: 35px;
+    white-space: nowrap;
 }
 
 .variable-row:hover {
@@ -968,6 +969,7 @@ body.panel-resizing * {
     font-family: var(--font-mono);
     font-size: 15px;
     color: var(--success-color);
+    flex-shrink: 0;
 }
 
 .variable-row[data-type="output"] .variable-name {
@@ -1025,9 +1027,7 @@ body.panel-resizing * {
     font-style: italic;
     padding-left: 8px;
     line-height: 27px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .variable-solve-btn {
