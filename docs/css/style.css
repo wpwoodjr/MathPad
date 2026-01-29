@@ -293,6 +293,7 @@ button {
 .sidebar-actions {
     padding: 12px;
     margin-top: auto;
+    flex-shrink: 0;
     border-top: 1px solid var(--border-color);
 }
 
@@ -834,14 +835,6 @@ button {
     .header-right {
         gap: 4px;
     }
-
-    /* Hide Import/Export/Reset on mobile - access via sidebar */
-    #btn-import,
-    #btn-export,
-    #btn-reset {
-        display: none;
-    }
-
 }
 
 @media (max-width: 480px) {
