@@ -647,13 +647,14 @@ button {
 
 /* Status Bar */
 .status-bar {
-    height: var(--status-height);
-    padding: 0 16px;
+    min-height: var(--status-height);
+    padding: 4px 16px;
     display: flex;
     align-items: center;
     background-color: var(--accent-primary);
     color: white;
     font-size: 12px;
+    flex-wrap: wrap;
 }
 
 .status-bar.error {

@@ -68,7 +68,8 @@ function initUI(data) {
         }
     }
 
-    setStatus('Ready');
+    const count = data.records.length;
+    setStatus(`Loaded ${count} record${count !== 1 ? 's' : ''}`);
 }
 
 /**
@@ -761,6 +762,24 @@ function setupEventListeners() {
     // Reset button
     document.getElementById('btn-reset')?.addEventListener('click', handleReset);
 
+    // Undo button
+    document.getElementById('btn-undo')?.addEventListener('click', () => {
+        const editorInfo = UI.editors.get(UI.currentRecordId);
+        if (editorInfo) {
+            editorInfo.editor.textarea.focus();
+            document.execCommand('undo');
+        }
+    });
+
+    // Redo button
+    document.getElementById('btn-redo')?.addEventListener('click', () => {
+        const editorInfo = UI.editors.get(UI.currentRecordId);
+        if (editorInfo) {
+            editorInfo.editor.textarea.focus();
+            document.execCommand('redo');
+        }
+    });
+
     // Solve button
     document.getElementById('btn-solve')?.addEventListener('click', handleSolve);
 
@@ -868,7 +887,8 @@ async function handleFileSelect(e) {
             if (noEditorMsg) noEditorMsg.style.display = 'block';
         }
 
-        setStatus(`Imported from ${file.name}`, false, false);
+        const count = UI.data.records.length;
+        setStatus(`Imported ${count} record${count !== 1 ? 's' : ''} from ${file.name}`, false, false);
     } catch (err) {
         setStatus('Import failed: ' + err.message, true, false);
     }
