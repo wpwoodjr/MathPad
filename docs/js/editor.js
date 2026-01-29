@@ -207,6 +207,12 @@ class SimpleEditor {
         this.textarea.addEventListener('input', () => this.onInput());
         this.textarea.addEventListener('scroll', () => this.onScroll());
         this.textarea.addEventListener('keydown', (e) => this.onKeyDown(e));
+        this.textarea.addEventListener('focus', () => {
+            // Scroll into view after keyboard appears on mobile
+            setTimeout(() => {
+                this.textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        });
 
         // Update line numbers on resize (affects wrapping)
         this.resizeObserver = new ResizeObserver(() => this.updateLineNumbers());

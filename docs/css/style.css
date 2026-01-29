@@ -786,6 +786,18 @@ button {
     margin: 16px 0;
 }
 
+.settings-modal-footer {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.settings-modal-footer button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .details-panel {

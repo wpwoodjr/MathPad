@@ -741,6 +741,10 @@ function renderSettingsModal() {
             <button onclick="duplicateCurrentRecord(); toggleSettings();" class="btn-secondary">Duplicate</button>
             <button onclick="deleteCurrentRecord(); toggleSettings();" class="btn-danger">Delete</button>
         </div>
+
+        <div class="settings-modal-footer">
+            <button onclick="toggleSettings()" class="btn-primary">Done</button>
+        </div>
     `;
 }
 
