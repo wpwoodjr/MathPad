@@ -229,8 +229,10 @@ class VariablesPanel {
             solveBtn.title = 'Clear and solve';
             solveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
+                // Get current info from declarations (may have been replaced after solve)
+                const currentInfo = this.declarations.get(info.lineIndex) || info;
                 // Clear the value if present
-                if (info.valueText) {
+                if (currentInfo.valueText) {
                     valueElement.value = '';
                     this.handleValueChange(info.lineIndex, '');
                 }
