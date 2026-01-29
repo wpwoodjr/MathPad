@@ -858,8 +858,8 @@ button {
         z-index: 100;
     }
 
-    /* Add padding to account for fixed header */
-    .main-content {
+    /* Add padding to app-container to account for fixed header */
+    .app-container {
         padding-top: var(--header-height);
     }
 }
