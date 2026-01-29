@@ -390,18 +390,26 @@ function parseMarkedLine(line) {
         } else {
             // Expression output (expression LHS)
             // Extract just the expression part if there's label text before it
-            // Find the first operator to locate where the expression starts
-            const operatorMatch = lhs.match(/[+\-*\/\(\)\^]/);
             let expression = lhs;
-            if (operatorMatch) {
-                const opIdx = operatorMatch.index;
-                // Look back from the operator to find the start of the expression
-                // (the identifier or number immediately before the operator)
-                const beforeOp = lhs.substring(0, opIdx);
-                const tokenMatch = beforeOp.match(/(\w+(?:[$%]|#\d+)?|\d+\.?\d*)\s*$/);
-                if (tokenMatch) {
-                    const exprStart = beforeOp.length - tokenMatch[0].length;
-                    expression = lhs.substring(exprStart).trim();
+
+            // Check for ": " as label delimiter (e.g., "result: (a * b)")
+            const colonSpaceIdx = lhs.lastIndexOf(': ');
+            if (colonSpaceIdx !== -1) {
+                // Use everything after ": " as the expression
+                expression = lhs.substring(colonSpaceIdx + 2).trim();
+            } else {
+                // Find the first operator to locate where the expression starts
+                const operatorMatch = lhs.match(/[+\-*\/\(\)\^]/);
+                if (operatorMatch) {
+                    const opIdx = operatorMatch.index;
+                    // Look back from the operator to find the start of the expression
+                    // (the identifier or number immediately before the operator)
+                    const beforeOp = lhs.substring(0, opIdx);
+                    const tokenMatch = beforeOp.match(/(\w+(?:[$%]|#\d+)?|\d+\.?\d*)\s*$/);
+                    if (tokenMatch) {
+                        const exprStart = beforeOp.length - tokenMatch[0].length;
+                        expression = lhs.substring(exprStart).trim();
+                    }
                 }
             }
 
@@ -903,6 +911,79 @@ function clearExpressionOutputs(text) {
 }
 
 /**
+ * Try to extract a valid equation from a line that may have label text before/after.
+ * For example: "equation c = a + b test" -> "c = a + b"
+ * Returns the extracted equation text, or the original if it parses fine or can't be fixed.
+ */
+function extractEquationFromLine(lineText) {
+    // First, check if the line parses correctly as-is
+    const eqMatch = lineText.match(/^(.+?)=(.+)$/);
+    if (!eqMatch) return lineText;
+
+    const leftText = eqMatch[1].trim();
+    const rightText = eqMatch[2].trim();
+
+    // Try parsing both sides
+    let leftOk = false, rightOk = false;
+    try {
+        parseExpression(leftText);
+        leftOk = true;
+    } catch (e) {}
+    try {
+        parseExpression(rightText);
+        rightOk = true;
+    } catch (e) {}
+
+    // If both sides parse, no extraction needed
+    if (leftOk && rightOk) return lineText;
+
+    // Try to extract the actual equation
+    // For LHS: find the last identifier (possibly with function call) before =
+    // For RHS: find where the valid expression ends
+    let extractedLeft = leftText;
+    let extractedRight = rightText;
+
+    if (!leftOk) {
+        // Find start of LHS: look for last identifier or function call start
+        // Pattern: identifier (possibly with $ or %) followed by optional function call
+        const lhsMatch = leftText.match(/([a-zA-Z_][\w$%]*(?:\s*\([^)]*\))?)\s*$/);
+        if (lhsMatch) {
+            extractedLeft = lhsMatch[1];
+        }
+    }
+
+    if (!rightOk) {
+        // Find end of RHS: try to parse incrementally and find where it breaks
+        // Simple approach: look for trailing word that's not part of expression
+        const tokens = rightText.split(/\s+/);
+        for (let i = tokens.length; i > 0; i--) {
+            const candidate = tokens.slice(0, i).join(' ');
+            try {
+                parseExpression(candidate);
+                extractedRight = candidate;
+                break;
+            } catch (e) {
+                // Try shorter
+            }
+        }
+    }
+
+    // Verify the extracted equation parses
+    const extracted = extractedLeft + ' = ' + extractedRight;
+    try {
+        const finalMatch = extracted.match(/^(.+?)=(.+)$/);
+        if (finalMatch) {
+            parseExpression(finalMatch[1].trim());
+            parseExpression(finalMatch[2].trim());
+            return extracted;
+        }
+    } catch (e) {}
+
+    // Couldn't extract a valid equation, return original
+    return lineText;
+}
+
+/**
  * Find equations in text (lines or blocks with = that are not variable declarations)
  */
 function findEquations(text) {
@@ -985,8 +1066,10 @@ function findEquations(text) {
                 if ((colonIdx === -1 || eqIdx < colonIdx) &&
                     (arrowInIdx === -1 || eqIdx < arrowInIdx) &&
                     (arrowOutIdx === -1 || eqIdx < arrowOutIdx)) {
+                    // Extract the equation, handling lines with label text before/after
+                    const eqText = extractEquationFromLine(cleanLine.trim());
                     equations.push({
-                        text: cleanLine.trim(),
+                        text: eqText,
                         startLine: i,
                         endLine: i,
                         isBraced: false,
