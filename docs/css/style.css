@@ -872,11 +872,12 @@ button {
     }
 
     .header-left {
-        gap: 8px;
+        gap: 4px;
     }
 
     .app-title {
         font-size: 16px;
+        margin-right: 8px;
     }
 }
 
