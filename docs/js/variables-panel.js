@@ -217,7 +217,7 @@ class VariablesPanel {
                 this.lastEditedVar = info.name;
                 // Scroll into view after keyboard appears on mobile
                 setTimeout(() => {
-                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }, 300);
             });
             // Also handle Enter key to commit the value
