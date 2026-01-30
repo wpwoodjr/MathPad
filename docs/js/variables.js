@@ -220,8 +220,28 @@ function extractValueAndUnit(rhs) {
  * - :, :: with single variable LHS: declaration
  * - ->, ->> with single variable LHS: output variable declaration
  * - :, ::, ->, ->> with expression LHS: expression output
+ *
+ * This function delegates to the grammar-based LineParser in line-parser.js.
+ * The LineParser uses tokenization for more reliable parsing than regex.
  */
 function parseMarkedLine(line) {
+    // Use the grammar-based parser from line-parser.js
+    // The LineParser class is loaded globally from line-parser.js
+    if (typeof LineParser !== 'undefined') {
+        const parser = new LineParser(line);
+        return parser.parse();
+    }
+
+    // Fallback for environments where LineParser isn't loaded
+    // (This preserves backwards compatibility)
+    return parseMarkedLineLegacy(line);
+}
+
+/**
+ * Legacy regex-based parseMarkedLine implementation
+ * Kept for backwards compatibility and as fallback
+ */
+function parseMarkedLineLegacy(line) {
     // Extract trailing comment (text in double quotes at end of line) before cleaning
     const trailingCommentMatch = line.match(/"([^"]*)"\s*$/);
     const comment = trailingCommentMatch ? trailingCommentMatch[1] : null;
@@ -1292,7 +1312,7 @@ function escapeRegex(str) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         VarType, ClearBehavior, expandLiterals, expandLineLiterals,
-        parseVarNameAndFormat, parseMarkedLine, parseVariableLine, parseAllVariables,
+        parseVarNameAndFormat, parseMarkedLine, parseMarkedLineLegacy, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         buildOutputLine, setVariableValue, clearVariables, findEquations,
         findExpressionOutputs, clearExpressionOutputs,

@@ -20,7 +20,12 @@ const TokenType = {
     COMMENT: 'COMMENT',
     NEWLINE: 'NEWLINE',
     EOF: 'EOF',
-    ERROR: 'ERROR'
+    ERROR: 'ERROR',
+    // Variable declaration markers
+    ARROW_LEFT: 'ARROW_LEFT',       // <-
+    ARROW_RIGHT: 'ARROW_RIGHT',     // ->
+    ARROW_FULL: 'ARROW_FULL',       // ->>
+    DOUBLE_COLON: 'DOUBLE_COLON'    // ::
 };
 
 // AST Node types
@@ -162,23 +167,38 @@ class Tokenizer {
         const startCol = this.col;
         const ch = this.peek();
         const ch2 = this.peek(1);
+        const ch3 = this.peek(2);
 
-        // Two-character operators
+        // Check three-character operators FIRST
+        if (ch === '-' && ch2 === '>' && ch3 === '>') {
+            this.advance();
+            this.advance();
+            this.advance();
+            return this.makeToken(TokenType.ARROW_FULL, '->>', startLine, startCol);
+        }
+
+        // Two-character operators (check longer patterns first within this group)
         const twoChar = ch + (ch2 || '');
-        const twoCharOps = ['**', '==', '!=', '<=', '>=', '<<', '>>', '&&', '||', '^^', '<-', '->', '::', '>>', '->'];
 
+        // Variable declaration markers get their own token types
+        if (twoChar === '<-') {
+            this.advance();
+            this.advance();
+            return this.makeToken(TokenType.ARROW_LEFT, '<-', startLine, startCol);
+        }
+        if (twoChar === '->') {
+            this.advance();
+            this.advance();
+            return this.makeToken(TokenType.ARROW_RIGHT, '->', startLine, startCol);
+        }
+        // Note: :: is handled in the main tokenize() loop for COLON
+
+        // Other two-character operators
+        const twoCharOps = ['**', '==', '!=', '<=', '>=', '<<', '>>', '&&', '||', '^^'];
         if (twoCharOps.includes(twoChar)) {
             this.advance();
             this.advance();
             return this.makeToken(TokenType.OPERATOR, twoChar, startLine, startCol);
-        }
-
-        // Check for ->> (three char)
-        if (ch === '-' && ch2 === '>' && this.peek(2) === '>') {
-            this.advance();
-            this.advance();
-            this.advance();
-            return this.makeToken(TokenType.OPERATOR, '->>', startLine, startCol);
         }
 
         // Single-character operators
@@ -275,11 +295,11 @@ class Tokenizer {
 
             // Colon (variable declaration)
             if (ch === ':') {
-                // Check for ::
+                // Check for :: (full precision marker)
                 if (this.peek(1) === ':') {
                     this.advance();
                     this.advance();
-                    this.tokens.push(this.makeToken(TokenType.OPERATOR, '::', startLine, startCol));
+                    this.tokens.push(this.makeToken(TokenType.DOUBLE_COLON, '::', startLine, startCol));
                 } else {
                     this.advance();
                     this.tokens.push(this.makeToken(TokenType.COLON, ':', startLine, startCol));

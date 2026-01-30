@@ -35,6 +35,14 @@ function loadModules() {
     global.tokenize = parser.tokenize;
     global.parseExpression = parser.parseExpression;
 
+    // Line Parser (depends on parser)
+    const lineParser = require(path.join(jsPath, 'line-parser.js'));
+    global.LineType = lineParser.LineType;
+    global.LineParser = lineParser.LineParser;
+    global.parseMarkedLineNew = lineParser.parseMarkedLineNew;
+    global.isMarkerToken = lineParser.isMarkerToken;
+    global.getMarkerString = lineParser.getMarkerString;
+
     // Evaluator (depends on parser for AST types)
     const evaluator = require(path.join(jsPath, 'evaluator.js'));
     global.EvalContext = evaluator.EvalContext;
