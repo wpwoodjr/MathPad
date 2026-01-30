@@ -14,6 +14,7 @@ class VariablesPanel {
         this.changeListeners = [];
         this.solveCallback = null;
         this.inputElements = new Map();
+        this.lastEditedVar = null; // Track most recently edited variable name
 
         // Handle Tab key to cycle through inputs
         this.container.addEventListener('keydown', (e) => {
@@ -207,9 +208,13 @@ class VariablesPanel {
             valueElement.className = 'variable-value-input';
             valueElement.value = this.formatValueForDisplay(info);
             // Update formula pane on blur (when user is done typing), not during typing
-            valueElement.addEventListener('blur', (e) => this.handleValueChange(info.lineIndex, e.target.value));
+            valueElement.addEventListener('blur', (e) => {
+                this.handleValueChange(info.lineIndex, e.target.value);
+            });
             valueElement.addEventListener('focus', (e) => {
                 e.target.select();
+                // Track this as the focused variable (for clear exclusion)
+                this.lastEditedVar = info.name;
                 // Scroll into view after keyboard appears on mobile
                 setTimeout(() => {
                     e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -238,12 +243,14 @@ class VariablesPanel {
                 e.preventDefault();
                 // Get current info from declarations (may have been replaced after solve)
                 const currentInfo = this.declarations.get(info.lineIndex) || info;
-                // Clear the value if present
-                if (currentInfo.valueText) {
+                // Clear the value if present, UNLESS user just edited this variable
+                const justEdited = this.lastEditedVar === info.name;
+                if (currentInfo.valueText && !justEdited) {
                     valueElement.value = '';
                     this.handleValueChange(info.lineIndex, '');
                 }
-                // Trigger solve
+                // Clear tracking and trigger solve
+                this.lastEditedVar = null;
                 if (this.solveCallback) {
                     this.solveCallback();
                 }
