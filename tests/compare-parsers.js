@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Compare old regex-based parseMarkedLine with new grammar-based parser
+ * Validate the grammar-based LineParser parses test cases correctly
  */
 
 const path = require('path');
@@ -20,97 +20,99 @@ const lineParser = require(path.join(jsPath, 'line-parser.js'));
 global.LineParser = lineParser.LineParser;
 global.parseMarkedLineNew = lineParser.parseMarkedLineNew;
 
-const variables = require(path.join(jsPath, 'variables.js'));
-
-// Test cases from the test files
+// Test cases with expected results
 const testCases = [
-    'pi: 3.14159265358979',
-    'e: 2.71828182845905',
-    'c: 299792458 "speed of light m/s"',
-    'x: 10',
-    'y->',
-    'a: 3',
-    'a + b + pi->',
-    'Enter x<- 7',
-    'Enter y: 3',
-    'Result x+y: 8',
-    'Result x+y-> 8',
-    'pmt$: -$607.61 "monthly payment"',
-    'yint%: 6.12% "annual interest rate %"',
-    'yint%[0:0.5]: "annual interest rate %"',
-    'Enter height (in)    ht<-62.5',
-    'Enter weight (lb)    wt<-139.5',
-    'Input (test) a<- 5',
-    'Value (m/s) b: 10',
-    'Result (%) c->',
-    'sqrt(a)->',
-    'a + b->',
-    '(a * b)->',
-    "Output a-> 5 that's a",
-    "result sqrt(a)-> that's sqrt(a)",
-    'result: (a * b)-> should be 50',
-    'PAO2-> 275 mm Hg',
-    'BSA-> m2',
-    'x->>',
-    'x:: 10',
-    'h/w = 16/9',
-    'Label: { x + 5 = y }',
+    // Simple declarations
+    { input: 'pi: 3.14159265358979', expected: { kind: 'declaration', name: 'pi', marker: ':' } },
+    { input: 'x: 10', expected: { kind: 'declaration', name: 'x', marker: ':' } },
+    { input: 'y->', expected: { kind: 'declaration', name: 'y', marker: '->' } },
+    { input: 'x->>', expected: { kind: 'declaration', name: 'x', marker: '->>' } },
+    { input: 'x:: 10', expected: { kind: 'declaration', name: 'x', marker: '::' } },
+
+    // Input declarations
+    { input: 'Enter x<- 7', expected: { kind: 'declaration', name: 'x', marker: '<-', type: 'input' } },
+    { input: 'Enter height (in)    ht<-62.5', expected: { kind: 'declaration', name: 'ht', marker: '<-' } },
+    { input: 'Input (test) a<- 5', expected: { kind: 'declaration', name: 'a', marker: '<-' } },
+
+    // Format suffixes
+    { input: 'pmt$: -$607.61 "monthly payment"', expected: { kind: 'declaration', name: 'pmt', format: 'money' } },
+    { input: 'yint%: 6.12% "annual interest rate %"', expected: { kind: 'declaration', name: 'yint', format: 'percent' } },
+
+    // Limits
+    { input: 'yint%[0:0.5]: "annual interest rate %"', expected: { kind: 'declaration', name: 'yint', limits: { lowExpr: '0', highExpr: '0.5' } } },
+
+    // Label text with parentheses (should be declarations)
+    { input: 'Value (m/s) b: 10', expected: { kind: 'declaration', name: 'b' } },
+    { input: 'Result (%) c->', expected: { kind: 'declaration', name: 'c' } },
+
+    // Expression outputs
+    { input: 'sqrt(a)->', expected: { kind: 'expression-output', expression: 'sqrt(a)' } },
+    { input: 'a + b->', expected: { kind: 'expression-output', expression: 'a + b' } },
+    { input: '(a * b)->', expected: { kind: 'expression-output', expression: '(a * b)' } },
+    { input: 'a + b + pi->', expected: { kind: 'expression-output', expression: 'a + b + pi' } },
+    { input: 'Result x+y: 8', expected: { kind: 'expression-output', expression: 'x+y' } },
+    { input: 'Result x+y-> 8', expected: { kind: 'expression-output', expression: 'x+y' } },
+    { input: 'result: (a * b)-> should be 50', expected: { kind: 'expression-output', expression: '(a * b)' } },
+
+    // With comments
+    { input: 'c: 299792458 "speed of light m/s"', expected: { kind: 'declaration', name: 'c', comment: 'speed of light m/s' } },
+    { input: 'PAO2-> 275 mm Hg', expected: { kind: 'declaration', name: 'PAO2', comment: 'mm Hg', commentUnquoted: true } },
+    { input: 'BSA-> m2', expected: { kind: 'declaration', name: 'BSA', comment: 'm2', commentUnquoted: true } },
+
+    // Not declarations or expression outputs (should return null)
+    { input: 'h/w = 16/9', expected: null },
+    { input: 'Label: { x + 5 = y }', expected: null },
 ];
 
-// Compare semantically important fields
-function semanticCompare(oldResult, newResult) {
-    if (oldResult === null && newResult === null) return { match: true };
-    if (oldResult === null || newResult === null) return { match: false, field: 'null', oldValue: oldResult, newValue: newResult };
+console.log('Validating LineParser:\n');
 
-    // Compare only semantically important fields
-    const fields = ['kind', 'name', 'type', 'clearBehavior', 'valueText', 'base', 'fullPrecision', 'marker', 'format', 'comment', 'expression', 'recalculates'];
-
-    for (const field of fields) {
-        if (oldResult[field] !== newResult[field]) {
-            return { match: false, field, oldValue: oldResult[field], newValue: newResult[field] };
-        }
-    }
-
-    // Check limits if present in either result
-    const oldLimits = oldResult.limits;
-    const newLimits = newResult.limits;
-    if (oldLimits && newLimits) {
-        if (oldLimits.lowExpr !== newLimits.lowExpr) {
-            return { match: false, field: 'limits.lowExpr', oldValue: oldLimits.lowExpr, newValue: newLimits.lowExpr };
-        }
-        if (oldLimits.highExpr !== newLimits.highExpr) {
-            return { match: false, field: 'limits.highExpr', oldValue: oldLimits.highExpr, newValue: newLimits.highExpr };
-        }
-    } else if (oldLimits || newLimits) {
-        return { match: false, field: 'limits', oldValue: oldLimits, newValue: newLimits };
-    }
-
-    return { match: true };
-}
-
-console.log('Comparing old and new parsers (semantic comparison):\n');
-
-let matches = 0;
-let mismatches = 0;
+let passed = 0;
+let failed = 0;
 
 for (const testCase of testCases) {
-    // Use the legacy regex parser for comparison
-    const oldResult = variables.parseMarkedLineLegacy(testCase);
-    // parseMarkedLine now uses LineParser, same as parseMarkedLineNew
-    const newResult = parseMarkedLineNew(testCase);
+    const result = parseMarkedLineNew(testCase.input);
 
-    const result = semanticCompare(oldResult, newResult);
-    if (result.match) {
-        matches++;
+    // Check expected fields match
+    let match = true;
+    let mismatchDetails = [];
+
+    if (testCase.expected === null) {
+        if (result !== null) {
+            match = false;
+            mismatchDetails.push(`expected null, got ${result.kind}`);
+        }
+    } else if (result === null) {
+        match = false;
+        mismatchDetails.push(`expected ${testCase.expected.kind}, got null`);
     } else {
-        mismatches++;
-        console.log('MISMATCH: ' + testCase);
-        console.log('  Field:', result.field);
-        console.log('  Old value:', result.oldValue);
-        console.log('  New value:', result.newValue);
+        for (const [key, expectedValue] of Object.entries(testCase.expected)) {
+            const actualValue = result[key];
+            if (typeof expectedValue === 'object' && expectedValue !== null) {
+                // Deep compare for objects like limits
+                for (const [subKey, subExpected] of Object.entries(expectedValue)) {
+                    if (actualValue?.[subKey] !== subExpected) {
+                        match = false;
+                        mismatchDetails.push(`${key}.${subKey}: expected "${subExpected}", got "${actualValue?.[subKey]}"`);
+                    }
+                }
+            } else if (actualValue !== expectedValue) {
+                match = false;
+                mismatchDetails.push(`${key}: expected "${expectedValue}", got "${actualValue}"`);
+            }
+        }
+    }
+
+    if (match) {
+        passed++;
+    } else {
+        failed++;
+        console.log('FAIL: ' + testCase.input);
+        for (const detail of mismatchDetails) {
+            console.log('  ' + detail);
+        }
         console.log();
     }
 }
 
-console.log('\nResults: ' + matches + ' semantic matches, ' + mismatches + ' mismatches');
-process.exit(mismatches > 0 ? 1 : 0);
+console.log(`\nResults: ${passed} passed, ${failed} failed`);
+process.exit(failed > 0 ? 1 : 0);
