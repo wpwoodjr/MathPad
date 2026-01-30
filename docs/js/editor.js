@@ -212,7 +212,7 @@ class SimpleEditor {
             // Only scroll if still focused (skip for programmatic focus/blur)
             setTimeout(() => {
                 if (document.activeElement === this.textarea) {
-                    this.textarea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    this.textarea.scrollIntoView({ behavior: 'smooth', block: 'center', container:'nearest' });
                 }
             }, 300);
         });
