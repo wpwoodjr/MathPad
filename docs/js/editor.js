@@ -187,6 +187,9 @@ class SimpleEditor {
         this.textarea = document.createElement('textarea');
         this.textarea.className = 'editor-textarea';
         this.textarea.spellcheck = false;
+        this.textarea.setAttribute('autocapitalize', 'none');
+        this.textarea.setAttribute('autocorrect', 'off');
+        this.textarea.autocomplete = 'off';
         this.textarea.value = options.value || '';
 
         // Hidden element to measure line heights
@@ -212,7 +215,7 @@ class SimpleEditor {
             // Only scroll if still focused (skip for programmatic focus/blur)
             setTimeout(() => {
                 if (document.activeElement === this.textarea) {
-                    this.textarea.scrollIntoView({ behavior: 'smooth', block: 'center', container:'nearest' });
+                    this.textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }, 300);
         });

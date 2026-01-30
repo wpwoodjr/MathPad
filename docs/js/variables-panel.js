@@ -206,6 +206,10 @@ class VariablesPanel {
             valueElement = document.createElement('input');
             valueElement.type = 'text';
             valueElement.className = 'variable-value-input';
+            valueElement.spellcheck = false;
+            valueElement.setAttribute('autocapitalize', 'none');
+            valueElement.setAttribute('autocorrect', 'off');
+            valueElement.autocomplete = 'off';
             valueElement.value = this.formatValueForDisplay(info);
             // Update formula pane on blur (when user is done typing), not during typing
             valueElement.addEventListener('blur', (e) => {
