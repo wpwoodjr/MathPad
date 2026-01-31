@@ -929,7 +929,7 @@ button {
 
 .formulas-panel {
     flex: 1;
-    min-height: 40px;
+    min-height: 0;
     overflow: hidden;
     display: flex;
 }
