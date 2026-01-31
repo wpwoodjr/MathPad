@@ -500,15 +500,14 @@ button {
     position: absolute;
     visibility: hidden;
     padding: 0 8px;
+    box-sizing: border-box;
     white-space: pre-wrap;
     word-wrap: break-word;
     overflow-wrap: break-word;
     font-family: var(--font-mono);
     font-size: 14px;
     line-height: 1.5;
-    /* Match textarea width minus scrollbar */
-    left: 0;
-    right: 17px;
+    /* Width set dynamically by JS to match textarea.clientWidth */
 }
 
 /* Syntax highlighting tokens */
@@ -808,9 +807,29 @@ button {
     .settings-btn {
         display: flex;
     }
+
+    .app-header button {
+        min-width: 36px;
+        min-height: 36px;
+        padding: 6px 8px;
+        font-size: 16px;
+    }
 }
 
 @media (max-width: 768px) {
+    .app-header .hamburger-btn {
+        font-size: 20px;
+    }
+
+    .app-title {
+        margin-right: 12px;
+    }
+
+    /* Hide subtitle on small screens */
+    .app-subtitle {
+        display: none;
+    }
+
     /* Slide-out sidebar drawer */
     .sidebar {
         position: fixed;
@@ -831,14 +850,6 @@ button {
     .hamburger-btn {
         display: flex;
     }
-
-    /* Larger touch targets for buttons */
-    .app-header button {
-        min-height: 44px;
-        min-width: 44px;
-        padding: 8px 12px;
-    }
-
 
     /* Adjust header spacing */
     .header-center {
@@ -865,15 +876,9 @@ button {
 }
 
 @media (max-width: 480px) {
-    /* Hide subtitle on small screens */
-    .app-subtitle {
-        display: none;
-    }
-
     /* Smaller line numbers */
     .line-numbers {
         width: 35px;
-        font-size: 11px;
     }
 
     .line-number {
@@ -884,9 +889,30 @@ button {
         gap: 4px;
     }
 
+    /* Shrink header controls */
+    .app-header {
+        padding: 0 8px;
+    }
+
+    .header-center {
+        gap: 4px;
+    }
+
+    .header-right {
+        gap: 2px;
+    }
+}
+
+@media (max-width: 410px) {
     .app-title {
         font-size: 16px;
-        margin-right: 8px;
+        margin-right: 10px;
+    }
+
+    .app-header button {
+        min-width: 30px;
+        padding: 6px 4px;
+        font-size: 14px;
     }
 }
 

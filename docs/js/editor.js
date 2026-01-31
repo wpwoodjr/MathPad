@@ -331,6 +331,9 @@ class SimpleEditor {
         const lines = this.textarea.value.split('\n');
         let html = '';
 
+        // Match measure element width to textarea content width (excludes scrollbar)
+        this.measureElement.style.width = `${this.textarea.clientWidth}px`;
+
         // Measure each line's rendered height to handle wrapping
         for (let i = 0; i < lines.length; i++) {
             // Use non-breaking space for empty lines to get correct height
