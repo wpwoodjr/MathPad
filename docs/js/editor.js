@@ -253,6 +253,9 @@ class SimpleEditor {
     }
 
     setValue(value, undoable = false) {
+        // Save scroll position
+        const scrollTop = this.textarea.scrollTop;
+
         if (undoable) {
             // Use execCommand to make the change undoable with Ctrl+Z
             this.textarea.focus();
@@ -263,6 +266,11 @@ class SimpleEditor {
         }
         this.updateHighlighting();
         this.updateLineNumbers();
+
+        // Restore scroll position
+        this.textarea.scrollTop = scrollTop;
+        this.highlightLayer.scrollTop = scrollTop;
+        this.lineNumbers.scrollTop = scrollTop;
     }
 
     onInput() {
