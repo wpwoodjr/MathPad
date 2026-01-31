@@ -218,10 +218,6 @@ class VariablesPanel {
             valueElement.addEventListener('focus', (e) => {
                 // Track this as the focused variable (for clear exclusion)
                 this.lastEditedVar = info.name;
-                // Scroll into view after keyboard appears on mobile
-                setTimeout(() => {
-                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 300);
             });
             // Also handle Enter key to commit the value
             valueElement.addEventListener('keydown', (e) => {

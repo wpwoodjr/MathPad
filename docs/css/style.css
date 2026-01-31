@@ -858,14 +858,9 @@ button {
         z-index: 100;
     }
 
-    /* Fix entire app to viewport to prevent mobile scroll on focus */
+    /* Add padding to account for fixed header */
     .app-container {
-        position: fixed;
-        top: var(--header-height);
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: auto;
+        padding-top: var(--header-height);
     }
 }
 
