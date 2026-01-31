@@ -210,15 +210,34 @@ class SimpleEditor {
         this.textarea.addEventListener('input', () => this.onInput());
         this.textarea.addEventListener('scroll', () => this.onScroll());
         this.textarea.addEventListener('keydown', (e) => this.onKeyDown(e));
+
+        // Mobile keyboard handling - resize editor to fit visible viewport
+        this.isAdjustedForKeyboard = false;
+        this.originalVariablesHeight = null;
+        this.viewportHandler = null;
+
         this.textarea.addEventListener('focus', () => {
-            // Scroll into view after keyboard appears on mobile
-            // Only scroll if still focused (skip for programmatic focus/blur)
+            // Wait for keyboard to appear, then adjust
             setTimeout(() => {
                 if (document.activeElement === this.textarea) {
-                    this.textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    this.adjustForKeyboard();
                 }
             }, 300);
         });
+
+        this.textarea.addEventListener('blur', () => {
+            this.restoreHeight();
+        });
+
+        // Listen for viewport changes (keyboard resize, rotation)
+        if (window.visualViewport) {
+            this.viewportHandler = () => {
+                if (document.activeElement === this.textarea) {
+                    this.adjustForKeyboard();
+                }
+            };
+            window.visualViewport.addEventListener('resize', this.viewportHandler);
+        }
 
         // Update line numbers on resize (affects wrapping)
         this.resizeObserver = new ResizeObserver(() => this.updateLineNumbers());
@@ -334,6 +353,76 @@ class SimpleEditor {
 
     setCursorPosition(pos) {
         this.textarea.selectionStart = this.textarea.selectionEnd = pos;
+    }
+    adjustForKeyboard() {
+        if (!window.visualViewport) return;
+
+        // Check if keyboard is actually showing by comparing viewport to window height
+        const viewportHeight = window.visualViewport.height;
+        const keyboardShowing = viewportHeight < window.innerHeight * 0.85;
+
+        if (!keyboardShowing) {
+            // Keyboard closed while still focused - restore normal height
+            this.restoreHeight();
+            return;
+        }
+
+        // Save original variables panel height on first call
+        if (!this.isAdjustedForKeyboard) {
+            this.isAdjustedForKeyboard = true;
+            const variablesPanel = document.querySelector('.variables-panel');
+            this.originalVariablesHeight = variablesPanel?.style.height || '';
+        }
+
+        // Get header and tab bar heights
+        const header = document.querySelector('.app-header');
+        const headerHeight = header ? header.offsetHeight : 0;
+        const tabBar = document.querySelector('.tab-bar');
+        const tabBarHeight = tabBar ? tabBar.offsetHeight : 0;
+
+        // Calculate available height for editor (exact space between tab bar and keyboard)
+        const availableHeight = viewportHeight - headerHeight - tabBarHeight;
+
+        // Resize both panels (like divider drag does)
+        const formulasPanel = document.querySelector('.formulas-panel');
+        const variablesPanel = document.querySelector('.variables-panel');
+        const divider = document.querySelector('.panel-divider');
+        const dividerHeight = divider ? divider.offsetHeight : 0;
+
+        // Get the container height to calculate variables panel size
+        const container = formulasPanel?.parentElement;
+        const containerHeight = container ? container.offsetHeight : 0;
+        const variablesHeight = Math.max(40, containerHeight - availableHeight - dividerHeight);
+
+        if (formulasPanel) {
+            formulasPanel.style.height = `${availableHeight}px`;
+            formulasPanel.style.flex = 'none';
+        }
+        if (variablesPanel) {
+            variablesPanel.style.height = `${variablesHeight}px`;
+        }
+    }
+
+    restoreHeight() {
+        if (!this.isAdjustedForKeyboard) return;
+
+        // Restore both panels to their original heights
+        const formulasPanel = document.querySelector('.formulas-panel');
+        const variablesPanel = document.querySelector('.variables-panel');
+        if (formulasPanel) {
+            formulasPanel.style.removeProperty('height');
+            formulasPanel.style.removeProperty('flex');
+        }
+        if (variablesPanel) {
+            if (this.originalVariablesHeight) {
+                variablesPanel.style.height = this.originalVariablesHeight;
+            } else {
+                variablesPanel.style.removeProperty('height');
+            }
+        }
+
+        this.isAdjustedForKeyboard = false;
+        this.originalVariablesHeight = null;
     }
 
     getSelection() {

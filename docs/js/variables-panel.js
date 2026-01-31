@@ -216,7 +216,6 @@ class VariablesPanel {
                 this.handleValueChange(info.lineIndex, e.target.value);
             });
             valueElement.addEventListener('focus', (e) => {
-                e.target.select();
                 // Track this as the focused variable (for clear exclusion)
                 this.lastEditedVar = info.name;
                 // Scroll into view after keyboard appears on mobile
