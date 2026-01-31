@@ -327,18 +327,31 @@ class SimpleEditor {
         this.highlightLayer.innerHTML = html + '\n'; // Extra newline for scrolling
     }
 
+    /**
+     * Measure the rendered height of text, accounting for wrapping
+     */
+    measureTextHeight(text) {
+        this.measureElement.style.width = `${this.textarea.clientWidth}px`;
+        this.measureElement.textContent = text || '\u00A0';
+        return this.measureElement.offsetHeight;
+    }
+
+    /**
+     * Get the pixel position of the cursor from the top of the textarea content
+     */
+    getCursorPixelPosition() {
+        const cursorPos = this.textarea.selectionStart;
+        const textBeforeCursor = this.textarea.value.substring(0, cursorPos);
+        return this.measureTextHeight(textBeforeCursor);
+    }
+
     updateLineNumbers() {
         const lines = this.textarea.value.split('\n');
         let html = '';
 
-        // Match measure element width to textarea content width (excludes scrollbar)
-        this.measureElement.style.width = `${this.textarea.clientWidth}px`;
-
         // Measure each line's rendered height to handle wrapping
         for (let i = 0; i < lines.length; i++) {
-            // Use non-breaking space for empty lines to get correct height
-            this.measureElement.textContent = lines[i] || '\u00A0';
-            const height = this.measureElement.offsetHeight;
+            const height = this.measureTextHeight(lines[i]);
             html += `<div class="line-number" style="height:${height}px">${i + 1}</div>`;
         }
         this.lineNumbers.innerHTML = html;
@@ -412,6 +425,23 @@ class SimpleEditor {
         if (variablesPanel) {
             variablesPanel.style.height = `${variablesHeight}px`;
         }
+
+        // Scroll cursor into view if it's too close to the bottom
+        // Use setTimeout to let the resize take effect first
+        setTimeout(() => {
+            const cursorTop = this.getCursorPixelPosition();
+            const lineHeight = this.measureTextHeight('X');
+            const margin = lineHeight * 3;
+            const visibleHeight = this.textarea.clientHeight;
+            const cursorFromTop = cursorTop - this.textarea.scrollTop;
+
+            // If cursor is less than 3 lines from the bottom, scroll it up
+            if (cursorFromTop > visibleHeight - margin) {
+                this.textarea.scrollTop = cursorTop - visibleHeight + margin;
+                this.highlightLayer.scrollTop = this.textarea.scrollTop;
+                this.lineNumbers.scrollTop = this.textarea.scrollTop;
+            }
+        }, 50);
     }
 
     restoreHeight() {
