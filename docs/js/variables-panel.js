@@ -31,6 +31,35 @@ class VariablesPanel {
     }
 
     /**
+     * Expand variables panel to fill space on mobile when input is focused
+     */
+    expandForMobile() {
+        // Only on mobile (check for visualViewport and small screen)
+        if (!window.visualViewport || window.innerWidth > 768) return;
+
+        const formulasPanel = document.querySelector('.formulas-panel');
+        const variablesPanel = document.querySelector('.variables-panel');
+        const header = document.querySelector('.app-header');
+        const tabBar = document.querySelector('.tab-bar');
+        const statusBar = document.querySelector('.status-bar');
+        const divider = document.querySelector('.panel-divider');
+
+        const headerHeight = header ? header.offsetHeight : 0;
+        const tabBarHeight = tabBar ? tabBar.offsetHeight : 0;
+        const statusBarHeight = statusBar ? statusBar.offsetHeight : 0;
+        const dividerHeight = divider ? divider.offsetHeight : 0;
+
+        // Calculate available height between tab bar and status bar
+        const availableHeight = window.innerHeight - headerHeight - tabBarHeight - statusBarHeight - dividerHeight;
+
+        // Expand variables panel to fill available space
+        // The formulas panel will shrink naturally via flexbox (min-height: 0)
+        if (variablesPanel) {
+            variablesPanel.style.height = `${availableHeight}px`;
+        }
+    }
+
+    /**
      * Get next/previous input in the variables panel (wraps around)
      */
     getNextInput(currentInput, reverse = false) {
@@ -218,6 +247,8 @@ class VariablesPanel {
             valueElement.addEventListener('focus', (e) => {
                 // Track this as the focused variable (for clear exclusion)
                 this.lastEditedVar = info.name;
+                // Expand variables panel on mobile
+                this.expandForMobile();
             });
             // Also handle Enter key to commit the value
             valueElement.addEventListener('keydown', (e) => {

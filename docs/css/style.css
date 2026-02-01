@@ -952,7 +952,7 @@ button {
 /* Larger touch target for panel divider on mobile */
 @media (max-width: 768px) {
     .panel-divider {
-        height: 12px;
+        height: 16px;
         position: relative;
     }
 
@@ -962,8 +962,8 @@ button {
         position: absolute;
         left: 0;
         right: 0;
-        top: -10px;
-        bottom: -10px;
+        top: -15px;
+        bottom: -15px;
     }
 }
 
