@@ -10,7 +10,7 @@ const editorBuiltinFunctions = new Set([
     'tan', 'atan', 'tanh', 'atanh', 'radians', 'degrees',
     'now', 'days', 'jdays', 'date', 'jdate', 'year', 'month', 'day',
     'weekday', 'hour', 'minute', 'second', 'hours', 'hms',
-    'if', 'choose', 'min', 'max', 'avg', 'sum', 'rand'
+    'if', 'choose', 'min', 'max', 'avg', 'sum', 'rand', 'mod'
 ]);
 
 /**
@@ -89,12 +89,7 @@ function tokenizeMathPad(text) {
                 highlightType = getIdentifierHighlightType(token.value, text, tokenEnd);
                 break;
             case TokenType.OPERATOR:
-                // Style % as variable-def if it immediately follows a variable-def identifier
-                if (token.value === '%' && lastTokenWasVarDef && tokenStart === lastTokenEnd) {
-                    highlightType = 'variable-def';
-                } else {
-                    highlightType = 'operator';
-                }
+                highlightType = 'operator';
                 break;
             case TokenType.LPAREN:
             case TokenType.RPAREN:
@@ -120,14 +115,16 @@ function tokenizeMathPad(text) {
                 lastTokenWasVarDef = false;
                 continue;
             case TokenType.FORMATTER:
-                // Style $ and # as variable-def if they immediately follow a variable-def identifier
+                // Style $, %, # as variable-def if they immediately follow a variable-def identifier
                 if (lastTokenWasVarDef && tokenStart === lastTokenEnd) {
                     highlightType = 'variable-def';
                 } else {
-                    highlightType = 'operator';
+                    highlightType = 'error'; // orphaned formatter is likely a syntax error
                 }
                 break;
             case TokenType.ERROR:
+                highlightType = 'error';
+                break;
             default:
                 highlightType = 'punctuation';
         }

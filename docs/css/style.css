@@ -556,6 +556,10 @@ button {
     color: var(--text-secondary);
 }
 
+.tok-error {
+    color: var(--error-color);
+}
+
 .tok-inline-marker {
     color: var(--success-color);
     font-weight: bold;

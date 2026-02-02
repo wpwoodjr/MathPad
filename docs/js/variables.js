@@ -52,8 +52,7 @@ function expandLiterals(text) {
     });
     // Expand $num money literals (e.g., $100 -> 100, $1,000.50 -> 1000.50)
     text = text.replace(/\$([0-9,]+\.?[0-9]*)\b/g, (_, v) => v.replace(/,/g, ''));
-    // Note: Percent literals (5% -> 0.05) are now handled in the tokenizer (parser.js)
-    // to correctly distinguish from modulo operator (5%2)
+    // Note: Percent literals (5% -> 0.05) are handled in the tokenizer (parser.js)
     return text;
 }
 

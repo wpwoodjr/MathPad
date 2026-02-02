@@ -99,12 +99,12 @@ OPERATORS (by precedence):
   &              Bitwise AND
   << >>          Shift
   + -            Add, Subtract
-  * / %          Multiply, Divide, Modulo
+  * /            Multiply, Divide
   **             Power (right-associative)
   - + ~ !        Unary minus, plus, NOT, logical NOT
 
 BUILT-IN FUNCTIONS:
-  Math: Abs, Sign, Int, Frac, Round, Floor, Ceil
+  Math: Abs, Sign, Int, Frac, Round, Floor, Ceil, Mod
         Sqrt, Cbrt, Root, Exp, Ln, Log, Fact, Pi
   Trig: Sin, ASin, SinH, ASinH, Cos, ACos, CosH, ACosH
         Tan, ATan, TanH, ATanH, Radians, Degrees

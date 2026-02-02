@@ -30,9 +30,9 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"03 variable name rate with % after it"
+"03 modulo using mod() function"
 
-x = rate% 3
+x = mod(rate; 3)
 rate: 4
 
 x->

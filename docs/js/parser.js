@@ -26,7 +26,7 @@ const TokenType = {
     ARROW_RIGHT: 'ARROW_RIGHT',     // ->
     ARROW_FULL: 'ARROW_FULL',       // ->>
     DOUBLE_COLON: 'DOUBLE_COLON',   // ::
-    FORMATTER: 'FORMATTER'          // $ # (format suffixes)
+    FORMATTER: 'FORMATTER'          // $ % # (format suffixes)
 };
 
 // AST Node types
@@ -144,32 +144,12 @@ class Tokenizer {
             }
         }
 
-        // Percent literal: 5% -> 0.05 (only if % not followed by an operand)
-        // This distinguishes percent literals from modulo: 5% vs 5%x or 5% x
-        // Look past whitespace to see if an operand (number/identifier) follows
+        // Percent literal: 5% -> 0.05
+        // Since % is not an operator (use mod() for modulo), 5% is always a percent literal
         if (this.peek() === '%') {
-            let lookAhead = 1;
-            while (this.peek(lookAhead) === ' ' || this.peek(lookAhead) === '\t') {
-                lookAhead++;
-            }
-            const nextChar = this.peek(lookAhead);
-            // Check if followed by an operand:
-            // - digit, letter, '.' start an operand directly
-            // - '-' or '+' followed by digit/dot starts a signed number operand
-            let isModulo = false;
-            if (nextChar && (this.isAlphaNum(nextChar) || nextChar === '.')) {
-                isModulo = true;
-            } else if (nextChar === '-' || nextChar === '+') {
-                const afterSign = this.peek(lookAhead + 1);
-                if (afterSign && (this.isDigit(afterSign) || afterSign === '.')) {
-                    isModulo = true; // signed number follows
-                }
-            }
-            if (!isModulo) {
-                this.advance(); // consume %
-                raw += '%';
-                return this.makeToken(TokenType.NUMBER, { value: parseFloat(value) / 100, base: 10, raw }, startLine, startCol);
-            }
+            this.advance(); // consume %
+            raw += '%';
+            return this.makeToken(TokenType.NUMBER, { value: parseFloat(value) / 100, base: 10, raw }, startLine, startCol);
         }
 
         return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw }, startLine, startCol);
@@ -248,8 +228,8 @@ class Tokenizer {
             return this.makeToken(TokenType.OPERATOR, twoChar, startLine, startCol);
         }
 
-        // Single-character operators
-        const singleCharOps = ['+', '-', '*', '/', '%', '&', '|', '^', '~', '!', '<', '>', '=', '?', '\\'];
+        // Single-character operators (% is not an operator - use mod() function)
+        const singleCharOps = ['+', '-', '*', '/', '&', '|', '^', '~', '!', '<', '>', '=', '?', '\\'];
         if (singleCharOps.includes(ch)) {
             this.advance();
             return this.makeToken(TokenType.OPERATOR, ch, startLine, startCol);
@@ -354,9 +334,8 @@ class Tokenizer {
                 continue;
             }
 
-            // Format suffixes: $ (money), # (base)
-            // Note: % stays as OPERATOR since it's also modulo; editor handles highlighting
-            if (ch === '$' || ch === '#') {
+            // Format suffixes: $ (money), % (percent), # (base)
+            if (ch === '$' || ch === '%' || ch === '#') {
                 this.advance();
                 this.tokens.push(this.makeToken(TokenType.FORMATTER, ch, startLine, startCol));
                 continue;
@@ -508,11 +487,11 @@ class Parser {
         return left;
     }
 
-    // Level 8: * / %
+    // Level 8: * / (use mod() function for modulo)
     parseMultiplicative() {
         let left = this.parsePower();
         while (this.peek().type === TokenType.OPERATOR &&
-               (this.peek().value === '*' || this.peek().value === '/' || this.peek().value === '%')) {
+               (this.peek().value === '*' || this.peek().value === '/')) {
             const op = this.advance().value;
             const right = this.parsePower();
             left = { type: NodeType.BINARY_OP, op, left, right };

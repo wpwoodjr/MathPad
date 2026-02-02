@@ -386,7 +386,10 @@ const builtinFunctions = {
         if (args.length === 0) return Math.random();
         if (args.length === 1) return Math.random() * args[0];
         return args[0] + Math.random() * (args[1] - args[0]);
-    }
+    },
+
+    // Modulo (remainder)
+    mod: (args) => args[0] % args[1]
 };
 
 /**
@@ -447,7 +450,6 @@ function evaluate(node, context) {
                 case '/':
                     if (right === 0) throw new EvalError('Division by zero');
                     return left / right;
-                case '%': return left % right;
                 case '**': return Math.pow(left, right);
                 case '<<': return Math.trunc(left) << Math.trunc(right);
                 case '>>': return Math.trunc(left) >> Math.trunc(right);
