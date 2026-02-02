@@ -103,35 +103,47 @@ class Tokenizer {
         // need to handle decimal numbers here.
 
         // Decimal number (possibly floating point with scientific notation)
-        // Allow commas as digit grouping (ignored)
+        // Allow commas as digit grouping
+        let raw = '';
         while (this.isDigit(this.peek()) || this.peek() === ',') {
             const ch = this.advance();
-            if (ch !== ',') value += ch;  // Skip commas
+            raw += ch;
+            if (ch !== ',') value += ch;  // Skip commas for numeric value
         }
 
         // Decimal point
         if (this.peek() === '.' && this.isDigit(this.peek(1))) {
-            value += this.advance(); // .
+            const ch = this.advance(); // .
+            value += ch;
+            raw += ch;
             while (this.isDigit(this.peek())) {
-                value += this.advance();
+                const ch = this.advance();
+                value += ch;
+                raw += ch;
             }
         }
 
         // Scientific notation
         if (this.peek() && /[eE]/.test(this.peek())) {
-            value += this.advance(); // e or E
+            let ch = this.advance(); // e or E
+            value += ch;
+            raw += ch;
             if (this.peek() === '+' || this.peek() === '-') {
-                value += this.advance();
+                ch = this.advance();
+                value += ch;
+                raw += ch;
             }
             if (!this.isDigit(this.peek())) {
                 return this.makeToken(TokenType.ERROR, 'Invalid scientific notation', startLine, startCol);
             }
             while (this.isDigit(this.peek())) {
-                value += this.advance();
+                ch = this.advance();
+                value += ch;
+                raw += ch;
             }
         }
 
-        return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw: value }, startLine, startCol);
+        return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw }, startLine, startCol);
     }
 
     tokenizeIdentifier() {
