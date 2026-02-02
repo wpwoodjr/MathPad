@@ -18,6 +18,12 @@ const editorBuiltinFunctions = new Set([
  * Uses the shared Tokenizer from parser.js and maps to highlight types
  */
 function tokenizeMathPad(text) {
+    // First, use LineParser to find comment regions (label text and unquoted comments)
+    const commentRegions = findLabelRegions(text);
+
+    // Find literal number formats that the tokenizer doesn't handle natively
+    const literalRegions = findLiteralRegions(text);
+
     // Use the shared Tokenizer from parser.js
     const tokenizer = new Tokenizer(text);
     const parserTokens = tokenizer.tokenize();
@@ -25,18 +31,26 @@ function tokenizeMathPad(text) {
     const tokens = [];
     let pos = 0;
 
+    // Helper to check if a position overlaps with any special region
+    const overlapsSpecialRegion = (start, end) =>
+        commentRegions.some(r => start < r.end && end > r.start) ||
+        literalRegions.some(r => start < r.end && end > r.start);
+
     for (const token of parserTokens) {
         // Skip EOF token
         if (token.type === TokenType.EOF) continue;
 
-        // Calculate position from line/col (need to track position)
-        // Since Tokenizer doesn't give us absolute positions directly,
-        // we'll calculate them from the token values
         const tokenStart = findTokenPosition(text, token, pos);
         if (tokenStart === -1) continue;
 
         const tokenLength = getTokenLength(token, text, tokenStart);
         const tokenEnd = tokenStart + tokenLength;
+
+        // Skip tokens that overlap with special regions (we'll add those separately)
+        if (overlapsSpecialRegion(tokenStart, tokenEnd)) {
+            pos = tokenEnd;
+            continue;
+        }
 
         // Map token types to highlight types
         let highlightType;
@@ -71,7 +85,7 @@ function tokenizeMathPad(text) {
                 break;
             case TokenType.NEWLINE:
                 pos = tokenEnd;
-                continue; // Don't add newlines to highlight tokens
+                continue;
             default:
                 highlightType = 'punctuation';
         }
@@ -85,7 +99,99 @@ function tokenizeMathPad(text) {
         pos = tokenEnd;
     }
 
+    // Add comment regions as single comment tokens
+    for (const region of commentRegions) {
+        tokens.push({ from: region.start, to: region.end, type: 'comment' });
+    }
+
+    // Add literal regions as number tokens
+    for (const region of literalRegions) {
+        tokens.push({ from: region.start, to: region.end, type: 'number' });
+    }
+
+    // Sort tokens by position
+    tokens.sort((a, b) => a.from - b.from);
+
     return tokens;
+}
+
+/**
+ * Find label regions in the text using LineParser
+ * Returns array of { start, end } for each label region (absolute positions)
+ */
+function findLabelRegions(text) {
+    const lines = text.split('\n');
+    const regions = [];
+    let lineStart = 0;
+
+    for (const line of lines) {
+        // Use LineParser to parse the line
+        const parser = new LineParser(line);
+        const result = parser.parse();
+
+        if (result && result.kind === 'declaration') {
+            // For declarations, label is everything before the variable
+            const markerInfo = parser.findBestMarker();
+            if (markerInfo) {
+                const varInfo = parser.getImmediateVarBeforeMarker(markerInfo.index);
+                if (varInfo && varInfo.varStartPos > 0) {
+                    regions.push({
+                        start: lineStart,
+                        end: lineStart + varInfo.varStartPos
+                    });
+                }
+            }
+        } else if (result && result.kind === 'expression-output' && result.expression) {
+            // For expression outputs, label is everything before where the expression starts
+            const exprStart = line.indexOf(result.expression);
+            if (exprStart > 0) {
+                regions.push({
+                    start: lineStart,
+                    end: lineStart + exprStart
+                });
+            }
+        }
+
+        // Handle unquoted trailing comments (for both declarations and expression outputs)
+        if (result && result.comment && result.commentUnquoted) {
+            const commentStart = line.lastIndexOf(result.comment);
+            if (commentStart > 0) {
+                regions.push({
+                    start: lineStart + commentStart,
+                    end: lineStart + commentStart + result.comment.length
+                });
+            }
+        }
+
+        lineStart += line.length + 1; // +1 for newline
+    }
+
+    return regions;
+}
+
+/**
+ * Find literal number formats that the tokenizer doesn't handle natively
+ * Returns array of { start, end } for each literal region
+ * Handles: FF#16 (value#base), 0xFF (hex), 0b101 (binary), 0o77 (octal)
+ */
+function findLiteralRegions(text) {
+    const regions = [];
+
+    // Pattern for value#base notation (e.g., FF#16, 101#2)
+    const basePattern = /[0-9a-fA-F]+#[0-9]+/g;
+
+    // Pattern for prefix notation (0x, 0b, 0o)
+    const prefixPattern = /0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+/g;
+
+    let match;
+    while ((match = basePattern.exec(text)) !== null) {
+        regions.push({ start: match.index, end: match.index + match[0].length });
+    }
+    while ((match = prefixPattern.exec(text)) !== null) {
+        regions.push({ start: match.index, end: match.index + match[0].length });
+    }
+
+    return regions;
 }
 
 /**
