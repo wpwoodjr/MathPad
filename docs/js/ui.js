@@ -57,12 +57,23 @@ function initUI(data) {
     // Set up event listeners
     setupEventListeners();
 
-    // Open last viewed record, or first record if not available
+    // Restore open tabs, or open last viewed record, or first record
     if (data.records.length > 0) {
+        const savedTabs = data.settings?.openTabs || [];
         const lastRecordId = data.settings?.lastRecordId;
-        const lastRecord = lastRecordId ? findRecord(data, lastRecordId) : null;
-        if (lastRecord) {
-            openRecord(lastRecordId);
+
+        // Filter to only valid record IDs
+        const validTabs = savedTabs.filter(id => findRecord(data, id));
+
+        if (validTabs.length > 0) {
+            // Restore all saved tabs
+            for (const tabId of validTabs) {
+                openRecord(tabId);
+            }
+            // Switch to last viewed tab if it's open, otherwise stay on last opened
+            if (lastRecordId && validTabs.includes(lastRecordId)) {
+                openRecord(lastRecordId);
+            }
         } else {
             openRecord(data.records[0].id);
         }
@@ -200,8 +211,9 @@ function openRecord(recordId) {
     // Switch to this record
     UI.currentRecordId = recordId;
 
-    // Save last viewed record
+    // Save last viewed record and open tabs
     UI.data.settings.lastRecordId = recordId;
+    UI.data.settings.openTabs = [...UI.openTabs];
     debouncedSave(UI.data);
 
     // Create editor if not exists
@@ -298,16 +310,17 @@ function createEditorForRecord(record) {
         handleSolve();
     });
 
+    // Save scroll position when user scrolls
+    editor.onScrollChange((scrollTop) => {
+        record.scrollTop = scrollTop;
+        debouncedSave(UI.data);
+    });
+
     // Set up divider drag
     setupPanelResizer(divider, formulasPanel, variablesPanel);
 
     // Initial variables render
     variablesManager.updateFromText(record.text);
-
-    // Restore saved panel height
-    if (UI.data.settings?.variablesPanelHeight) {
-        variablesPanel.style.height = UI.data.settings.variablesPanelHeight + 'px';
-    }
 
     UI.editors.set(record.id, { editor, container, variablesManager });
 }
@@ -325,6 +338,25 @@ function showEditor(recordId) {
     const noEditorMsg = document.querySelector('.no-editor-message');
     if (noEditorMsg) {
         noEditorMsg.style.display = recordId ? 'none' : 'block';
+    }
+
+    // Restore scroll and divider positions after showing
+    const editorInfo = UI.editors.get(recordId);
+    const record = findRecord(UI.data, recordId);
+    if (editorInfo && record) {
+        // Restore divider position
+        if (record.dividerHeight) {
+            const variablesPanel = editorInfo.container.querySelector('.variables-panel');
+            if (variablesPanel) {
+                variablesPanel.style.height = record.dividerHeight + 'px';
+            }
+        }
+        // Restore scroll position
+        if (record.scrollTop) {
+            requestAnimationFrame(() => {
+                editorInfo.editor.setScrollPosition(record.scrollTop);
+            });
+        }
     }
 }
 
@@ -345,6 +377,10 @@ function closeTab(recordId) {
 
     // Remove from open tabs
     UI.openTabs.splice(index, 1);
+
+    // Save open tabs
+    UI.data.settings.openTabs = [...UI.openTabs];
+    debouncedSave(UI.data);
 
     // Remove editor
     if (UI.editors.has(recordId)) {
@@ -1123,9 +1159,10 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
         divider.classList.remove('dragging');
         document.body.classList.remove('panel-resizing');
 
-        // Save preference
-        if (UI.data.settings) {
-            UI.data.settings.variablesPanelHeight = bottomPanel.offsetHeight;
+        // Save divider position to current record
+        const record = findRecord(UI.data, UI.currentRecordId);
+        if (record) {
+            record.dividerHeight = bottomPanel.offsetHeight;
             debouncedSave(UI.data);
         }
 

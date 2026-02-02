@@ -169,6 +169,7 @@ class SimpleEditor {
         this.container = container;
         this.options = options;
         this.changeListeners = [];
+        this.scrollListeners = [];
 
         this.element = document.createElement('div');
         this.element.className = 'simple-editor';
@@ -208,7 +209,7 @@ class SimpleEditor {
 
         // Event handlers
         this.textarea.addEventListener('input', () => this.onInput());
-        this.textarea.addEventListener('scroll', () => this.onScroll());
+        this.textarea.addEventListener('scroll', () => this.onUserScroll());
         this.textarea.addEventListener('keydown', (e) => this.onKeyDown(e));
 
         // Mobile keyboard handling - resize editor to fit visible viewport
@@ -298,6 +299,18 @@ class SimpleEditor {
         this.lineNumbers.scrollTop = this.textarea.scrollTop;
     }
 
+    onUserScroll() {
+        this.onScroll();
+        // Notify scroll listeners only on user scroll
+        for (const listener of this.scrollListeners) {
+            listener(this.textarea.scrollTop);
+        }
+    }
+
+    onScrollChange(callback) {
+        this.scrollListeners.push(callback);
+    }
+
     onKeyDown(e) {
         // Tab handling
         if (e.key === 'Tab') {
@@ -382,6 +395,15 @@ class SimpleEditor {
 
     focus() {
         this.textarea.focus();
+    }
+
+    getScrollPosition() {
+        return this.textarea.scrollTop;
+    }
+
+    setScrollPosition(scrollTop) {
+        this.textarea.scrollTop = scrollTop;
+        this.onScroll();
     }
 
     getCursorPosition() {
