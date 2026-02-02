@@ -352,12 +352,25 @@ function showEditor(recordId) {
                 variablesPanel.style.height = record.dividerHeight + 'px';
             }
         }
-        // Restore scroll position
-        if (record.scrollTop) {
-            requestAnimationFrame(() => {
+        // Restore scroll position and set cursor to end of first visible line
+        requestAnimationFrame(() => {
+            if (record.scrollTop) {
                 editorInfo.editor.setScrollPosition(record.scrollTop);
-            });
-        }
+            }
+            // Calculate cursor position at end of first visible line
+            const lineHeight = editorInfo.editor.getLineHeight();
+            const scrollTop = record.scrollTop || 0;
+            const firstVisibleLine = Math.floor(scrollTop / lineHeight);
+            const lines = record.text.split('\n');
+            let cursorPos = 0;
+            for (let i = 0; i < firstVisibleLine && i < lines.length; i++) {
+                cursorPos += lines[i].length + 1; // +1 for newline
+            }
+            if (firstVisibleLine < lines.length) {
+                cursorPos += lines[firstVisibleLine].length; // end of line
+            }
+            editorInfo.editor.setCursorPosition(cursorPos);
+        });
     }
 }
 

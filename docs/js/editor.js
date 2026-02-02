@@ -545,6 +545,13 @@ class SimpleEditor {
     }
 
     /**
+     * Get the height of a single line in pixels
+     */
+    getLineHeight() {
+        return this.measureTextHeight('X');
+    }
+
+    /**
      * Get the pixel position of the cursor from the top of the textarea content
      */
     getCursorPixelPosition() {
