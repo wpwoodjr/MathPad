@@ -300,8 +300,9 @@ function createEditorForRecord(record) {
         syncFromVariables = true;
         const cursorPos = editor.getCursorPosition();
         const oldLength = editor.getValue().length;
-        editor.setValue(newText, true);
-        // Adjust cursor position based on text length change
+        // Use undoable=false to avoid stealing focus from variables panel
+        // (undoable=true requires textarea.focus() for execCommand)
+        editor.setValue(newText, false);
         const delta = newText.length - oldLength;
         editor.setCursorPosition(Math.max(0, cursorPos + delta));
     });
