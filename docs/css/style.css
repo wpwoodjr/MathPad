@@ -463,7 +463,7 @@ button {
     word-wrap: break-word;
     overflow-wrap: break-word;
     pointer-events: none;
-    color: transparent;
+    color: var(--text-primary);
     font-family: var(--font-mono);
     font-size: 14px;
     line-height: 1.5;
@@ -480,7 +480,7 @@ button {
     outline: none;
     resize: none;
     background: transparent;
-    color: var(--text-primary);
+    color: transparent;
     font-family: var(--font-mono);
     font-size: 14px;
     line-height: 1.5;
