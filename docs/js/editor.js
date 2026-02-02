@@ -150,6 +150,15 @@ function findLabelRegions(text) {
                     end: lineStart + exprStart
                 });
             }
+        } else if (!result && line.includes('=')) {
+            // Equation line - find label text before and after the equation
+            const eqRegions = findEquationLabelRegions(line);
+            for (const r of eqRegions) {
+                regions.push({
+                    start: lineStart + r.start,
+                    end: lineStart + r.end
+                });
+            }
         }
 
         // Handle unquoted trailing comments (for both declarations and expression outputs)
@@ -170,25 +179,60 @@ function findLabelRegions(text) {
 }
 
 /**
+ * Find label text regions in an equation line
+ * For "equation c = a + b test", returns regions for "equation " and " test"
+ * Uses extractEquationFromLine from variables.js
+ */
+function findEquationLabelRegions(line) {
+    const regions = [];
+
+    // Use the existing function to extract the valid equation
+    const extracted = extractEquationFromLine(line);
+
+    // If extraction returned the same line, no label text
+    if (extracted === line) return regions;
+
+    // Find where the extracted equation appears in the original line
+    const eqStart = line.indexOf(extracted);
+    if (eqStart === -1) return regions;
+
+    // Everything before the equation is label text
+    if (eqStart > 0) {
+        regions.push({ start: 0, end: eqStart });
+    }
+
+    // Everything after the equation is label text
+    const eqEnd = eqStart + extracted.length;
+    if (eqEnd < line.length) {
+        regions.push({ start: eqEnd, end: line.length });
+    }
+
+    return regions;
+}
+
+/**
  * Find literal number formats that the tokenizer doesn't handle natively
  * Returns array of { start, end } for each literal region
- * Handles: FF#16 (value#base), 0xFF (hex), 0b101 (binary), 0o77 (octal)
+ * Handles: FF#16, 0xFF, 0b101, 0o77, 10%, $607, -$607
  */
 function findLiteralRegions(text) {
     const regions = [];
 
-    // Pattern for value#base notation (e.g., FF#16, 101#2)
-    const basePattern = /[0-9a-fA-F]+#[0-9]+/g;
+    // All patterns for special number literals
+    const patterns = [
+        /[0-9a-fA-F]+#[0-9]+/g,                    // value#base (FF#16, 101#2)
+        /0[xX][0-9a-fA-F]+/g,                      // hex (0xFF)
+        /0[bB][01]+/g,                             // binary (0b101)
+        /0[oO][0-7]+/g,                            // octal (0o77)
+        /-?\$[\d,]+(?:\.\d+)?/g,                   // money (-$607, $1,234.56)
+        /[\d,]+(?:\.\d+)?%/g,                      // percent (10%, 7.5%)
+    ];
 
-    // Pattern for prefix notation (0x, 0b, 0o)
-    const prefixPattern = /0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+/g;
-
-    let match;
-    while ((match = basePattern.exec(text)) !== null) {
-        regions.push({ start: match.index, end: match.index + match[0].length });
-    }
-    while ((match = prefixPattern.exec(text)) !== null) {
-        regions.push({ start: match.index, end: match.index + match[0].length });
+    for (const pattern of patterns) {
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+            regions.push({ start: match.index, end: match.index + match[0].length });
+        }
     }
 
     return regions;
