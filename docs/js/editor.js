@@ -104,9 +104,12 @@ function tokenizeMathPad(text) {
         tokens.push({ from: region.start, to: region.end, type: 'comment' });
     }
 
-    // Add literal regions as number tokens
+    // Add literal regions as number tokens (skip if inside a comment region)
     for (const region of literalRegions) {
-        tokens.push({ from: region.start, to: region.end, type: 'number' });
+        const inComment = commentRegions.some(c => region.start >= c.start && region.end <= c.end);
+        if (!inComment) {
+            tokens.push({ from: region.start, to: region.end, type: 'number' });
+        }
     }
 
     // Sort tokens by position
@@ -159,6 +162,12 @@ function findLabelRegions(text) {
                     end: lineStart + r.end
                 });
             }
+        } else if (!result && line.trim()) {
+            // Plain text line (no markers, no equation) - entire line is comment
+            regions.push({
+                start: lineStart,
+                end: lineStart + line.length
+            });
         }
 
         // Handle unquoted trailing comments (for both declarations and expression outputs)
