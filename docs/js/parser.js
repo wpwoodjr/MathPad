@@ -164,8 +164,14 @@ class Tokenizer {
         let value = '';
 
         this.advance(); // opening "
-        while (this.peek() && this.peek() !== '"' && this.peek() !== '\n') {
-            value += this.advance();
+        while (this.peek() && this.peek() !== '"') {
+            const ch = this.advance();
+            value += ch;
+            // Track line/col for newlines within comment
+            if (ch === '\n') {
+                this.line++;
+                this.col = 1;
+            }
         }
         if (this.peek() === '"') {
             this.advance(); // closing "

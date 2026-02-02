@@ -568,8 +568,17 @@ function updateRecordTitleFromContent(record) {
     const firstLine = record.text.split('\n')[0].trim();
 
     // Extract title: strip quotes if present, otherwise use first line
-    const match = firstLine.match(/^"([^"]+)"$/);
-    let newTitle = match ? match[1] : (firstLine || 'Untitled');
+    // Handle: "complete quote", "start of multi-line, or plain text
+    let newTitle;
+    const completeQuote = firstLine.match(/^"([^"]+)"$/);
+    const startQuote = firstLine.match(/^"(.+)$/);
+    if (completeQuote) {
+        newTitle = completeQuote[1];
+    } else if (startQuote) {
+        newTitle = startQuote[1]; // Multi-line comment, use content after opening quote
+    } else {
+        newTitle = firstLine || 'Untitled';
+    }
 
     // Truncate long titles
     if (newTitle.length > 30) {
@@ -592,22 +601,36 @@ function duplicateCurrentRecord() {
     const record = findRecord(UI.data, UI.currentRecordId);
     if (!record) return;
 
-    const newTitle = record.title + ' (copy)';
     let newText = record.text;
 
-    // Update the title in the text if present (quoted or unquoted)
+    // Update the title in the text if present (quoted or plain text, not code)
     const lines = newText.split('\n');
     const firstLine = lines[0].trim();
-    const titleMatch = firstLine.match(/^"([^"]+)"$/);
-    if (titleMatch && titleMatch[1] === record.title) {
-        // Quoted title - update with quotes
-        lines[0] = `"${newTitle}"`;
+    const completeQuote = firstLine.match(/^"([^"]+)"$/);
+    const startQuote = firstLine.match(/^"(.+)$/);
+
+    // Check if first line is a title (quoted comment or plain text, not code)
+    // Use LineParser to determine if it's code
+    const parser = new LineParser(firstLine);
+    const parsed = parser.parse();
+    const isCodeLine = parsed !== null; // null means plain text, not a declaration/expression
+
+    if (completeQuote) {
+        // Complete quoted title - append (copy) inside quotes
+        lines[0] = `"${completeQuote[1]} (copy)"`;
         newText = lines.join('\n');
-    } else if (firstLine === record.title) {
-        // Unquoted title - update without quotes
-        lines[0] = newTitle;
+    } else if (startQuote) {
+        // Multi-line comment - append (copy) after opening quote content
+        lines[0] = `"${startQuote[1]} (copy)`;
+        newText = lines.join('\n');
+    } else if (!isCodeLine && firstLine) {
+        // Plain text title - append (copy)
+        lines[0] = firstLine + ' (copy)';
         newText = lines.join('\n');
     }
+
+    // The display title will be truncated if needed by updateRecordTitleFromContent
+    const newTitle = record.title + ' (copy)';
 
     const newRecord = {
         ...record,

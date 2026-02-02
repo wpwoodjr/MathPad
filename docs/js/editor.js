@@ -18,18 +18,41 @@ const editorBuiltinFunctions = new Set([
  * Uses the shared Tokenizer from parser.js and maps to highlight types
  */
 function tokenizeMathPad(text) {
-    // First, use LineParser to find comment regions (label text and unquoted comments)
-    const commentRegions = findLabelRegions(text);
-
-    // Find literal number formats that the tokenizer doesn't handle natively
-    const literalRegions = findLiteralRegions(text);
-
-    // Use the shared Tokenizer from parser.js
+    // Tokenize first to find quoted comments (they take precedence)
     const tokenizer = new Tokenizer(text);
     const parserTokens = tokenizer.tokenize();
 
-    const tokens = [];
+    // Find quoted comment regions from tokenizer
+    const quotedCommentRegions = [];
     let pos = 0;
+    for (const token of parserTokens) {
+        if (token.type === TokenType.EOF) continue;
+        const tokenStart = findTokenPosition(text, token, pos);
+        if (tokenStart === -1) continue;
+        const tokenLength = getTokenLength(token, text, tokenStart);
+        const tokenEnd = tokenStart + tokenLength;
+        if (token.type === TokenType.COMMENT) {
+            quotedCommentRegions.push({ start: tokenStart, end: tokenEnd });
+        }
+        pos = tokenEnd;
+    }
+
+    // Helper to check if a region overlaps with quoted comments
+    const overlapsQuotedComment = (start, end) =>
+        quotedCommentRegions.some(r => start < r.end && end > r.start);
+
+    // Find label/comment regions (exclude those inside quoted comments)
+    const commentRegions = findLabelRegions(text).filter(
+        r => !overlapsQuotedComment(r.start, r.end)
+    );
+
+    // Find literal number formats (exclude those inside quoted comments)
+    const literalRegions = findLiteralRegions(text).filter(
+        r => !overlapsQuotedComment(r.start, r.end)
+    );
+
+    const tokens = [];
+    pos = 0;
 
     // Helper to check if a position overlaps with any special region
     const overlapsSpecialRegion = (start, end) =>
