@@ -433,7 +433,6 @@ class SimpleEditor {
 
         if (formulasPanel) {
             formulasPanel.style.height = `${availableHeight}px`;
-            formulasPanel.style.flex = 'none';
         }
         if (variablesPanel) {
             variablesPanel.style.height = `${variablesHeight}px`;
@@ -464,7 +463,6 @@ class SimpleEditor {
         const formulasPanel = document.querySelector('.formulas-panel');
         if (formulasPanel) {
             formulasPanel.style.removeProperty('height');
-            formulasPanel.style.removeProperty('flex');
         }
 
         const variablesPanel = document.querySelector('.variables-panel');
