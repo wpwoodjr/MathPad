@@ -1128,6 +1128,12 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
             UI.data.settings.variablesPanelHeight = bottomPanel.offsetHeight;
             debouncedSave(UI.data);
         }
+
+        // Update editor's saved height if keyboard is up (so restoreHeight uses new position)
+        const editorInfo = UI.editors.get(UI.currentRecordId);
+        if (editorInfo?.editor.isAdjustedForKeyboard) {
+            editorInfo.editor.originalVariablesHeight = bottomPanel.style.height;
+        }
     }
 
     divider.addEventListener('pointerup', endDrag);
