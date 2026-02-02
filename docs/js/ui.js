@@ -1095,31 +1095,33 @@ function escapeAttr(text) {
  * Setup panel resizer for the divider
  */
 function setupPanelResizer(divider, topPanel, bottomPanel) {
-    let startY, startHeight;
+    let startY, startHeight, maxHeight;
 
-    function onMouseDown(e) {
+    // Prevent browser from taking over touch gestures
+    divider.style.touchAction = 'none';
+
+    divider.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        divider.setPointerCapture(e.pointerId);
         startY = e.clientY;
         startHeight = bottomPanel.offsetHeight;
+        // Cache container height to avoid layout thrashing during drag
+        maxHeight = bottomPanel.parentElement.offsetHeight;
         divider.classList.add('dragging');
         document.body.classList.add('panel-resizing');
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-        e.preventDefault();
-    }
+    });
 
-    function onMouseMove(e) {
+    divider.addEventListener('pointermove', (e) => {
+        if (!divider.hasPointerCapture(e.pointerId)) return;
         const delta = startY - e.clientY;
         // Min 80px for variables panel, allow formulas panel to shrink to 0
-        const maxHeight = bottomPanel.parentElement.offsetHeight;
         const newHeight = Math.max(80, Math.min(maxHeight, startHeight + delta));
         bottomPanel.style.height = newHeight + 'px';
-    }
+    });
 
-    function onMouseUp() {
+    function endDrag() {
         divider.classList.remove('dragging');
         document.body.classList.remove('panel-resizing');
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
 
         // Save preference
         if (UI.data.settings) {
@@ -1128,28 +1130,8 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
         }
     }
 
-    divider.addEventListener('mousedown', onMouseDown);
-
-    // Touch support for mobile
-    divider.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-            const touch = e.touches[0];
-            onMouseDown({ clientY: touch.clientY, preventDefault: () => {} });
-        }
-    });
-
-    document.addEventListener('touchmove', (e) => {
-        if (divider.classList.contains('dragging') && e.touches.length === 1) {
-            const touch = e.touches[0];
-            onMouseMove({ clientY: touch.clientY });
-        }
-    });
-
-    document.addEventListener('touchend', () => {
-        if (divider.classList.contains('dragging')) {
-            onMouseUp();
-        }
-    });
+    divider.addEventListener('pointerup', endDrag);
+    divider.addEventListener('pointercancel', endDrag);
 }
 
 // Export functions to global scope for HTML onclick handlers
