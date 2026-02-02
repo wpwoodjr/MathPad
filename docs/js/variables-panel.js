@@ -31,32 +31,14 @@ class VariablesPanel {
     }
 
     /**
-     * Expand variables panel to fill space on mobile when input is focused
+     * Scroll focused field into view when keyboard appears
      */
-    expandForMobile() {
-        // Only on mobile (check for visualViewport and small screen)
-        if (!window.visualViewport || window.innerWidth > 768) return;
-
-        const formulasPanel = document.querySelector('.formulas-panel');
-        const variablesPanel = document.querySelector('.variables-panel');
-        const header = document.querySelector('.app-header');
-        const tabBar = document.querySelector('.tab-bar');
-        const statusBar = document.querySelector('.status-bar');
-        const divider = document.querySelector('.panel-divider');
-
-        const headerHeight = header ? header.offsetHeight : 0;
-        const tabBarHeight = tabBar ? tabBar.offsetHeight : 0;
-        const statusBarHeight = statusBar ? statusBar.offsetHeight : 0;
-        const dividerHeight = divider ? divider.offsetHeight : 0;
-
-        // Calculate available height between tab bar and status bar
-        const availableHeight = window.innerHeight - headerHeight - tabBarHeight - statusBarHeight - dividerHeight;
-
-        // Expand variables panel to fill available space
-        // The formulas panel will shrink naturally via flexbox (min-height: 0)
-        if (variablesPanel) {
-            variablesPanel.style.height = `${availableHeight}px`;
-        }
+    scrollFieldIntoView(element) {
+        if (!element) return;
+        // Wait a bit for keyboard to appear, then scroll
+        setTimeout(() => {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
     }
 
     /**
@@ -247,8 +229,8 @@ class VariablesPanel {
             valueElement.addEventListener('focus', (e) => {
                 // Track this as the focused variable (for clear exclusion)
                 this.lastEditedVar = info.name;
-                // Expand variables panel on mobile
-                this.expandForMobile();
+                // Scroll into view when keyboard appears
+                this.scrollFieldIntoView(e.target);
             });
             // Also handle Enter key to commit the value
             valueElement.addEventListener('keydown', (e) => {
@@ -406,7 +388,7 @@ class VariablesPanel {
             // Detect decimal places from input
             const inputWithoutMoney = text.replace(/[$,]/g, '');
             const decimalMatch = inputWithoutMoney.match(/\.(\d+)/);
-            const places = decimalMatch ? Math.max(2, decimalMatch[1].length) : 2;
+            const places = decimalMatch ? Math.max(2, decimalMatch[1].length) : 0;
 
             const formatted = absValue.toFixed(places);
             const parts = formatted.split('.');

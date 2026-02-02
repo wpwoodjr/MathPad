@@ -215,24 +215,37 @@ class SimpleEditor {
         this.isAdjustedForKeyboard = false;
         this.originalVariablesHeight = null;
         this.viewportHandler = null;
+        this._userInitiatedFocus = false;
+
+        // Track user-initiated focus (touch, click, mousedown)
+        // Two flags: _userTouched is ephemeral (cleared on focus), _userInitiatedFocus persists until blur
+        this._userTouched = false;
+        this.textarea.addEventListener('mousedown', () => {
+            this._userTouched = true;
+        });
+        this.textarea.addEventListener('touchstart', () => {
+            this._userTouched = true;
+        });
 
         this.textarea.addEventListener('focus', () => {
-            // Wait for keyboard to appear, then adjust
-            setTimeout(() => {
-                if (document.activeElement === this.textarea) {
-                    this.adjustForKeyboard();
-                }
-            }, 300);
+            // Confirm user touch led to focus, then clear the ephemeral flag
+            this._userInitiatedFocus = this._userTouched;
+            if (this._userTouched) {
+                this._userTouched = false;
+                // adjust for keyboard in case keyboard is already active
+                this.adjustForKeyboard();
+            }
         });
 
         this.textarea.addEventListener('blur', () => {
+            this._userInitiatedFocus = false;
             this.restoreHeight();
         });
 
         // Listen for viewport changes (keyboard resize, rotation)
         if (window.visualViewport) {
             this.viewportHandler = () => {
-                if (document.activeElement === this.textarea) {
+                if (document.activeElement === this.textarea && this._userInitiatedFocus) {
                     this.adjustForKeyboard();
                 }
             };
@@ -449,11 +462,12 @@ class SimpleEditor {
 
         // Restore both panels to their original heights
         const formulasPanel = document.querySelector('.formulas-panel');
-        const variablesPanel = document.querySelector('.variables-panel');
         if (formulasPanel) {
             formulasPanel.style.removeProperty('height');
             formulasPanel.style.removeProperty('flex');
         }
+
+        const variablesPanel = document.querySelector('.variables-panel');
         if (variablesPanel) {
             if (this.originalVariablesHeight) {
                 variablesPanel.style.height = this.originalVariablesHeight;
