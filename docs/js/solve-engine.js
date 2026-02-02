@@ -123,8 +123,11 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
     const varInfo = variables.get(unknown);
     if (varInfo?.declaration?.limits) {
         try {
-            const lowAST = parseExpression(varInfo.declaration.limits.lowExpr);
-            const highAST = parseExpression(varInfo.declaration.limits.highExpr);
+            // Expand literals (e.g., 6% -> 0.06) before parsing limit expressions
+            const lowExpr = expandLiterals(varInfo.declaration.limits.lowExpr);
+            const highExpr = expandLiterals(varInfo.declaration.limits.highExpr);
+            const lowAST = parseExpression(lowExpr);
+            const highAST = parseExpression(highExpr);
             limits = {
                 low: evaluate(lowAST, context),
                 high: evaluate(highAST, context)
@@ -253,8 +256,11 @@ function solveEquations(text, context, declarations) {
                             // Check limits if defined
                             if (varInfo?.declaration?.limits) {
                                 try {
-                                    const lowAST = parseExpression(varInfo.declaration.limits.lowExpr);
-                                    const highAST = parseExpression(varInfo.declaration.limits.highExpr);
+                                    // Expand literals (e.g., 6% -> 0.06) before parsing limit expressions
+                                    const lowExpr = expandLiterals(varInfo.declaration.limits.lowExpr);
+                                    const highExpr = expandLiterals(varInfo.declaration.limits.highExpr);
+                                    const lowAST = parseExpression(lowExpr);
+                                    const highAST = parseExpression(highExpr);
                                     const low = evaluate(lowAST, context);
                                     const high = evaluate(highAST, context);
                                     if (value < low || value > high) {
