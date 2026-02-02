@@ -25,7 +25,8 @@ const TokenType = {
     ARROW_LEFT: 'ARROW_LEFT',       // <-
     ARROW_RIGHT: 'ARROW_RIGHT',     // ->
     ARROW_FULL: 'ARROW_FULL',       // ->>
-    DOUBLE_COLON: 'DOUBLE_COLON'    // ::
+    DOUBLE_COLON: 'DOUBLE_COLON',   // ::
+    FORMATTER: 'FORMATTER'          // $ # (format suffixes)
 };
 
 // AST Node types
@@ -140,6 +141,34 @@ class Tokenizer {
                 ch = this.advance();
                 value += ch;
                 raw += ch;
+            }
+        }
+
+        // Percent literal: 5% -> 0.05 (only if % not followed by an operand)
+        // This distinguishes percent literals from modulo: 5% vs 5%x or 5% x
+        // Look past whitespace to see if an operand (number/identifier) follows
+        if (this.peek() === '%') {
+            let lookAhead = 1;
+            while (this.peek(lookAhead) === ' ' || this.peek(lookAhead) === '\t') {
+                lookAhead++;
+            }
+            const nextChar = this.peek(lookAhead);
+            // Check if followed by an operand:
+            // - digit, letter, '.' start an operand directly
+            // - '-' or '+' followed by digit/dot starts a signed number operand
+            let isModulo = false;
+            if (nextChar && (this.isAlphaNum(nextChar) || nextChar === '.')) {
+                isModulo = true;
+            } else if (nextChar === '-' || nextChar === '+') {
+                const afterSign = this.peek(lookAhead + 1);
+                if (afterSign && (this.isDigit(afterSign) || afterSign === '.')) {
+                    isModulo = true; // signed number follows
+                }
+            }
+            if (!isModulo) {
+                this.advance(); // consume %
+                raw += '%';
+                return this.makeToken(TokenType.NUMBER, { value: parseFloat(value) / 100, base: 10, raw }, startLine, startCol);
             }
         }
 
@@ -322,6 +351,14 @@ class Tokenizer {
                     this.advance();
                     this.tokens.push(this.makeToken(TokenType.COLON, ':', startLine, startCol));
                 }
+                continue;
+            }
+
+            // Format suffixes: $ (money), # (base)
+            // Note: % stays as OPERATOR since it's also modulo; editor handles highlighting
+            if (ch === '$' || ch === '#') {
+                this.advance();
+                this.tokens.push(this.makeToken(TokenType.FORMATTER, ch, startLine, startCol));
                 continue;
             }
 

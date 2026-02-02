@@ -59,6 +59,9 @@ function tokenizeMathPad(text) {
         commentRegions.some(r => start < r.end && end > r.start) ||
         literalRegions.some(r => start < r.end && end > r.start);
 
+    let lastTokenWasVarDef = false;
+    let lastTokenEnd = 0;
+
     for (const token of parserTokens) {
         // Skip EOF token
         if (token.type === TokenType.EOF) continue;
@@ -72,6 +75,7 @@ function tokenizeMathPad(text) {
         // Skip tokens that overlap with special regions (we'll add those separately)
         if (overlapsSpecialRegion(tokenStart, tokenEnd)) {
             pos = tokenEnd;
+            lastTokenWasVarDef = false;
             continue;
         }
 
@@ -85,7 +89,12 @@ function tokenizeMathPad(text) {
                 highlightType = getIdentifierHighlightType(token.value, text, tokenEnd);
                 break;
             case TokenType.OPERATOR:
-                highlightType = 'operator';
+                // Style % as variable-def if it immediately follows a variable-def identifier
+                if (token.value === '%' && lastTokenWasVarDef && tokenStart === lastTokenEnd) {
+                    highlightType = 'variable-def';
+                } else {
+                    highlightType = 'operator';
+                }
                 break;
             case TokenType.LPAREN:
             case TokenType.RPAREN:
@@ -108,7 +117,17 @@ function tokenizeMathPad(text) {
                 break;
             case TokenType.NEWLINE:
                 pos = tokenEnd;
+                lastTokenWasVarDef = false;
                 continue;
+            case TokenType.FORMATTER:
+                // Style $ and # as variable-def if they immediately follow a variable-def identifier
+                if (lastTokenWasVarDef && tokenStart === lastTokenEnd) {
+                    highlightType = 'variable-def';
+                } else {
+                    highlightType = 'operator';
+                }
+                break;
+            case TokenType.ERROR:
             default:
                 highlightType = 'punctuation';
         }
@@ -117,6 +136,10 @@ function tokenizeMathPad(text) {
         if (token.type === TokenType.OPERATOR && token.value === '\\') {
             highlightType = 'inline-marker';
         }
+
+        // Track if this token is a variable-def for styling following $ or %
+        lastTokenWasVarDef = (highlightType === 'variable-def');
+        lastTokenEnd = tokenEnd;
 
         tokens.push({ from: tokenStart, to: tokenEnd, type: highlightType });
         pos = tokenEnd;
@@ -282,6 +305,10 @@ function findTokenPosition(text, token, startFrom) {
         searchValue = '"' + token.value + '"';
     } else if (token.type === TokenType.NEWLINE) {
         return text.indexOf('\n', startFrom);
+    } else if (token.type === TokenType.ERROR) {
+        // Extract the actual character from error message like "Unexpected character '$'"
+        const match = token.value.match(/character '(.)'/);
+        searchValue = match ? match[1] : null;
     } else {
         searchValue = token.value;
     }
@@ -309,6 +336,8 @@ function getTokenLength(token, text, start) {
         return token.value.length + 2; // Include quotes
     } else if (token.type === TokenType.NEWLINE) {
         return 1;
+    } else if (token.type === TokenType.ERROR) {
+        return 1; // ERROR tokens are single unknown characters
     } else if (token.value) {
         return token.value.length;
     }
@@ -332,7 +361,16 @@ function getIdentifierHighlightType(name, text, tokenEnd) {
     }
 
     // Check if this is a variable declaration
-    const nextChars = text.slice(lookAhead, lookAhead + 3);
+    // Account for $ or % suffix before the marker
+    let checkPos = lookAhead;
+    if (checkPos < text.length && (text[checkPos] === '$' || text[checkPos] === '%')) {
+        checkPos++;
+        // Skip whitespace after suffix
+        while (checkPos < text.length && (text[checkPos] === ' ' || text[checkPos] === '\t')) {
+            checkPos++;
+        }
+    }
+    const nextChars = text.slice(checkPos, checkPos + 3);
     if (nextChars.startsWith(':') || nextChars.startsWith('<-') ||
         nextChars.startsWith('->') || nextChars.startsWith('?:') ||
         nextChars.startsWith('#') || nextChars.startsWith('[')) {

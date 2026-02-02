@@ -20,7 +20,7 @@ w->> 0.1
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 4: Unexpected token after expression: ERROR 'Unexpected character '$''"; StatusIsError = 1
+Status = "Solved with errors: Line 4: Unexpected token after expression: FORMATTER '$'"; StatusIsError = 1
 "01 Illegal variable name pmt$"
 
 pmt$: 4
