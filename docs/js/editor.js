@@ -404,13 +404,6 @@ class SimpleEditor {
             return;
         }
 
-        // Save original variables panel height on first call
-        if (!this.isAdjustedForKeyboard) {
-            this.isAdjustedForKeyboard = true;
-            const variablesPanel = document.querySelector('.variables-panel');
-            this.originalVariablesHeight = variablesPanel?.style.height || '';
-        }
-
         // Get header and tab bar heights
         const header = document.querySelector('.app-header');
         const headerHeight = header ? header.offsetHeight : 0;
@@ -421,13 +414,20 @@ class SimpleEditor {
         const availableHeight = viewportHeight - headerHeight - tabBarHeight;
 
         // Resize both panels (like divider drag does)
-        const formulasPanel = document.querySelector('.formulas-panel');
-        const variablesPanel = document.querySelector('.variables-panel');
-        const divider = document.querySelector('.panel-divider');
+        // Navigate from this.element (simple-editor) to find panels
+        const formulasPanel = this.element.parentElement;
+        const container = formulasPanel?.parentElement;
+        const variablesPanel = container?.querySelector('.variables-panel');
+        const divider = container?.querySelector('.panel-divider');
         const dividerHeight = divider ? divider.offsetHeight : 0;
 
+        // Save original variables panel height on first call
+        if (!this.isAdjustedForKeyboard) {
+            this.isAdjustedForKeyboard = true;
+            this.originalVariablesHeight = variablesPanel?.style.height || '';
+        }
+
         // Get the container height to calculate variables panel size
-        const container = formulasPanel?.parentElement;
         const containerHeight = container ? container.offsetHeight : 0;
         const variablesHeight = Math.max(40, containerHeight - availableHeight - dividerHeight);
 
@@ -460,12 +460,13 @@ class SimpleEditor {
         if (!this.isAdjustedForKeyboard) return;
 
         // Restore both panels to their original heights
-        const formulasPanel = document.querySelector('.formulas-panel');
-        if (formulasPanel) {
-            formulasPanel.style.removeProperty('height');
-        }
+        // Navigate from this.element (simple-editor) to find panels
+        const formulasPanel = this.element.parentElement;
+        const container = formulasPanel?.parentElement;
+        const variablesPanel = container?.querySelector('.variables-panel');
 
-        const variablesPanel = document.querySelector('.variables-panel');
+        formulasPanel?.style.removeProperty('height');
+
         if (variablesPanel) {
             if (this.originalVariablesHeight) {
                 variablesPanel.style.height = this.originalVariablesHeight;
