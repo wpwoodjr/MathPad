@@ -79,11 +79,10 @@ function tokenizeMathPad(text) {
 
         // Skip tokens that overlap with special regions (we'll add those separately)
         // - Skip all tokens overlapping literal regions (literals take precedence)
-        // - Skip non-NUMBER tokens overlapping comment regions (comments take precedence)
-        // - Don't skip NUMBER tokens overlapping comment regions (NaN/Infinity should be yellow)
+        // - Skip all tokens overlapping comment regions (comments take precedence)
         const inLiteralRegion = literalRegions.some(r => tokenStart < r.end && tokenEnd > r.start);
         const inCommentRegion = commentRegions.some(r => tokenStart < r.end && tokenEnd > r.start);
-        if (inLiteralRegion || (inCommentRegion && token.type !== TokenType.NUMBER)) {
+        if (inLiteralRegion || inCommentRegion) {
             pos = tokenEnd;
             lastTokenWasVarDef = false;
             continue;
@@ -160,14 +159,12 @@ function tokenizeMathPad(text) {
         pos = tokenEnd;
     }
 
-    // Collect number token positions to avoid overlapping comment regions
-    const numberTokenRegions = tokens.filter(t => t.type === 'number');
-
-    // Add comment regions as single comment tokens (skip if overlapping with number tokens)
+    // Add comment regions as single comment tokens
+    // Skip if overlapping with existing tokens (but regular numbers in comments were already skipped)
     for (const region of commentRegions) {
-        const overlapsNumber = numberTokenRegions.some(n =>
-            region.start < n.to && region.end > n.from);
-        if (!overlapsNumber) {
+        const overlapsExisting = tokens.some(t =>
+            region.start < t.to && region.end > t.from);
+        if (!overlapsExisting) {
             tokens.push({ from: region.start, to: region.end, type: 'comment' });
         }
     }

@@ -459,6 +459,195 @@ function runAllTests() {
                 ['b', 'variable-def'],
                 ['->', 'punctuation']
             ]
+        },
+        // Plain text with numbers should be comment, not extract numbers (including NaN/Infinity)
+        {
+            name: 'plain text with numbers as comment',
+            line: '    these equations calculate the alveolar oxygen tension (which can range from 100mm on RA to 673mm on 100% oxygen NaN Infinity)',
+            assertions: [
+                ['    these equations calculate the alveolar oxygen tension (which can range from 100mm on RA to 673mm on 100% oxygen NaN Infinity)', 'comment']
+            ]
+        },
+        // Equation with label text before and after
+        {
+            name: 'equation with labels (equation f(x4; c5; c4; c3; c2; c1; c0) = 0 end)',
+            line: 'equation f(x4; c5; c4; c3; c2; c1; c0) = 0 end',
+            assertions: [
+                ['equation ', 'comment'],
+                ['f', 'function'],
+                ['(', 'paren'],
+                ['x4', 'variable'],
+                [';', 'punctuation'],
+                ['c5', 'variable'],
+                ['c4', 'variable'],
+                ['c3', 'variable'],
+                ['c2', 'variable'],
+                ['c1', 'variable'],
+                ['c0', 'variable'],
+                [')', 'paren'],
+                ['=', 'operator'],
+                ['0', 'number'],
+                [' end', 'comment']
+            ]
+        },
+        // Variable output with limits and label text
+        {
+            name: 'variable with limits and labels (x4[2.5:3]->)',
+            line: 'x4 between 2.5 and 3 is x4[2.5:3]->  - see that',
+            assertions: [
+                ['x4 between 2.5 and 3 is ', 'comment'],
+                ['x4', 'variable-def'],
+                ['[', 'bracket'],
+                ['2.5', 'number'],
+                [':', 'punctuation'],
+                ['3', 'number'],
+                [']', 'bracket'],
+                ['->', 'punctuation'],
+                ['- see that', 'comment']
+            ]
+        },
+        // Money format variable with money limits
+        {
+            name: 'money format with money limits (fv2$[$0:$0.20]: $0.13)',
+            line: 'future value fv2$[$0:$0.20]: $0.13',
+            assertions: [
+                ['future value ', 'comment'],
+                ['fv2', 'variable-def'],
+                ['$', 'variable-def'],
+                ['[', 'bracket'],
+                ['$0', 'number'],
+                [':', 'punctuation'],
+                ['$0.20', 'number'],
+                [']', 'bracket'],
+                [':', 'punctuation'],
+                ['$0.13', 'number']
+            ]
+        },
+        // Percent format variable with label
+        {
+            name: 'percent format with label (interest rate rate1%: 6)',
+            line: 'interest rate rate1%: 6',
+            assertions: [
+                ['interest rate ', 'comment'],
+                ['rate1', 'variable-def'],
+                ['%', 'variable-def'],
+                [':', 'punctuation'],
+                ['6', 'number']
+            ]
+        },
+        // Variable output with value
+        {
+            name: 'variable output with value (rate1-> 6)',
+            line: 'rate1-> 6',
+            assertions: [
+                ['rate1', 'variable-def'],
+                ['->', 'punctuation'],
+                ['6', 'number']
+            ]
+        },
+        // Percent format variable output with percent value
+        {
+            name: 'percent format output (rate1%-> 600%)',
+            line: 'rate1%-> 600%',
+            assertions: [
+                ['rate1', 'variable-def'],
+                ['%', 'variable-def'],
+                ['->', 'punctuation'],
+                ['600%', 'number']
+            ]
+        },
+        // Percent format variable with expression value
+        {
+            name: 'percent format with expression (rate%: 6+6%)',
+            line: 'rate%: 6+6%',
+            assertions: [
+                ['rate', 'variable-def'],
+                ['%', 'variable-def'],
+                [':', 'punctuation'],
+                ['6', 'number'],
+                ['+', 'operator'],
+                ['6%', 'number']
+            ]
+        },
+        // Percent format with limits, value, label, and quoted comment
+        {
+            name: 'percent format full (Enter yint%[0:5.1%]: 5% "annual interest rate %")',
+            line: 'Enter yint%[0:5.1%]: 5% "annual interest rate %"',
+            assertions: [
+                ['Enter ', 'comment'],
+                ['yint', 'variable-def'],
+                ['%', 'variable-def'],
+                ['[', 'bracket'],
+                ['0', 'number'],
+                [':', 'punctuation'],
+                ['5.1%', 'number'],
+                [']', 'bracket'],
+                [':', 'punctuation'],
+                ['5%', 'number'],
+                ['"annual interest rate %"', 'comment']
+            ]
+        },
+        // Single-line braced equation
+        {
+            name: 'single-line braced equation (TVM payment formula)',
+            line: '{ pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n) }',
+            assertions: [
+                ['{', 'brace'],
+                ['pmt', 'variable'],
+                ['=', 'operator'],
+                ['pv', 'variable'],
+                ['fv', 'variable'],
+                ['mint', 'variable'],
+                ['n', 'variable'],
+                ['**', 'operator'],
+                ['}', 'brace']
+            ]
+        },
+        // Percent literal in expression with subtraction
+        {
+            name: 'percent in expression (wibble: 85%-2.8)',
+            line: 'wibble: 85%-2.8',
+            assertions: [
+                ['wibble', 'variable-def'],
+                [':', 'punctuation'],
+                ['85%', 'number'],
+                ['-', 'operator'],
+                ['2.8', 'number']
+            ]
+        },
+        // Variable output with negative value
+        {
+            name: 'output with negative value (wibble-> -1.95)',
+            line: 'wibble-> -1.95',
+            assertions: [
+                ['wibble', 'variable-def'],
+                ['->', 'punctuation'],
+                ['-', 'operator'],
+                ['1.95', 'number']
+            ]
+        },
+        // Infinity expression with labels
+        {
+            name: 'Infinity expression with labels (Try Infinity/Infinity->)',
+            line: "Try Infinity/Infinity-> wow that's not even a number!",
+            assertions: [
+                ['Try ', 'comment'],
+                ['Infinity', 'number'],
+                ['/', 'operator'],
+                ['->', 'punctuation'],
+                ["wow that's not even a number!", 'comment']
+            ]
+        },
+        // Variable output with multiple parenthetical labels
+        {
+            name: 'variable with parenthetical labels (Result (%) (m/s) c->)',
+            line: 'Result (%) (m/s) c-> speed of light',
+            assertions: [
+                ['Result (%) (m/s) ', 'comment'],
+                ['c', 'variable'],
+                ['->', 'punctuation'],
+                ['speed of light', 'comment']
+            ]
         }
     ];
 

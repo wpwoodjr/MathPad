@@ -440,3 +440,32 @@ This is a fn: { min(a;b) =
 
 xmax(7; min(4;5))->> 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"NaN and Infinity tests"
+
+nn: NaN
+nn-> NaN
+2/0-> Infinity wow so big!
+Infinity/Infinity-> NaN wow that's not even a number!
+NaN*8-> NaN
+2/3-> 0.6667 wow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Base format tests"
+
+ff: ff#16
+ff-> 255
+ff#16-> FF#16
+
+xx: ff#16
+xx-> 255
+xx#16-> FF#16
+
+7v#32-> 255
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
