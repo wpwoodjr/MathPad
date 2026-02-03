@@ -11,6 +11,7 @@ class EvalContext {
         this.constants = new Map();
         this.constantComments = new Map(); // Store comments for constants
         this.shadowedConstants = new Set(); // Constants shadowed by local declarations
+        this.declaredVariables = new Set(); // Variables declared (may or may not have value)
         this.userFunctions = new Map();
         this.degreesMode = false; // false = radians, true = degrees
         this.usedConstants = new Set();
@@ -19,6 +20,15 @@ class EvalContext {
 
     setVariable(name, value) {
         this.variables.set(name, value);
+        this.declaredVariables.add(name);
+    }
+
+    declareVariable(name) {
+        this.declaredVariables.add(name);
+    }
+
+    isDeclared(name) {
+        return this.declaredVariables.has(name);
     }
 
     getVariable(name) {
@@ -85,6 +95,7 @@ class EvalContext {
         ctx.constants = this.constants;
         ctx.constantComments = this.constantComments;
         ctx.shadowedConstants = this.shadowedConstants; // Share shadowing with parent
+        ctx.declaredVariables = this.declaredVariables; // Share declared vars with parent
         ctx.userFunctions = this.userFunctions;
         ctx.degreesMode = this.degreesMode;
         ctx.usedConstants = this.usedConstants; // Share tracking with parent
@@ -407,7 +418,10 @@ function evaluate(node, context) {
             if (value !== undefined) {
                 return value;
             }
-            // No builtin fallback - use pi() not pi, define constants in Constants record
+            // Check if declared but no value vs truly undefined
+            if (context.isDeclared(node.name)) {
+                throw new EvalError(`Variable '${node.name}' has no value`);
+            }
             throw new EvalError(`Undefined variable: ${node.name}`);
         }
 

@@ -1143,6 +1143,7 @@ function handleSolve() {
         // Update variables panel
         if (editorInfo.variablesManager) {
             editorInfo.variablesManager.updateFromText(text);
+            editorInfo.variablesManager.setErrors(result.errors);
         }
 
         if (result.errors.length > 0) {
@@ -1202,9 +1203,10 @@ function handleClearInput() {
     record.text = text;
     debouncedSave(UI.data);
 
-    // Update variables panel
+    // Update variables panel and clear errors
     if (editorInfo.variablesManager) {
         editorInfo.variablesManager.updateFromText(text);
+        editorInfo.variablesManager.clearErrors();
     }
 
     setStatus('Cleared');

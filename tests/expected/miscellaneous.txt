@@ -480,7 +480,7 @@ c->
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 4: Cannot evaluate \"pi\" - Undefined variable: pi"; StatusIsError = 1
+Status = "Solved with errors: Line 4: Cannot evaluate \"pi\" - Variable 'pi' has no value"; StatusIsError = 1
 "Test pi is declared (with shadow constants on) but has no value"
 
 pi:
@@ -500,5 +500,15 @@ Status = "Solved with errors: Line 3: Variable \"pi\" conflicts with a constant"
 
 pi:
 x: pi
+x->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 4: Cannot evaluate \"y\" - Variable 'y' has no value"; StatusIsError = 1
+"Test y has no value"
+
+y:
+x: y
 x->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

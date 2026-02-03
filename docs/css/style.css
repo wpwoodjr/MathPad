@@ -1033,6 +1033,10 @@ body.panel-resizing * {
     color: var(--text-primary);
 }
 
+.variable-row.has-error .variable-name {
+    color: var(--error-color);
+}
+
 .variable-section-separator {
     padding: 8px 12px;
     color: var(--text-primary);

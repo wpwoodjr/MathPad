@@ -398,6 +398,9 @@ function discoverVariables(text, context, record) {
                 definedVars.add(name);
             }
 
+            // Track that this variable is declared (even if no value yet)
+            context.declareVariable(name);
+
             // Evaluate the value if present
             let value = null;
             let valueText = decl.valueText;

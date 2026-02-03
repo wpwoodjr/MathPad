@@ -467,3 +467,12 @@ pi:
 x: pi
 x->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Test y has no value"
+
+y:
+x: y
+x->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

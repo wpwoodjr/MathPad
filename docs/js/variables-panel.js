@@ -15,6 +15,7 @@ class VariablesPanel {
         this.solveCallback = null;
         this.inputElements = new Map();
         this.lastEditedVar = null; // Track most recently edited variable name
+        this.errorLines = new Set(); // Lines with errors
 
         // Handle Tab key to cycle through inputs
         this.container.addEventListener('keydown', (e) => {
@@ -475,6 +476,47 @@ class VariablesPanel {
                existing.valueText !== newInfo.valueText ||
                existing.declaration.type !== newInfo.declaration.type ||
                existing.name !== newInfo.name;
+    }
+
+    /**
+     * Set errors and highlight affected variable rows
+     * @param {Array} errors - Array of error strings like "Line 3: Variable 'x' ..."
+     */
+    setErrors(errors) {
+        // Clear previous errors
+        this.errorLines.clear();
+        for (const row of this.container.querySelectorAll('.variable-row.has-error')) {
+            row.classList.remove('has-error');
+        }
+
+        if (!errors || errors.length === 0) return;
+
+        // Parse line numbers from errors
+        for (const error of errors) {
+            const match = error.match(/^Line (\d+):/);
+            if (match) {
+                const lineNum = parseInt(match[1], 10) - 1; // Convert to 0-indexed
+                this.errorLines.add(lineNum);
+            }
+        }
+
+        // Mark rows with errors
+        for (const lineIndex of this.errorLines) {
+            const row = this.container.querySelector(`[data-line-index="${lineIndex}"]`);
+            if (row) {
+                row.classList.add('has-error');
+            }
+        }
+    }
+
+    /**
+     * Clear all error highlighting
+     */
+    clearErrors() {
+        this.errorLines.clear();
+        for (const row of this.container.querySelectorAll('.variable-row.has-error')) {
+            row.classList.remove('has-error');
+        }
     }
 
     /**
