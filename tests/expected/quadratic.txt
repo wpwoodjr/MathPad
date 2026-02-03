@@ -39,10 +39,7 @@ x2 = (-b - sqrt(disc)) / (2*a)
 a: 1
 b: -5
 c: 6
-disc-> -1199169807
-x1-> NaN
-x2-> NaN
-
-"--- Reference Constants and Functions ---"
-c: 299792458 "speed of light m/s"
+disc-> 1
+x1-> 3
+x2-> 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

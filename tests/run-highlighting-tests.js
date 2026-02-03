@@ -729,6 +729,30 @@ function runAllTests() {
                 ['->', 'punctuation'],
                 ['3.1416', 'number']
             ]
+        },
+        // With shadowConstants=true, output marker DOES shadow reference constant
+        {
+            name: 'shadowConstants=true: output marker shadows reference (pi->)',
+            line: 'pi-> 3.1416',
+            options: { referenceConstants: new Set(['pi']), shadowConstants: true },
+            assertions: [
+                ['pi', 'variable-def'],  // shadowed because shadowConstants is on
+                ['->', 'punctuation'],
+                ['3.1416', 'number']
+            ]
+        },
+        // With shadowConstants=true, reference constant in expression (not a marker) stays builtin
+        {
+            name: 'shadowConstants=true: reference constant in expression stays builtin',
+            line: 'x: pi + 1',
+            options: { referenceConstants: new Set(['pi']), shadowConstants: true },
+            assertions: [
+                ['x', 'variable-def'],
+                [':', 'punctuation'],
+                ['pi', 'builtin'],  // no marker, so still builtin
+                ['+', 'operator'],
+                ['1', 'number']
+            ]
         }
     ];
 

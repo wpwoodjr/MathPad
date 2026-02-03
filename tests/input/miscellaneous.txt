@@ -444,3 +444,26 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 
 c->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 15; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Test pi is declared (with shadow constants on) but has no value"
+
+pi:
+x: pi
+x->>
+pi()->>
+
+h:
+y: h
+y->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 15; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test pi is declared (with shadow constants off) - should error"
+
+pi:
+x: pi
+x->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

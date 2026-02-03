@@ -407,11 +407,7 @@ function evaluate(node, context) {
             if (value !== undefined) {
                 return value;
             }
-            // Check if it's a zero-arg builtin function like pi
-            const builtin = builtinFunctions[node.name.toLowerCase()];
-            if (builtin) {
-                return builtin([], context);
-            }
+            // No builtin fallback - use pi() not pi, define constants in Constants record
             throw new EvalError(`Undefined variable: ${node.name}`);
         }
 

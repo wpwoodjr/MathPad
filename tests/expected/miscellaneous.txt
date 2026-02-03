@@ -477,3 +477,28 @@ Status = "Solved with errors: Line 3: Variable 'c' has no value to output"; Stat
 
 c->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 15; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 4: Cannot evaluate \"pi\" - Undefined variable: pi"; StatusIsError = 1
+"Test pi is declared (with shadow constants on) but has no value"
+
+pi:
+x: pi
+x->>
+pi()->> 3.141592653589793
+
+h:
+y: h
+y->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 15; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 3: Variable \"pi\" conflicts with a constant"; StatusIsError = 1
+"Test pi is declared (with shadow constants off) - should error"
+
+pi:
+x: pi
+x->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

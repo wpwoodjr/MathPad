@@ -72,10 +72,7 @@ Status = "Solved with errors: Line 3: Variable \"e\" conflicts with a constant";
 "04 No shadow e - conflict error but output works"
 
 e: 3
-e->> 2.71828182845905
-
-"--- Reference Constants and Functions ---"
-e: 2.71828182845905
+e->> 3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0; Selected = 1
 Places = 4; StripZeros = 1

@@ -20,9 +20,10 @@ const editorBuiltinFunctions = new Set([
  * @param {Object} options - Optional settings
  * @param {Set} options.referenceConstants - Constants from Reference section (highlighted as builtin)
  * @param {Set} options.referenceFunctions - Functions from Reference section (highlighted as builtin)
+ * @param {boolean} options.shadowConstants - If true, reference constants with any marker are shadowed
  */
 function tokenizeMathPad(text, options = {}) {
-    const { referenceConstants = new Set(), referenceFunctions = new Set() } = options;
+    const { referenceConstants = new Set(), referenceFunctions = new Set(), shadowConstants = false } = options;
 
     // Strip the reference section first so definitions there aren't treated as local
     const strippedText = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
@@ -31,12 +32,18 @@ function tokenizeMathPad(text, options = {}) {
     const userDefinedFunctions = new Set(parseFunctionsRecord(strippedText).keys());
 
     // Find locally-defined variables (may shadow reference constants)
-    // Only count definition markers (:, <-, ::), not output markers (->, ->>)
+    // When shadowConstants is OFF: only definition markers (:, <-, ::) shadow constants
+    // When shadowConstants is ON: ANY marker shadows constants (including ->, ->>)
     const localVariables = new Set();
     for (const line of strippedText.split('\n')) {
         const decl = parseVariableLine(line);
-        if (decl && (decl.marker === ':' || decl.marker === '<-' || decl.marker === '::')) {
-            localVariables.add(decl.name.toLowerCase());
+        if (decl) {
+            const isDefinitionMarker = decl.marker === ':' || decl.marker === '<-' || decl.marker === '::';
+            const isOutputMarker = decl.marker === '->' || decl.marker === '->>';
+            // Shadow if it's a definition, OR if shadowConstants is on and it's any marker
+            if (isDefinitionMarker || (shadowConstants && isOutputMarker && referenceConstants.has(decl.name.toLowerCase()))) {
+                localVariables.add(decl.name.toLowerCase());
+            }
         }
     }
 
@@ -662,9 +669,10 @@ class SimpleEditor {
      * @param {Set|Array} constants - Names of constants from Reference section
      * @param {Set|Array} functions - Names of functions from Reference section
      */
-    setReferenceInfo(constants, functions) {
+    setReferenceInfo(constants, functions, shadowConstants = false) {
         this.referenceConstants = new Set(Array.from(constants || []).map(n => n.toLowerCase()));
         this.referenceFunctions = new Set(Array.from(functions || []).map(n => n.toLowerCase()));
+        this.shadowConstants = shadowConstants;
         this.updateHighlighting();
     }
 
@@ -710,7 +718,8 @@ class SimpleEditor {
         const text = this.textarea.value;
         const tokens = tokenizeMathPad(text, {
             referenceConstants: this.referenceConstants,
-            referenceFunctions: this.referenceFunctions
+            referenceFunctions: this.referenceFunctions,
+            shadowConstants: this.shadowConstants
         });
 
         let html = '';

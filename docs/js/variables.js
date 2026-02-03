@@ -374,12 +374,13 @@ function discoverVariables(text, context, record) {
             // Check if shadowing a constant
             if (context.constants.has(name)) {
                 if (record.shadowConstants) {
-                    // Shadow the constant (it remains available for output if no computed value)
+                    // Shadow the constant
                     context.shadowConstant(name);
                 } else if (!isOutput) {
                     // Input declarations conflict with constants (unless shadowConstants enabled)
+                    // Shadow the constant and report error, but continue processing so value is used
+                    context.shadowConstant(name);
                     errors.push(`Line ${i + 1}: Variable "${name}" conflicts with a constant`);
-                    continue;
                 }
                 // Output declarations can output constant values without conflict
             }

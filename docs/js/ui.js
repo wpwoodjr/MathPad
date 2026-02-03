@@ -272,12 +272,14 @@ function getReferenceInfo() {
 
 /**
  * Update reference info on all editors
- * Call this when Constants or Functions records are modified
+ * Call this when Constants or Functions records are modified, or when shadowConstants changes
  */
 function updateAllEditorsReferenceInfo() {
     const { constants, functions } = getReferenceInfo();
     for (const [id, { editor }] of UI.editors) {
-        editor.setReferenceInfo(constants, functions);
+        const record = UI.data.records.find(r => r.id === id);
+        const shadowConstants = record?.shadowConstants || false;
+        editor.setReferenceInfo(constants, functions, shadowConstants);
     }
 }
 
@@ -372,7 +374,7 @@ function createEditorForRecord(record) {
 
     // Set reference info for highlighting
     const { constants, functions } = getReferenceInfo();
-    editor.setReferenceInfo(constants, functions);
+    editor.setReferenceInfo(constants, functions, record.shadowConstants || false);
 
     UI.editors.set(record.id, { editor, container, variablesManager });
 }
@@ -583,6 +585,15 @@ function updateRecordDetail(field, value) {
         renderSidebar();
         renderDetailsPanel();
         renderSettingsModal();
+    }
+
+    // Update editor highlighting when shadowConstants changes
+    if (field === 'shadowConstants') {
+        const editorInfo = UI.editors.get(record.id);
+        if (editorInfo) {
+            const { constants, functions } = getReferenceInfo();
+            editorInfo.editor.setReferenceInfo(constants, functions, value);
+        }
     }
 }
 
