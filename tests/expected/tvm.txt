@@ -39,3 +39,22 @@ yint = mint * 12
 rate%: 6+6%
 rate%-> 606%
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Solve with current values and check error status"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$602.75 "monthly payment"
+pv$: $100,000 "loan amount"
+fv$: -$20.26 "future value (balloon payment)"
+yint%: 6.05% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+yint = mint * 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

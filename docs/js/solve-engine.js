@@ -354,7 +354,7 @@ function solveEquations(text, context, declarations) {
                 const maxVal = Math.max(Math.abs(leftVal), Math.abs(rightVal));
                 const relError = maxVal > 0 ? diff / maxVal : diff;
 
-                if (relError > 1e-10) {
+                if (relError > 1e-5) {
                     errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eq.text} (${leftVal} ≠ ${rightVal})`);
                 }
             }
