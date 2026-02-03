@@ -349,9 +349,8 @@ function createEditorForRecord(record) {
         syncFromVariables = true;
         const cursorPos = editor.getCursorPosition();
         const oldLength = editor.getValue().length;
-        // Use undoable=false to avoid stealing focus from variables panel
-        // (undoable=true requires textarea.focus() for execCommand)
-        editor.setValue(newText, false);
+        editor.setValue(newText, true);  // undoable=true for granular undo of each change
+        syncFromVariables = false;  // Reset immediately so undo can update vars panel
         const delta = newText.length - oldLength;
         editor.setCursorPosition(Math.max(0, cursorPos + delta));
     });
@@ -376,7 +375,24 @@ function createEditorForRecord(record) {
     const { constants, functions } = getReferenceInfo();
     editor.setReferenceInfo(constants, functions, record.shadowConstants || false);
 
+    // Update undo/redo button states when stacks change
+    editor.onUndoStateChange((canUndo, canRedo) => {
+        if (UI.currentRecordId === record.id) {
+            updateUndoButtons(canUndo, canRedo);
+        }
+    });
+
     UI.editors.set(record.id, { editor, container, variablesManager });
+}
+
+/**
+ * Update undo/redo button enabled states
+ */
+function updateUndoButtons(canUndo, canRedo) {
+    const undoBtn = document.getElementById('btn-undo');
+    const redoBtn = document.getElementById('btn-redo');
+    if (undoBtn) undoBtn.disabled = !canUndo;
+    if (redoBtn) redoBtn.disabled = !canRedo;
 }
 
 /**
@@ -424,6 +440,9 @@ function showEditor(recordId) {
             }
             editorInfo.editor.setCursorPosition(cursorPos);
         });
+
+        // Update undo/redo button states for this editor
+        updateUndoButtons(editorInfo.editor.canUndo(), editorInfo.editor.canRedo());
     }
 }
 
@@ -901,9 +920,7 @@ function setupEventListeners() {
     document.getElementById('btn-undo')?.addEventListener('click', () => {
         const editorInfo = UI.editors.get(UI.currentRecordId);
         if (editorInfo) {
-            editorInfo.editor.textarea.focus();
-            document.execCommand('undo');
-            editorInfo.editor.textarea.blur();
+            editorInfo.editor.undo();
         }
     });
 
@@ -911,9 +928,7 @@ function setupEventListeners() {
     document.getElementById('btn-redo')?.addEventListener('click', () => {
         const editorInfo = UI.editors.get(UI.currentRecordId);
         if (editorInfo) {
-            editorInfo.editor.textarea.focus();
-            document.execCommand('redo');
-            editorInfo.editor.textarea.blur();
+            editorInfo.editor.redo();
         }
     });
 

@@ -163,6 +163,21 @@ button {
     color: var(--text-primary);
 }
 
+#btn-undo, #btn-redo {
+    font-size: 18px;
+    padding: 2px 8px;
+    color: var(--text-primary);
+}
+
+#btn-undo:disabled, #btn-redo:disabled {
+    color: var(--text-muted);
+    cursor: default;
+}
+
+#btn-undo:disabled:hover, #btn-redo:disabled:hover {
+    background-color: transparent;
+}
+
 .btn-danger {
     background-color: var(--error-color);
     color: white;
@@ -917,6 +932,10 @@ button {
         min-width: 30px;
         padding: 6px 4px;
         font-size: 14px;
+    }
+
+    #btn-undo, #btn-redo {
+        font-size: 16px;
     }
 }
 

@@ -19,6 +19,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Degrees toggle is now per-record, initialized by openRecord()
 
+    // Global undo/redo handler - works unless focus is in a vars panel input
+    document.addEventListener('keydown', (e) => {
+        // Check for Ctrl+Z (undo) or Ctrl+Y/Ctrl+Shift+Z (redo)
+        const isUndo = (e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey;
+        const isRedo = (e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey) || (e.key === 'Z' && e.shiftKey));
+
+        if (!isUndo && !isRedo) return;
+
+        // Let vars panel inputs use native undo
+        const active = document.activeElement;
+        if (active && active.closest('.variables-panel') && active.tagName === 'INPUT') {
+            return;
+        }
+
+        // Route to current editor
+        const editorInfo = UI.editors.get(UI.currentRecordId);
+        if (editorInfo) {
+            e.preventDefault();
+            if (isUndo) {
+                editorInfo.editor.undo();
+            } else {
+                editorInfo.editor.redo();
+            }
+        }
+    });
+
     console.log('MathPad ready');
 });
 

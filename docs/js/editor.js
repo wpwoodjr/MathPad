@@ -547,6 +547,13 @@ class SimpleEditor {
         this.referenceConstants = new Set();
         this.referenceFunctions = new Set();
 
+        // Custom undo/redo history (browser's native undo is unreliable across tab switches)
+        this.undoStack = [];
+        this.redoStack = [];
+        this.maxUndoHistory = 100;
+        this.undoDebounceTimer = null;
+        this.lastSavedState = null;
+
         this.element = document.createElement('div');
         this.element.className = 'simple-editor';
 
@@ -636,6 +643,159 @@ class SimpleEditor {
         // Initial render
         this.updateHighlighting();
         this.updateLineNumbers();
+
+        // Save initial state for undo history
+        this.saveInitialState();
+    }
+
+    /**
+     * Save initial state to undo history
+     */
+    saveInitialState() {
+        const value = this.textarea.value;
+        this.lastSavedState = {
+            value,
+            cursorStart: value.length,
+            cursorEnd: value.length
+        };
+        // Don't push to undoStack - this is the baseline
+    }
+
+    /**
+     * Save current state to undo history (debounced)
+     * Called on user input to capture undoable changes
+     */
+    saveToHistory() {
+        // Clear any pending debounce
+        if (this.undoDebounceTimer) {
+            clearTimeout(this.undoDebounceTimer);
+        }
+
+        // Debounce: wait for 300ms of no typing before saving a history entry
+        // This groups rapid keystrokes into a single undo step
+        this.undoDebounceTimer = setTimeout(() => {
+            this.saveToHistoryNow();
+        }, 300);
+    }
+
+    /**
+     * Immediately save current state to undo history
+     */
+    saveToHistoryNow() {
+        if (this.undoDebounceTimer) {
+            clearTimeout(this.undoDebounceTimer);
+            this.undoDebounceTimer = null;
+        }
+
+        const currentState = {
+            value: this.textarea.value,
+            cursorStart: this.textarea.selectionStart,
+            cursorEnd: this.textarea.selectionEnd
+        };
+
+        // Only save if different from last saved state
+        if (this.lastSavedState && currentState.value === this.lastSavedState.value) {
+            return;
+        }
+
+        // Push last saved state to undo stack (not current - we want to undo TO the previous state)
+        if (this.lastSavedState) {
+            this.undoStack.push(this.lastSavedState);
+            // Trim stack if too large
+            if (this.undoStack.length > this.maxUndoHistory) {
+                this.undoStack.shift();
+            }
+        }
+
+        // Clear redo stack on new input
+        this.redoStack = [];
+
+        // Update last saved state
+        this.lastSavedState = currentState;
+
+        this.notifyUndoState();
+    }
+
+    /**
+     * Undo the last change
+     */
+    undo() {
+        // Save any pending state first
+        this.saveToHistoryNow();
+
+        if (this.undoStack.length === 0) return false;
+
+        // Push current state to redo stack
+        this.redoStack.push({
+            value: this.textarea.value,
+            cursorStart: this.textarea.selectionStart,
+            cursorEnd: this.textarea.selectionEnd
+        });
+
+        // Pop and restore previous state
+        const state = this.undoStack.pop();
+        this.textarea.value = state.value;
+        this.textarea.selectionStart = state.cursorStart;
+        this.textarea.selectionEnd = state.cursorEnd;
+        this.lastSavedState = state;
+
+        this.updateHighlighting();
+        this.updateLineNumbers();
+        this.notifyChange();
+        this.notifyUndoState();
+
+        return true;
+    }
+
+    /**
+     * Redo the last undone change
+     */
+    redo() {
+        if (this.redoStack.length === 0) return false;
+
+        // Push current state to undo stack
+        this.undoStack.push({
+            value: this.textarea.value,
+            cursorStart: this.textarea.selectionStart,
+            cursorEnd: this.textarea.selectionEnd
+        });
+
+        // Pop and restore redo state
+        const state = this.redoStack.pop();
+        this.textarea.value = state.value;
+        this.textarea.selectionStart = state.cursorStart;
+        this.textarea.selectionEnd = state.cursorEnd;
+        this.lastSavedState = state;
+
+        this.updateHighlighting();
+        this.updateLineNumbers();
+        this.notifyChange();
+        this.notifyUndoState();
+
+        return true;
+    }
+
+    canUndo() {
+        return this.undoStack.length > 0;
+    }
+
+    canRedo() {
+        return this.redoStack.length > 0;
+    }
+
+    onUndoStateChange(callback) {
+        if (!this.undoStateListeners) {
+            this.undoStateListeners = [];
+        }
+        this.undoStateListeners.push(callback);
+    }
+
+    notifyUndoState() {
+        if (this.undoStateListeners) {
+            for (const listener of this.undoStateListeners) {
+                listener(this.canUndo(), this.canRedo());
+            }
+        }
     }
 
     getValue() {
@@ -646,14 +806,38 @@ class SimpleEditor {
         // Save scroll position
         const scrollTop = this.textarea.scrollTop;
 
-        if (undoable) {
-            // Use execCommand to make the change undoable with Ctrl+Z
-            this.textarea.focus();
-            this.textarea.select();
-            document.execCommand('insertText', false, value);
-        } else {
-            this.textarea.value = value;
+        // Save to undo history before changing (if content is different)
+        if (undoable && this.textarea.value !== value) {
+            // Clear any pending debounce timer
+            if (this.undoDebounceTimer) {
+                clearTimeout(this.undoDebounceTimer);
+                this.undoDebounceTimer = null;
+            }
+            // Push current state to undo stack
+            this.undoStack.push({
+                value: this.textarea.value,
+                cursorStart: this.textarea.selectionStart,
+                cursorEnd: this.textarea.selectionEnd
+            });
+            if (this.undoStack.length > this.maxUndoHistory) {
+                this.undoStack.shift();
+            }
+            // Clear redo stack on new change
+            this.redoStack = [];
+            this.notifyUndoState();
         }
+
+        this.textarea.value = value;
+
+        // Update last saved state if this was an undoable change
+        if (undoable) {
+            this.lastSavedState = {
+                value,
+                cursorStart: this.textarea.selectionStart,
+                cursorEnd: this.textarea.selectionEnd
+            };
+        }
+
         this.updateHighlighting();
         this.updateLineNumbers();
 
@@ -677,6 +861,7 @@ class SimpleEditor {
     }
 
     onInput() {
+        this.saveToHistory();
         this.updateHighlighting();
         this.updateLineNumbers();
         this.notifyChange();
