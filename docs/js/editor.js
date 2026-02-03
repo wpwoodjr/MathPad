@@ -100,7 +100,7 @@ function tokenizeMathPad(text) {
                 }
                 break;
             case TokenType.IDENTIFIER:
-                highlightType = getIdentifierHighlightType(token.value, text, tokenStart, tokenEnd, userDefinedFunctions);
+                highlightType = getIdentifierHighlightType(token.value, text, tokenStart, tokenEnd, userDefinedFunctions, commentRegions);
                 break;
             case TokenType.OPERATOR:
                 highlightType = 'operator';
@@ -436,7 +436,7 @@ function getTokenLength(token, text, start) {
 /**
  * Determine highlight type for an identifier
  */
-function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefinedFunctions) {
+function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefinedFunctions, commentRegions = []) {
     const nameLower = name.toLowerCase();
 
     // Look ahead for ( to detect function calls
@@ -476,8 +476,13 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
         if (lookBack >= 0) {
             const charBefore = text[lookBack];
             // If preceded by operator or closing paren/bracket, it's part of an expression
+            // But only if that character is NOT in a comment region (e.g., label text)
             if ('+-*/%^)]='.includes(charBefore)) {
-                return 'variable';
+                const charPos = lookBack;
+                const inCommentRegion = commentRegions.some(r => charPos >= r.start && charPos < r.end);
+                if (!inCommentRegion) {
+                    return 'variable';
+                }
             }
         }
         return 'variable-def';

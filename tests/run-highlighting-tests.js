@@ -644,7 +644,7 @@ function runAllTests() {
             line: 'Result (%) (m/s) c-> speed of light',
             assertions: [
                 ['Result (%) (m/s) ', 'comment'],
-                ['c', 'variable'],
+                ['c', 'variable-def'],
                 ['->', 'punctuation'],
                 ['speed of light', 'comment']
             ]
