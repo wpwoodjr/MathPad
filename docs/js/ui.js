@@ -1159,6 +1159,7 @@ function handleSolve() {
         if (editorInfo.variablesManager) {
             editorInfo.variablesManager.updateFromText(text);
             editorInfo.variablesManager.setErrors(result.errors);
+            editorInfo.variablesManager.clearLastEdited();
         }
 
         if (result.errors.length > 0) {

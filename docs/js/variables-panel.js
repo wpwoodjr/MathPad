@@ -520,6 +520,14 @@ class VariablesPanel {
     }
 
     /**
+     * Clear the last edited variable tracking
+     * Called after solve to reset the "just edited" state
+     */
+    clearLastEdited() {
+        this.lastEditedVar = null;
+    }
+
+    /**
      * Insert row in correct order by line number
      */
     insertRowInOrder(row, lineIndex) {
