@@ -302,7 +302,6 @@ function findLiteralRegions(text) {
     const regions = [];
 
     const patterns = [
-        /[0-9a-zA-Z]+#[0-9]+/g,                    // value#base (FF#16, 7v#32)
         /0[xX][0-9a-fA-F]+/g,                      // hex (0xFF)
         /0[bB][01]+/g,                             // binary (0b101)
         /0[oO][0-7]+/g,                            // octal (0o77)
@@ -314,6 +313,28 @@ function findLiteralRegions(text) {
         while ((match = pattern.exec(text)) !== null) {
             regions.push({ start: match.index, end: match.index + match[0].length });
         }
+    }
+
+    // Base literals (ff#16, 7v#32) need context-aware matching:
+    // - If starts with digit, it's always a literal (can't be a variable name)
+    // - If starts with letter and followed by a marker (-> <- : ::), it's a variable with format suffix
+    // - Otherwise, it's a literal value
+    const baseLiteralPattern = /[a-zA-Z0-9][a-zA-Z0-9]*#[0-9]+/g;
+    const markerPattern = /^\s*(<-|->|::|:|=)/;
+    let match;
+    while ((match = baseLiteralPattern.exec(text)) !== null) {
+        const firstChar = match[0][0];
+        // If starts with digit, always a literal (can't be a variable name)
+        if (/[0-9]/.test(firstChar)) {
+            regions.push({ start: match.index, end: match.index + match[0].length });
+            continue;
+        }
+        // Starts with letter - check if followed by a marker (variable declaration)
+        const afterMatch = text.slice(match.index + match[0].length);
+        if (markerPattern.test(afterMatch)) {
+            continue;
+        }
+        regions.push({ start: match.index, end: match.index + match[0].length });
     }
 
     return regions;

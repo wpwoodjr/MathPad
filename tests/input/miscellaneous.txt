@@ -370,3 +370,23 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 5->
 5%4->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Base literal highlighting test"
+
+"Expected: ff=vardef, ff#16=literal(yellow)"
+ff: ff#16
+ff->
+"Expected: ff=vardef, #16=vardef (format suffix)"
+ff#16->
+
+"Expected: xx=vardef, ff#16=literal(yellow)"
+xx: ff#16
+xx->
+"Expected: xx=vardef, #16=vardef (format suffix)"
+xx#16->
+
+"Expected: 7v#32=literal(yellow), starts with digit so always literal"
+7v#32->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
