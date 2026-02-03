@@ -553,7 +553,7 @@ button {
 }
 
 .tok-punctuation {
-    color: var(--text-secondary);
+    color: #20ebc2;
 }
 
 .tok-error {

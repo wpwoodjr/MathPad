@@ -361,3 +361,12 @@ result: (a/b)->> should be 0.5
 "Mixed - equation then labeled output"
 equation c = a + b test
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Numeric literal expression outputs"
+
+5%+1->
+5->
+5%4->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

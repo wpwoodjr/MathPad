@@ -703,6 +703,23 @@ function clearExpressionOutputs(text) {
  * Returns the extracted equation text, or the original if it parses fine or can't be fixed.
  */
 function extractEquationFromLine(lineText) {
+    // Handle braced equations: { expr = expr }
+    // The braces are part of the equation syntax, not label text
+    const trimmed = lineText.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        // Extract content inside braces, process it, then add braces back
+        const innerContent = trimmed.slice(1, -1).trim();
+        const innerExtracted = extractEquationFromLineInner(innerContent);
+        // Find original brace positions to preserve whitespace
+        const openBrace = lineText.indexOf('{');
+        const closeBrace = lineText.lastIndexOf('}');
+        return lineText.slice(0, openBrace + 1) + ' ' + innerExtracted + ' ' + lineText.slice(closeBrace);
+    }
+
+    return extractEquationFromLineInner(lineText);
+}
+
+function extractEquationFromLineInner(lineText) {
     // First, check if the line parses correctly as-is
     const eqMatch = lineText.match(/^(.+?)=(.+)$/);
     if (!eqMatch) return lineText;

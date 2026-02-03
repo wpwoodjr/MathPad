@@ -164,6 +164,14 @@ class Tokenizer {
             value += this.advance();
         }
 
+        // Special numeric values
+        if (value === 'Infinity') {
+            return this.makeToken(TokenType.NUMBER, { value: Infinity, base: 10, raw: value }, startLine, startCol);
+        }
+        if (value === 'NaN') {
+            return this.makeToken(TokenType.NUMBER, { value: NaN, base: 10, raw: value }, startLine, startCol);
+        }
+
         return this.makeToken(TokenType.IDENTIFIER, value, startLine, startCol);
     }
 

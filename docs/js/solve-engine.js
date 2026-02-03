@@ -325,7 +325,10 @@ function solveEquations(text, context, declarations) {
                 marker: output.marker
             });
         } catch (e) {
-            // Expression has unknowns or other error - skip
+            // Report parse/eval errors (but not "undefined variable" which means unknowns)
+            if (!e.message.includes('Undefined variable')) {
+                errors.push(`Line ${output.startLine + 1}: ${e.message}`);
+            }
         }
     }
 

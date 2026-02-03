@@ -157,7 +157,8 @@ class LineParser {
 
         // Check for variable pattern at end: identifier optionally followed by $, %, or #digits
         // Also handle limits: identifier[low:high]
-        const varMatch = beforeMarker.match(/(\w+)([$%]|#\d+)?(\s*\[[^\]]+\])?\s*$/);
+        // Variable names must start with letter or underscore (not digit)
+        const varMatch = beforeMarker.match(/([a-zA-Z_]\w*)([$%]|#\d+)?(\s*\[[^\]]+\])?\s*$/);
         if (varMatch) {
             const name = varMatch[1];
             const formatSuffix = varMatch[2];
@@ -274,8 +275,12 @@ class LineParser {
 
         // For output markers (-> and ->>), trailing non-numeric text is unit comment
         if (markerToken.type === TokenType.ARROW_RIGHT || markerToken.type === TokenType.ARROW_FULL) {
-            // Match numeric value at start
-            const numMatch = afterMarker.match(/^(-?\$?[\d,]+(?:\.\d+)?%?(?:[eE][+-]?\d+)?|[0-9a-zA-Z]+#\d+)\s*(.*)$/);
+            // Match numeric value at start:
+            // - NaN, Infinity, -Infinity (special values)
+            // - Money: $123, -$123.45
+            // - Regular numbers with optional scientific notation
+            // - Base format: FF#16, 101#2
+            const numMatch = afterMarker.match(/^(-?Infinity|NaN|-?\$?[\d,]+(?:\.\d+)?%?(?:[eE][+-]?\d+)?|[0-9a-zA-Z]+#\d+)\s*(.*)$/);
             if (numMatch) {
                 return {
                     valueText: numMatch[1],
@@ -336,13 +341,28 @@ class LineParser {
         }
 
         if (firstOperatorIdx === -1) {
-            // No operators found - the whole thing before marker is expression
-            // (single identifier or number)
+            // No operators found - check for adjacent numbers/identifiers (invalid syntax)
+            // or single identifier/number (valid simple expression)
+            let lastValueIdx = -1;
+            let hasAdjacentValues = false;
             for (let i = tokensBeforeMarker.length - 1; i >= 0; i--) {
                 if (tokensBeforeMarker[i].type === TokenType.IDENTIFIER ||
                     tokensBeforeMarker[i].type === TokenType.NUMBER) {
-                    return beforeMarker.substring(tokensBeforeMarker[i].col - 1).trim();
+                    if (lastValueIdx === -1) {
+                        lastValueIdx = i;
+                    } else {
+                        // Found another value token - adjacent values without operator
+                        hasAdjacentValues = true;
+                    }
                 }
+            }
+            if (lastValueIdx !== -1) {
+                if (hasAdjacentValues) {
+                    // Multiple adjacent values - include all of them as the expression
+                    // (the parser will fail with a proper error)
+                    return beforeMarker.trim();
+                }
+                return beforeMarker.substring(tokensBeforeMarker[lastValueIdx].col - 1).trim();
             }
             return beforeMarker.trim();
         }

@@ -18,6 +18,10 @@ const editorBuiltinFunctions = new Set([
  * Uses the shared Tokenizer from parser.js and maps to highlight types
  */
 function tokenizeMathPad(text) {
+    // Find user-defined functions (may shadow builtins)
+    // Uses parseFunctionsRecord from variables.js which returns a Map
+    const userDefinedFunctions = new Set(parseFunctionsRecord(text).keys());
+
     // Tokenize first to find quoted comments (they take precedence)
     const tokenizer = new Tokenizer(text);
     const parserTokens = tokenizer.tokenize();
@@ -73,7 +77,8 @@ function tokenizeMathPad(text) {
         const tokenEnd = tokenStart + tokenLength;
 
         // Skip tokens that overlap with special regions (we'll add those separately)
-        if (overlapsSpecialRegion(tokenStart, tokenEnd)) {
+        // Exception: NUMBER tokens should always be highlighted as numbers
+        if (overlapsSpecialRegion(tokenStart, tokenEnd) && token.type !== TokenType.NUMBER) {
             pos = tokenEnd;
             lastTokenWasVarDef = false;
             continue;
@@ -86,7 +91,7 @@ function tokenizeMathPad(text) {
                 highlightType = 'number';
                 break;
             case TokenType.IDENTIFIER:
-                highlightType = getIdentifierHighlightType(token.value, text, tokenEnd);
+                highlightType = getIdentifierHighlightType(token.value, text, tokenEnd, userDefinedFunctions);
                 break;
             case TokenType.OPERATOR:
                 highlightType = 'operator';
@@ -142,9 +147,16 @@ function tokenizeMathPad(text) {
         pos = tokenEnd;
     }
 
-    // Add comment regions as single comment tokens
+    // Collect number token positions to avoid overlapping comment regions
+    const numberTokenRegions = tokens.filter(t => t.type === 'number');
+
+    // Add comment regions as single comment tokens (skip if overlapping with number tokens)
     for (const region of commentRegions) {
-        tokens.push({ from: region.start, to: region.end, type: 'comment' });
+        const overlapsNumber = numberTokenRegions.some(n =>
+            region.start < n.to && region.end > n.from);
+        if (!overlapsNumber) {
+            tokens.push({ from: region.start, to: region.end, type: 'comment' });
+        }
     }
 
     // Add literal regions as number tokens (skip if inside a comment region)
@@ -265,19 +277,22 @@ function findEquationLabelRegions(line) {
 /**
  * Find literal number formats that the tokenizer doesn't handle natively
  * Returns array of { start, end } for each literal region
- * Handles: FF#16, 0xFF, 0b101, 0o77, 10%, $607, -$607
+ * Handles: FF#16, 0xFF, 0b101, 0o77, $607, -$607
+ *
+ * Note: Percent literals (5%) and special values (NaN, Infinity) are handled
+ * by the tokenizer directly as NUMBER tokens - simpler than regex + expandLiterals().
+ * Other literals produce multiple tokens (e.g. $100 → FORMATTER + NUMBER) so we
+ * use regex here to highlight them as unified number regions.
  */
 function findLiteralRegions(text) {
     const regions = [];
 
-    // All patterns for special number literals
     const patterns = [
         /[0-9a-fA-F]+#[0-9]+/g,                    // value#base (FF#16, 101#2)
         /0[xX][0-9a-fA-F]+/g,                      // hex (0xFF)
         /0[bB][01]+/g,                             // binary (0b101)
         /0[oO][0-7]+/g,                            // octal (0o77)
         /-?\$[\d,]+(?:\.\d+)?/g,                   // money (-$607, $1,234.56)
-        /[\d,]+(?:\.\d+)?%/g,                      // percent (10%, 7.5%)
     ];
 
     for (const pattern of patterns) {
@@ -344,7 +359,7 @@ function getTokenLength(token, text, start) {
 /**
  * Determine highlight type for an identifier
  */
-function getIdentifierHighlightType(name, text, tokenEnd) {
+function getIdentifierHighlightType(name, text, tokenEnd, userDefinedFunctions) {
     const nameLower = name.toLowerCase();
 
     // Look ahead for ( to detect function calls
@@ -354,6 +369,10 @@ function getIdentifierHighlightType(name, text, tokenEnd) {
     }
 
     if (lookAhead < text.length && text[lookAhead] === '(') {
+        // User-defined functions override builtins
+        if (userDefinedFunctions && userDefinedFunctions.has(nameLower)) {
+            return 'function';
+        }
         return editorBuiltinFunctions.has(nameLower) ? 'builtin' : 'function';
     }
 

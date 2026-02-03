@@ -448,7 +448,7 @@ function evaluate(node, context) {
                 case '-': return left - right;
                 case '*': return left * right;
                 case '/':
-                    if (right === 0) throw new EvalError('Division by zero');
+                    // Allow division by zero to return Infinity/-Infinity/NaN
                     return left / right;
                 case '**': return Math.pow(left, right);
                 case '<<': return Math.trunc(left) << Math.trunc(right);
