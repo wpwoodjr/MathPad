@@ -1096,6 +1096,7 @@ if (typeof module !== 'undefined' && module.exports) {
         buildOutputLine, setVariableValue, clearVariables, findEquations,
         findExpressionOutputs, clearExpressionOutputs,
         findInlineEvaluations, replaceInlineEvaluation,
-        parseConstantsRecord, parseFunctionsRecord, createEvalContext
+        parseConstantsRecord, parseFunctionsRecord, createEvalContext,
+        extractEquationFromLine
     };
 }

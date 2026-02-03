@@ -418,3 +418,25 @@ xx#16-> FF#16
 "Expected: 7v#32=literal(yellow), starts with digit so always literal"
 7v#32-> 255
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 3: Undefined variable: a"; StatusIsError = 1
+"Test a*b with no values for a and b"
+
+a*b->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Multi-line braced equations with builtin override"
+
+{ xmax(a;b) = if(a>b; a; b) }
+
+This is a fn: { min(a;b) =
+  if(a<b; a; b)
+  * 3 } hi there
+
+xmax(7; min(4;5))->> 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

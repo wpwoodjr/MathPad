@@ -101,7 +101,7 @@ function tokenizeMathPad(text) {
                 }
                 break;
             case TokenType.IDENTIFIER:
-                highlightType = getIdentifierHighlightType(token.value, text, tokenEnd, userDefinedFunctions);
+                highlightType = getIdentifierHighlightType(token.value, text, tokenStart, tokenEnd, userDefinedFunctions);
                 break;
             case TokenType.OPERATOR:
                 highlightType = 'operator';
@@ -195,8 +195,41 @@ function findLabelRegions(text) {
     const lines = text.split('\n');
     const regions = [];
     let lineStart = 0;
+    let insideBrace = false;  // Track if we're inside a multi-line braced equation
 
     for (const line of lines) {
+        // Count braces to track multi-line braced equations
+        const openBraces = (line.match(/\{/g) || []).length;
+        const closeBraces = (line.match(/\}/g) || []).length;
+        const hadOpenBrace = insideBrace;
+
+        // Update brace state
+        if (openBraces > closeBraces) {
+            insideBrace = true;
+        } else if (closeBraces > openBraces) {
+            insideBrace = false;
+        }
+
+        // If we're inside a brace (continuation line), don't treat as label
+        // But we still need to find label text after the closing brace
+        if (hadOpenBrace && !line.includes('{')) {
+            // This is a continuation line inside braces
+            // Check if this line has the closing brace with trailing text
+            const closeBracePos = line.indexOf('}');
+            if (closeBracePos >= 0) {
+                // Everything after the closing brace is label text
+                const afterBrace = closeBracePos + 1;
+                if (afterBrace < line.length && line.slice(afterBrace).trim()) {
+                    regions.push({
+                        start: lineStart + afterBrace,
+                        end: lineStart + line.length
+                    });
+                }
+            }
+            lineStart += line.length + 1;
+            continue;
+        }
+
         // Use LineParser to parse the line
         const parser = new LineParser(line);
         const result = parser.parse();
@@ -224,15 +257,27 @@ function findLabelRegions(text) {
             }
         } else if (!result && line.includes('=')) {
             // Equation line - find label text before and after the equation
-            const eqRegions = findEquationLabelRegions(line);
-            for (const r of eqRegions) {
-                regions.push({
-                    start: lineStart + r.start,
-                    end: lineStart + r.end
-                });
+            // For braced equations like "This is a fn: { xmin(a;b) = ", everything before { is label
+            if (line.includes('{')) {
+                const bracePos = line.indexOf('{');
+                // Everything before the opening brace is label text
+                if (bracePos > 0) {
+                    regions.push({
+                        start: lineStart,
+                        end: lineStart + bracePos
+                    });
+                }
+            } else {
+                const eqRegions = findEquationLabelRegions(line);
+                for (const r of eqRegions) {
+                    regions.push({
+                        start: lineStart + r.start,
+                        end: lineStart + r.end
+                    });
+                }
             }
-        } else if (!result && line.trim()) {
-            // Plain text line (no markers, no equation) - entire line is comment
+        } else if (!result && line.trim() && !insideBrace) {
+            // Plain text line (no markers, no equation, not inside brace) - entire line is comment
             regions.push({
                 start: lineStart,
                 end: lineStart + line.length
@@ -394,7 +439,7 @@ function getTokenLength(token, text, start) {
 /**
  * Determine highlight type for an identifier
  */
-function getIdentifierHighlightType(name, text, tokenEnd, userDefinedFunctions) {
+function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefinedFunctions) {
     const nameLower = name.toLowerCase();
 
     // Look ahead for ( to detect function calls
@@ -425,6 +470,19 @@ function getIdentifierHighlightType(name, text, tokenEnd, userDefinedFunctions) 
     if (nextChars.startsWith(':') || nextChars.startsWith('<-') ||
         nextChars.startsWith('->') || nextChars.startsWith('?:') ||
         nextChars.startsWith('#') || nextChars.startsWith('[')) {
+        // Check if this is part of an expression (has operator before it)
+        // If so, it's not a variable-def, just a variable in an expression output
+        let lookBack = tokenStart - 1;
+        while (lookBack >= 0 && (text[lookBack] === ' ' || text[lookBack] === '\t')) {
+            lookBack--;
+        }
+        if (lookBack >= 0) {
+            const charBefore = text[lookBack];
+            // If preceded by operator or closing paren/bracket, it's part of an expression
+            if ('+-*/%^)]='.includes(charBefore)) {
+                return 'variable';
+            }
+        }
         return 'variable-def';
     }
 
