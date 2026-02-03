@@ -40,10 +40,10 @@ rate%: 6+6%
 rate%-> 606%
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Finance"; Secret = 0
-Places = 2; StripZeros = 1
+Places = 6; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved 1 equation"; StatusIsError = 0
-"Solve with current values and check error status"
+Status = "Solved with errors: Line 14: Equation doesn't balance: yint = mint * 12 (0.0605 ≠ 0.060500167939065756)"; StatusIsError = 1
+"Solve with 6 decimal places - should fail balance check"
 
 "Payment calculation"
 pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
@@ -57,4 +57,42 @@ n: 360 "number of payments (30 years)"
 
 "Monthly interest rate from annual"
 yint = mint * 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Same values with default tolerance - should pass"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$602.75 "monthly payment"
+pv$: $100,000 "loan amount"
+fv$: -$20.26 "future value (balloon payment)"
+yint%: 6.05% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+yint = mint * 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 14: Equation doesn't balance: mint = yint / 12 (0.003655927952362684 ≠ 0.005104166666666667)"; StatusIsError = 1
+"TVM with wrong pmt - should fail balance check"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$500 "wrong payment - should be ~$607"
+pv$: $100,000 "loan amount"
+fv$: $0 "future value"
+yint%: 6.125% "annual interest rate %"
+n: 360 "number of payments"
+
+"Monthly interest rate from annual"
+mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

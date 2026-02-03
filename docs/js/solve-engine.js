@@ -170,9 +170,14 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
  * @param {string} text - The formula text (with \expr\ already evaluated)
  * @param {EvalContext} context - Context with known variables
  * @param {Array} declarations - Parsed declarations from discoverVariables
+ * @param {Object} record - Record settings (for places -> tolerance)
  * @returns {{ computedValues: Map, solved: number, errors: Array, solveFailures: Map }}
  */
-function solveEquations(text, context, declarations) {
+function solveEquations(text, context, declarations, record = {}) {
+    // Derive balance tolerance from decimal places: 0.5 * 10^(-places)
+    // This matches rounding precision - if diff < tolerance, values display the same
+    const places = record.places ?? 4;
+    const balanceTolerance = 0.5 * Math.pow(10, -places);
     const errors = [];
     const computedValues = new Map();
     const solveFailures = new Map(); // Track last failure per variable
@@ -354,7 +359,7 @@ function solveEquations(text, context, declarations) {
                 const maxVal = Math.max(Math.abs(leftVal), Math.abs(rightVal));
                 const relError = maxVal > 0 ? diff / maxVal : diff;
 
-                if (relError > 1e-5) {
+                if (relError > balanceTolerance) {
                     errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eq.text} (${leftVal} ≠ ${rightVal})`);
                 }
             }
@@ -527,7 +532,7 @@ function solveRecord(text, context, record) {
     const errors = [...discovery.errors];
 
     // Pass 2: Equation Solving (computes values, no text modification)
-    const solveResult = solveEquations(text, context, declarations);
+    const solveResult = solveEquations(text, context, declarations, record);
     errors.push(...solveResult.errors);
 
     // Pass 3: Format Output (inserts values into text)
