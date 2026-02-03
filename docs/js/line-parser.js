@@ -238,6 +238,12 @@ class LineParser {
 
         const lastChar = beforeVar[beforeVar.length - 1];
 
+        // Digit immediately before variable means they're adjacent (expression, not label)
+        // e.g., "7v#32->" should be expression, not "7" as label + "v#32" as variable
+        if (/\d/.test(lastChar)) {
+            return true;
+        }
+
         // Math operators directly connect
         if (['+', '*', '/', '^', '%'].includes(lastChar)) {
             return true;

@@ -64,6 +64,7 @@ function tokenizeMathPad(text) {
         literalRegions.some(r => start < r.end && end > r.start);
 
     let lastTokenWasVarDef = false;
+    let lastTokenWasBaseFormatter = false;  // Track # formatter for base suffix (e.g., xx#16)
     let lastTokenEnd = 0;
 
     for (const token of parserTokens) {
@@ -77,8 +78,12 @@ function tokenizeMathPad(text) {
         const tokenEnd = tokenStart + tokenLength;
 
         // Skip tokens that overlap with special regions (we'll add those separately)
-        // Exception: NUMBER tokens should always be highlighted as numbers
-        if (overlapsSpecialRegion(tokenStart, tokenEnd) && token.type !== TokenType.NUMBER) {
+        // - Skip all tokens overlapping literal regions (literals take precedence)
+        // - Skip non-NUMBER tokens overlapping comment regions (comments take precedence)
+        // - Don't skip NUMBER tokens overlapping comment regions (NaN/Infinity should be yellow)
+        const inLiteralRegion = literalRegions.some(r => tokenStart < r.end && tokenEnd > r.start);
+        const inCommentRegion = commentRegions.some(r => tokenStart < r.end && tokenEnd > r.start);
+        if (inLiteralRegion || (inCommentRegion && token.type !== TokenType.NUMBER)) {
             pos = tokenEnd;
             lastTokenWasVarDef = false;
             continue;
@@ -88,7 +93,12 @@ function tokenizeMathPad(text) {
         let highlightType;
         switch (token.type) {
             case TokenType.NUMBER:
-                highlightType = 'number';
+                // Style number as variable-def if it's the base in a format suffix (e.g., 16 in xx#16)
+                if (lastTokenWasBaseFormatter && tokenStart === lastTokenEnd) {
+                    highlightType = 'variable-def';
+                } else {
+                    highlightType = 'number';
+                }
                 break;
             case TokenType.IDENTIFIER:
                 highlightType = getIdentifierHighlightType(token.value, text, tokenEnd, userDefinedFunctions);
@@ -118,6 +128,7 @@ function tokenizeMathPad(text) {
             case TokenType.NEWLINE:
                 pos = tokenEnd;
                 lastTokenWasVarDef = false;
+                lastTokenWasBaseFormatter = false;
                 continue;
             case TokenType.FORMATTER:
                 // Style $, %, # as variable-def if they immediately follow a variable-def identifier
@@ -139,8 +150,10 @@ function tokenizeMathPad(text) {
             highlightType = 'inline-marker';
         }
 
-        // Track if this token is a variable-def for styling following $ or %
+        // Track if this token is a variable-def for styling following $ or % or #
         lastTokenWasVarDef = (highlightType === 'variable-def');
+        // Track if this is a # formatter for styling following base number (e.g., 16 in xx#16)
+        lastTokenWasBaseFormatter = (token.type === TokenType.FORMATTER && token.value === '#' && highlightType === 'variable-def');
         lastTokenEnd = tokenEnd;
 
         tokens.push({ from: tokenStart, to: tokenEnd, type: highlightType });
@@ -159,10 +172,11 @@ function tokenizeMathPad(text) {
         }
     }
 
-    // Add literal regions as number tokens (skip if inside a comment region)
+    // Add literal regions as number tokens (skip if overlapping with existing tokens or comments)
     for (const region of literalRegions) {
         const inComment = commentRegions.some(c => region.start >= c.start && region.end <= c.end);
-        if (!inComment) {
+        const overlapsToken = tokens.some(t => region.start < t.to && region.end > t.from);
+        if (!inComment && !overlapsToken) {
             tokens.push({ from: region.start, to: region.end, type: 'number' });
         }
     }
@@ -288,7 +302,7 @@ function findLiteralRegions(text) {
     const regions = [];
 
     const patterns = [
-        /[0-9a-fA-F]+#[0-9]+/g,                    // value#base (FF#16, 101#2)
+        /[0-9a-zA-Z]+#[0-9]+/g,                    // value#base (FF#16, 7v#32)
         /0[xX][0-9a-fA-F]+/g,                      // hex (0xFF)
         /0[bB][01]+/g,                             // binary (0b101)
         /0[oO][0-7]+/g,                            // octal (0o77)
