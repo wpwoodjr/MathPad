@@ -240,6 +240,48 @@ function openRecord(recordId) {
 }
 
 /**
+ * Get reference constants and functions from the Constants and Functions records
+ * @returns {{ constants: Set, functions: Set }}
+ */
+function getReferenceInfo() {
+    const constants = new Set();
+    const functions = new Set();
+
+    if (UI.data && UI.data.records) {
+        // Get constants from Constants record
+        const constantsRecord = UI.data.records.find(r => r.title === 'Constants');
+        if (constantsRecord) {
+            const parsed = parseConstantsRecord(constantsRecord.text);
+            for (const name of parsed.keys()) {
+                constants.add(name.toLowerCase());
+            }
+        }
+
+        // Get functions from Functions record
+        const functionsRecord = UI.data.records.find(r => r.title === 'Functions');
+        if (functionsRecord) {
+            const parsed = parseFunctionsRecord(functionsRecord.text);
+            for (const name of parsed.keys()) {
+                functions.add(name.toLowerCase());
+            }
+        }
+    }
+
+    return { constants, functions };
+}
+
+/**
+ * Update reference info on all editors
+ * Call this when Constants or Functions records are modified
+ */
+function updateAllEditorsReferenceInfo() {
+    const { constants, functions } = getReferenceInfo();
+    for (const [id, { editor }] of UI.editors) {
+        editor.setReferenceInfo(constants, functions);
+    }
+}
+
+/**
  * Create an editor for a record
  */
 function createEditorForRecord(record) {
@@ -294,6 +336,11 @@ function createEditorForRecord(record) {
             variablesManager.updateFromText(value);
         }
         syncFromVariables = false;
+
+        // If Constants or Functions record changed, update all editors' reference highlighting
+        if (record.title === 'Constants' || record.title === 'Functions') {
+            updateAllEditorsReferenceInfo();
+        }
     });
 
     variablesManager.onValueChange((varName, newValue, newText) => {
@@ -322,6 +369,10 @@ function createEditorForRecord(record) {
 
     // Initial variables render
     variablesManager.updateFromText(record.text);
+
+    // Set reference info for highlighting
+    const { constants, functions } = getReferenceInfo();
+    editor.setReferenceInfo(constants, functions);
 
     UI.editors.set(record.id, { editor, container, variablesManager });
 }

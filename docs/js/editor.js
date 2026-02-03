@@ -16,11 +16,29 @@ const editorBuiltinFunctions = new Set([
 /**
  * Convert parser tokens to editor highlight tokens
  * Uses the shared Tokenizer from parser.js and maps to highlight types
+ * @param {string} text - The text to tokenize
+ * @param {Object} options - Optional settings
+ * @param {Set} options.referenceConstants - Constants from Reference section (highlighted as builtin)
+ * @param {Set} options.referenceFunctions - Functions from Reference section (highlighted as builtin)
  */
-function tokenizeMathPad(text) {
-    // Find user-defined functions (may shadow builtins)
-    // Uses parseFunctionsRecord from variables.js which returns a Map
-    const userDefinedFunctions = new Set(parseFunctionsRecord(text).keys());
+function tokenizeMathPad(text, options = {}) {
+    const { referenceConstants = new Set(), referenceFunctions = new Set() } = options;
+
+    // Strip the reference section first so definitions there aren't treated as local
+    const strippedText = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
+
+    // Find user-defined functions (may shadow builtins/reference functions)
+    const userDefinedFunctions = new Set(parseFunctionsRecord(strippedText).keys());
+
+    // Find locally-defined variables (may shadow reference constants)
+    // Only count definition markers (:, <-, ::), not output markers (->, ->>)
+    const localVariables = new Set();
+    for (const line of strippedText.split('\n')) {
+        const decl = parseVariableLine(line);
+        if (decl && (decl.marker === ':' || decl.marker === '<-' || decl.marker === '::')) {
+            localVariables.add(decl.name.toLowerCase());
+        }
+    }
 
     // Tokenize first to find quoted comments (they take precedence)
     const tokenizer = new Tokenizer(text);
@@ -100,7 +118,7 @@ function tokenizeMathPad(text) {
                 }
                 break;
             case TokenType.IDENTIFIER:
-                highlightType = getIdentifierHighlightType(token.value, text, tokenStart, tokenEnd, userDefinedFunctions, commentRegions);
+                highlightType = getIdentifierHighlightType(token.value, text, tokenStart, tokenEnd, userDefinedFunctions, commentRegions, referenceConstants, referenceFunctions, localVariables);
                 break;
             case TokenType.OPERATOR:
                 highlightType = 'operator';
@@ -436,7 +454,7 @@ function getTokenLength(token, text, start) {
 /**
  * Determine highlight type for an identifier
  */
-function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefinedFunctions, commentRegions = []) {
+function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefinedFunctions, commentRegions = [], referenceConstants = new Set(), referenceFunctions = new Set(), localVariables = new Set()) {
     const nameLower = name.toLowerCase();
 
     // Look ahead for ( to detect function calls
@@ -446,11 +464,15 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
     }
 
     if (lookAhead < text.length && text[lookAhead] === '(') {
-        // User-defined functions override builtins
+        // User-defined functions (local) override everything
         if (userDefinedFunctions && userDefinedFunctions.has(nameLower)) {
             return 'function';
         }
-        return editorBuiltinFunctions.has(nameLower) ? 'builtin' : 'function';
+        // Reference functions and builtins both use 'builtin' style
+        if (referenceFunctions.has(nameLower) || editorBuiltinFunctions.has(nameLower)) {
+            return 'builtin';
+        }
+        return 'function';
     }
 
     // Check if this is a variable declaration
@@ -481,11 +503,25 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
                 const charPos = lookBack;
                 const inCommentRegion = commentRegions.some(r => charPos >= r.start && charPos < r.end);
                 if (!inCommentRegion) {
+                    // Check if it's a reference constant (not shadowed by local variable)
+                    if (referenceConstants.has(nameLower) && !localVariables.has(nameLower)) {
+                        return 'builtin';
+                    }
                     return 'variable';
                 }
             }
         }
+        // Check if it's a reference constant being output (not shadowed)
+        // e.g., "pi->" should highlight pi as builtin, not variable-def
+        if (referenceConstants.has(nameLower) && !localVariables.has(nameLower)) {
+            return 'builtin';
+        }
         return 'variable-def';
+    }
+
+    // Check if it's a reference constant (not shadowed by local variable)
+    if (referenceConstants.has(nameLower) && !localVariables.has(nameLower)) {
+        return 'builtin';
     }
 
     return 'variable';
@@ -501,6 +537,8 @@ class SimpleEditor {
         this.options = options;
         this.changeListeners = [];
         this.scrollListeners = [];
+        this.referenceConstants = new Set();
+        this.referenceFunctions = new Set();
 
         this.element = document.createElement('div');
         this.element.className = 'simple-editor';
@@ -618,6 +656,18 @@ class SimpleEditor {
         this.lineNumbers.scrollTop = scrollTop;
     }
 
+    /**
+     * Set reference constants and functions for highlighting
+     * These will be highlighted as 'builtin' (same as built-in functions)
+     * @param {Set|Array} constants - Names of constants from Reference section
+     * @param {Set|Array} functions - Names of functions from Reference section
+     */
+    setReferenceInfo(constants, functions) {
+        this.referenceConstants = new Set(Array.from(constants || []).map(n => n.toLowerCase()));
+        this.referenceFunctions = new Set(Array.from(functions || []).map(n => n.toLowerCase()));
+        this.updateHighlighting();
+    }
+
     onInput() {
         this.updateHighlighting();
         this.updateLineNumbers();
@@ -658,7 +708,10 @@ class SimpleEditor {
 
     updateHighlighting() {
         const text = this.textarea.value;
-        const tokens = tokenizeMathPad(text);
+        const tokens = tokenizeMathPad(text, {
+            referenceConstants: this.referenceConstants,
+            referenceFunctions: this.referenceFunctions
+        });
 
         let html = '';
         let lastPos = 0;

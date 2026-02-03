@@ -469,3 +469,11 @@ xx#16-> FF#16
 
 7v#32-> 255
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 3: Variable 'c' has no value to output"; StatusIsError = 1
+"Test for value of c when shadow constants is on"
+
+c->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

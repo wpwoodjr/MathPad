@@ -44,6 +44,8 @@ function loadModules() {
     global.VarType = variables.VarType;
     global.ClearBehavior = variables.ClearBehavior;
     global.parseFunctionsRecord = variables.parseFunctionsRecord;
+    global.parseConstantsRecord = variables.parseConstantsRecord;
+    global.parseVariableLine = variables.parseVariableLine;
     global.extractEquationFromLine = variables.extractEquationFromLine;
 
     // Editor (depends on parser, variables)
@@ -56,13 +58,16 @@ function loadModules() {
 /**
  * Get tokens for a line of text, optionally with preceding context lines
  * Returns array of { text, type } for each token on the target line
+ * @param {string} line - The line to tokenize
+ * @param {string} context - Optional preceding context lines
+ * @param {Object} options - Optional tokenizer options (referenceConstants, referenceFunctions)
  */
-function getTokens(line, context = '') {
+function getTokens(line, context = '', options = {}) {
     const fullText = context ? context + '\n' + line : line;
     const lineStart = context ? context.length + 1 : 0;
     const lineEnd = lineStart + line.length;
 
-    const tokens = tokenizeMathPad(fullText);
+    const tokens = tokenizeMathPad(fullText, options);
     return tokens
         .filter(t => t.from >= lineStart && t.from < lineEnd)
         .map(t => ({
@@ -95,8 +100,8 @@ function assertTokenType(tokens, text, expectedType, testName) {
 /**
  * Run a single highlighting test
  */
-function runTest(name, line, assertions, context = '') {
-    const tokens = getTokens(line, context);
+function runTest(name, line, assertions, context = '', options = {}) {
+    const tokens = getTokens(line, context, options);
     const errors = [];
 
     for (const [text, expectedType] of assertions) {
@@ -648,6 +653,82 @@ function runAllTests() {
                 ['->', 'punctuation'],
                 ['speed of light', 'comment']
             ]
+        },
+        // Reference constant highlighted as builtin
+        {
+            name: 'reference constant as builtin (pi + e)',
+            line: 'x: pi + e',
+            options: { referenceConstants: new Set(['pi', 'e']) },
+            assertions: [
+                ['x', 'variable-def'],
+                [':', 'punctuation'],
+                ['pi', 'builtin'],
+                ['+', 'operator'],
+                ['e', 'builtin']
+            ]
+        },
+        // Reference function highlighted as builtin
+        {
+            name: 'reference function as builtin (hypot(3;4))',
+            line: 'x: hypot(3; 4)',
+            options: { referenceFunctions: new Set(['hypot']) },
+            assertions: [
+                ['x', 'variable-def'],
+                [':', 'punctuation'],
+                ['hypot', 'builtin'],
+                ['(', 'paren'],
+                ['3', 'number'],
+                [';', 'punctuation'],
+                ['4', 'number'],
+                [')', 'paren']
+            ]
+        },
+        // Local function overrides reference function
+        {
+            name: 'local function overrides reference (hypot defined locally)',
+            line: 'hypot(3; 4)->',
+            context: 'hypot(a; b) = sqrt(a**2 + b**2)',
+            options: { referenceFunctions: new Set(['hypot']) },
+            assertions: [
+                ['hypot', 'function'],  // local, not builtin
+                ['(', 'paren'],
+                ['3', 'number']
+            ]
+        },
+        // Local variable shadows reference constant
+        {
+            name: 'local variable shadows reference constant (pi: 3.14)',
+            line: 'p: pi + 2',
+            context: 'pi: 3.14',
+            options: { referenceConstants: new Set(['pi']) },
+            assertions: [
+                ['p', 'variable-def'],
+                [':', 'punctuation'],
+                ['pi', 'variable'],  // shadowed, not builtin
+                ['+', 'operator'],
+                ['2', 'number']
+            ]
+        },
+        // Reference constant output (pi->)
+        {
+            name: 'reference constant output (pi->)',
+            line: 'pi->',
+            options: { referenceConstants: new Set(['pi']) },
+            assertions: [
+                ['pi', 'builtin'],
+                ['->', 'punctuation']
+            ]
+        },
+        // Output marker doesn't shadow reference constant (pi-> 3.1416)
+        {
+            name: 'output marker does not shadow reference (pi-> 3.1416)',
+            line: 'pi-> 3.1416',
+            options: { referenceConstants: new Set(['pi']) },
+            assertions: [
+                ['pi', 'builtin'],  // still builtin, -> doesn't define
+                ['->', 'punctuation'],
+                ['3.1416', 'number']
+            ]
         }
     ];
 
@@ -657,7 +738,7 @@ function runAllTests() {
     let failed = 0;
 
     for (const test of tests) {
-        const result = runTest(test.name, test.line, test.assertions, test.context || '');
+        const result = runTest(test.name, test.line, test.assertions, test.context || '', test.options || {});
         if (result.passed) {
             console.log(`PASS: ${result.name}`);
             passed++;

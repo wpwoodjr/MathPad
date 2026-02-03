@@ -437,3 +437,10 @@ xx#16->
 
 7v#32->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Test for value of c when shadow constants is on"
+
+c->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
