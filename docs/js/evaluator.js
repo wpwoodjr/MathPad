@@ -635,9 +635,9 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
         }
     }
 
-    // Integer base output: use value#base suffix notation (e.g., FF#16, 77#8)
-    if (base !== 10 && Number.isInteger(value)) {
-        const intVal = Math.trunc(value);
+    // Non-decimal base output: round to integer, use value#base suffix notation (e.g., FF#16, 77#8)
+    if (base !== 10) {
+        const intVal = Math.round(value);
         const str = intVal.toString(base).toUpperCase();
         return str + '#' + base;
     }
