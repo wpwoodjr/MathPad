@@ -874,6 +874,54 @@ function runAllTests() {
                 ['a', 'variable'],
                 ['%', 'variable'],
             ]
+        },
+        // Inline eval with formatter then money literal expression
+        {
+            name: 'inline eval formatter then money literal (\\x$\\+$.01->)',
+            line: '\\x$\\+$.01->',
+            context: 'x$: $10',
+            assertions: [
+                ['\\', 'inline-marker'],
+                ['x', 'variable'],
+                ['$', 'variable'],
+                ['\\', 'inline-marker'],
+                ['+', 'operator'],
+                ['$.01', 'number'],
+                ['->', 'punctuation']
+            ]
+        },
+        // Formatter suffix in expression context is an error
+        {
+            name: 'money suffix in equation is error (y = x$)',
+            line: 'y = x$',
+            assertions: [
+                ['y', 'variable'],
+                ['=', 'operator'],
+                ['x', 'variable'],
+                ['$', 'error']
+            ]
+        },
+        {
+            name: 'money suffix on declaration value is error (z: x$)',
+            line: 'z: x$',
+            context: 'x: 5',
+            assertions: [
+                ['z', 'variable-def'],
+                [':', 'punctuation'],
+                ['x', 'variable'],
+                ['$', 'error']
+            ]
+        },
+        {
+            name: 'percent suffix in expression is error (q: x%)',
+            line: 'q: x%',
+            context: 'x: 5',
+            assertions: [
+                ['q', 'variable-def'],
+                [':', 'punctuation'],
+                ['x', 'variable'],
+                ['%', 'error']
+            ]
         }
     ];
 

@@ -92,6 +92,7 @@ function tokenizeMathPad(text, options = {}) {
     let lastTokenWasVar = false;
     let lastTokenWasBaseFormatter = false;  // Track # formatter for base suffix (e.g., xx#16)
     let lastTokenEnd = 0;
+    let inInlineEval = false;  // Track whether we're inside \..\ inline eval markers
 
     for (const token of parserTokens) {
         // Skip EOF token
@@ -155,15 +156,16 @@ function tokenizeMathPad(text, options = {}) {
                 lastTokenWasVarDef = false;
                 lastTokenWasVar = false;
                 lastTokenWasBaseFormatter = false;
+                inInlineEval = false;
                 continue;
             case TokenType.FORMATTER:
-                // Style $, %, # to match the preceding identifier if adjacent
+                // Style $, %, # to match the preceding identifier only in declaration or inline eval context
                 if (lastTokenWasVarDef && tokenStart === lastTokenEnd) {
                     highlightType = 'variable-def';
-                } else if (lastTokenWasVar && tokenStart === lastTokenEnd) {
-                    highlightType = 'variable';
+                } else if (inInlineEval && lastTokenWasVar && tokenStart === lastTokenEnd) {
+                    highlightType = 'variable'; // format suffix in inline eval (\a$\, \a%\, \a#16\)
                 } else {
-                    highlightType = 'error'; // orphaned formatter is likely a syntax error
+                    highlightType = 'error'; // formatter in expression context is a syntax error
                 }
                 break;
             case TokenType.ERROR:
@@ -176,6 +178,7 @@ function tokenizeMathPad(text, options = {}) {
         // Check for inline evaluation marker (backslash)
         if (token.type === TokenType.OPERATOR && token.value === '\\') {
             highlightType = 'inline-marker';
+            inInlineEval = !inInlineEval;
         }
 
         // Track if this token is a variable-def or variable for styling following $ or % or #
@@ -377,7 +380,7 @@ function findLiteralRegions(text) {
         /0[xX][0-9a-fA-F]+/g,                      // hex (0xFF)
         /0[bB][01]+/g,                             // binary (0b101)
         /0[oO][0-7]+/g,                            // octal (0o77)
-        /-?\$[\d,]+(?:\.\d+)?/g,                   // money (-$607, $1,234.56)
+        /-?\$[\d,]*\.?\d+/g,                         // money (-$607, $1,234.56, $.01)
     ];
 
     for (const pattern of patterns) {
