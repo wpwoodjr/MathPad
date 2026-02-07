@@ -359,10 +359,17 @@ function discoverVariables(text, context, record) {
         for (let j = filteredMatches.length - 1; j >= 0; j--) {
             const evalInfo = filteredMatches[j];
             try {
-                // Strip format suffix ($ or %) before parsing - it's used for output formatting only
+                // Strip format suffix ($, %, or #base) before parsing - it's used for output formatting only
                 let exprToParse = evalInfo.expression;
                 if (exprToParse.endsWith('$') || exprToParse.endsWith('%')) {
                     exprToParse = exprToParse.slice(0, -1);
+                } else {
+                    // Strip #base suffix only for identifier#digits (e.g., \a#16\)
+                    // Don't strip for digit-start literals (e.g., \4D#16\ = 77)
+                    const baseMatch = exprToParse.match(/^([a-zA-Z_]\w*)#(\d+)$/);
+                    if (baseMatch) {
+                        exprToParse = baseMatch[1];
+                    }
                 }
                 // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
                 exprToParse = expandLiterals(exprToParse);
@@ -490,14 +497,22 @@ function getInlineEvalFormat(expression, record, variables = null) {
     const trimmed = expression.trim();
     let varFormat = null;
 
-    // Check if expression ends with $ or % (format suffix)
+    // Check if expression ends with format suffix ($, %, or #base)
     let baseName = trimmed;
+    let base = 10;
     if (trimmed.endsWith('$')) {
         baseName = trimmed.slice(0, -1);
         varFormat = 'money';
     } else if (trimmed.endsWith('%')) {
         baseName = trimmed.slice(0, -1);
         varFormat = 'percent';
+    } else {
+        // Check for #base suffix on identifier (e.g., a#16)
+        const baseMatch = trimmed.match(/^([a-zA-Z_]\w*)#(\d+)$/);
+        if (baseMatch) {
+            baseName = baseMatch[1];
+            base = parseInt(baseMatch[2]);
+        }
     }
 
     // If expression is a simple variable name, look up its format from the variables map
@@ -514,7 +529,8 @@ function getInlineEvalFormat(expression, record, variables = null) {
         stripZeros: record.stripZeros !== false,
         groupDigits: record.groupDigits || false,
         numberFormat: record.format || 'float',
-        varFormat: varFormat
+        varFormat: varFormat,
+        base: base
     };
 }
 

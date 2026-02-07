@@ -1,7 +1,7 @@
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved 3 equations"; StatusIsError = 0
+Status = "Solved 4 equations"; StatusIsError = 0
 "Number base formatting"
 
 hex: 15
@@ -50,4 +50,9 @@ y = ff#16
 y:: 255
 y-> 255
 y->> 255
+
+"\a#16\ inline eval with base format"
+a: 77
+b = 4D#16
+b-> 77
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

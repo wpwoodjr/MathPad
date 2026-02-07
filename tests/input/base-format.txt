@@ -49,4 +49,9 @@ y = ff#16
 y::
 y->
 y->>
+
+"\a#16\ inline eval with base format"
+a: 77
+b = \a#16\
+b->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
