@@ -68,20 +68,17 @@ class LineParser {
         this.originalLine = line;
         this.lineNumber = lineNumber;
 
-        // Strip // line comment before processing
-        const lcStart = findLineCommentStart(line);
-        this.lineComment = null;
-        if (lcStart !== -1) {
-            this.lineComment = line.substring(lcStart);
-            line = line.substring(0, lcStart);
-        }
+        // Strip // line comment and "..." quoted strings
+        const comments = stripComments(line);
+        this.lineComment = comments.lineComment;
+        line = comments.stripped;
 
         // Extract trailing quoted comment before tokenizing
         const trailingCommentMatch = line.match(/"([^"]*)"\s*$/);
         this.trailingComment = trailingCommentMatch ? trailingCommentMatch[1] : null;
 
-        // Remove quoted strings for tokenization (replace with spaces to preserve positions)
-        this.cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+        // cleanLine has both // and "..." replaced with spaces
+        this.cleanLine = comments.clean;
 
         // Tokenize the clean line
         const tokenizer = new Tokenizer(this.cleanLine);

@@ -54,6 +54,21 @@ function findLineCommentStart(line) {
 }
 
 /**
+ * Strip comments from a line: both // line comments and "..." quoted strings
+ * Returns:
+ *   clean - both // and "..." replaced with spaces (position-preserving)
+ *   stripped - only // removed ("..." still present for regex matching)
+ *   lineComment - the "// ..." text or null (for re-appending)
+ */
+function stripComments(line) {
+    const lcStart = findLineCommentStart(line);
+    const lineComment = lcStart !== -1 ? line.substring(lcStart) : null;
+    const stripped = lcStart !== -1 ? line.substring(0, lcStart) : line;
+    const clean = stripped.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+    return { clean, stripped, lineComment };
+}
+
+/**
  * Tokenizer class - converts source text to tokens
  */
 class Tokenizer {
@@ -657,6 +672,6 @@ function parseExpression(text) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         TokenType, NodeType, Tokenizer, Parser, ParseError,
-        tokenize, parseExpression, findLineCommentStart
+        tokenize, parseExpression, stripComments
     };
 }

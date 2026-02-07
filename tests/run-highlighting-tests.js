@@ -24,7 +24,7 @@ function loadModules() {
     global.ParseError = parser.ParseError;
     global.tokenize = parser.tokenize;
     global.parseExpression = parser.parseExpression;
-    global.findLineCommentStart = parser.findLineCommentStart;
+    global.stripComments = parser.stripComments;
 
     // Line Parser (depends on parser)
     const lineParser = require(path.join(jsPath, 'line-parser.js'));
