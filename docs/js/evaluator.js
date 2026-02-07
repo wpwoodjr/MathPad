@@ -258,6 +258,21 @@ function formatDate(year, month, day, hour = 0, minute = 0, second = 0) {
 /**
  * Built-in functions
  */
+/**
+ * Check if two values are equal within tolerance.
+ * Uses relative tolerance normally, absolute tolerance when comparing against zero.
+ */
+function checkBalance(a, b, balanceTolerance) {
+    const diff = Math.abs(a - b);
+    if (a === 0 || b === 0) {
+        const absTolerance = Math.min(balanceTolerance, 5e-13);
+        return diff < absTolerance;
+    } else {
+        const maxVal = Math.max(Math.abs(a), Math.abs(b));
+        return diff < maxVal * balanceTolerance;
+    }
+}
+
 const builtinFunctions = {
     // Math functions
     abs: (args) => Math.abs(args[0]),
@@ -400,7 +415,10 @@ const builtinFunctions = {
     },
 
     // Modulo (remainder)
-    mod: (args) => args[0] % args[1]
+    mod: (args) => args[0] % args[1],
+
+    // Balance check: isClose(a; b; places) returns 1 if equal within tolerance, 0 otherwise
+    isclose: (args) => checkBalance(args[0], args[1], 0.5 * Math.pow(10, -args[2])) ? 1 : 0
 };
 
 /**
@@ -669,7 +687,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        EvalContext, EvalError, evaluate, formatNumber,
+        EvalContext, EvalError, evaluate, formatNumber, checkBalance,
         builtinFunctions, factorial, gamma,
         dateToJulian, julianToDate, parseDate, formatDate
     };

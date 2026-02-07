@@ -1,0 +1,204 @@
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 1: Small diff, tight relative tolerance (places=6) - not equal"
+
+a: 0.0605
+b: 0.060500167939065756
+places: 6
+isClose(a; b; places)-> 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 2: Small diff, looser relative tolerance (places=5) - equal"
+
+a: 0.0605
+b: 0.060500167939065756
+places: 5
+isClose(a; b; places)-> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 3: Identical values - equal"
+
+a: 0.00510417
+b: 0.00510417
+places: 4
+isClose(a; b; places)-> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 4: Small values, 10% relative error - not equal"
+
+a: 5.5e-6
+b: 5e-6
+places: 4
+isClose(a; b; places)-> 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 4b: Small values, 10% relative error, places=0 (within 50% tolerance) - equal"
+
+a: 5.5e-6
+b: 5e-6
+places: 0
+isClose(a; b; places)-> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 4c: Small values, 10% relative error, places=1 (exceeds 5% tolerance) - not equal"
+
+a: 5.5e-6
+b: 5e-6
+places: 1
+isClose(a; b; places)-> 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 5: Small values, 50% relative error - not equal"
+
+a: 0.0001
+b: 0.0002
+places: 2
+isClose(a; b; places)-> 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 6: Near-zero values, 50% relative error - not equal"
+
+a: 1e-14
+b: 2e-14
+places: 4
+isClose(a; b; places)-> 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 7: Near-zero values, opposite signs - not equal"
+
+a: 1e-14
+b: -1e-14
+places: 4
+isClose(a; b; places)-> 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 8: Floating point noise vs literal zero (polynomial case) - equal"
+
+a: -1.4566126083082054e-13
+b: 0
+places: 4
+isClose(a; b; places)-> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 8b: Noise vs zero, places=12 (just within abs cap 5e-13) - equal"
+
+a: -1.4566126083082054e-13
+b: 0
+places: 12
+isClose(a; b; places)-> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 8c: Noise vs zero, places=13 (exceeds abs cap 5e-14) - not equal"
+
+a: -1.4566126083082054e-13
+b: 0
+places: 13
+isClose(a; b; places)-> 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 12; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 1 equation"; StatusIsError = 0
+"Test 9: Polynomial f(x)=0 at places=12 (noise just within abs cap) - balances"
+
+c5: 1
+c4: -2
+c3: -10
+c2: 20
+c1: 9
+c0: -14
+
+f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
+
+f(x; c5; c4; c3; c2; c1; c0) = 0
+x-> 0.78045519272
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 6; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 1 equation"; StatusIsError = 0
+"Test 10: TVM at places=6 ($ rounding error within tolerance) - balances"
+
+"Payment calculation"
+pmt = -pv * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$6,379.91 "monthly payment"
+pv$: $1,050,000 "loan amount"
+yint%: 6.125% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 7; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 13: Equation doesn't balance: mint = yint / 12 (0.005104165849745932 ≠ 0.005104166666666667)"; StatusIsError = 1
+"Test 10b: TVM at places=7 ($ rounding error exceeds tolerance) - doesn't balance"
+
+"Payment calculation"
+pmt = -pv * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$6,379.91 "monthly payment"
+pv$: $1,050,000 "loan amount"
+yint%: 6.125% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 13; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) = 0 (-1.4566126083082054e-13 ≠ 0)"; StatusIsError = 1
+"Test 9b: Polynomial f(x)=0 at places=13 (noise exceeds abs cap) - doesn't balance"
+
+c5: 1
+c4: -2
+c3: -10
+c2: 20
+c1: 9
+c0: -14
+
+f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
+
+f(x; c5; c4; c3; c2; c1; c0) = 0
+x-> 0.78045519272
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

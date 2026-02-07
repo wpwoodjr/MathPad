@@ -96,3 +96,22 @@ n: 360 "number of payments"
 "Monthly interest rate from annual"
 mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 8; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 14: Equation doesn't balance: mint = yint / 12 (0.005104166726622282 ≠ 0.005104166666666667)"; StatusIsError = 1
+"High precision (8 places) - exposes rounding error in $ values"
+
+"Payment calculation"
+pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$602.75 "monthly payment"
+pv$: $99,999.86 "loan amount"
+fv$: -5000 "future value (baloon payment)"
+yint%: 6.125% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

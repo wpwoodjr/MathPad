@@ -156,7 +156,7 @@ x5[-4:-2]:`,
                 id: generateId(),
                 title: 'Constants',
                 text: `"Physical and mathematical constants"
-pi: 3.14159265358979
+pi: 3.141592653589793
 e: 2.71828182845905
 c: 299792458 "speed of light m/s"
 G: 6.67430e-11 "gravitational constant"

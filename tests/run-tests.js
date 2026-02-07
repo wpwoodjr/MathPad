@@ -50,6 +50,7 @@ function loadModules() {
     global.evaluate = evaluator.evaluate;
     global.formatNumber = evaluator.formatNumber;
     global.builtinFunctions = evaluator.builtinFunctions;
+    global.checkBalance = evaluator.checkBalance;
 
     // Solver (depends on parser, evaluator)
     const solver = require(path.join(jsPath, 'solver.js'));

@@ -186,7 +186,7 @@ yint = mint * 12
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) = 0 (-1.4566126083082054e-13 ≠ 0)"; StatusIsError = 1
+Status = "Solved 6 equations"; StatusIsError = 0
 "Fifth degree polynomial (test for f(x) = 0 being read as an equation, not fn definition)"
 
 c5: 1
