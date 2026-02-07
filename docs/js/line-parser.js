@@ -291,7 +291,7 @@ class LineParser {
             // - Money: $123, -$123.45
             // - Regular numbers with optional scientific notation
             // - Base format: FF#16, 101#2
-            const numMatch = afterMarker.match(/^(-?Infinity|NaN|-?\$?[\d,]+(?:\.\d+)?%?(?:[eE][+-]?\d+)?|[0-9a-zA-Z]+#\d+)\s*(.*)$/);
+            const numMatch = afterMarker.match(/^(-?Infinity|NaN|[0-9a-zA-Z]+#\d+|-?\$?[\d,]+(?:\.\d+)?%?(?:[eE][+-]?\d+)?)\s*(.*)$/);
             if (numMatch) {
                 return {
                     valueText: numMatch[1],

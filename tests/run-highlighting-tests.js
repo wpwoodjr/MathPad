@@ -837,6 +837,20 @@ function runAllTests() {
             ]
         },
         // Inline eval with money format suffix
+        // Base format output value (4D#16 should be number, not comment)
+        {
+            name: 'base format output value (a#16-> 4D#16)',
+            line: 'a#16-> 4D#16',
+            context: 'a: 77',
+            assertions: [
+                ['a', 'variable-def'],
+                ['#', 'variable-def'],
+                ['16', 'variable-def'],
+                ['->', 'punctuation'],
+                ['4D#16', 'number']
+            ]
+        },
+        // Inline eval with money format suffix
         {
             name: 'inline eval with money suffix (b = \\a$\\)',
             line: 'b = \\a$\\',
