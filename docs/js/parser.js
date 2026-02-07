@@ -390,6 +390,15 @@ class Tokenizer {
                 continue;
             }
 
+            // Money literal: $digits or $.digits (e.g., $100, $1,234.56, $.01)
+            if (ch === '$' && (this.isDigit(this.peek(1)) || (this.peek(1) === '.' && this.isDigit(this.peek(2))))) {
+                this.advance(); // consume $
+                const numToken = this.tokenizeNumber();
+                numToken.value.raw = '$' + numToken.value.raw;
+                this.tokens.push(numToken);
+                continue;
+            }
+
             // Format suffixes: $ (money), % (percent), # (base)
             if (ch === '$' || ch === '%' || ch === '#') {
                 this.advance();

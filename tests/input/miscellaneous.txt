@@ -476,3 +476,14 @@ y:
 x: y
 x->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Money literal expressions"
+
+b: $.01+$.01
+b->
+
+c: -$.01+-$.01
+c->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
