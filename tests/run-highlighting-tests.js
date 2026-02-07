@@ -753,6 +753,51 @@ function runAllTests() {
                 ['+', 'operator'],
                 ['1', 'number']
             ]
+        },
+        // Comparison operator with output marker
+        {
+            name: 'comparison operator with output marker (relE < relT-> 1)',
+            line: 'relE < relT-> 1',
+            context: 'relE: 0\nrelT: 7',
+            assertions: [
+                ['relE', 'variable'],
+                ['<', 'operator'],
+                ['relT', 'variable'],
+                ['->', 'punctuation'],
+                ['1', 'number']
+            ]
+        },
+        // Function call with comparison and output marker
+        {
+            name: 'function call with comparison and output marker (abs(1) < jsEPSILON-> 1)',
+            line: 'abs(1) < jsEPSILON-> 1',
+            context: 'jsEPSILON: 7',
+            assertions: [
+                ['abs', 'builtin'],
+                ['(', 'paren'],
+                ['1', 'number'],
+                [')', 'paren'],
+                ['<', 'operator'],
+                ['jsEPSILON', 'variable'],
+                ['->', 'punctuation'],
+                ['1', 'number']
+            ]
+        },
+        // Unary minus after ** with full precision output
+        {
+            name: 'unary minus after ** with full precision output (0.5*10**-places->> 0.00005)',
+            line: '0.5*10**-places->> 0.00005',
+            context: 'places: 4',
+            assertions: [
+                ['0.5', 'number'],
+                ['*', 'operator'],
+                ['10', 'number'],
+                ['**', 'operator'],
+                ['-', 'operator'],
+                ['places', 'variable'],
+                ['->>', 'punctuation'],
+                ['0.00005', 'number']
+            ]
         }
     ];
 

@@ -86,3 +86,31 @@ Status = "Input and output variables cleared"; StatusIsError = 0
 
 r: hex#88
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Expression with comparison operator output"
+
+relE: 0
+relT: 7
+relE < relT->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Expression with function and comparison output"
+
+jsEPSILON: 7
+abs(1) < jsEPSILON->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Expression with unary minus after ** output"
+
+places: 4
+0.5*10**-places->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

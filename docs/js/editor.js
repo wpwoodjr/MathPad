@@ -506,7 +506,7 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
             const charBefore = text[lookBack];
             // If preceded by operator or closing paren/bracket, it's part of an expression
             // But only if that character is NOT in a comment region (e.g., label text)
-            if ('+-*/%^)]='.includes(charBefore)) {
+            if ('+-*/%^)]=<>!&|~'.includes(charBefore)) {
                 const charPos = lookBack;
                 const inCommentRegion = commentRegions.some(r => charPos >= r.start && charPos < r.end);
                 if (!inCommentRegion) {

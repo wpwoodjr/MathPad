@@ -245,7 +245,7 @@ class LineParser {
         }
 
         // Math operators directly connect
-        if (['+', '*', '/', '^', '%'].includes(lastChar)) {
+        if (['+', '*', '/', '^', '%', '<', '>', '=', '!', '&', '|', '~'].includes(lastChar)) {
             return true;
         }
 
@@ -258,7 +258,7 @@ class LineParser {
         if (lastChar === '-') {
             // Check if there's something before the minus that it connects to
             const beforeMinus = beforeVar.slice(0, -1).trimEnd();
-            if (beforeMinus && /[\w\)\]]$/.test(beforeMinus)) {
+            if (beforeMinus && /[\w\)\]\+\*\/\^\%\<\>\=\!\&\|\~\(]$/.test(beforeMinus)) {
                 return true; // Binary minus connecting terms
             }
         }
