@@ -1,0 +1,95 @@
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 1: Variable with // comment"
+
+x: 5 // input value
+y: 10 // another input
+x + y->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 2: Expression output with // comment"
+
+a: 3
+b: 7
+a + b-> // sum of a and b
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 3: Equation with // comment"
+
+a: 5
+b: 3
+{ a + b = c } // constraint
+c->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 4: // inside quoted string should be preserved"
+
+x: 5 "has // in it"
+x + 1->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 5: Full-line // comment is ignored by solver"
+
+// this line is completely ignored
+x: 42
+x->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 6: Inline eval before // comment"
+
+x: 3
+\x + 2\ // result should be 5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 7: Inline eval inside // comment should NOT expand"
+
+x: 3
+// \x + 2\ stays unexpanded
+x->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 8: Inline eval inside quoted comment should NOT expand"
+
+x: 3
+"\x + 2\ stays unexpanded"
+x->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 9: Variable declaration after // should be ignored"
+
+// x: 99
+y: 7
+y->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"misc \expr\ tests"
+
+a$: $10.994
+b = \a$\
+b$->>
+
+// \a$\
+"\a$\"
+\a$\
+\a%\
+\a#16\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

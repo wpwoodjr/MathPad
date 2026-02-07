@@ -24,6 +24,7 @@ function loadModules() {
     global.ParseError = parser.ParseError;
     global.tokenize = parser.tokenize;
     global.parseExpression = parser.parseExpression;
+    global.findLineCommentStart = parser.findLineCommentStart;
 
     // Line Parser (depends on parser)
     const lineParser = require(path.join(jsPath, 'line-parser.js'));
@@ -797,6 +798,67 @@ function runAllTests() {
                 ['places', 'variable'],
                 ['->>', 'punctuation'],
                 ['0.00005', 'number']
+            ]
+        },
+        // Line comment tests
+        {
+            name: 'full line // comment',
+            line: '// this is a comment',
+            assertions: [
+                ['// this is a comment', 'comment']
+            ]
+        },
+        {
+            name: 'variable declaration with // comment (x: 5 // input)',
+            line: 'x: 5 // input value',
+            assertions: [
+                ['x', 'variable-def'],
+                [':', 'punctuation'],
+                ['5', 'number'],
+                ['// input value', 'comment']
+            ]
+        },
+        {
+            name: 'expression output with // comment (a + b-> // sum)',
+            line: 'a + b-> // sum',
+            assertions: [
+                ['a', 'variable'],
+                ['+', 'operator'],
+                ['b', 'variable'],
+                ['->', 'punctuation'],
+                ['// sum', 'comment']
+            ]
+        },
+        {
+            name: '// inside quoted string is NOT a line comment',
+            line: '"quoted // not a line comment"',
+            assertions: [
+                ['"quoted // not a line comment"', 'comment']
+            ]
+        },
+        // Inline eval with money format suffix
+        {
+            name: 'inline eval with money suffix (b = \\a$\\)',
+            line: 'b = \\a$\\',
+            context: 'a$: $10.994',
+            assertions: [
+                ['b', 'variable'],
+                ['=', 'operator'],
+                ['\\', 'inline-marker'],
+                ['a', 'variable'],
+                ['$', 'variable'],
+            ]
+        },
+        {
+            name: 'inline eval with percent suffix (b = \\a%\\)',
+            line: 'b = \\a%\\',
+            context: 'a%: 10%',
+            assertions: [
+                ['b', 'variable'],
+                ['=', 'operator'],
+                ['\\', 'inline-marker'],
+                ['a', 'variable'],
+                ['%', 'variable'],
             ]
         }
     ];

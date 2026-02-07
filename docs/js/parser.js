@@ -41,6 +41,19 @@ const NodeType = {
 };
 
 /**
+ * Find the start position of a // line comment, ignoring // inside "..." quotes
+ * Returns the index of the first /, or -1 if no line comment found
+ */
+function findLineCommentStart(line) {
+    let inQuote = false;
+    for (let i = 0; i < line.length - 1; i++) {
+        if (line[i] === '"') inQuote = !inQuote;
+        else if (!inQuote && line[i] === '/' && line[i + 1] === '/') return i;
+    }
+    return -1;
+}
+
+/**
  * Tokenizer class - converts source text to tokens
  */
 class Tokenizer {
@@ -197,6 +210,20 @@ class Tokenizer {
         return this.makeToken(TokenType.COMMENT, value, startLine, startCol);
     }
 
+    tokenizeLineComment() {
+        const startLine = this.line;
+        const startCol = this.col;
+        this.advance(); // first /
+        this.advance(); // second /
+        let value = '';
+        while (this.peek() && this.peek() !== '\n') {
+            value += this.advance();
+        }
+        const token = this.makeToken(TokenType.COMMENT, value, startLine, startCol);
+        token.lineComment = true;
+        return token;
+    }
+
     tokenizeOperator() {
         const startLine = this.line;
         const startCol = this.col;
@@ -270,6 +297,12 @@ class Tokenizer {
             // Comment in double quotes
             if (ch === '"') {
                 this.tokens.push(this.tokenizeComment());
+                continue;
+            }
+
+            // Line comment: //
+            if (ch === '/' && this.peek(1) === '/') {
+                this.tokens.push(this.tokenizeLineComment());
                 continue;
             }
 
@@ -624,6 +657,6 @@ function parseExpression(text) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         TokenType, NodeType, Tokenizer, Parser, ParseError,
-        tokenize, parseExpression
+        tokenize, parseExpression, findLineCommentStart
     };
 }

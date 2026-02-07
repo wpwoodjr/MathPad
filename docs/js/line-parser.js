@@ -68,6 +68,14 @@ class LineParser {
         this.originalLine = line;
         this.lineNumber = lineNumber;
 
+        // Strip // line comment before processing
+        const lcStart = findLineCommentStart(line);
+        this.lineComment = null;
+        if (lcStart !== -1) {
+            this.lineComment = line.substring(lcStart);
+            line = line.substring(0, lcStart);
+        }
+
         // Extract trailing quoted comment before tokenizing
         const trailingCommentMatch = line.match(/"([^"]*)"\s*$/);
         this.trailingComment = trailingCommentMatch ? trailingCommentMatch[1] : null;

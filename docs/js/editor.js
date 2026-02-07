@@ -89,6 +89,7 @@ function tokenizeMathPad(text, options = {}) {
         literalRegions.some(r => start < r.end && end > r.start);
 
     let lastTokenWasVarDef = false;
+    let lastTokenWasVar = false;
     let lastTokenWasBaseFormatter = false;  // Track # formatter for base suffix (e.g., xx#16)
     let lastTokenEnd = 0;
 
@@ -152,12 +153,15 @@ function tokenizeMathPad(text, options = {}) {
             case TokenType.NEWLINE:
                 pos = tokenEnd;
                 lastTokenWasVarDef = false;
+                lastTokenWasVar = false;
                 lastTokenWasBaseFormatter = false;
                 continue;
             case TokenType.FORMATTER:
-                // Style $, %, # as variable-def if they immediately follow a variable-def identifier
+                // Style $, %, # to match the preceding identifier if adjacent
                 if (lastTokenWasVarDef && tokenStart === lastTokenEnd) {
                     highlightType = 'variable-def';
+                } else if (lastTokenWasVar && tokenStart === lastTokenEnd) {
+                    highlightType = 'variable';
                 } else {
                     highlightType = 'error'; // orphaned formatter is likely a syntax error
                 }
@@ -174,8 +178,9 @@ function tokenizeMathPad(text, options = {}) {
             highlightType = 'inline-marker';
         }
 
-        // Track if this token is a variable-def for styling following $ or % or #
+        // Track if this token is a variable-def or variable for styling following $ or % or #
         lastTokenWasVarDef = (highlightType === 'variable-def');
+        lastTokenWasVar = (highlightType === 'variable');
         // Track if this is a # formatter for styling following base number (e.g., 16 in xx#16)
         lastTokenWasBaseFormatter = (token.type === TokenType.FORMATTER && token.value === '#' && highlightType === 'variable-def');
         lastTokenEnd = tokenEnd;
@@ -416,7 +421,7 @@ function findTokenPosition(text, token, startFrom) {
     if (token.type === TokenType.NUMBER) {
         searchValue = token.value.raw || String(token.value.value);
     } else if (token.type === TokenType.COMMENT) {
-        searchValue = '"' + token.value + '"';
+        searchValue = token.lineComment ? '//' + token.value : '"' + token.value + '"';
     } else if (token.type === TokenType.NEWLINE) {
         return text.indexOf('\n', startFrom);
     } else if (token.type === TokenType.ERROR) {

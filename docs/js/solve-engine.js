@@ -438,7 +438,9 @@ function formatOutput(text, declarations, context, computedValues, record, solve
 
             // Find the marker in the line and insert the value after it
             const line = lines[output.startLine];
-            const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+            const lcStart = findLineCommentStart(line);
+            const lineNoLC = lcStart !== -1 ? line.substring(0, lcStart) : line;
+            const cleanLine = lineNoLC.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
             const markerIdx = cleanLine.lastIndexOf(marker);
 
             if (markerIdx !== -1) {

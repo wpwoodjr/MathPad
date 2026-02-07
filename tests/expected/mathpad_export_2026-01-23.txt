@@ -225,7 +225,7 @@ width5-> 23.7171
 Category = "Unfiled"; Secret = 0
 Places = 6; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 1: Cannot evaluate \expr\ - Undefined variable: expr"; StatusIsError = 1
+Status = "Solved 1 equation"; StatusIsError = 0
 "01 \expr\: Inline eval error: Undefined variable: a"
 
 a: cos(1)
@@ -252,7 +252,7 @@ Status = "Solved 3 equations"; StatusIsError = 0
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 1: Cannot evaluate \a$\ - Undefined variable: a"; StatusIsError = 1
+Status = "Solved 1 equation"; StatusIsError = 0
 "02 \expr\: \a$\ doesn't preserve $ formatting"
 
 a$: $10.994

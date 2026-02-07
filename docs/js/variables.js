@@ -130,6 +130,14 @@ function parseVarNameAndFormat(nameWithSuffix) {
  * @returns {string} The rebuilt line
  */
 function buildOutputLine(line, markerEndIndex, newValue, commentInfo = null) {
+    // Extract // line comment from original line and re-append at end
+    let lineCommentSuffix = '';
+    const lcStart = findLineCommentStart(line);
+    if (lcStart !== -1) {
+        lineCommentSuffix = ' ' + line.substring(lcStart).trimEnd();
+        line = line.substring(0, lcStart).trimEnd();
+    }
+
     // Determine trailing comment/unit text
     let trailingPart = '';
     if (commentInfo && commentInfo.comment) {
@@ -151,11 +159,13 @@ function buildOutputLine(line, markerEndIndex, newValue, commentInfo = null) {
     const beforeValue = line.substring(0, markerEndIndex);
     const valuePart = newValue ? ' ' + newValue : '';
 
-    return beforeValue + valuePart + trailingPart;
+    return beforeValue + valuePart + trailingPart + lineCommentSuffix;
 }
 
 function replaceValueOnLine(line, varName, marker, hasLimits, newValue, commentInfo = null) {
-    const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+    const lcStart = findLineCommentStart(line);
+    const lineNoLC = lcStart !== -1 ? line.substring(0, lcStart) : line;
+    const cleanLine = lineNoLC.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
 
     let markerIndex;
     if (hasLimits) {
@@ -340,8 +350,19 @@ function discoverVariables(text, context, record) {
             });
         }
 
-        for (let j = inlineMatches.length - 1; j >= 0; j--) {
-            const evalInfo = inlineMatches[j];
+        // Filter out inline matches inside // or "..." comments
+        const lcStart = findLineCommentStart(line);
+        const filteredMatches = inlineMatches.filter(m => {
+            if (lcStart !== -1 && m.start >= lcStart) return false;
+            let inQuote = false;
+            for (let k = 0; k < m.start; k++) {
+                if (line[k] === '"') inQuote = !inQuote;
+            }
+            return !inQuote;
+        });
+
+        for (let j = filteredMatches.length - 1; j >= 0; j--) {
+            const evalInfo = filteredMatches[j];
             try {
                 // Strip format suffix ($ or %) before parsing - it's used for output formatting only
                 let exprToParse = evalInfo.expression;
@@ -678,12 +699,18 @@ function clearExpressionOutputs(text) {
         if (output.recalculates && output.existingValue) {
             // Clear the value portion for -> and ->> outputs
             const line = lines[output.startLine];
-            const cleanLine = line.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
+
+            // Strip // line comment before processing, re-append later
+            const lcStart = findLineCommentStart(line);
+            const lineNoLC = lcStart !== -1 ? line.substring(0, lcStart) : line;
+            let lineCommentSuffix = lcStart !== -1 ? ' ' + line.substring(lcStart).trimEnd() : '';
+
+            const cleanLine = lineNoLC.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
 
             // Find the marker position and clear everything after it (except comments)
             const markerIdx = cleanLine.lastIndexOf(output.marker);
             if (markerIdx !== -1) {
-                const beforeMarker = line.substring(0, markerIdx + output.marker.length);
+                const beforeMarker = lineNoLC.substring(0, markerIdx + output.marker.length);
                 // Use parsed comment info
                 let trailingText = '';
                 if (output.comment) {
@@ -693,7 +720,7 @@ function clearExpressionOutputs(text) {
                         trailingText = ' "' + output.comment + '"';
                     }
                 }
-                lines[output.startLine] = beforeMarker + trailingText;
+                lines[output.startLine] = beforeMarker + trailingText + lineCommentSuffix;
             }
         }
     }
@@ -804,7 +831,9 @@ function findEquations(text) {
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        const cleanLine = line.replace(/"[^"]*"/g, ' '); // Replace comments with spaces
+        const lcStart = findLineCommentStart(line);
+        const lineNoLC = lcStart !== -1 ? line.substring(0, lcStart) : line;
+        const cleanLine = lineNoLC.replace(/"[^"]*"/g, ' '); // Replace comments with spaces
 
         // Handle braced equations (state machine for multi-line braces)
         const braceOpenIdx = cleanLine.indexOf('{');
@@ -984,7 +1013,9 @@ function parseFunctionsRecord(text) {
 
     for (const line of lines) {
         // Remove comments for parsing
-        const cleanLine = line.replace(/"[^"]*"/g, '').trim();
+        const lcStart = findLineCommentStart(line);
+        const lineNoLC = lcStart !== -1 ? line.substring(0, lcStart) : line;
+        const cleanLine = lineNoLC.replace(/"[^"]*"/g, '').trim();
 
         if (inBrace) {
             const closeIdx = cleanLine.indexOf('}');
