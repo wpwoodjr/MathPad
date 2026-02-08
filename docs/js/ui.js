@@ -975,10 +975,16 @@ function setupEventListeners() {
             e.preventDefault();
             handleSolve();
         }
-        // Ctrl/Cmd + S to save (prevent default, auto-saved)
+        // Ctrl/Cmd + Shift + S to clear
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            handleClearInput();
+            return;
+        }
+        // Ctrl/Cmd + S to solve
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
-            setStatus('All changes auto-saved');
+            handleSolve();
         }
         // Escape to close modals/sidebar
         if (e.key === 'Escape') {

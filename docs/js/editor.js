@@ -910,17 +910,159 @@ class SimpleEditor {
     }
 
     onKeyDown(e) {
-        // Tab handling
+        // Ctrl+/ to toggle line comments
+        if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+            e.preventDefault();
+            this.toggleLineComment();
+            return;
+        }
+
+        // Tab / Shift+Tab handling
         if (e.key === 'Tab') {
             e.preventDefault();
             const start = this.textarea.selectionStart;
             const end = this.textarea.selectionEnd;
             const value = this.textarea.value;
 
-            this.textarea.value = value.substring(0, start) + '  ' + value.substring(end);
-            this.textarea.selectionStart = this.textarea.selectionEnd = start + 2;
-            this.onInput();
+            // Check if selection spans multiple lines
+            const selectedText = value.substring(start, end);
+            if (selectedText.includes('\n')) {
+                if (e.shiftKey) {
+                    this.outdentLines(start, end);
+                } else {
+                    this.indentLines(start, end);
+                }
+            } else if (e.shiftKey) {
+                // Shift+Tab with single cursor or single-line selection: outdent current line
+                this.outdentLines(start, end);
+            } else {
+                // Single cursor or single-line selection: insert 2 spaces
+                this.textarea.value = value.substring(0, start) + '  ' + value.substring(end);
+                this.textarea.selectionStart = this.textarea.selectionEnd = start + 2;
+                this.onInput();
+            }
+            return;
         }
+    }
+
+    /**
+     * Toggle // comment on selected or current lines
+     */
+    toggleLineComment() {
+        const ta = this.textarea;
+        const value = ta.value;
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+
+        // Find the full line range
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+        const lineEnd = value.indexOf('\n', end);
+        const blockEnd = lineEnd === -1 ? value.length : lineEnd;
+
+        const block = value.substring(lineStart, blockEnd);
+        const lines = block.split('\n');
+
+        // Determine if we should uncomment: all non-empty lines start with "// "
+        const allCommented = lines.every(line => line.trimStart() === '' || line.startsWith('// '));
+
+        let newLines;
+        if (allCommented) {
+            // Uncomment: remove first "// " from each line
+            newLines = lines.map(line => {
+                if (line.startsWith('// ')) return line.substring(3);
+                return line;
+            });
+        } else {
+            // Comment: add "// " to all lines
+            newLines = lines.map(line => '// ' + line);
+        }
+
+        const newBlock = newLines.join('\n');
+        ta.value = value.substring(0, lineStart) + newBlock + value.substring(blockEnd);
+
+        // Adjust selection
+        const delta = newBlock.length - block.length;
+        const perLineDelta = allCommented ? -3 : 3;
+
+        // Adjust start position
+        let newStart = start + perLineDelta;
+        if (newStart < lineStart) newStart = lineStart;
+
+        // Adjust end position
+        let newEnd = end + delta;
+        if (newEnd < lineStart) newEnd = lineStart;
+
+        ta.selectionStart = newStart;
+        ta.selectionEnd = newEnd;
+        this.onInput();
+    }
+
+    /**
+     * Indent selected lines by 2 spaces
+     */
+    indentLines(start, end) {
+        const ta = this.textarea;
+        const value = ta.value;
+
+        // Find the full line range
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+        const lineEnd = value.indexOf('\n', end);
+        const blockEnd = lineEnd === -1 ? value.length : lineEnd;
+
+        const block = value.substring(lineStart, blockEnd);
+        const lines = block.split('\n');
+        const newLines = lines.map(line => '  ' + line);
+        const newBlock = newLines.join('\n');
+
+        ta.value = value.substring(0, lineStart) + newBlock + value.substring(blockEnd);
+
+        // Adjust selection: start moves by 2, end moves by 2 per line
+        ta.selectionStart = start + 2;
+        ta.selectionEnd = end + (lines.length * 2);
+        this.onInput();
+    }
+
+    /**
+     * Outdent selected lines by up to 2 spaces
+     */
+    outdentLines(start, end) {
+        const ta = this.textarea;
+        const value = ta.value;
+
+        // Find the full line range
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+        const lineEnd = value.indexOf('\n', end);
+        const blockEnd = lineEnd === -1 ? value.length : lineEnd;
+
+        const block = value.substring(lineStart, blockEnd);
+        const lines = block.split('\n');
+
+        let totalRemoved = 0;
+        let firstLineRemoved = 0;
+        const newLines = lines.map((line, i) => {
+            let removed = 0;
+            if (line.startsWith('  ')) {
+                removed = 2;
+            } else if (line.startsWith(' ')) {
+                removed = 1;
+            }
+            if (i === 0) firstLineRemoved = removed;
+            totalRemoved += removed;
+            return line.substring(removed);
+        });
+
+        const newBlock = newLines.join('\n');
+        ta.value = value.substring(0, lineStart) + newBlock + value.substring(blockEnd);
+
+        // Adjust selection
+        let newStart = start - firstLineRemoved;
+        if (newStart < lineStart) newStart = lineStart;
+        let newEnd = end - totalRemoved;
+        if (newEnd < lineStart) newEnd = lineStart;
+
+        ta.selectionStart = newStart;
+        ta.selectionEnd = newEnd;
+        this.onInput();
     }
 
     updateHighlighting() {
