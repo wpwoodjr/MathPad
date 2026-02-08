@@ -937,12 +937,46 @@ class SimpleEditor {
                 this.outdentLines(start, end);
             } else {
                 // Single cursor or single-line selection: insert 2 spaces
-                this.textarea.value = value.substring(0, start) + '  ' + value.substring(end);
-                this.textarea.selectionStart = this.textarea.selectionEnd = start + 2;
-                this.onInput();
+                this.replaceRange(start, end, '  ');
             }
             return;
         }
+    }
+
+    /**
+     * Replace a range in the textarea, saving to undo history first
+     */
+    replaceRange(from, to, text) {
+        const ta = this.textarea;
+        const value = ta.value;
+        const newValue = value.substring(0, from) + text + value.substring(to);
+        if (newValue === value) return;
+
+        // Save current state to undo stack (same pattern as setValue undoable)
+        if (this.undoDebounceTimer) {
+            clearTimeout(this.undoDebounceTimer);
+            this.undoDebounceTimer = null;
+        }
+        this.undoStack.push({
+            value: value,
+            cursorStart: ta.selectionStart,
+            cursorEnd: ta.selectionEnd
+        });
+        if (this.undoStack.length > this.maxUndoHistory) {
+            this.undoStack.shift();
+        }
+        this.redoStack = [];
+
+        ta.value = newValue;
+        this.lastSavedState = {
+            value: newValue,
+            cursorStart: ta.selectionStart,
+            cursorEnd: ta.selectionEnd
+        };
+        this.updateHighlighting();
+        this.updateLineNumbers();
+        this.notifyChange();
+        this.notifyUndoState();
     }
 
     /**
@@ -978,7 +1012,7 @@ class SimpleEditor {
         }
 
         const newBlock = newLines.join('\n');
-        ta.value = value.substring(0, lineStart) + newBlock + value.substring(blockEnd);
+        this.replaceRange(lineStart, blockEnd, newBlock);
 
         // Adjust selection
         const delta = newBlock.length - block.length;
@@ -994,7 +1028,6 @@ class SimpleEditor {
 
         ta.selectionStart = newStart;
         ta.selectionEnd = newEnd;
-        this.onInput();
     }
 
     /**
@@ -1014,12 +1047,11 @@ class SimpleEditor {
         const newLines = lines.map(line => '  ' + line);
         const newBlock = newLines.join('\n');
 
-        ta.value = value.substring(0, lineStart) + newBlock + value.substring(blockEnd);
+        this.replaceRange(lineStart, blockEnd, newBlock);
 
         // Adjust selection: start moves by 2, end moves by 2 per line
         ta.selectionStart = start + 2;
         ta.selectionEnd = end + (lines.length * 2);
-        this.onInput();
     }
 
     /**
@@ -1052,7 +1084,7 @@ class SimpleEditor {
         });
 
         const newBlock = newLines.join('\n');
-        ta.value = value.substring(0, lineStart) + newBlock + value.substring(blockEnd);
+        this.replaceRange(lineStart, blockEnd, newBlock);
 
         // Adjust selection
         let newStart = start - firstLineRemoved;
@@ -1062,7 +1094,6 @@ class SimpleEditor {
 
         ta.selectionStart = newStart;
         ta.selectionEnd = newEnd;
-        this.onInput();
     }
 
     updateHighlighting() {
