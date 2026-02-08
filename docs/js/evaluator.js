@@ -670,8 +670,14 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
     }
 
     // Strip trailing zeros if requested
-    if (stripZeros && str.includes('.') && !str.includes('e')) {
-        str = str.replace(/\.?0+$/, '');
+    if (stripZeros && str.includes('.')) {
+        if (str.includes('e')) {
+            // Strip zeros from mantissa before the 'e'
+            const eIdx = str.indexOf('e');
+            str = str.substring(0, eIdx).replace(/\.?0+$/, '') + str.substring(eIdx);
+        } else {
+            str = str.replace(/\.?0+$/, '');
+        }
     }
 
     // Add comma grouping to integer part if requested

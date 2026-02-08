@@ -351,7 +351,7 @@ d->> 3.14159265358979
 "check formatting"
 g: h "h from Constants"
 g-> 6.6261e-34
-g->> 6.626070150000000e-34
+g->> 6.62607015e-34
 
         x: 3
         x2<-
@@ -506,7 +506,7 @@ Status = "Nothing to solve"; StatusIsError = 0
 
 g: h
 g-> 6.6261e-34
-g->> 6.626070150000000e-34
+g->> 6.62607015e-34
 
 x: g*1e34
 x-> 6.6261

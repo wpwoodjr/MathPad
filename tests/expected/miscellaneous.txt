@@ -488,7 +488,7 @@ a: c
 a->> 299792458
 
 b: h
-b->> 6.626070150000000e-34
+b->> 6.62607015e-34
 
 "C and H are wrong case - should error"
 d: C
