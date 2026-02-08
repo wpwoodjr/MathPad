@@ -405,9 +405,13 @@ function findLiteralRegions(text) {
             continue;
         }
         // Starts with letter - check if followed by a marker (variable declaration)
+        // But if preceded by an operator, it's a literal in expression context (e.g., f#16+f#32->)
         const afterMatch = text.slice(match.index + match[0].length);
         if (markerPattern.test(afterMatch)) {
-            continue;
+            const charBefore = match.index > 0 ? text[match.index - 1] : '';
+            if (!/[+\-*\/^(,;]/.test(charBefore)) {
+                continue;
+            }
         }
         regions.push({ start: match.index, end: match.index + match[0].length });
     }

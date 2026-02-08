@@ -486,4 +486,44 @@ b->
 
 c: -$.01+-$.01
 c->
+
+$99.99+$.01->
+
+f#16+f#32->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Base literal tests"
+
+"Variable with base format suffix"
+x: 12
+x#16->
+
+"Literal expressions (e#16 = 14, f#16 = 15)"
+e#16+e#16->
+e#16+3->
+f#16+3->
+
+"Variable declaration (f has no value, nothing to solve)"
+f#16->
+
+"Literal on LHS with leading 0"
+0ff#16->
+
+"ff#16 is literal in equations, variable in declarations"
+ff: 7
+
+0ff#16 = y
+y->>
+y#16->
+
+ff#16 = z
+z->>
+z#16->
+
+w = ff#16
+w->>
+
+ff#16->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

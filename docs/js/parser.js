@@ -395,6 +395,8 @@ class Tokenizer {
                 this.advance(); // consume $
                 const numToken = this.tokenizeNumber();
                 numToken.value.raw = '$' + numToken.value.raw;
+                numToken.line = startLine;
+                numToken.col = startCol;
                 this.tokens.push(numToken);
                 continue;
             }

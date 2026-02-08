@@ -890,6 +890,28 @@ function runAllTests() {
                 ['->', 'punctuation']
             ]
         },
+        // Money literal expression output
+        {
+            name: 'money literal expression output ($99.99+$.01->)',
+            line: '$99.99+$.01->',
+            assertions: [
+                ['$99.99', 'number'],
+                ['+', 'operator'],
+                ['$.01', 'number'],
+                ['->', 'punctuation']
+            ]
+        },
+        // Base literal expression output (both operands are base literals)
+        {
+            name: 'base literal expression output (f#16+f#32->)',
+            line: 'f#16+f#32->',
+            assertions: [
+                ['f#16', 'number'],
+                ['+', 'operator'],
+                ['f#32', 'number'],
+                ['->', 'punctuation']
+            ]
+        },
         // Formatter suffix in expression context is an error
         {
             name: 'money suffix in equation is error (y = x$)',

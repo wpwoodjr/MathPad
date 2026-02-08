@@ -399,6 +399,16 @@ class LineParser {
             }
         }
 
+        // Check if expression start token is preceded by base literal tokens
+        // (e.g., IDENTIFIER 'f' + FORMATTER '#' + NUMBER '16' should all be included)
+        while (exprStartIdx >= 2 &&
+               tokensBeforeMarker[exprStartIdx].type === TokenType.NUMBER &&
+               tokensBeforeMarker[exprStartIdx - 1].type === TokenType.FORMATTER &&
+               tokensBeforeMarker[exprStartIdx - 1].value === '#' &&
+               tokensBeforeMarker[exprStartIdx - 2].type === TokenType.IDENTIFIER) {
+            exprStartIdx -= 2;
+        }
+
         // Get the expression from the start token to the marker
         const startToken = tokensBeforeMarker[exprStartIdx];
         return beforeMarker.substring(startToken.col - 1).trim();
