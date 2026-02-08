@@ -121,7 +121,7 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
     // Get search limits if specified
     let limits = null;
     const varInfo = variables.get(unknown);
-    if (varInfo?.declaration?.limits) {
+    if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
         try {
             // Expand literals (e.g., 6% -> 0.06) before parsing limit expressions
             const lowExpr = expandLiterals(varInfo.declaration.limits.lowExpr);
@@ -176,7 +176,7 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
 function solveEquations(text, context, declarations, record = {}) {
     // Derive balance tolerance from decimal places: 0.5 * 10^(-places)
     // This matches rounding precision - if diff < tolerance, values display the same
-    const places = record.places ?? 4;
+    const places = record.places != null ? record.places : 4;
     const balanceTolerance = 0.5 * Math.pow(10, -places);
     const errors = [];
     const computedValues = new Map();
@@ -259,7 +259,7 @@ function solveEquations(text, context, declarations, record = {}) {
                             const value = evaluate(ast, context);
 
                             // Check limits if defined
-                            if (varInfo?.declaration?.limits) {
+                            if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
                                 try {
                                     // Expand literals (e.g., 6% -> 0.06) before parsing limit expressions
                                     const lowExpr = expandLiterals(varInfo.declaration.limits.lowExpr);
@@ -379,7 +379,7 @@ function solveEquations(text, context, declarations, record = {}) {
 function formatOutput(text, declarations, context, computedValues, record, solveFailures = new Map()) {
     const errors = [];
     const format = {
-        places: record.places ?? 4,
+        places: record.places != null ? record.places : 4,
         stripZeros: record.stripZeros !== false,
         groupDigits: record.groupDigits || false,
         format: record.format || 'float'

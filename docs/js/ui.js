@@ -59,8 +59,8 @@ function initUI(data) {
 
     // Restore open tabs, or open last viewed record, or first record
     if (data.records.length > 0) {
-        const savedTabs = data.settings?.openTabs || [];
-        const lastRecordId = data.settings?.lastRecordId;
+        const savedTabs = (data.settings && data.settings.openTabs) || [];
+        const lastRecordId = data.settings && data.settings.lastRecordId;
 
         // Filter to only valid record IDs
         const validTabs = savedTabs.filter(id => findRecord(data, id));
@@ -278,7 +278,7 @@ function updateAllEditorsReferenceInfo() {
     const { constants, functions } = getReferenceInfo();
     for (const [id, { editor }] of UI.editors) {
         const record = UI.data.records.find(r => r.id === id);
-        const shadowConstants = record?.shadowConstants || false;
+        const shadowConstants = (record && record.shadowConstants) || false;
         editor.setReferenceInfo(constants, functions, shadowConstants);
     }
 }
@@ -521,7 +521,7 @@ function renderDetailsPanel() {
 
         <div class="detail-group">
             <label>Decimal Places</label>
-            <input type="number" id="detail-places" min="0" max="15" value="${record.places ?? 2}"
+            <input type="number" id="detail-places" min="0" max="15" value="${record.places != null ? record.places : 2}"
                    onchange="updateRecordDetail('places', parseInt(this.value))">
         </div>
 
@@ -857,7 +857,7 @@ function renderSettingsModal() {
 
         <div class="detail-group">
             <label>Decimal Places</label>
-            <input type="number" min="0" max="15" value="${record.places ?? 2}"
+            <input type="number" min="0" max="15" value="${record.places != null ? record.places : 2}"
                    onchange="updateRecordDetail('places', parseInt(this.value))">
         </div>
 
@@ -915,17 +915,23 @@ function renderSettingsModal() {
  * Setup event listeners
  */
 function setupEventListeners() {
+    // Helper to safely add event listeners to elements that may not exist
+    function addListener(id, event, handler) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener(event, handler);
+    }
+
     // Import button
-    document.getElementById('btn-import')?.addEventListener('click', handleImport);
+    addListener('btn-import', 'click', handleImport);
 
     // Export button
-    document.getElementById('btn-export')?.addEventListener('click', handleExport);
+    addListener('btn-export', 'click', handleExport);
 
     // Reset button
-    document.getElementById('btn-reset')?.addEventListener('click', handleReset);
+    addListener('btn-reset', 'click', handleReset);
 
     // Undo button
-    document.getElementById('btn-undo')?.addEventListener('click', () => {
+    addListener('btn-undo', 'click', () => {
         const editorInfo = UI.editors.get(UI.currentRecordId);
         if (editorInfo) {
             editorInfo.editor.undo();
@@ -933,7 +939,7 @@ function setupEventListeners() {
     });
 
     // Redo button
-    document.getElementById('btn-redo')?.addEventListener('click', () => {
+    addListener('btn-redo', 'click', () => {
         const editorInfo = UI.editors.get(UI.currentRecordId);
         if (editorInfo) {
             editorInfo.editor.redo();
@@ -941,28 +947,28 @@ function setupEventListeners() {
     });
 
     // Solve button
-    document.getElementById('btn-solve')?.addEventListener('click', handleSolve);
+    addListener('btn-solve', 'click', handleSolve);
 
     // Clear Input button
-    document.getElementById('btn-clear')?.addEventListener('click', handleClearInput);
+    addListener('btn-clear', 'click', handleClearInput);
 
     // File input for import
-    document.getElementById('file-input')?.addEventListener('change', handleFileSelect);
+    addListener('file-input', 'change', handleFileSelect);
 
     // Mobile: Hamburger button
-    document.getElementById('hamburger-btn')?.addEventListener('click', toggleSidebar);
+    addListener('hamburger-btn', 'click', toggleSidebar);
 
     // Mobile: Sidebar overlay click to close
-    document.getElementById('sidebar-overlay')?.addEventListener('click', closeSidebar);
+    addListener('sidebar-overlay', 'click', closeSidebar);
 
     // Mobile: Settings button
-    document.getElementById('settings-btn')?.addEventListener('click', toggleSettings);
+    addListener('settings-btn', 'click', toggleSettings);
 
     // Mobile: Settings modal close button
-    document.getElementById('settings-modal-close')?.addEventListener('click', toggleSettings);
+    addListener('settings-modal-close', 'click', toggleSettings);
 
     // Mobile: Settings modal overlay click to close
-    document.getElementById('settings-modal')?.addEventListener('click', (e) => {
+    addListener('settings-modal', 'click', (e) => {
         if (e.target.id === 'settings-modal') {
             toggleSettings();
         }
@@ -989,11 +995,11 @@ function setupEventListeners() {
         // Escape to close modals/sidebar
         if (e.key === 'Escape') {
             const settingsModal = document.getElementById('settings-modal');
-            if (settingsModal?.classList.contains('visible')) {
+            if (settingsModal && settingsModal.classList.contains('visible')) {
                 toggleSettings();
             }
             const sidebar = document.querySelector('.sidebar');
-            if (sidebar?.classList.contains('open')) {
+            if (sidebar && sidebar.classList.contains('open')) {
                 closeSidebar();
             }
         }
@@ -1004,7 +1010,8 @@ function setupEventListeners() {
  * Handle import
  */
 function handleImport() {
-    document.getElementById('file-input')?.click();
+    var fileInput = document.getElementById('file-input');
+    if (fileInput) fileInput.click();
 }
 
 /**
@@ -1041,7 +1048,7 @@ async function handleFileSelect(e) {
         renderDetailsPanel();
 
         // Open the selected record from the imported file, or first record
-        const selectedId = UI.data.settings?.lastRecordId;
+        const selectedId = UI.data.settings && UI.data.settings.lastRecordId;
         const recordToOpen = selectedId ? findRecord(UI.data, selectedId) : null;
         if (recordToOpen) {
             openRecord(recordToOpen.id);
@@ -1299,7 +1306,7 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
 
         // Update editor's saved height if keyboard is up (so restoreHeight uses new position)
         const editorInfo = UI.editors.get(UI.currentRecordId);
-        if (editorInfo?.editor.isAdjustedForKeyboard) {
+        if (editorInfo && editorInfo.editor.isAdjustedForKeyboard) {
             editorInfo.editor.originalVariablesHeight = bottomPanel.style.height;
         }
     }

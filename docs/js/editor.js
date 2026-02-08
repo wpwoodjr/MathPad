@@ -1231,15 +1231,15 @@ class SimpleEditor {
         // Resize both panels (like divider drag does)
         // Navigate from this.element (simple-editor) to find panels
         const formulasPanel = this.element.parentElement;
-        const container = formulasPanel?.parentElement;
-        const variablesPanel = container?.querySelector('.variables-panel');
-        const divider = container?.querySelector('.panel-divider');
+        const container = formulasPanel ? formulasPanel.parentElement : null;
+        const variablesPanel = container ? container.querySelector('.variables-panel') : null;
+        const divider = container ? container.querySelector('.panel-divider') : null;
         const dividerHeight = divider ? divider.offsetHeight : 0;
 
         // Save original variables panel height on first call
         if (!this.isAdjustedForKeyboard) {
             this.isAdjustedForKeyboard = true;
-            this.originalVariablesHeight = variablesPanel?.style.height || '';
+            this.originalVariablesHeight = (variablesPanel && variablesPanel.style.height) || '';
         }
 
         // Get the container height to calculate variables panel size
@@ -1277,10 +1277,10 @@ class SimpleEditor {
         // Restore both panels to their original heights
         // Navigate from this.element (simple-editor) to find panels
         const formulasPanel = this.element.parentElement;
-        const container = formulasPanel?.parentElement;
-        const variablesPanel = container?.querySelector('.variables-panel');
+        const container = formulasPanel ? formulasPanel.parentElement : null;
+        const variablesPanel = container ? container.querySelector('.variables-panel') : null;
 
-        formulasPanel?.style.removeProperty('height');
+        if (formulasPanel) formulasPanel.style.removeProperty('height');
 
         if (variablesPanel) {
             if (this.originalVariablesHeight) {

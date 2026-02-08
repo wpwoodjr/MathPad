@@ -372,7 +372,7 @@ function exportToText(data, options = {}) {
         const isSelected = selectedRecordId && record.id === selectedRecordId;
         const selectedFlag = isSelected ? '; Selected = 1' : '';
         lines.push(`Category = "${record.category || 'Unfiled'}"; Secret = ${record.secret ? 1 : 0}${selectedFlag}`);
-        lines.push(`Places = ${record.places ?? 4}; StripZeros = ${record.stripZeros ? 1 : 0}`);
+        lines.push(`Places = ${record.places != null ? record.places : 4}; StripZeros = ${record.stripZeros ? 1 : 0}`);
         lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}; ShadowConstants = ${record.shadowConstants ? 1 : 0}`);
         if (record.status) {
             // Escape quotes in status message
@@ -491,7 +491,7 @@ function importFromText(text, existingData = null, options = {}) {
         // Extract title from first comment line if present
         let title = '';
         let textContent = content;
-        const firstLine = contentLines[0]?.trim() || '';
+        const firstLine = (contentLines[0] && contentLines[0].trim()) || '';
         const titleMatch = firstLine.match(/^"([^"]+)"$/);
         if (titleMatch) {
             title = titleMatch[1];
@@ -630,12 +630,12 @@ function createRecord(data = null) {
         if (defaultSettings) {
             // Use Default Settings values as template
             defaults.title = defaultSettings.text.split('\n')[0].replace(/^"|"$/g, '') || 'New Record';
-            defaults.places = defaultSettings.places ?? 4;
-            defaults.stripZeros = defaultSettings.stripZeros ?? true;
-            defaults.groupDigits = defaultSettings.groupDigits ?? true;
+            defaults.places = defaultSettings.places != null ? defaultSettings.places : 4;
+            defaults.stripZeros = defaultSettings.stripZeros != null ? defaultSettings.stripZeros : true;
+            defaults.groupDigits = defaultSettings.groupDigits != null ? defaultSettings.groupDigits : true;
             defaults.format = defaultSettings.format || 'float';
-            defaults.degreesMode = defaultSettings.degreesMode ?? false;
-            defaults.shadowConstants = defaultSettings.shadowConstants ?? false;
+            defaults.degreesMode = defaultSettings.degreesMode != null ? defaultSettings.degreesMode : false;
+            defaults.shadowConstants = defaultSettings.shadowConstants != null ? defaultSettings.shadowConstants : false;
         }
     }
 

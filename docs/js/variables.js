@@ -525,7 +525,7 @@ function getInlineEvalFormat(expression, record, variables = null) {
     }
 
     return {
-        places: record.places ?? 4,
+        places: record.places != null ? record.places : 4,
         stripZeros: record.stripZeros !== false,
         groupDigits: record.groupDigits || false,
         numberFormat: record.format || 'float',
@@ -544,7 +544,7 @@ function getInlineEvalFormat(expression, record, variables = null) {
  * @returns {string} Formatted value string
  */
 function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
-    const places = fullPrecision ? 15 : (format.places ?? 4);
+    const places = fullPrecision ? 15 : (format.places != null ? format.places : 4);
     const stripZeros = format.stripZeros !== false;
     const numberFormat = format.numberFormat || 'float';
     const base = format.base || 10;
@@ -593,10 +593,10 @@ function setVariableValue(text, varName, value, format = {}) {
     let modified = false;
 
     // Format defaults
-    const regularPlaces = format.places ?? 2;
-    const stripZeros = format.stripZeros ?? true;
-    const groupDigits = format.groupDigits ?? false;
-    const numberFormat = format.format ?? 'float';
+    const regularPlaces = format.places != null ? format.places : 2;
+    const stripZeros = format.stripZeros != null ? format.stripZeros : true;
+    const groupDigits = format.groupDigits != null ? format.groupDigits : false;
+    const numberFormat = format.format != null ? format.format : 'float';
 
     // Process each line looking for declarations of this variable
     for (let i = 0; i < lines.length; i++) {
@@ -1071,7 +1071,7 @@ function parseFunctionsRecord(text) {
  */
 function createEvalContext(records, record, localText = null) {
     const context = new EvalContext();
-    context.degreesMode = record?.degreesMode || false;
+    context.degreesMode = (record && record.degreesMode) || false;
 
     // Load constants from Constants record
     const constantsRecord = records.find(r => isReferenceRecord(r, 'Constants'));
