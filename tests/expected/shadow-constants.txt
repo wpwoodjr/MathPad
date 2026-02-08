@@ -124,3 +124,16 @@ Status = "Nothing to solve"; StatusIsError = 0
 
 h:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 5: Variable 'e' has no value to output"; StatusIsError = 1
+"test a: e before e-> shadows it"
+
+a: e
+a-> 2.7183
+e->
+
+"--- Reference Constants and Functions ---"
+e: 2.71828182845905
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

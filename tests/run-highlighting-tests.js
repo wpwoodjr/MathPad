@@ -794,6 +794,28 @@ function runAllTests() {
                 ['->>', 'punctuation']
             ]
         },
+        // Constant shadowing is position-aware (matches top-to-bottom evaluator)
+        // c is a constant used before c-> shadows it, so c is still builtin on the a: c line
+        {
+            name: 'constant is builtin before shadow line (a: c before c->)',
+            line: 'a: c',
+            context: '',
+            options: { referenceConstants: new Set(['c']), shadowConstants: true },
+            assertions: [
+                ['a', 'variable-def'],
+                [':', 'punctuation'],
+                ['c', 'builtin']  // not yet shadowed
+            ]
+        },
+        {
+            name: 'constant is variable-def on shadow line (c-> after a: c)',
+            line: 'c->',
+            context: 'a: c',
+            options: { referenceConstants: new Set(['c']), shadowConstants: true },
+            assertions: [
+                ['c', 'variable-def']  // shadowed here
+            ]
+        },
         // Comparison operator with output marker
         {
             name: 'comparison operator with output marker (relE < relT-> 1)',

@@ -34,7 +34,9 @@ function tokenizeMathPad(text, options = {}) {
     // Find locally-defined variables (may shadow reference constants)
     // When shadowConstants is OFF: only definition markers (:, <-, ::) shadow constants
     // When shadowConstants is ON: ANY marker shadows constants (including ->, ->>)
-    const localVariables = new Set();
+    // Stores name -> character position where shadowing starts (top-to-bottom, matching evaluator)
+    const localVariables = new Map();
+    let charOffset = 0;
     for (const line of strippedText.split('\n')) {
         const decl = parseVariableLine(line);
         if (decl) {
@@ -42,9 +44,12 @@ function tokenizeMathPad(text, options = {}) {
             const isOutputMarker = decl.marker === '->' || decl.marker === '->>';
             // Shadow if it's a definition, OR if shadowConstants is on and it's any marker
             if (isDefinitionMarker || (shadowConstants && isOutputMarker && referenceConstants.has(decl.name))) {
-                localVariables.add(decl.name);
+                if (!localVariables.has(decl.name)) {
+                    localVariables.set(decl.name, charOffset);
+                }
             }
         }
+        charOffset += line.length + 1; // +1 for newline
     }
 
     // Tokenize first to find quoted comments (they take precedence)
@@ -473,8 +478,15 @@ function getTokenLength(token, text, start) {
 /**
  * Determine highlight type for an identifier
  */
-function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefinedFunctions, commentRegions = [], referenceConstants = new Set(), referenceFunctions = new Set(), localVariables = new Set()) {
+function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefinedFunctions, commentRegions = [], referenceConstants = new Set(), referenceFunctions = new Set(), localVariables = new Map()) {
     const nameLower = name.toLowerCase();
+
+    // Check if a local variable shadows a constant at this position
+    // localVariables maps name -> character position where shadowing starts
+    function isShadowed(varName) {
+        const shadowPos = localVariables.get(varName);
+        return shadowPos !== undefined && tokenStart >= shadowPos;
+    }
 
     // Look ahead for ( to detect function calls
     let lookAhead = tokenEnd;
@@ -523,7 +535,7 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
                 const inCommentRegion = commentRegions.some(r => charPos >= r.start && charPos < r.end);
                 if (!inCommentRegion) {
                     // Check if it's a reference constant (not shadowed by local variable)
-                    if (referenceConstants.has(name) && !localVariables.has(name)) {
+                    if (referenceConstants.has(name) && !isShadowed(name)) {
                         return 'builtin';
                     }
                     return 'variable';
@@ -532,14 +544,14 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
         }
         // Check if it's a reference constant being output (not shadowed)
         // e.g., "pi->" should highlight pi as builtin, not variable-def
-        if (referenceConstants.has(name) && !localVariables.has(name)) {
+        if (referenceConstants.has(name) && !isShadowed(name)) {
             return 'builtin';
         }
         return 'variable-def';
     }
 
     // Check if it's a reference constant (not shadowed by local variable)
-    if (referenceConstants.has(name) && !localVariables.has(name)) {
+    if (referenceConstants.has(name) && !isShadowed(name)) {
         return 'builtin';
     }
 
