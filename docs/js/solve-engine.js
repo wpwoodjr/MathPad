@@ -538,8 +538,8 @@ function solveRecord(text, context, record) {
 
     // Pass 4: Append references section showing used constants and functions
     // Skip for reference records (Constants, Functions, Default Settings)
-    const isReferenceRecord = record.category === 'Reference';
-    if (!isReferenceRecord) {
+    const isInReferenceCategory = record.category === 'Reference';
+    if (!isInReferenceCategory) {
         text = appendReferencesSection(text, context);
     }
 

@@ -112,7 +112,7 @@ function renderSidebar() {
 
         for (const record of records) {
             const isActive = record.id === UI.currentRecordId;
-            const isSpecial = record.title === 'Constants' || record.title === 'Functions' || record.title === 'Default Settings';
+            const isSpecial = isReferenceRecord(record);
             html += `
                 <div class="record-item ${isActive ? 'active' : ''} ${isSpecial ? 'special' : ''}"
                      data-record-id="${record.id}"
@@ -249,7 +249,7 @@ function getReferenceInfo() {
 
     if (UI.data && UI.data.records) {
         // Get constants from Constants record
-        const constantsRecord = UI.data.records.find(r => r.title === 'Constants');
+        const constantsRecord = UI.data.records.find(r => isReferenceRecord(r, 'Constants'));
         if (constantsRecord) {
             const parsed = parseConstantsRecord(constantsRecord.text);
             for (const name of parsed.keys()) {
@@ -258,7 +258,7 @@ function getReferenceInfo() {
         }
 
         // Get functions from Functions record
-        const functionsRecord = UI.data.records.find(r => r.title === 'Functions');
+        const functionsRecord = UI.data.records.find(r => isReferenceRecord(r, 'Functions'));
         if (functionsRecord) {
             const parsed = parseFunctionsRecord(functionsRecord.text);
             for (const name of parsed.keys()) {
@@ -340,7 +340,7 @@ function createEditorForRecord(record) {
         syncFromVariables = false;
 
         // If Constants or Functions record changed, update all editors' reference highlighting
-        if (record.title === 'Constants' || record.title === 'Functions') {
+        if (isReferenceRecord(record) && (record.title === 'Constants' || record.title === 'Functions')) {
             updateAllEditorsReferenceInfo();
         }
     });
@@ -601,6 +601,14 @@ function updateRecordDetail(field, value) {
     debouncedSave(UI.data);
 
     if (field === 'category') {
+        // Moving a Constants/Functions record to/from Reference changes what's available
+        if (isReferenceTitle(record.title)) {
+            updateAllEditorsReferenceInfo();
+        }
+        // If moved out of Reference, auto-update title from content like a normal record
+        if (value !== 'Reference') {
+            updateRecordTitleFromContent(record);
+        }
         renderSidebar();
         renderDetailsPanel();
         renderSettingsModal();
@@ -657,7 +665,7 @@ function renameRecord(recordId) {
  */
 function updateRecordTitleFromContent(record) {
     // Don't auto-update title for special records
-    if (record.title === 'Constants' || record.title === 'Functions' || record.title === 'Default Settings') {
+    if (isReferenceRecord(record)) {
         return;
     }
     const firstLine = record.text.split('\n')[0].trim();

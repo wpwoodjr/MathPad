@@ -1074,7 +1074,7 @@ function createEvalContext(records, record, localText = null) {
     context.degreesMode = record?.degreesMode || false;
 
     // Load constants from Constants record
-    const constantsRecord = records.find(r => r.title === 'Constants');
+    const constantsRecord = records.find(r => isReferenceRecord(r, 'Constants'));
     if (constantsRecord) {
         const constants = parseConstantsRecord(constantsRecord.text);
         for (const [name, { value, comment }] of constants) {
@@ -1083,7 +1083,7 @@ function createEvalContext(records, record, localText = null) {
     }
 
     // Load user functions from Functions record
-    const functionsRecord = records.find(r => r.title === 'Functions');
+    const functionsRecord = records.find(r => isReferenceRecord(r, 'Functions'));
     if (functionsRecord) {
         const functions = parseFunctionsRecord(functionsRecord.text);
         for (const [name, { params, bodyText, sourceText }] of functions) {

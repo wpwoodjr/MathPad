@@ -89,6 +89,8 @@ function loadModules() {
     global.importFromText = storage.importFromText;
     global.exportToText = storage.exportToText;
     global.createDefaultData = storage.createDefaultData;
+    global.isReferenceRecord = storage.isReferenceRecord;
+    global.isReferenceTitle = storage.isReferenceTitle;
 
     // Solve Engine (depends on all above)
     const solveEngine = require(path.join(jsPath, 'solve-engine.js'));

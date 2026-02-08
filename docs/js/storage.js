@@ -223,6 +223,24 @@ disc(a;b;c) = b**2 - 4*a*c`,
 /**
  * Generate a unique ID
  */
+/**
+ * Check if a record is a special reference record (Constants, Functions, or Default Settings)
+ * @param {object} record - The record to check
+ * @param {string} [title] - Optional: check for a specific reference record title
+ */
+function isReferenceRecord(record, title) {
+    if (record.category !== 'Reference') return false;
+    if (title) return record.title === title;
+    return record.title === 'Constants' || record.title === 'Functions' || record.title === 'Default Settings';
+}
+
+/**
+ * Check if a record title is a reference record title
+ */
+function isReferenceTitle(title) {
+    return title === 'Constants' || title === 'Functions' || title === 'Default Settings';
+}
+
 function generateId() {
     return 'r_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
 }
@@ -304,7 +322,7 @@ function ensureDefaultSettingsRecord(data) {
     if (!data.records) {
         data.records = [];
     }
-    const hasDefaultSettings = data.records.some(r => r.title === 'Default Settings');
+    const hasDefaultSettings = data.records.some(r => isReferenceRecord(r, 'Default Settings'));
     if (!hasDefaultSettings) {
         data.records.push({
             id: generateId(),
@@ -479,8 +497,8 @@ function importFromText(text, existingData = null, options = {}) {
             title = titleMatch[1];
             // For reference records, remove title line from content to avoid duplication
             // (export adds the title line, so we remove it on import)
-            const isReferenceRecord = title === 'Constants' || title === 'Functions' || title === 'Default Settings';
-            if (isReferenceRecord) {
+            const isRefRecord = isReferenceTitle(title);
+            if (isRefRecord) {
                 textContent = contentLines.slice(1).join('\n').trim();
             }
         } else {
@@ -608,7 +626,7 @@ function createRecord(data = null) {
     };
 
     if (data && data.records) {
-        const defaultSettings = data.records.find(r => r.title === 'Default Settings');
+        const defaultSettings = data.records.find(r => isReferenceRecord(r, 'Default Settings'));
         if (defaultSettings) {
             // Use Default Settings values as template
             defaults.title = defaultSettings.text.split('\n')[0].replace(/^"|"$/g, '') || 'New Record';
@@ -739,7 +757,7 @@ function getRecordsByCategory(data) {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        STORAGE_KEY, createDefaultData, generateId,
+        STORAGE_KEY, createDefaultData, isReferenceRecord, isReferenceTitle, generateId,
         loadData, saveData, debouncedSave,
         exportToText, importFromText, downloadTextFile, readTextFile,
         createRecord, deleteRecord, findRecord, updateRecord,
