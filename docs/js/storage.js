@@ -372,7 +372,7 @@ function exportToText(data, options = {}) {
         const isSelected = selectedRecordId && record.id === selectedRecordId;
         const selectedFlag = isSelected ? '; Selected = 1' : '';
         lines.push(`Category = "${record.category || 'Unfiled'}"; Secret = ${record.secret ? 1 : 0}${selectedFlag}`);
-        lines.push(`Places = ${record.places != null ? record.places : 4}; StripZeros = ${record.stripZeros ? 1 : 0}`);
+        lines.push(`Places = ${record.places != null ? record.places : 4}; StripZeros = ${record.stripZeros !== false ? 1 : 0}`);
         lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}; ShadowConstants = ${record.shadowConstants ? 1 : 0}`);
         if (record.status) {
             // Escape quotes in status message
