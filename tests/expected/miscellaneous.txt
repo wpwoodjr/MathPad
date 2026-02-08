@@ -373,9 +373,9 @@ Status = "Solved 1 equation"; StatusIsError = 0
 "Label text torture test"
 
 "Labels with parentheses - should be variable declarations"
-Input (test) a<- 5
-Value (m/s) b: 10
-Result (%) c-> 15
+Input (test) a<- 5 "here's a"
+Value (m/s) b: 10 "and b"
+Result (%) c-> 15 that's c
 
 "Expressions - should be expression outputs"
 Output a-> 5 that's a
@@ -476,6 +476,30 @@ Status = "Solved with errors: Line 3: Variable 'c' has no value to output"; Stat
 "Test for value of c when shadow constants is on"
 
 c->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 15; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 11: Cannot evaluate \"C\" - Undefined variable: C"; StatusIsError = 1
+"Constants are case-sensitive (c and h are constants, C and H are not)"
+
+"c and h resolve to constant values"
+a: c
+a->> 299792458
+
+b: h
+b->> 6.626070150000000e-34
+
+"C and H are wrong case - should error"
+d: C
+d->>
+
+g: H
+g->>
+
+"--- Reference Constants and Functions ---"
+c: 299792458 "speed of light m/s"
+h: 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1

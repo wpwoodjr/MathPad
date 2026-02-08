@@ -755,6 +755,45 @@ function runAllTests() {
                 ['1', 'number']
             ]
         },
+        // Reference constants are case-sensitive (G and c are constants, g and C are not)
+        {
+            name: 'wrong-case constant is variable-def, not builtin (g->>)',
+            line: 'g->>',
+            options: { referenceConstants: new Set(['G', 'c']) },
+            assertions: [
+                ['g', 'variable-def'],  // g != G, not a constant
+                ['->>', 'punctuation']
+            ]
+        },
+        {
+            name: 'correct-case constant is builtin (G->> 0.000000000066743)',
+            line: 'G->> 0.000000000066743',
+            options: { referenceConstants: new Set(['G', 'c']) },
+            assertions: [
+                ['G', 'builtin'],
+                ['->>', 'punctuation'],
+                ['0.000000000066743', 'number']
+            ]
+        },
+        {
+            name: 'correct-case constant is builtin (c->> 299,792,458)',
+            line: 'c->> 299,792,458',
+            options: { referenceConstants: new Set(['G', 'c']) },
+            assertions: [
+                ['c', 'builtin'],
+                ['->>', 'punctuation'],
+                ['299,792,458', 'number']
+            ]
+        },
+        {
+            name: 'wrong-case constant is variable-def, not builtin (C->>)',
+            line: 'C->>',
+            options: { referenceConstants: new Set(['G', 'c']) },
+            assertions: [
+                ['C', 'variable-def'],  // C != c, not a constant
+                ['->>', 'punctuation']
+            ]
+        },
         // Comparison operator with output marker
         {
             name: 'comparison operator with output marker (relE < relT-> 1)',

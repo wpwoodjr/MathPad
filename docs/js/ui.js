@@ -253,7 +253,7 @@ function getReferenceInfo() {
         if (constantsRecord) {
             const parsed = parseConstantsRecord(constantsRecord.text);
             for (const name of parsed.keys()) {
-                constants.add(name.toLowerCase());
+                constants.add(name);
             }
         }
 

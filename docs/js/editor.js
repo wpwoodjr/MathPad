@@ -41,8 +41,8 @@ function tokenizeMathPad(text, options = {}) {
             const isDefinitionMarker = decl.marker === ':' || decl.marker === '<-' || decl.marker === '::';
             const isOutputMarker = decl.marker === '->' || decl.marker === '->>';
             // Shadow if it's a definition, OR if shadowConstants is on and it's any marker
-            if (isDefinitionMarker || (shadowConstants && isOutputMarker && referenceConstants.has(decl.name.toLowerCase()))) {
-                localVariables.add(decl.name.toLowerCase());
+            if (isDefinitionMarker || (shadowConstants && isOutputMarker && referenceConstants.has(decl.name))) {
+                localVariables.add(decl.name);
             }
         }
     }
@@ -523,7 +523,7 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
                 const inCommentRegion = commentRegions.some(r => charPos >= r.start && charPos < r.end);
                 if (!inCommentRegion) {
                     // Check if it's a reference constant (not shadowed by local variable)
-                    if (referenceConstants.has(nameLower) && !localVariables.has(nameLower)) {
+                    if (referenceConstants.has(name) && !localVariables.has(name)) {
                         return 'builtin';
                     }
                     return 'variable';
@@ -532,14 +532,14 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
         }
         // Check if it's a reference constant being output (not shadowed)
         // e.g., "pi->" should highlight pi as builtin, not variable-def
-        if (referenceConstants.has(nameLower) && !localVariables.has(nameLower)) {
+        if (referenceConstants.has(name) && !localVariables.has(name)) {
             return 'builtin';
         }
         return 'variable-def';
     }
 
     // Check if it's a reference constant (not shadowed by local variable)
-    if (referenceConstants.has(nameLower) && !localVariables.has(nameLower)) {
+    if (referenceConstants.has(name) && !localVariables.has(name)) {
         return 'builtin';
     }
 
@@ -866,7 +866,7 @@ class SimpleEditor {
      * @param {Set|Array} functions - Names of functions from Reference section
      */
     setReferenceInfo(constants, functions, shadowConstants = false) {
-        this.referenceConstants = new Set(Array.from(constants || []).map(n => n.toLowerCase()));
+        this.referenceConstants = new Set(constants || []);
         this.referenceFunctions = new Set(Array.from(functions || []).map(n => n.toLowerCase()));
         this.shadowConstants = shadowConstants;
         this.updateHighlighting();
