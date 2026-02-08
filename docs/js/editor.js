@@ -668,6 +668,17 @@ class SimpleEditor {
         this.updateHighlighting();
         this.updateLineNumbers();
 
+        // Capture cursor position before the first edit so the initial undo state
+        // has the correct cursor (saveInitialState can't know where user will click)
+        const captureInitialCursor = () => {
+            if (this.lastSavedState) {
+                this.lastSavedState.cursorStart = this.textarea.selectionStart;
+                this.lastSavedState.cursorEnd = this.textarea.selectionEnd;
+            }
+            this.textarea.removeEventListener('beforeinput', captureInitialCursor);
+        };
+        this.textarea.addEventListener('beforeinput', captureInitialCursor);
+
         // Save initial state for undo history
         this.saveInitialState();
     }
@@ -676,11 +687,10 @@ class SimpleEditor {
      * Save initial state to undo history
      */
     saveInitialState() {
-        const value = this.textarea.value;
         this.lastSavedState = {
-            value,
-            cursorStart: value.length,
-            cursorEnd: value.length
+            value: this.textarea.value,
+            cursorStart: this.textarea.selectionStart,
+            cursorEnd: this.textarea.selectionEnd
         };
         // Don't push to undoStack - this is the baseline
     }
@@ -973,6 +983,7 @@ class SimpleEditor {
             cursorStart: ta.selectionStart,
             cursorEnd: ta.selectionEnd
         };
+
         this.updateHighlighting();
         this.updateLineNumbers();
         this.notifyChange();
