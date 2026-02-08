@@ -312,11 +312,16 @@ function findLabelRegions(text) {
                 }
             }
         } else if (!result && line.trim() && !insideBrace) {
-            // Plain text line (no markers, no equation, not inside brace) - entire line is comment
-            regions.push({
-                start: lineStart,
-                end: lineStart + line.length
-            });
+            // Plain text line (no markers, no equation, not inside brace) - label/comment
+            // Use cleanLine (// and "..." replaced with spaces) to find extent of actual text,
+            // so label region doesn't overlap with comment tokens and get filtered out
+            const labelEnd = parser.cleanLine.trimEnd().length;
+            if (labelEnd > 0) {
+                regions.push({
+                    start: lineStart,
+                    end: lineStart + labelEnd
+                });
+            }
         }
 
         // Handle unquoted trailing comments (for both declarations and expression outputs)

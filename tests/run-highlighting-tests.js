@@ -897,6 +897,22 @@ function runAllTests() {
                 ['"quoted // not a line comment"', 'comment']
             ]
         },
+        {
+            name: 'plain text before // comment is label (ccc // why blue?)',
+            line: 'ccc // why blue?',
+            assertions: [
+                ['ccc', 'comment'],
+                ['// why blue?', 'comment']
+            ]
+        },
+        {
+            name: 'plain text before quoted comment is label (ccc "test")',
+            line: 'ccc "test"',
+            assertions: [
+                ['ccc', 'comment'],
+                ['"test"', 'comment']
+            ]
+        },
         // Inline eval with money format suffix
         // Base format output value (4D#16 should be number, not comment)
         {
