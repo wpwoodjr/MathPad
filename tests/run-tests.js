@@ -79,6 +79,7 @@ function loadModules() {
     global.getInlineEvalFormat = variables.getInlineEvalFormat;
     global.formatVariableValue = variables.formatVariableValue;
     global.findExpressionOutputs = variables.findExpressionOutputs;
+    global.findEquationsAndOutputs = variables.findEquationsAndOutputs;
     global.clearExpressionOutputs = variables.clearExpressionOutputs;
     global.buildOutputLine = variables.buildOutputLine;
 

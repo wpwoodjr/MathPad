@@ -561,32 +561,123 @@ function clearVariables(text, clearType = 'input') {
 }
 
 /**
- * Find expression outputs in text: expr:, expr::, expr->, expr->>
- * These are expressions (not simple variable names) followed by output markers
- * Returns array of { text, marker, startLine, fullPrecision, recalculates, existingValue }
- * (Wrapper around parseMarkedLine for backwards compatibility)
+ * Find equations and expression outputs in a single pass over all lines.
+ * This is the core implementation; findEquations() and findExpressionOutputs()
+ * are thin wrappers for callers that only need one result.
+ * @param {string} text - The formula text
+ * @returns {{ equations: Array, exprOutputs: Array }}
  */
-function findExpressionOutputs(text) {
+function findEquationsAndOutputs(text) {
     const lines = text.split('\n');
-    const outputs = [];
+    const equations = [];
+    const exprOutputs = [];
+    let inBrace = false;
+    let braceStart = -1;
+    let braceContent = [];
+    let braceStartCol = 0;
 
     for (let i = 0; i < lines.length; i++) {
-        const result = parseMarkedLine(lines[i]);
-        if (result && result.kind === 'expression-output') {
-            outputs.push({
-                text: result.expression,
-                marker: result.marker,
+        const line = lines[i];
+        const { clean: cleanLine } = stripComments(line);
+
+        // Handle braced equations (state machine for multi-line braces)
+        const braceOpenIdx = cleanLine.indexOf('{');
+        if (braceOpenIdx !== -1 && !inBrace) {
+            inBrace = true;
+            braceStart = i;
+            braceStartCol = braceOpenIdx;
+            braceContent = [];
+
+            const afterBrace = cleanLine.substring(braceOpenIdx + 1);
+            const braceCloseIdx = afterBrace.indexOf('}');
+
+            if (braceCloseIdx !== -1) {
+                equations.push({
+                    text: afterBrace.substring(0, braceCloseIdx).trim(),
+                    startLine: i,
+                    endLine: i,
+                    isBraced: true,
+                    startCol: braceOpenIdx,
+                    endCol: braceOpenIdx + 1 + braceCloseIdx + 1
+                });
+                inBrace = false;
+            } else {
+                braceContent.push(afterBrace);
+            }
+            continue;
+        }
+
+        if (inBrace) {
+            const braceCloseIdx = cleanLine.indexOf('}');
+            if (braceCloseIdx !== -1) {
+                braceContent.push(cleanLine.substring(0, braceCloseIdx));
+                equations.push({
+                    text: braceContent.join(' ').trim(),
+                    startLine: braceStart,
+                    endLine: i,
+                    isBraced: true,
+                    startCol: braceStartCol,
+                    endCol: braceCloseIdx + 1
+                });
+                inBrace = false;
+            } else {
+                braceContent.push(cleanLine);
+            }
+            continue;
+        }
+
+        // Parse the line once using parseMarkedLine (single tokenization)
+        const markedResult = parseMarkedLine(line);
+
+        if (markedResult && markedResult.kind === 'expression-output') {
+            exprOutputs.push({
+                text: markedResult.expression,
+                marker: markedResult.marker,
                 startLine: i,
-                fullPrecision: result.fullPrecision,
-                recalculates: result.recalculates,
-                existingValue: result.valueText,
-                comment: result.comment,
-                commentUnquoted: result.commentUnquoted
+                fullPrecision: markedResult.fullPrecision,
+                recalculates: markedResult.recalculates,
+                existingValue: markedResult.valueText,
+                comment: markedResult.comment,
+                commentUnquoted: markedResult.commentUnquoted
             });
+            continue;
+        }
+
+        if (markedResult) {
+            // Declaration line - skip
+            continue;
+        }
+
+        // Check for equation: line with = that's not a comparison operator
+        const eqIdx = cleanLine.indexOf('=');
+        if (eqIdx !== -1) {
+            const prevChar = eqIdx > 0 ? cleanLine[eqIdx - 1] : '';
+            const nextChar = eqIdx < cleanLine.length - 1 ? cleanLine[eqIdx + 1] : '';
+
+            if (prevChar !== '=' && prevChar !== '!' && prevChar !== '<' && prevChar !== '>' &&
+                nextChar !== '=') {
+                const eqText = extractEquationFromLine(cleanLine.trim());
+                equations.push({
+                    text: eqText,
+                    startLine: i,
+                    endLine: i,
+                    isBraced: false,
+                    startCol: 0,
+                    endCol: line.length
+                });
+            }
         }
     }
 
-    return outputs;
+    return { equations, exprOutputs };
+}
+
+/**
+ * Find expression outputs in text: expr:, expr::, expr->, expr->>
+ * Thin wrapper around findEquationsAndOutputs for callers that only need outputs.
+ */
+function findExpressionOutputs(text) {
+    return findEquationsAndOutputs(text).exprOutputs;
 }
 
 /**
@@ -718,98 +809,10 @@ function extractEquationFromLineInner(lineText) {
 
 /**
  * Find equations in text (lines or blocks with = that are not variable declarations)
+ * Thin wrapper around findEquationsAndOutputs for callers that only need equations.
  */
 function findEquations(text) {
-    const lines = text.split('\n');
-    const equations = [];
-    let inBrace = false;
-    let braceStart = -1;
-    let braceContent = [];
-    let braceStartCol = 0;
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const { clean: cleanLine } = stripComments(line);
-
-        // Handle braced equations (state machine for multi-line braces)
-        const braceOpenIdx = cleanLine.indexOf('{');
-        if (braceOpenIdx !== -1 && !inBrace) {
-            inBrace = true;
-            braceStart = i;
-            braceStartCol = braceOpenIdx;
-            braceContent = [];
-
-            const afterBrace = cleanLine.substring(braceOpenIdx + 1);
-            const braceCloseIdx = afterBrace.indexOf('}');
-
-            if (braceCloseIdx !== -1) {
-                // Single-line braced equation
-                equations.push({
-                    text: afterBrace.substring(0, braceCloseIdx).trim(),
-                    startLine: i,
-                    endLine: i,
-                    isBraced: true,
-                    startCol: braceOpenIdx,
-                    endCol: braceOpenIdx + 1 + braceCloseIdx + 1
-                });
-                inBrace = false;
-            } else {
-                braceContent.push(afterBrace);
-            }
-            continue;
-        }
-
-        if (inBrace) {
-            const braceCloseIdx = cleanLine.indexOf('}');
-            if (braceCloseIdx !== -1) {
-                braceContent.push(cleanLine.substring(0, braceCloseIdx));
-                equations.push({
-                    text: braceContent.join(' ').trim(),
-                    startLine: braceStart,
-                    endLine: i,
-                    isBraced: true,
-                    startCol: braceStartCol,
-                    endCol: braceCloseIdx + 1
-                });
-                inBrace = false;
-            } else {
-                braceContent.push(cleanLine);
-            }
-            continue;
-        }
-
-        // Check for regular equation line using parseMarkedLine
-        // If parseMarkedLine returns a result, it's a declaration or expression-output, not an equation
-        const markedResult = parseMarkedLine(line);
-        if (markedResult) {
-            // Line is a declaration or expression output - skip
-            continue;
-        }
-
-        // Check for equation: line with = that's not a comparison operator
-        const eqIdx = cleanLine.indexOf('=');
-        if (eqIdx !== -1) {
-            // Check it's not a comparison operator (==, !=, <=, >=)
-            const prevChar = eqIdx > 0 ? cleanLine[eqIdx - 1] : '';
-            const nextChar = eqIdx < cleanLine.length - 1 ? cleanLine[eqIdx + 1] : '';
-
-            if (prevChar !== '=' && prevChar !== '!' && prevChar !== '<' && prevChar !== '>' &&
-                nextChar !== '=') {
-                // Extract the equation, handling lines with label text before/after
-                const eqText = extractEquationFromLine(cleanLine.trim());
-                equations.push({
-                    text: eqText,
-                    startLine: i,
-                    endLine: i,
-                    isBraced: false,
-                    startCol: 0,
-                    endCol: line.length
-                });
-            }
-        }
-    }
-
-    return equations;
+    return findEquationsAndOutputs(text).equations;
 }
 
 /**
@@ -1024,7 +1027,7 @@ if (typeof module !== 'undefined' && module.exports) {
         parseVarNameAndFormat, parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         buildOutputLine, setVariableValue, clearVariables, findEquations,
-        findExpressionOutputs, clearExpressionOutputs,
+        findExpressionOutputs, findEquationsAndOutputs, clearExpressionOutputs,
         findInlineEvaluations, replaceInlineEvaluation,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext,
         extractEquationFromLine

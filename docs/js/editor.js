@@ -31,27 +31,6 @@ function tokenizeMathPad(text, options = {}) {
     // Find user-defined functions (may shadow builtins/reference functions)
     const userDefinedFunctions = new Set(parseFunctionsRecord(strippedText).keys());
 
-    // Find locally-defined variables (may shadow reference constants)
-    // When shadowConstants is OFF: only definition markers (:, <-, ::) shadow constants
-    // When shadowConstants is ON: ANY marker shadows constants (including ->, ->>)
-    // Stores name -> character position where shadowing starts (top-to-bottom, matching evaluator)
-    const localVariables = new Map();
-    let charOffset = 0;
-    for (const line of strippedText.split('\n')) {
-        const decl = parseVariableLine(line);
-        if (decl) {
-            const isDefinitionMarker = decl.marker === ':' || decl.marker === '<-' || decl.marker === '::';
-            const isOutputMarker = decl.marker === '->' || decl.marker === '->>';
-            // Shadow if it's a definition, OR if shadowConstants is on and it's any marker
-            if (isDefinitionMarker || (shadowConstants && isOutputMarker && referenceConstants.has(decl.name))) {
-                if (!localVariables.has(decl.name)) {
-                    localVariables.set(decl.name, charOffset);
-                }
-            }
-        }
-        charOffset += line.length + 1; // +1 for newline
-    }
-
     // Tokenize first to find quoted comments (they take precedence)
     const tokenizer = new Tokenizer(text);
     const parserTokens = tokenizer.tokenize();
@@ -75,8 +54,11 @@ function tokenizeMathPad(text, options = {}) {
     const overlapsQuotedComment = (start, end) =>
         quotedCommentRegions.some(r => start < r.end && end > r.start);
 
-    // Find label/comment regions (exclude those inside quoted comments)
-    const commentRegions = findLabelRegions(text).filter(
+    // Single pass: detect shadow variables AND find label regions (replaces 2N with N tokenizations)
+    const { localVariables, labelRegions } = analyzeLines(text, strippedText, referenceConstants, shadowConstants);
+
+    // Filter label regions that overlap with quoted comments
+    const commentRegions = labelRegions.filter(
         r => !overlapsQuotedComment(r.start, r.end)
     );
 
@@ -204,16 +186,26 @@ function tokenizeMathPad(text, options = {}) {
 }
 
 /**
- * Find label regions in the text using LineParser
- * Returns array of { start, end } for each label region (absolute positions)
+ * Analyze lines in one pass: detect shadow variables AND find label regions
+ * Replaces separate shadow detection loop + findLabelRegions() with a single LineParser per line
+ * @param {string} text - Full text to analyze
+ * @param {string} strippedText - Text with reference section removed (for shadow detection bounds)
+ * @param {Set} referenceConstants - Constants from Reference section
+ * @param {boolean} shadowConstants - If true, output markers also shadow constants
+ * @returns {{ localVariables: Map, labelRegions: Array }}
  */
-function findLabelRegions(text) {
+function analyzeLines(text, strippedText, referenceConstants, shadowConstants) {
     const lines = text.split('\n');
-    const regions = [];
+    const strippedLength = strippedText.length;
+    const localVariables = new Map();  // name -> charOffset where shadowing starts
+    const labelRegions = [];
     let lineStart = 0;
-    let insideBrace = false;  // Track if we're inside a multi-line braced equation
+    let insideBrace = false;
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const inReferenceSection = lineStart >= strippedLength;
+
         // Count braces to track multi-line braced equations
         const openBraces = (line.match(/\{/g) || []).length;
         const closeBraces = (line.match(/\}/g) || []).length;
@@ -229,14 +221,11 @@ function findLabelRegions(text) {
         // If we're inside a brace (continuation line), don't treat as label
         // But we still need to find label text after the closing brace
         if (hadOpenBrace && !line.includes('{')) {
-            // This is a continuation line inside braces
-            // Check if this line has the closing brace with trailing text
             const closeBracePos = line.indexOf('}');
             if (closeBracePos >= 0) {
-                // Everything after the closing brace is label text
                 const afterBrace = closeBracePos + 1;
                 if (afterBrace < line.length && line.slice(afterBrace).trim()) {
-                    regions.push({
+                    labelRegions.push({
                         start: lineStart + afterBrace,
                         end: lineStart + line.length
                     });
@@ -246,17 +235,30 @@ function findLabelRegions(text) {
             continue;
         }
 
-        // Use LineParser to parse the line
+        // Create ONE LineParser for this line
         const parser = new LineParser(line);
         const result = parser.parse();
 
+        // --- Shadow detection (non-reference lines only) ---
+        if (!inReferenceSection && result && result.kind === 'declaration') {
+            const decl = result;
+            const isDefMarker = decl.marker === ':' || decl.marker === '<-' || decl.marker === '::';
+            const isOutMarker = decl.marker === '->' || decl.marker === '->>';
+            if (isDefMarker || (shadowConstants && isOutMarker && referenceConstants.has(decl.name))) {
+                if (!localVariables.has(decl.name)) {
+                    localVariables.set(decl.name, lineStart);
+                }
+            }
+        }
+
+        // --- Label region detection ---
         if (result && result.kind === 'declaration') {
             // For declarations, label is everything before the variable
             const markerInfo = parser.findBestMarker();
             if (markerInfo) {
                 const varInfo = parser.getImmediateVarBeforeMarker(markerInfo.index);
                 if (varInfo && varInfo.varStartPos > 0) {
-                    regions.push({
+                    labelRegions.push({
                         start: lineStart,
                         end: lineStart + varInfo.varStartPos
                     });
@@ -266,19 +268,17 @@ function findLabelRegions(text) {
             // For expression outputs, label is everything before where the expression starts
             const exprStart = line.indexOf(result.expression);
             if (exprStart > 0) {
-                regions.push({
+                labelRegions.push({
                     start: lineStart,
                     end: lineStart + exprStart
                 });
             }
         } else if (!result && line.includes('=')) {
             // Equation line - find label text before and after the equation
-            // For braced equations like "This is a fn: { xmin(a;b) = ", everything before { is label
             if (line.includes('{')) {
                 const bracePos = line.indexOf('{');
-                // Everything before the opening brace is label text
                 if (bracePos > 0) {
-                    regions.push({
+                    labelRegions.push({
                         start: lineStart,
                         end: lineStart + bracePos
                     });
@@ -286,19 +286,17 @@ function findLabelRegions(text) {
             } else {
                 const eqRegions = findEquationLabelRegions(line);
                 for (const r of eqRegions) {
-                    regions.push({
+                    labelRegions.push({
                         start: lineStart + r.start,
                         end: lineStart + r.end
                     });
                 }
             }
         } else if (!result && line.trim() && !insideBrace) {
-            // Plain text line (no markers, no equation, not inside brace) - label/comment
-            // Use cleanLine (// and "..." replaced with spaces) to find extent of actual text,
-            // so label region doesn't overlap with comment tokens and get filtered out
+            // Plain text line - label/comment
             const labelEnd = parser.cleanLine.trimEnd().length;
             if (labelEnd > 0) {
-                regions.push({
+                labelRegions.push({
                     start: lineStart,
                     end: lineStart + labelEnd
                 });
@@ -309,17 +307,17 @@ function findLabelRegions(text) {
         if (result && result.comment && result.commentUnquoted) {
             const commentStart = line.lastIndexOf(result.comment);
             if (commentStart > 0) {
-                regions.push({
+                labelRegions.push({
                     start: lineStart + commentStart,
                     end: lineStart + commentStart + result.comment.length
                 });
             }
         }
 
-        lineStart += line.length + 1; // +1 for newline
+        lineStart += line.length + 1;
     }
 
-    return regions;
+    return { localVariables, labelRegions };
 }
 
 /**

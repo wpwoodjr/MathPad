@@ -188,6 +188,9 @@ function solveEquations(text, context, declarations, record = {}) {
         }
     }
 
+    // Compute equations and expression outputs ONCE (text doesn't change within this function)
+    const { equations, exprOutputs } = findEquationsAndOutputs(text);
+
     // Iterative solving
     const maxIterations = 50;
     let iterations = 0;
@@ -196,7 +199,6 @@ function solveEquations(text, context, declarations, record = {}) {
     while (changed && iterations++ < maxIterations) {
         changed = false;
 
-        const equations = findEquations(text);
         const substitutions = buildSubstitutionMap(equations, context, errors);
 
         for (const eq of equations) {
@@ -301,7 +303,6 @@ function solveEquations(text, context, declarations, record = {}) {
 
     // Evaluate expression outputs (expr:, expr::, expr->, expr->>)
     // For : and :: (non-recalculating), skip if there's already a value
-    const exprOutputs = findExpressionOutputs(text);
     for (const output of exprOutputs) {
         // Skip non-recalculating outputs that already have a value
         if (!output.recalculates && output.existingValue) {
@@ -323,9 +324,8 @@ function solveEquations(text, context, declarations, record = {}) {
         }
     }
 
-    // Check equation consistency
-    const finalEquations = findEquations(text);
-    for (const eq of finalEquations) {
+    // Check equation consistency (reuses precomputed equations)
+    for (const eq of equations) {
         try {
             const eqMatch = eq.text.match(/^(.+?)=(.+)$/);
             if (!eqMatch) continue;
