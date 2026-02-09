@@ -345,14 +345,25 @@ function ensureDefaultSettingsRecord(data) {
  * Debounced save function
  */
 let saveTimeout = null;
+let resched = true;
+function doSave(data, delay) {
+    if (resched) {
+        resched = false;
+        saveTimeout = setTimeout(() => {
+            doSave(data, delay);
+        }, delay);
+    } else {
+        saveTimeout = null;
+        resched = true;
+        saveData(data);
+    }
+}
 function debouncedSave(data, delay = 500) {
     if (saveTimeout) {
-        clearTimeout(saveTimeout);
+        resched = true;
+    } else {
+        doSave(data, delay);
     }
-    saveTimeout = setTimeout(() => {
-        saveData(data);
-        saveTimeout = null;
-    }, delay);
 }
 
 /**
