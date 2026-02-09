@@ -1,0 +1,425 @@
+Category = "Medical Calc"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 14: Variable 'PAO2' has no value to output"; StatusIsError = 1
+"A-a Gradient"
+A-a Gradient
+	these equations calculate the alveolar oxygen tension (which can range from 100mm on RA to 673mm on 100% oxygen) and the alveolar-arterial oxygen gradient.
+
+--Input--
+Enter FiO2<-
+Enter PaCO2<-
+Enter PaO2<-
+
+PAO2=(FiO2*(760-47))-(PaCO2/0.8)
+AaDO2=PAO2-PaO2
+
+--Output--
+PAO2-> mm Hg
+AaDO2-> mm Hg
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Anion Gap"
+Anion Gap
+
+--Input--
+Na<- 1
+Cl<- 1
+HCO3<- 2
+
+AnionGap=Na-(Cl+HCO3)
+
+--Output--
+AnionGap-> -2 mEq/L
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 3 equations"; StatusIsError = 0
+"BSA/BMI (metric)"
+BSA/BMI (metric)
+
+--Input--
+Enter height (cm)	ht<-73*2.54
+Enter weight (kg)	wt<-195/2.2
+
+ht_m = ht/100
+BSA=sqrt((ht*wt)/3600)
+BMI=wt/(ht_m*ht_m)
+
+--Output--
+ht-> 185.4
+wt-> 88.6
+BSA-> 2.1 m2
+BMI-> 25.8 kg/m2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 1; StripZeros = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"BSA/BMI"
+BSA/BMI
+
+--Input--
+Enter height (in)	ht<- 73
+Enter weight (lb)	wt<- 195
+
+BSA=sqrt((ht*wt)/3131)
+BMI=(wt*703)/(ht*ht)
+
+--Output--
+BSA-> 2.1 m2
+BMI-> 25.7 kg/m2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Drug doses"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 4 equations"; StatusIsError = 0
+"Drips"
+Drips
+
+
+--Input--
+ENTER PT WEIGHT(kg)   wt<- 80
+ENTER DOSE (�g/kg/min) dose<- .4
+ENTER RATE (cc/hr)  rate<- 29
+
+--Output--
+@dopamine	1-20 �g/kg/min
+dopamine=(6*dose/rate*wt)
+dopamine-> 6.6 mg/100cc of fluid
+
+@dobutamine	    5-20 �g/kg/min
+dobutamine=(6*dose/rate*wt)
+dobutamine-> 6.6 mg/100cc of fluid
+
+@PGE1	0.05-0.1 �g/kg/min
+PGE1=(6*dose/rate*wt)
+PGE1-> 6.6 mg/100cc of fluid
+
+@epinephrine	0.1-1.0 �g/kg/min
+epinephrine=(6*dose/rate*wt)
+epinephrine-> 6.6 mg/100cc of fluid
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Drug doses"; Secret = 0; Selected = 1
+Places = 1; StripZeros = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 16 equations"; StatusIsError = 0
+"Emergency meds"
+Emergency meds
+
+---Input---
+enter weight (kg) wt<-70
+enter age (years) age<-16
+
+Versed = 0.1 * wt
+Etomidate = 0.4 * wt
+Fentenyl = 1 * wt
+Vecuronium = 0.1 * wt
+Rocuronium = 1 * wt
+Atropine = 0.01 * wt
+Lidocaine = 1.5 * wt
+Epi = 0.1 * wt
+Adenosine = 0.1 * wt
+Narcan = 0.1 * wt
+ETTsize = (16 + age)/4
+Defibrillation = 2 * wt
+Cardioversion = 0.5 * wt
+Ativan = 0.1 * wt
+Dilatin = 20 * wt
+Fosphenytoin = 20 * wt
+
+---Output---
+@raised ICP use Atr/Et/Roc/lido
+@RSV use Atr/Ver/Roc
+@Asthma use Ver/Atr/Ket/Roc
+@shock use Ver/Fen/Roc
+
+ETTsize-> 8.0 cm
+
+@sedation
+Versed-> 7.0 mg
+Etomidate-> 28.0 mg
+
+@analgesic
+Fentenyl-> 70.0 mcg
+
+@paralization
+Vecuronium-> 7.0 mg
+Rocuronium-> 70.0 mg
+
+@other
+Atropine-> 0.7 mg
+Lidocaine-> 105.0 mg
+Epi-> 7.0 cc  (1:10,000 -> 1:1000)
+Adenosine-> 7.0 mg  (max 12mg)
+Narcan-> 7.0 mg (max 2mg)
+Defibrillation-> 140.0 joules
+Cardioversion-> 35.0 joules
+
+@status epilepticus
+Ativan-> 7.0 mg	(max 4mg slow IV)
+Dilatin-> 1400.0 mg
+Fosphenytoin-> 1400.0 mg 	(IV or IM)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 2; StripZeros = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"FENa"
+FENa
+
+--Input--
+urineNa<- 0.5
+serumNa<- 0.7
+urineCr<- 0.4
+serumCr<- 0.5
+
+FENa=(urineNa*serumCr)/(serumNa*urineCr)*100
+
+--Output--
+FENa-> 89.29
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Free Water Deficit"
+Free Water Deficit 
+
+--Input--
+Enter serum Na		NaS<-12
+Enter desired Na		NaD<-10
+Enter weight (kg)		wt<-90
+
+FWD=(((NaS/NaD)*0.6*wt)-(0.6*wt))*1000
+
+--Output--
+FWD-> 10800 cc free water deficit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 0; StripZeros = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Glasgow Coma Scale"
+Glasgow Coma Scale
+
+--Input--
+BestMotorResponse<-5
+	Obeys commands			6
+	Localizes pain				5
+	Withdraws from pain		4
+	Abnormal flexion			3
+	Extensor response			2
+	No Response				1
+	
+BestVerbalResponse<-3
+	Oriented					5
+	Confused conversation		4
+	Inappropriate words		3
+	Incomprehensible			2
+	No response				1
+
+BestOcularResponse<-3
+	Spontaneous eye opening	4
+	Eye opening to speech		3
+	Eye opening to pain			2
+	No eye opening			1
+
+GCS=BestMotorResponse+BestVerbalResponse+BestOcularResponse
+
+--Output--
+GCS-> 11
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 12: Variable 'first10' has no value to output"; StatusIsError = 1
+"Isotonic Dehydration"
+Isotonic Dehydration
+
+--Input--
+enter weight kg<-
+enter percent dehyration<-
+
+first10=If(kg>10;10;kg)*100
+next10=If(kg<=10;0;If(kg>20;10;kg-10))*50
+over20=If(kg<=20;0;kg-20)*20
+maint=(first10+next10+over20)/24
+first10->
+next10->
+over20->
+deficit->
+
+deficit=(kg*1000)*(dehyration)
+first8hours=maint+((0.5*deficit)/8)
+next16hours=maint+((0.5*deficit)/16)
+
+--Output--
+first8hours-> cc/hr
+next16hours-> cc/hr
+maint-> cc/hr
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 4 equations"; StatusIsError = 0
+"Maintenance Fluids"
+Maintenance Fluids
+	these formulas will calculate a patient's maintenance fluid requirements.
+
+--Input--
+enter weight kg<- 24
+
+first10=If(kg>10;10;kg)*100
+next10=If(kg<=10;0;If(kg>20;10;kg-10))*50
+over20=If(kg<=20;0;kg-20)*20
+
+rate=(first10+next10+over20)/24
+first10-> 1,000
+next10-> 500
+over20-> 80
+
+--Output--
+rate-> 66 cc/hr
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Na Deficit"
+Na Deficit
+
+--Input--
+Enter serum Na		NaS<-120
+Enter desired Na		NaD<-135
+Enter weight (kg)		wt<-10
+
+NaDeficit=(NaD-NaS)*0.6*wt
+
+--Output--
+NaDeficit-> 90 mEq/L
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 19: Variable 'PredPeakFlow' has no value to output"; StatusIsError = 1
+"Peak Flows"
+Peak Flows
+     these equations will calculate a patient's predicted peak flow and their 
+green/yellow/red zones for ht between 43 & 67 in.
+
+PredPeakFlow=Choose(ht-42 ; 147;160; 173; 187; 200; 214; 227; 240; 254; 267; 280; 293; 307; 320; 334; 347; 360; 373; 387; 400; 413; 427; 440; 454; 467)
+.
+PercentPred=(pf/PredPeakFlow)*100
+
+GreenZone=PredPeakFlow*0.8 
+YellowZone=PredPeakFlow*0.5
+
+
+--Input-- 
+height (in) ht<-
+peak flow (L/min) pf<-
+
+--Output-- 
+PredPeakFlow->
+PercentPred-> %
+
+GreenZone-> @80-100% Pred
+YellowZone-> @50-80% Pred
+@RedZone is <YellowZone (<50 Pred)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Plasma Osmolality"
+Plasma Osmolality
+
+--Input--
+Enter serum Na<-12
+Enter serum glucose<-15
+Enter serum BUN<-6
+
+osmolality=(2*Na)+(glucose/18)+(BUN/2.8)
+
+--Output--
+osmolality-> 27 mOsm/L
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Schwartz Equation (CrCl)"
+Schwartz Equation (CrCl)
+	this equation allows an estimation of creatine clearance for patients with relatively normal body habitus.
+
+--Input--
+@k values   (proportionality constant)
+LBW during 1st year 	0.33
+Term during 1st year	0.45
+Children & Adol girls	0.55
+Adolescent boys		0.70
+
+k value			k<- 4
+height (cm)		ht<- 180
+Serum Cr	(mg/dl)	Cr<- 6
+
+CrCl=(k*ht)/Cr
+
+--Output--
+CrCl-> 120
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Serum Na Corrected"
+Serum Na Corrected
+	serum sodium is factitiously decreased by 1.6 mEq/L for each 100mg/dl rise in glucose.
+
+--Input--
+Enter serum Na		Na<-16
+Enter serum glucose	glu<-780
+
+NaCorrected=(((glu-100)/100)*1.6)+Na
+
+--Output--
+NaCorrected-> 27 mEq/L
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Medical Calc"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 3 equations"; StatusIsError = 0
+"WBC Indices"
+WBC Indices
+	enter WBC as thousands, segs and immatures (including bands, metas, myelos, etc.) as a percent (example 57, NOT .57) and these eguations will solve for the following WBC Indices:
+
+ATN=((segs+immatures)/100)*WBC
+ITN=(immatures/100)*WBC
+IT=immatures/(segs+immatures)
+
+--Input--
+WBC<-21900
+segs<-34
+immatures<-22
+
+--Output--
+ATN-> 12,264
+ITN-> 4,818
+IT-> 0.39
+
+	In general, in the 1st 24� you should have an ATN <14,400 (but depends on how old baby is; 10,000 at 3� is high), IT < 0.16, and ITN < 1440 (also depends on age though).
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Default Settings"
+"New Record"
+"Template for new records"
+"First line becomes the default title"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

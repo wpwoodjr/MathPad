@@ -226,8 +226,8 @@ class LineParser {
      * Find the most appropriate marker to use
      * Strategy:
      * 1. Arrow markers (-> ->> <-) take precedence over colon markers
-     * 2. Among equal precedence, use the last one (rightmost)
-     * 3. But for input (<-), always use the first one found
+     * 2. Arrow markers prefer leftmost (the real marker; later ones are in trailing text)
+     * 3. Colon markers prefer rightmost (for "label: var: value" patterns)
      */
     findBestMarker() {
         const markers = this.findAllMarkers();
@@ -240,16 +240,22 @@ class LineParser {
             }
         }
 
-        // Find highest precedence marker (prefer rightmost among equals)
+        // Find highest precedence marker
+        // Arrows (-> ->>) prefer leftmost; colons (: ::) prefer rightmost
         let best = markers[0];
         for (let i = 1; i < markers.length; i++) {
             const m = markers[i];
             const mPrec = MARKER_PRECEDENCE[getMarkerString(m.token)];
             const bestPrec = MARKER_PRECEDENCE[getMarkerString(best.token)];
 
-            // Higher precedence wins, or same precedence but rightmost
-            if (mPrec > bestPrec || (mPrec === bestPrec && m.index > best.index)) {
+            if (mPrec > bestPrec) {
                 best = m;
+            } else if (mPrec === bestPrec) {
+                // Arrows: leftmost wins (keep best if it's already left)
+                // Colons: rightmost wins
+                if (mPrec < 2 && m.index > best.index) {
+                    best = m;
+                }
             }
         }
 

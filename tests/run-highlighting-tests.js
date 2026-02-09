@@ -1098,6 +1098,18 @@ function runAllTests() {
                 ['$', 'error']
             ]
         },
+        // Arrow marker in trailing text should not steal the marker position
+        {
+            name: 'arrow in trailing text (Epi-> 1.0 cc  (1:10,000 -> 1:1000))',
+            line: 'Epi-> 1.0 cc  (1:10,000 -> 1:1000)',
+            context: 'Epi: 5',
+            assertions: [
+                ['Epi', 'variable-def'],
+                ['->', 'punctuation'],
+                ['1.0', 'number'],
+                ['cc  (1:10,000 -> 1:1000)', 'comment']
+            ]
+        },
         {
             name: 'percent suffix in expression is error (q: x%)',
             line: 'q: x%',
