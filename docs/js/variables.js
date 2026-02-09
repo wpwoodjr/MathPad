@@ -189,34 +189,7 @@ function replaceValueOnLine(line, varName, marker, hasLimits, newValue, commentI
  * @returns {{ valueText: string, unitComment: string|null }}
  */
 function extractValueAndUnit(rhs) {
-    if (!rhs) return { valueText: '', unitComment: null };
-
-    // Match a numeric value at the start:
-    // - Optional negative sign
-    // - Optional $ for money
-    // - Digits with optional commas (grouping)
-    // - Optional decimal part
-    // - Optional % for percentage
-    // - Optional scientific notation
-    // - OR base notation like F#16, 101#2
-    const numMatch = rhs.match(/^(-?\$?[\d,]+(?:\.\d*)?%?(?:[eE][+-]?\d+)?|[0-9a-zA-Z]+#\d+)\s*(.*)$/);
-
-    if (numMatch) {
-        const valueText = numMatch[1];
-        const trailing = numMatch[2].trim();
-        // Don't allow trailing comment to start with a digit, $, or -digit (ambiguous with value)
-        if (trailing && /^[\d$]|^-\d/.test(trailing)) {
-            return { valueText: rhs, unitComment: null };
-        }
-        return {
-            valueText,
-            unitComment: trailing || null
-        };
-    }
-
-    // No numeric value found - treat entire rhs as unit comment (for cleared output variables)
-    // This handles cases like "PAO2-> mm Hg" where the value was cleared but unit remains
-    return { valueText: '', unitComment: rhs.trim() || null };
+    return splitValueAndComment(rhs);
 }
 
 /**

@@ -61,6 +61,61 @@ function getMarkerString(token) {
 }
 
 /**
+ * Split output value text into numeric value and trailing unit comment.
+ * Uses the tokenizer for number recognition (regular, negative, money, percent,
+ * scientific, special values). Base format literals (e.g., 4D#16, FF#16) use a
+ * regex because the tokenizer splits mixed alphanumeric values at digit-letter
+ * boundaries (e.g., "4D" becomes NUMBER "4" + IDENTIFIER "D").
+ * @param {string} text - The text after the output marker, trimmed
+ * @returns {{ valueText: string, unitComment: string|null }}
+ */
+function splitValueAndComment(text) {
+    if (!text) return { valueText: '', unitComment: null };
+
+    // Base format literals (4D#16, FF#16, 101#2) - the tokenizer can't handle
+    // mixed alphanumeric values like "4D" (splits into NUMBER "4" + IDENTIFIER "D")
+    const baseMatch = text.match(/^([0-9a-zA-Z]+#\d+)\s*(.*)$/);
+    if (baseMatch) {
+        const trailing = baseMatch[2].trim();
+        if (trailing && /^[\d$]|^-\d/.test(trailing)) {
+            return { valueText: text, unitComment: null };
+        }
+        return { valueText: baseMatch[1], unitComment: trailing || null };
+    }
+
+    // Use tokenizer to find numeric value at start
+    const tokens = tokenize(text);
+    let valueTokenCount = 0;
+
+    if (tokens.length > 0 && tokens[0].type === TokenType.NUMBER) {
+        valueTokenCount = 1;
+    } else if (tokens.length > 1 && tokens[0].type === TokenType.OPERATOR &&
+               tokens[0].value === '-' && tokens[1].type === TokenType.NUMBER) {
+        // Negative number: operator(-) followed by number
+        valueTokenCount = 2;
+    }
+
+    if (valueTokenCount > 0) {
+        const nextToken = tokens[valueTokenCount];
+        // If next token is EOF, the entire text is the value
+        if (nextToken.type === TokenType.EOF) {
+            return { valueText: text, unitComment: null };
+        }
+        const splitPos = nextToken.col - 1;
+        const valueText = text.substring(0, splitPos).trim();
+        const trailing = text.substring(splitPos).trim();
+        // Don't allow trailing comment to start with a digit, $, or -digit (ambiguous with value)
+        if (trailing && /^[\d$]|^-\d/.test(trailing)) {
+            return { valueText: text, unitComment: null };
+        }
+        return { valueText, unitComment: trailing || null };
+    }
+
+    // No numeric value found - entire text is unit comment (for cleared output variables)
+    return { valueText: '', unitComment: text || null };
+}
+
+/**
  * LineParser class - parses a single line to extract declarations or expression outputs
  */
 class LineParser {
@@ -286,25 +341,7 @@ class LineParser {
 
         // For output markers (-> and ->>), trailing non-numeric text is unit comment
         if (markerToken.type === TokenType.ARROW_RIGHT || markerToken.type === TokenType.ARROW_FULL) {
-            // Match numeric value at start:
-            // - NaN, Infinity, -Infinity (special values)
-            // - Money: $123, -$123.45
-            // - Regular numbers with optional scientific notation
-            // - Base format: FF#16, 101#2
-            const numMatch = afterMarker.match(/^(-?Infinity|NaN|[0-9a-zA-Z]+#\d+|-?\$?[\d,]+(?:\.\d*)?%?(?:[eE][+-]?\d+)?)\s*(.*)$/);
-            if (numMatch) {
-                const trailing = numMatch[2].trim();
-                // Don't allow trailing comment to start with a digit, $, or -digit (ambiguous with value)
-                if (trailing && /^[\d$]|^-\d/.test(trailing)) {
-                    return { valueText: afterMarker, unitComment: null };
-                }
-                return {
-                    valueText: numMatch[1],
-                    unitComment: trailing || null
-                };
-            }
-            // No numeric value - entire thing might be unit comment for cleared output
-            return { valueText: '', unitComment: afterMarker || null };
+            return splitValueAndComment(afterMarker);
         }
 
         // For other markers, the whole thing is value
@@ -561,6 +598,7 @@ if (typeof module !== 'undefined' && module.exports) {
         LineParser,
         parseMarkedLineNew,
         isMarkerToken,
-        getMarkerString
+        getMarkerString,
+        splitValueAndComment
     };
 }
