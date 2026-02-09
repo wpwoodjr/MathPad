@@ -1000,6 +1000,57 @@ function runAllTests() {
                 ['$', 'error']
             ]
         },
+        // Trailing dot on number is valid (1. = 1.0)
+        {
+            name: 'trailing dot on number is valid (a: 1.)',
+            line: 'a: 1.',
+            assertions: [
+                ['a', 'variable-def'],
+                [':', 'punctuation'],
+                ['1.', 'number']
+            ]
+        },
+        // Output with trailing dot number and label
+        {
+            name: 'output with trailing dot number (test a-> 1. output)',
+            line: 'test a-> 1. output',
+            context: 'a: 1',
+            assertions: [
+                ['test ', 'comment'],
+                ['a', 'variable-def'],
+                ['->', 'punctuation'],
+                ['1.', 'number'],
+                ['output', 'comment']
+            ]
+        },
+        // Output with trailing label text
+        {
+            name: 'output with trailing label (test a-> 1 output)',
+            line: 'test a-> 1 output',
+            context: 'a: 1',
+            assertions: [
+                ['test ', 'comment'],
+                ['a', 'variable-def'],
+                ['->', 'punctuation'],
+                ['1', 'number'],
+                ['output', 'comment']
+            ]
+        },
+        // Output with numeric trailing text (ambiguous - not split as comment)
+        {
+            name: 'output with numeric trailing text (test a-> 1 2 3 output)',
+            line: 'test a-> 1 2 3 output',
+            context: 'a: 1',
+            assertions: [
+                ['test ', 'comment'],
+                ['a', 'variable-def'],
+                ['->', 'punctuation'],
+                ['1', 'number'],
+                ['2', 'number'],
+                ['3', 'number'],
+                ['output', 'variable']
+            ]
+        },
         // Reference constant with base format output
         {
             name: 'reference constant with base-16 output (c#16-> 11DE784A#16)',

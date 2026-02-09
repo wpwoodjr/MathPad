@@ -140,8 +140,8 @@ class Tokenizer {
             if (ch !== ',') value += ch;  // Skip commas for numeric value
         }
 
-        // Decimal point
-        if (this.peek() === '.' && this.isDigit(this.peek(1))) {
+        // Decimal point (with or without trailing digits: 1.5 and 1. are both valid)
+        if (this.peek() === '.') {
             const ch = this.advance(); // .
             value += ch;
             raw += ch;

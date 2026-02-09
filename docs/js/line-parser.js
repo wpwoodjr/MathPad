@@ -291,11 +291,16 @@ class LineParser {
             // - Money: $123, -$123.45
             // - Regular numbers with optional scientific notation
             // - Base format: FF#16, 101#2
-            const numMatch = afterMarker.match(/^(-?Infinity|NaN|[0-9a-zA-Z]+#\d+|-?\$?[\d,]+(?:\.\d+)?%?(?:[eE][+-]?\d+)?)\s*(.*)$/);
+            const numMatch = afterMarker.match(/^(-?Infinity|NaN|[0-9a-zA-Z]+#\d+|-?\$?[\d,]+(?:\.\d*)?%?(?:[eE][+-]?\d+)?)\s*(.*)$/);
             if (numMatch) {
+                const trailing = numMatch[2].trim();
+                // Don't allow trailing comment to start with a digit, $, or -digit (ambiguous with value)
+                if (trailing && /^[\d$]|^-\d/.test(trailing)) {
+                    return { valueText: afterMarker, unitComment: null };
+                }
                 return {
                     valueText: numMatch[1],
-                    unitComment: numMatch[2].trim() || null
+                    unitComment: trailing || null
                 };
             }
             // No numeric value - entire thing might be unit comment for cleared output

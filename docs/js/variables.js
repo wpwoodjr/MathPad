@@ -199,11 +199,15 @@ function extractValueAndUnit(rhs) {
     // - Optional % for percentage
     // - Optional scientific notation
     // - OR base notation like F#16, 101#2
-    const numMatch = rhs.match(/^(-?\$?[\d,]+(?:\.\d+)?%?(?:[eE][+-]?\d+)?|[0-9a-zA-Z]+#\d+)\s*(.*)$/);
+    const numMatch = rhs.match(/^(-?\$?[\d,]+(?:\.\d*)?%?(?:[eE][+-]?\d+)?|[0-9a-zA-Z]+#\d+)\s*(.*)$/);
 
     if (numMatch) {
         const valueText = numMatch[1];
         const trailing = numMatch[2].trim();
+        // Don't allow trailing comment to start with a digit, $, or -digit (ambiguous with value)
+        if (trailing && /^[\d$]|^-\d/.test(trailing)) {
+            return { valueText: rhs, unitComment: null };
+        }
         return {
             valueText,
             unitComment: trailing || null
