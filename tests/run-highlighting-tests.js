@@ -211,7 +211,8 @@ function runAllTests() {
             line: 'cost: -$50',
             assertions: [
                 ['cost', 'variable-def'],
-                ['-$50', 'number']
+                ['-', 'operator'],
+                ['$50', 'number']
             ]
         },
         // Percent format

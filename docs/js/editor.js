@@ -80,18 +80,8 @@ function tokenizeMathPad(text, options = {}) {
         r => !overlapsQuotedComment(r.start, r.end)
     );
 
-    // Find literal number formats (exclude those inside quoted comments)
-    const literalRegions = findLiteralRegions(text).filter(
-        r => !overlapsQuotedComment(r.start, r.end)
-    );
-
     const tokens = [];
     pos = 0;
-
-    // Helper to check if a position overlaps with any special region
-    const overlapsSpecialRegion = (start, end) =>
-        commentRegions.some(r => start < r.end && end > r.start) ||
-        literalRegions.some(r => start < r.end && end > r.start);
 
     let lastTokenWasVarDef = false;
     let lastTokenWasVar = false;
@@ -110,12 +100,9 @@ function tokenizeMathPad(text, options = {}) {
         const tokenLength = getTokenLength(token, text, tokenStart);
         const tokenEnd = tokenStart + tokenLength;
 
-        // Skip tokens that overlap with special regions (we'll add those separately)
-        // - Skip all tokens overlapping literal regions (literals take precedence)
-        // - Skip all tokens overlapping comment regions (comments take precedence)
-        const inLiteralRegion = literalRegions.some(r => tokenStart < r.end && tokenEnd > r.start);
+        // Skip tokens that overlap with comment regions (comments take precedence)
         const inCommentRegion = commentRegions.some(r => tokenStart < r.end && tokenEnd > r.start);
-        if (inLiteralRegion || inCommentRegion) {
+        if (inCommentRegion) {
             pos = tokenEnd;
             lastTokenWasVarDef = false;
             continue;
@@ -207,15 +194,6 @@ function tokenizeMathPad(text, options = {}) {
             region.start < t.to && region.end > t.from);
         if (!overlapsExisting) {
             tokens.push({ from: region.start, to: region.end, type: 'comment' });
-        }
-    }
-
-    // Add literal regions as number tokens (skip if overlapping with existing tokens or comments)
-    for (const region of literalRegions) {
-        const inComment = commentRegions.some(c => region.start >= c.start && region.end <= c.end);
-        const overlapsToken = tokens.some(t => region.start < t.to && region.end > t.from);
-        if (!inComment && !overlapsToken) {
-            tokens.push({ from: region.start, to: region.end, type: 'number' });
         }
     }
 
@@ -371,36 +349,6 @@ function findEquationLabelRegions(line) {
     const eqEnd = eqStart + extracted.length;
     if (eqEnd < line.length) {
         regions.push({ start: eqEnd, end: line.length });
-    }
-
-    return regions;
-}
-
-/**
- * Find literal number formats that the tokenizer doesn't handle natively
- * Returns array of { start, end } for each literal region
- * Handles: 0xFF, 0b101, 0o77, $607, -$607
- *
- * Note: Percent literals (5%), special values (NaN, Infinity), and base format
- * literals (FF#16, 4D#16) are handled by the tokenizer directly as NUMBER tokens.
- * Other literals produce multiple tokens (e.g. $100 → FORMATTER + NUMBER) so we
- * use regex here to highlight them as unified number regions.
- */
-function findLiteralRegions(text) {
-    const regions = [];
-
-    const patterns = [
-        /0[xX][0-9a-fA-F]+/g,                      // hex (0xFF)
-        /0[bB][01]+/g,                             // binary (0b101)
-        /0[oO][0-7]+/g,                            // octal (0o77)
-        /-?\$[\d,]*\.?\d+/g,                         // money (-$607, $1,234.56, $.01)
-    ];
-
-    for (const pattern of patterns) {
-        let match;
-        while ((match = pattern.exec(text)) !== null) {
-            regions.push({ start: match.index, end: match.index + match[0].length });
-        }
     }
 
     return regions;
