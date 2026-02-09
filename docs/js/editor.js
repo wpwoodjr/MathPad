@@ -54,8 +54,8 @@ function tokenizeMathPad(text, options = {}) {
     const overlapsQuotedComment = (start, end) =>
         quotedCommentRegions.some(r => start < r.end && end > r.start);
 
-    // Single pass: detect shadow variables AND find label regions (replaces 2N with N tokenizations)
-    const { localVariables, labelRegions } = analyzeLines(text, strippedText, referenceConstants, shadowConstants);
+    // Single pass: detect shadow variables AND find label regions (reuses full-text tokens, no re-tokenization)
+    const { localVariables, labelRegions } = analyzeLines(text, strippedText, referenceConstants, shadowConstants, parserTokens);
 
     // Filter label regions that overlap with quoted comments
     const commentRegions = labelRegions.filter(
@@ -187,20 +187,33 @@ function tokenizeMathPad(text, options = {}) {
 
 /**
  * Analyze lines in one pass: detect shadow variables AND find label regions
- * Replaces separate shadow detection loop + findLabelRegions() with a single LineParser per line
+ * Reuses tokens from the full-text tokenizer — no per-line re-tokenization.
  * @param {string} text - Full text to analyze
  * @param {string} strippedText - Text with reference section removed (for shadow detection bounds)
  * @param {Set} referenceConstants - Constants from Reference section
  * @param {boolean} shadowConstants - If true, output markers also shadow constants
+ * @param {Array} parserTokens - Tokens from the full-text tokenizer
  * @returns {{ localVariables: Map, labelRegions: Array }}
  */
-function analyzeLines(text, strippedText, referenceConstants, shadowConstants) {
+function analyzeLines(text, strippedText, referenceConstants, shadowConstants, parserTokens) {
     const lines = text.split('\n');
     const strippedLength = strippedText.length;
     const localVariables = new Map();  // name -> charOffset where shadowing starts
     const labelRegions = [];
     let lineStart = 0;
     let insideBrace = false;
+
+    // Group tokens by line (split at NEWLINE tokens)
+    const tokensByLine = [[]];
+    let lineIdx = 0;
+    for (const token of parserTokens) {
+        if (token.type === TokenType.NEWLINE) {
+            lineIdx++;
+            tokensByLine[lineIdx] = [];
+        } else if (token.type !== TokenType.EOF) {
+            tokensByLine[lineIdx].push(token);
+        }
+    }
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -235,8 +248,8 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants) {
             continue;
         }
 
-        // Create ONE LineParser for this line
-        const parser = new LineParser(line);
+        // Create LineParser from pre-tokenized input (no re-tokenization)
+        const parser = LineParser.fromTokens(line, tokensByLine[i] || [], i);
         const result = parser.parse();
 
         // --- Shadow detection (non-reference lines only) ---

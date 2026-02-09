@@ -131,6 +131,74 @@ class LineParser {
         this.pos = 0;
     }
 
+    /**
+     * Create a LineParser from pre-tokenized input (avoids re-tokenizing)
+     * Derives cleanLine and trailingComment from the token stream.
+     * @param {string} originalLine - The original line text
+     * @param {Array} tokens - Tokens for this line from the full-text tokenizer
+     *                         (may include COMMENT, NEWLINE, EOF tokens)
+     * @param {number} lineNumber - Line number (0-based)
+     * @returns {LineParser}
+     */
+    static fromTokens(originalLine, tokens, lineNumber = 0) {
+        const parser = Object.create(LineParser.prototype);
+        parser.originalLine = originalLine;
+        parser.lineNumber = lineNumber;
+        parser.pos = 0;
+
+        // Derive cleanLine and metadata from comment tokens
+        let cleanLine = originalLine;
+        let lineComment = null;
+        let trailingComment = null;
+
+        // Process comment tokens to build cleanLine (replace with spaces)
+        // Walk backwards so replacements don't shift positions
+        const commentTokens = [];
+        for (const t of tokens) {
+            if (t.type === TokenType.COMMENT) {
+                commentTokens.push(t);
+            }
+        }
+
+        for (let i = commentTokens.length - 1; i >= 0; i--) {
+            const t = commentTokens[i];
+            const startIdx = t.col - 1; // col is 1-based
+
+            if (t.lineComment) {
+                // // comment: everything from start to end of line
+                lineComment = originalLine.substring(startIdx);
+                cleanLine = cleanLine.substring(0, startIdx);
+            } else {
+                // "..." quoted comment: value doesn't include quotes, length = value.length + 2
+                const len = t.value.length + 2;
+                // Extract trailing quoted comment (last quoted string before any // comment)
+                if (trailingComment === null) {
+                    // Check if this is at the end of the non-line-comment portion
+                    const afterQuote = cleanLine.substring(startIdx + len).trim();
+                    if (!afterQuote) {
+                        trailingComment = t.value;
+                    }
+                }
+                cleanLine = cleanLine.substring(0, startIdx) +
+                            ' '.repeat(len) +
+                            cleanLine.substring(startIdx + len);
+            }
+        }
+
+        parser.lineComment = lineComment;
+        parser.trailingComment = trailingComment;
+        parser.cleanLine = cleanLine;
+
+        // Filter to structural tokens only (no COMMENT, NEWLINE, EOF)
+        parser.tokens = tokens.filter(t =>
+            t.type !== TokenType.COMMENT &&
+            t.type !== TokenType.NEWLINE &&
+            t.type !== TokenType.EOF
+        );
+
+        return parser;
+    }
+
     peek(offset = 0) {
         const idx = this.pos + offset;
         return idx < this.tokens.length ? this.tokens[idx] : null;

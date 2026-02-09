@@ -399,8 +399,8 @@ function formatOutput(text, declarations, context, computedValues, record, solve
         }
     }
 
-    // Handle incomplete equations (expr =) using pre-computed values
-    const equations = findEquations(text);
+    // Handle incomplete equations and expression outputs using pre-computed values
+    const { equations, exprOutputs } = findEquationsAndOutputs(text);
     for (const eq of equations) {
         const key = `__incomplete_${eq.startLine}`;
         if (computedValues.has(key)) {
@@ -410,9 +410,6 @@ function formatOutput(text, declarations, context, computedValues, record, solve
             text = text.replace(new RegExp(eqPattern), eq.text + ' ' + formatted);
         }
     }
-
-    // Handle expression outputs (expr:, expr::, expr->, expr->>) using pre-computed values
-    const exprOutputs = findExpressionOutputs(text);
     const lines = text.split('\n');
     for (const output of exprOutputs) {
         const key = `__exprout_${output.startLine}`;
