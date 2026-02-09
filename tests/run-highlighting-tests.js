@@ -1000,6 +1000,19 @@ function runAllTests() {
                 ['$', 'error']
             ]
         },
+        // Reference constant with base format output
+        {
+            name: 'reference constant with base-16 output (c#16-> 11DE784A#16)',
+            line: 'c#16-> 11DE784A#16',
+            options: { referenceConstants: new Set(['c']) },
+            assertions: [
+                ['c', 'builtin'],
+                ['#', 'builtin'],
+                ['16', 'builtin'],
+                ['->', 'punctuation'],
+                ['11DE784A#16', 'number']
+            ]
+        },
         {
             name: 'money suffix on declaration value is error (z: x$)',
             line: 'z: x$',

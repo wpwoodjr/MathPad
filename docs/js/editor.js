@@ -95,6 +95,7 @@ function tokenizeMathPad(text, options = {}) {
 
     let lastTokenWasVarDef = false;
     let lastTokenWasVar = false;
+    let lastTokenWasBuiltin = false;
     let lastTokenWasBaseFormatter = false;  // Track # formatter for base suffix (e.g., xx#16)
     let lastTokenEnd = 0;
     let inInlineEval = false;  // Track whether we're inside \..\ inline eval markers
@@ -124,9 +125,9 @@ function tokenizeMathPad(text, options = {}) {
         let highlightType;
         switch (token.type) {
             case TokenType.NUMBER:
-                // Style number as variable-def if it's the base in a format suffix (e.g., 16 in xx#16)
+                // Style number as variable-def/builtin if it's the base in a format suffix (e.g., 16 in xx#16)
                 if (lastTokenWasBaseFormatter && tokenStart === lastTokenEnd) {
-                    highlightType = 'variable-def';
+                    highlightType = lastTokenWasBuiltin ? 'builtin' : 'variable-def';
                 } else {
                     highlightType = 'number';
                 }
@@ -160,13 +161,14 @@ function tokenizeMathPad(text, options = {}) {
                 pos = tokenEnd;
                 lastTokenWasVarDef = false;
                 lastTokenWasVar = false;
+                lastTokenWasBuiltin = false;
                 lastTokenWasBaseFormatter = false;
                 inInlineEval = false;
                 continue;
             case TokenType.FORMATTER:
                 // Style $, %, # to match the preceding identifier only in declaration or inline eval context
-                if (lastTokenWasVarDef && tokenStart === lastTokenEnd) {
-                    highlightType = 'variable-def';
+                if ((lastTokenWasVarDef || lastTokenWasBuiltin) && tokenStart === lastTokenEnd) {
+                    highlightType = lastTokenWasBuiltin ? 'builtin' : 'variable-def';
                 } else if (inInlineEval && lastTokenWasVar && tokenStart === lastTokenEnd) {
                     highlightType = 'variable'; // format suffix in inline eval (\a$\, \a%\, \a#16\)
                 } else {
@@ -186,11 +188,12 @@ function tokenizeMathPad(text, options = {}) {
             inInlineEval = !inInlineEval;
         }
 
-        // Track if this token is a variable-def or variable for styling following $ or % or #
+        // Track if this token is a variable-def, variable, or builtin for styling following $ or % or #
         lastTokenWasVarDef = (highlightType === 'variable-def');
         lastTokenWasVar = (highlightType === 'variable');
+        lastTokenWasBuiltin = (highlightType === 'builtin');
         // Track if this is a # formatter for styling following base number (e.g., 16 in xx#16)
-        lastTokenWasBaseFormatter = (token.type === TokenType.FORMATTER && token.value === '#' && highlightType === 'variable-def');
+        lastTokenWasBaseFormatter = (token.type === TokenType.FORMATTER && token.value === '#' && (highlightType === 'variable-def' || highlightType === 'builtin'));
         lastTokenEnd = tokenEnd;
 
         tokens.push({ from: tokenStart, to: tokenEnd, type: highlightType });
