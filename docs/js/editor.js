@@ -610,15 +610,16 @@ class SimpleEditor {
         this.updateLineNumbers();
 
         // Capture cursor position before the first edit so the initial undo state
-        // has the correct cursor (saveInitialState can't know where user will click)
-        const captureInitialCursor = () => {
+        // has the correct cursor (saveInitialState can't know where user will click).
+        // Stored as instance method so it can be re-registered when undo empties the stack.
+        this._captureInitialCursor = () => {
             if (this.lastSavedState) {
                 this.lastSavedState.cursorStart = this.textarea.selectionStart;
                 this.lastSavedState.cursorEnd = this.textarea.selectionEnd;
             }
-            this.textarea.removeEventListener('beforeinput', captureInitialCursor);
+            this.textarea.removeEventListener('beforeinput', this._captureInitialCursor);
         };
-        this.textarea.addEventListener('beforeinput', captureInitialCursor);
+        this.textarea.addEventListener('beforeinput', this._captureInitialCursor);
 
         // Save initial state for undo history
         this.saveInitialState();
@@ -713,6 +714,12 @@ class SimpleEditor {
         this.textarea.selectionStart = state.cursorStart;
         this.textarea.selectionEnd = state.cursorEnd;
         this.lastSavedState = state;
+
+        // If fully undone, re-register cursor capture so the next edit
+        // records where the user clicks before typing (not the old position)
+        if (this.undoStack.length === 0) {
+            this.textarea.addEventListener('beforeinput', this._captureInitialCursor);
+        }
 
         this.updateHighlighting();
         this.updateLineNumbers();
