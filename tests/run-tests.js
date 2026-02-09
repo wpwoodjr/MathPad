@@ -67,8 +67,6 @@ function loadModules() {
     const variables = require(path.join(jsPath, 'variables.js'));
     global.VarType = variables.VarType;
     global.ClearBehavior = variables.ClearBehavior;
-    global.expandLiterals = variables.expandLiterals;
-    global.expandLineLiterals = variables.expandLineLiterals;
     global.parseVariableLine = variables.parseVariableLine;
     global.parseAllVariables = variables.parseAllVariables;
     global.setVariableValue = variables.setVariableValue;

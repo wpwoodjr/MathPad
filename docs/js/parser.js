@@ -159,7 +159,10 @@ class Tokenizer {
         // Base literal lookahead: digits followed by alphanums then #digits (e.g., 4D#16, 101#2, 4E#16)
         // Digit-start base literals are always numeric values (can't be variable names)
         const baseLiteral = this.tryConsumeBaseLiteral(raw);
-        if (baseLiteral) return this.makeToken(TokenType.NUMBER, baseLiteral, startLine, startCol);
+        if (baseLiteral) {
+            if (baseLiteral.error) return this.makeToken(TokenType.ERROR, baseLiteral.error, startLine, startCol);
+            return this.makeToken(TokenType.NUMBER, baseLiteral, startLine, startCol);
+        }
 
         // Decimal point (with or without trailing digits: 1.5 and 1. are both valid)
         if (this.peek() === '.') {
@@ -241,7 +244,14 @@ class Tokenizer {
 
         const base = parseInt(baseStr, 10);
         const raw = digits + '#' + baseStr;
-        return { value: parseInt(digits, base), base, raw };
+        if (base < 2 || base > 36) {
+            return { error: `Invalid base in "${raw}" - base must be between 2 and 36` };
+        }
+        const parsed = parseInt(digits, base);
+        if (isNaN(parsed)) {
+            return { error: `Invalid constant "${raw}" - "${digits}" is not valid in base ${base}` };
+        }
+        return { value: parsed, base, raw };
     }
 
     tokenizeIdentifier() {
@@ -301,7 +311,14 @@ class Tokenizer {
                 }
                 const base = parseInt(baseStr, 10);
                 const raw = value + '#' + baseStr;
-                return this.makeToken(TokenType.NUMBER, { value: parseInt(value, base), base, raw }, startLine, startCol);
+                if (base < 2 || base > 36) {
+                    return this.makeToken(TokenType.ERROR, `Invalid base in "${raw}" - base must be between 2 and 36`, startLine, startCol);
+                }
+                const parsed = parseInt(value, base);
+                if (isNaN(parsed)) {
+                    return this.makeToken(TokenType.ERROR, `Invalid constant "${raw}" - "${value}" is not valid in base ${base}`, startLine, startCol);
+                }
+                return this.makeToken(TokenType.NUMBER, { value: parsed, base, raw }, startLine, startCol);
             }
             // Otherwise it's a variable with format suffix — fall through to return IDENTIFIER
         }

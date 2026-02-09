@@ -49,9 +49,6 @@ function findVariablesInAST(node) {
  * Solve a single equation in context
  */
 function solveEquationInContext(eqText, eqLine, context, variables, substitutions = new Map()) {
-    // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
-    eqText = expandLiterals(eqText);
-
     // Parse the equation: left = right
     const eqMatch = eqText.match(/^(.+?)=(.+)$/);
     if (!eqMatch) {
@@ -123,11 +120,8 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
     const varInfo = variables.get(unknown);
     if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
         try {
-            // Expand literals (e.g., 6% -> 0.06) before parsing limit expressions
-            const lowExpr = expandLiterals(varInfo.declaration.limits.lowExpr);
-            const highExpr = expandLiterals(varInfo.declaration.limits.highExpr);
-            const lowAST = parseExpression(lowExpr);
-            const highAST = parseExpression(highExpr);
+            const lowAST = parseExpression(varInfo.declaration.limits.lowExpr);
+            const highAST = parseExpression(varInfo.declaration.limits.highExpr);
             limits = {
                 low: evaluate(lowAST, context),
                 high: evaluate(highAST, context)
@@ -211,9 +205,7 @@ function solveEquations(text, context, declarations, record = {}) {
                 if (eq.text.includes('\\')) continue;
 
                 // Handle incomplete equations (expr =)
-                // Expand literals before matching
-                const expandedEqText = expandLiterals(eq.text);
-                const incompleteMatch = expandedEqText.match(/^(.+?)\s*=\s*$/);
+                const incompleteMatch = eq.text.match(/^(.+?)\s*=\s*$/);
                 if (incompleteMatch) {
                     try {
                         let ast = parseExpression(incompleteMatch[1].trim());
@@ -231,8 +223,7 @@ function solveEquations(text, context, declarations, record = {}) {
                 }
 
                 // Handle definition equations (var = expr)
-                // Note: expandedEqText is already expanded above for incomplete equations
-                const def = isDefinitionEquation(expandedEqText);
+                const def = isDefinitionEquation(eq.text);
                 if (def) {
                     const varInfo = variables.get(def.variable);
                     const rhsVars = findVariablesInAST(def.expressionAST);
@@ -261,11 +252,8 @@ function solveEquations(text, context, declarations, record = {}) {
                             // Check limits if defined
                             if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
                                 try {
-                                    // Expand literals (e.g., 6% -> 0.06) before parsing limit expressions
-                                    const lowExpr = expandLiterals(varInfo.declaration.limits.lowExpr);
-                                    const highExpr = expandLiterals(varInfo.declaration.limits.highExpr);
-                                    const lowAST = parseExpression(lowExpr);
-                                    const highAST = parseExpression(highExpr);
+                                    const lowAST = parseExpression(varInfo.declaration.limits.lowExpr);
+                                    const highAST = parseExpression(varInfo.declaration.limits.highExpr);
                                     const low = evaluate(lowAST, context);
                                     const high = evaluate(highAST, context);
                                     if (value < low || value > high) {
@@ -320,8 +308,7 @@ function solveEquations(text, context, declarations, record = {}) {
             continue;
         }
         try {
-            const expandedExpr = expandLiterals(output.text);
-            const ast = parseExpression(expandedExpr);
+            const ast = parseExpression(output.text);
             const value = evaluate(ast, context);
             // Store with marker info for formatting
             computedValues.set(`__exprout_${output.startLine}`, {
@@ -340,9 +327,7 @@ function solveEquations(text, context, declarations, record = {}) {
     const finalEquations = findEquations(text);
     for (const eq of finalEquations) {
         try {
-            // Expand literals before parsing
-            const expandedText = expandLiterals(eq.text);
-            const eqMatch = expandedText.match(/^(.+?)=(.+)$/);
+            const eqMatch = eq.text.match(/^(.+?)=(.+)$/);
             if (!eqMatch) continue;
 
             const leftAST = parseExpression(eqMatch[1].trim());

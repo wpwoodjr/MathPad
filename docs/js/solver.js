@@ -423,7 +423,6 @@ function deepCopyAST(node) {
 /**
  * Check if an equation is a simple definition: variable = expression
  * Returns { variable, expression AST } or null
- * Note: expects eqText to already have literals expanded by expandLiterals()
  */
 function isDefinitionEquation(eqText) {
     const eqMatch = eqText.match(/^(.+?)=(.+)$/);
@@ -452,7 +451,6 @@ function isDefinitionEquation(eqText) {
  * Try to algebraically derive a substitution from an equation
  * Handles cases like: a/b = c => a = b*c, a + b = c => a = c - b, etc.
  * Returns { variable, expressionAST } or null
- * Note: expects eqText to already have literals expanded by expandLiterals()
  */
 function deriveSubstitution(eqText, context) {
     const eqMatch = eqText.match(/^(.+?)=(.+)$/);
@@ -617,14 +615,11 @@ function buildSubstitutionMap(equations, context, errors = []) {
 
     for (const eq of equations) {
         try {
-            // Expand literals before parsing
-            const expandedText = expandLiterals(eq.text);
-
             // First try simple definition
-            let def = isDefinitionEquation(expandedText);
+            let def = isDefinitionEquation(eq.text);
             if (!def || context.hasVariable(def.variable)) {
                 // Try algebraic derivation
-                def = deriveSubstitution(expandedText, context);
+                def = deriveSubstitution(eq.text, context);
             }
 
             if (!def || context.hasVariable(def.variable) || substitutions.has(def.variable)) {

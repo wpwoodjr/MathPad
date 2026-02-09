@@ -28,66 +28,6 @@ const VarType = {
 };
 
 /**
- * Expand literal notations to decimal values in text
- * Handles: $num (money), num% (percent), 0x/0b/0o (base prefix), value#base (base suffix)
- * @param {string} text - Text to expand
- * @returns {string} Text with literals expanded to decimal
- */
-function expandLiterals(text) {
-    // Expand 0x, 0b, 0o prefix notation
-    text = text.replace(/\b0x([0-9a-fA-F]+)\b/g, (_, v) => parseInt(v, 16));
-    text = text.replace(/\b0b([01]+)\b/g, (_, v) => parseInt(v, 2));
-    text = text.replace(/\b0o([0-7]+)\b/g, (_, v) => parseInt(v, 8));
-    // Expand value#base suffix notation (e.g., ff#16 -> 255, 101#2 -> 5)
-    text = text.replace(/\b([0-9a-zA-Z]+)#(\d+)\b/g, (m, v, b) => {
-        const base = parseInt(b);
-        if (base < 2 || base > 36) {
-            throw new Error(`Invalid base in "${m}" - base must be between 2 and 36`);
-        }
-        const parsed = parseInt(v, base);
-        if (isNaN(parsed)) {
-            throw new Error(`Invalid constant "${m}" - "${v}" is not valid in base ${base}`);
-        }
-        return parsed;
-    });
-    // Expand $num money literals (e.g., $100 -> 100, $1,000.50 -> 1000.50)
-    text = text.replace(/\$([0-9,]+\.?[0-9]*)\b/g, (_, v) => v.replace(/,/g, ''));
-    // Note: Percent literals (5% -> 0.05) are handled in the tokenizer (parser.js)
-    return text;
-}
-
-/**
- * Expand literals in a single line, handling declarations specially
- * For declarations: only expand in the value portion (after the marker)
- * For equations/expressions: expand entire line
- * @param {string} line - Line to expand
- * @returns {string} Line with literals expanded
- */
-function expandLineLiterals(line) {
-    // Check if line is a declaration (has marker like :, ::, <-, ->, ->>)
-    // Pattern captures: varName (with optional $, %, or #base suffix), marker, value portion
-    const declMatch = line.match(/^(\w+(?:[$%]|#\d+)?)\s*(:|::|<-|->|->>) *(.*)$/);
-    if (declMatch) {
-        // Only expand in value portion (group 3)
-        const [, varPart, marker, valuePart] = declMatch;
-        const expandedValue = expandLiterals(valuePart);
-        // Preserve spacing after marker
-        const spacing = valuePart.length > 0 && expandedValue.length > 0 ? ' ' : '';
-        return varPart + marker + spacing + expandedValue;
-    }
-    // Also check for declarations with limits: var[low:high]: value
-    const limitsMatch = line.match(/^(\w+[$%]?\s*\[[^\]]+\])\s*:\s*(.*)$/);
-    if (limitsMatch) {
-        const [, varPart, valuePart] = limitsMatch;
-        const expandedValue = expandLiterals(valuePart);
-        const spacing = valuePart.length > 0 && expandedValue.length > 0 ? ' ' : '';
-        return varPart + ':' + spacing + expandedValue;
-    }
-    // Not a declaration - expand entire line
-    return expandLiterals(line);
-}
-
-/**
  * Extract base variable name, format, and numeric base from a name that may have suffixes
  * e.g., "pmt$" -> { baseName: "pmt", format: "money", base: 10 }
  *       "rate%" -> { baseName: "rate", format: "percent", base: 10 }
@@ -271,9 +211,14 @@ function parseAllVariables(text) {
             // Expressions stay as valueText for display
             let value = null;
             if (decl.valueText) {
-                // Note: We don't expand literals here - this is just for UI display
-                // The solve phase will expand and report errors
-                value = parseNumericValue(decl.valueText);
+                try {
+                    const ast = parseExpression(decl.valueText);
+                    if (ast && ast.type === NodeType.NUMBER) {
+                        value = ast.value;
+                    }
+                } catch (e) {
+                    // Not a simple literal - leave for solve phase
+                }
             }
 
             declarations.push({
@@ -348,8 +293,6 @@ function discoverVariables(text, context, record) {
                         exprToParse = baseMatch[1];
                     }
                 }
-                // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
-                exprToParse = expandLiterals(exprToParse);
                 const ast = parseExpression(exprToParse);
                 const value = evaluate(ast, context);
                 const format = getInlineEvalFormat(evalInfo.expression, record, null);
@@ -407,17 +350,8 @@ function discoverVariables(text, context, record) {
 
             if (valueText && !isOutput) {
                 try {
-                    // Expand literals ($num, num%, 0x, 0b, 0o, value#base) before parsing
-                    const expandedValue = expandLiterals(valueText);
-
-                    // Try to parse as numeric literal first
-                    value = parseNumericValue(expandedValue);
-
-                    // If not a numeric literal, try to evaluate as expression
-                    if (value === null) {
-                        const ast = parseExpression(expandedValue);
-                        value = evaluate(ast, context);
-                    }
+                    const ast = parseExpression(valueText);
+                    value = evaluate(ast, context);
                 } catch (e) {
                     errors.push(`Line ${i + 1}: Cannot evaluate "${valueText}" - ${e.message}`);
                 }
@@ -443,27 +377,6 @@ function discoverVariables(text, context, record) {
         declarations: declarations,
         errors: errors
     };
-}
-
-/**
- * Parse a numeric value from text
- * Returns null if the text is an expression (not a simple numeric literal)
- * Note: Assumes literals ($num, num%, 0x, 0b, 0o, value#base) have already been
- * expanded by expandLiterals() before calling this function.
- * @param {string} valueText - The text to parse (already expanded)
- */
-function parseNumericValue(valueText) {
-    // Remove commas (digit grouping)
-    const textToParse = valueText.replace(/,/g, '');
-
-    // Check if value is a simple number (decimal, with optional scientific notation)
-    const numMatch = textToParse.match(/^-?\d+\.?\d*(?:[eE][+-]?\d+)?$/);
-    if (numMatch) {
-        return parseFloat(textToParse);
-    }
-
-    // Not a numeric literal (it's an expression)
-    return null;
 }
 
 /**
@@ -1107,7 +1020,7 @@ function escapeRegex(str) {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        VarType, ClearBehavior, expandLiterals, expandLineLiterals,
+        VarType, ClearBehavior,
         parseVarNameAndFormat, parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         buildOutputLine, setVariableValue, clearVariables, findEquations,
