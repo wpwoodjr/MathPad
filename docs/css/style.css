@@ -111,6 +111,11 @@
     padding: 2px 8px;
 }
 
+/* Sidebar theme row - hidden by default, shown on small screens */
+.sidebar-actions-row.sidebar-theme-row {
+    display: none;
+}
+
 /* Reset */
 *, *::before, *::after {
     box-sizing: border-box;
@@ -979,6 +984,14 @@ button {
 
     .header-right {
         gap: 2px;
+    }
+
+    #btn-theme {
+        display: none;
+    }
+
+    .sidebar-actions-row.sidebar-theme-row {
+        display: flex;
     }
 }
 

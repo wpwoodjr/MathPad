@@ -43,11 +43,14 @@
         }
     }
 
-    function updateToggleButton(theme) {
-        var btn = document.getElementById('btn-theme');
-        if (!btn) return;
-        btn.innerHTML = theme === 'light' ? MOON_ICON : SUN_ICON;
-        btn.title = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+    function updateToggleButtons(theme) {
+        var icon = theme === 'light' ? MOON_ICON : SUN_ICON;
+        var title = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+        var buttons = document.querySelectorAll('.btn-theme-toggle');
+        for (var i = 0; i < buttons.length; i++) {
+            buttons[i].innerHTML = icon;
+            buttons[i].title = title;
+        }
     }
 
     function toggleTheme() {
@@ -59,7 +62,7 @@
             // localStorage not available
         }
         applyTheme(next);
-        updateToggleButton(next);
+        updateToggleButtons(next);
     }
 
     function listenForSystemChanges() {
@@ -70,7 +73,7 @@
                 if (!getSavedTheme()) {
                     var theme = getSystemTheme();
                     applyTheme(theme);
-                    updateToggleButton(theme);
+                    updateToggleButtons(theme);
                 }
             };
             // addListener is deprecated but has wider support than addEventListener
@@ -84,16 +87,19 @@
         }
     }
 
+    // Expose globally for onclick handlers (e.g., sidebar button)
+    window.toggleTheme = toggleTheme;
+
     // Apply theme immediately to prevent flash of wrong theme
     var initialTheme = getEffectiveTheme();
     applyTheme(initialTheme);
 
-    // Set up button and system listener once DOM is ready
+    // Set up button listeners once DOM is ready
     function onReady() {
-        updateToggleButton(getEffectiveTheme());
-        var btn = document.getElementById('btn-theme');
-        if (btn) {
-            btn.addEventListener('click', toggleTheme);
+        updateToggleButtons(getEffectiveTheme());
+        var buttons = document.querySelectorAll('.btn-theme-toggle');
+        for (var i = 0; i < buttons.length; i++) {
+            buttons[i].addEventListener('click', toggleTheme);
         }
         listenForSystemChanges();
     }

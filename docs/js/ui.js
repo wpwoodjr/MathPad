@@ -139,6 +139,9 @@ function renderSidebar() {
                 <button onclick="handleExport()" class="btn-secondary">Export</button>
                 <button onclick="handleReset()" class="btn-secondary">Reset</button>
             </div>
+            <div class="sidebar-actions-row sidebar-theme-row">
+                <button onclick="toggleTheme()" class="btn-secondary btn-theme-toggle" title="Toggle light/dark theme">${document.documentElement.getAttribute('data-theme') === 'light' ? '\u263D' : '\u2604'}</button>
+            </div>
         </div>
     `;
 
