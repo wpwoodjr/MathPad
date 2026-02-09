@@ -927,6 +927,28 @@ function runAllTests() {
                 ['4D#16', 'number']
             ]
         },
+        // Base format output value with E (tests scientific notation disambiguation)
+        {
+            name: 'base format output value with E (a#16-> 4E#16)',
+            line: 'a#16-> 4E#16',
+            context: 'a: 78',
+            assertions: [
+                ['a', 'variable-def'],
+                ['#', 'variable-def'],
+                ['16', 'variable-def'],
+                ['->', 'punctuation'],
+                ['4E#16', 'number']
+            ]
+        },
+        // Digit-start base literal with E as expression output (2e#16->)
+        {
+            name: 'digit-start base literal with E (2e#16->)',
+            line: '2e#16->',
+            assertions: [
+                ['2e#16', 'number'],
+                ['->', 'punctuation']
+            ]
+        },
         // Inline eval with money format suffix
         {
             name: 'inline eval with money suffix (b = \\a$\\)',

@@ -127,10 +127,6 @@ class Tokenizer {
         const startCol = this.col;
         let value = '';
 
-        // Note: Base prefixes (0x, 0b, 0o) and suffix notation (value#base) are
-        // expanded to decimal by expandLiterals() before parsing, so we only
-        // need to handle decimal numbers here.
-
         // Decimal number (possibly floating point with scientific notation)
         // Allow commas as digit grouping
         let raw = '';
@@ -139,6 +135,11 @@ class Tokenizer {
             raw += ch;
             if (ch !== ',') value += ch;  // Skip commas for numeric value
         }
+
+        // Base literal lookahead: digits followed by alphanums then #digits (e.g., 4D#16, 101#2, 4E#16)
+        // Digit-start base literals are always numeric values (can't be variable names)
+        const baseLiteral = this.tryConsumeBaseLiteral(raw);
+        if (baseLiteral) return this.makeToken(TokenType.NUMBER, baseLiteral, startLine, startCol);
 
         // Decimal point (with or without trailing digits: 1.5 and 1. are both valid)
         if (this.peek() === '.') {
@@ -152,8 +153,9 @@ class Tokenizer {
             }
         }
 
-        // Scientific notation
-        if (this.peek() && /[eE]/.test(this.peek())) {
+        // Scientific notation - only if e/E is followed by digit, +, or -
+        if (this.peek() && /[eE]/.test(this.peek()) &&
+            (this.isDigit(this.peek(1)) || this.peek(1) === '+' || this.peek(1) === '-')) {
             let ch = this.advance(); // e or E
             value += ch;
             raw += ch;
@@ -183,6 +185,45 @@ class Tokenizer {
         return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw }, startLine, startCol);
     }
 
+    /**
+     * Try to consume a base literal suffix: alphanums followed by #digits (e.g., D#16, #2)
+     * Called after reading initial alphanumeric chars. Peeks ahead without consuming
+     * to check for the pattern, then consumes if found.
+     * @param {string} prefix - Already-consumed alphanumeric characters
+     * @returns {object|null} - { value, base, raw } if base literal found, null otherwise
+     */
+    tryConsumeBaseLiteral(prefix) {
+        // Scan ahead (without consuming) for optional alphanums then #digits
+        let offset = 0;
+
+        // Skip additional alphanumeric chars
+        while (this.peek(offset) && /[a-zA-Z0-9]/.test(this.peek(offset))) {
+            offset++;
+        }
+
+        // Must see # followed by at least one digit
+        if (this.peek(offset) !== '#') return null;
+        offset++;
+        if (!this.isDigit(this.peek(offset))) return null;
+
+        // Consume the extra alphanumeric chars
+        let digits = prefix;
+        while (this.peek() && /[a-zA-Z0-9]/.test(this.peek()) && this.peek() !== '#') {
+            digits += this.advance();
+        }
+
+        // Consume # and base digits
+        this.advance(); // #
+        let baseStr = '';
+        while (this.isDigit(this.peek())) {
+            baseStr += this.advance();
+        }
+
+        const base = parseInt(baseStr, 10);
+        const raw = digits + '#' + baseStr;
+        return { value: parseInt(digits, base), base, raw };
+    }
+
     tokenizeIdentifier() {
         const startLine = this.line;
         const startCol = this.col;
@@ -198,6 +239,51 @@ class Tokenizer {
         }
         if (value === 'NaN') {
             return this.makeToken(TokenType.NUMBER, { value: NaN, base: 10, raw: value }, startLine, startCol);
+        }
+
+        // Base literal lookahead: identifier followed by #digits (e.g., FF#16, abc#16)
+        // Disambiguate from variable with format suffix (x#16:) by peeking past #digits
+        // for a declaration marker. If preceded by an operator, it's always a base literal
+        // even if a marker follows (e.g., f#16+f#32-> the second f#32 is a base literal).
+        if (this.peek() === '#' && this.isDigit(this.peek(1))) {
+            let isBaseLiteral = false;
+
+            // Check if preceded by an operator — always a base literal in expression context
+            const lastToken = this.tokens.length > 0 ? this.tokens[this.tokens.length - 1] : null;
+            if (lastToken && (lastToken.type === TokenType.OPERATOR ||
+                              lastToken.type === TokenType.LPAREN ||
+                              lastToken.type === TokenType.SEMICOLON ||
+                              lastToken.type === TokenType.COMMA)) {
+                isBaseLiteral = true;
+            } else {
+                // Peek past #digits + optional whitespace for a declaration marker
+                let offset = 1;
+                while (this.isDigit(this.peek(offset))) {
+                    offset++;
+                }
+                while (this.peek(offset) && /[ \t]/.test(this.peek(offset))) {
+                    offset++;
+                }
+                const nextCh = this.peek(offset);
+                const nextCh2 = this.peek(offset + 1);
+                const isMarker = nextCh === ':' || nextCh === '[' ||
+                                 (nextCh === '<' && nextCh2 === '-') ||
+                                 (nextCh === '-' && nextCh2 === '>');
+                isBaseLiteral = !isMarker;
+            }
+
+            if (isBaseLiteral) {
+                // Consume #digits and return NUMBER
+                this.advance(); // #
+                let baseStr = '';
+                while (this.isDigit(this.peek())) {
+                    baseStr += this.advance();
+                }
+                const base = parseInt(baseStr, 10);
+                const raw = value + '#' + baseStr;
+                return this.makeToken(TokenType.NUMBER, { value: parseInt(value, base), base, raw }, startLine, startCol);
+            }
+            // Otherwise it's a variable with format suffix — fall through to return IDENTIFIER
         }
 
         return this.makeToken(TokenType.IDENTIFIER, value, startLine, startCol);

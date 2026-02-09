@@ -379,10 +379,10 @@ function findEquationLabelRegions(line) {
 /**
  * Find literal number formats that the tokenizer doesn't handle natively
  * Returns array of { start, end } for each literal region
- * Handles: FF#16, 0xFF, 0b101, 0o77, $607, -$607
+ * Handles: 0xFF, 0b101, 0o77, $607, -$607
  *
- * Note: Percent literals (5%) and special values (NaN, Infinity) are handled
- * by the tokenizer directly as NUMBER tokens - simpler than regex + expandLiterals().
+ * Note: Percent literals (5%), special values (NaN, Infinity), and base format
+ * literals (FF#16, 4D#16) are handled by the tokenizer directly as NUMBER tokens.
  * Other literals produce multiple tokens (e.g. $100 → FORMATTER + NUMBER) so we
  * use regex here to highlight them as unified number regions.
  */
@@ -401,32 +401,6 @@ function findLiteralRegions(text) {
         while ((match = pattern.exec(text)) !== null) {
             regions.push({ start: match.index, end: match.index + match[0].length });
         }
-    }
-
-    // Base literals (ff#16, 7v#32) need context-aware matching:
-    // - If starts with digit, it's always a literal (can't be a variable name)
-    // - If starts with letter and followed by a marker (-> <- : ::), it's a variable with format suffix
-    // - Otherwise, it's a literal value
-    const baseLiteralPattern = /[a-zA-Z0-9][a-zA-Z0-9]*#[0-9]+/g;
-    const markerPattern = /^\s*(<-|->|::|:|=)/;
-    let match;
-    while ((match = baseLiteralPattern.exec(text)) !== null) {
-        const firstChar = match[0][0];
-        // If starts with digit, always a literal (can't be a variable name)
-        if (/[0-9]/.test(firstChar)) {
-            regions.push({ start: match.index, end: match.index + match[0].length });
-            continue;
-        }
-        // Starts with letter - check if followed by a marker (variable declaration)
-        // But if preceded by an operator, it's a literal in expression context (e.g., f#16+f#32->)
-        const afterMatch = text.slice(match.index + match[0].length);
-        if (markerPattern.test(afterMatch)) {
-            const charBefore = match.index > 0 ? text[match.index - 1] : '';
-            if (!/[+\-*\/^(,;]/.test(charBefore)) {
-                continue;
-            }
-        }
-        regions.push({ start: match.index, end: match.index + match[0].length });
     }
 
     return regions;

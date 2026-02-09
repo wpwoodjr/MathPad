@@ -63,25 +63,12 @@ function getMarkerString(token) {
 /**
  * Split output value text into numeric value and trailing unit comment.
  * Uses the tokenizer for number recognition (regular, negative, money, percent,
- * scientific, special values). Base format literals (e.g., 4D#16, FF#16) use a
- * regex because the tokenizer splits mixed alphanumeric values at digit-letter
- * boundaries (e.g., "4D" becomes NUMBER "4" + IDENTIFIER "D").
+ * scientific, special values, base format literals like 4D#16, FF#16).
  * @param {string} text - The text after the output marker, trimmed
  * @returns {{ valueText: string, unitComment: string|null }}
  */
 function splitValueAndComment(text) {
     if (!text) return { valueText: '', unitComment: null };
-
-    // Base format literals (4D#16, FF#16, 101#2) - the tokenizer can't handle
-    // mixed alphanumeric values like "4D" (splits into NUMBER "4" + IDENTIFIER "D")
-    const baseMatch = text.match(/^([0-9a-zA-Z]+#\d+)\s*(.*)$/);
-    if (baseMatch) {
-        const trailing = baseMatch[2].trim();
-        if (trailing && /^[\d$]|^-\d/.test(trailing)) {
-            return { valueText: text, unitComment: null };
-        }
-        return { valueText: baseMatch[1], unitComment: trailing || null };
-    }
 
     // Use tokenizer to find numeric value at start
     const tokens = tokenize(text);

@@ -509,6 +509,8 @@ c->
 $99.99+$.01->
 
 f#16+f#32->
+
+2e#16->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
