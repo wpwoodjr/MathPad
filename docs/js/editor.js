@@ -147,6 +147,7 @@ function tokenizeMathPad(text, options = {}) {
                 }
                 break;
             case TokenType.ERROR:
+            case TokenType.UNEXPECTED_CHAR:
                 highlightType = 'error';
                 break;
             default:
@@ -311,7 +312,7 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
             }
         } else if (!result && line.trim() && !insideBrace) {
             // Plain text line - label/comment (but not if it has error tokens — let those highlight red)
-            const hasError = parser.tokens.some(t => t.type === TokenType.ERROR);
+            const hasError = parser.tokens.some(t => t.type === TokenType.ERROR || t.type === TokenType.UNEXPECTED_CHAR);
             if (!hasError) {
                 const labelEnd = parser.cleanLine.trimEnd().length;
                 if (labelEnd > 0) {
@@ -384,7 +385,7 @@ function findTokenPosition(text, token, startFrom) {
         searchValue = token.lineComment ? '//' + token.value : '"' + token.value + '"';
     } else if (token.type === TokenType.NEWLINE) {
         return text.indexOf('\n', startFrom);
-    } else if (token.type === TokenType.ERROR) {
+    } else if (token.type === TokenType.ERROR || token.type === TokenType.UNEXPECTED_CHAR) {
         // Extract the actual character from error message like "Unexpected character '$'"
         const match = token.value.match(/character '(.)'/);
         searchValue = match ? match[1] : null;
@@ -392,7 +393,14 @@ function findTokenPosition(text, token, startFrom) {
         searchValue = token.value;
     }
 
-    if (!searchValue) return startFrom;
+    if (!searchValue) {
+        // Skip whitespace for multi-char error tokens
+        let pos = startFrom;
+        while (pos < text.length && /\s/.test(text[pos])) {
+            pos++;
+        }
+        return pos;
+    }
 
     // Skip whitespace to find the token
     let pos = startFrom;
@@ -415,7 +423,7 @@ function getTokenLength(token, text, start) {
         return token.value.length + 2; // Include quotes
     } else if (token.type === TokenType.NEWLINE) {
         return 1;
-    } else if (token.type === TokenType.ERROR) {
+    } else if (token.type === TokenType.ERROR || token.type === TokenType.UNEXPECTED_CHAR) {
         return token.length || 1; // Multi-char errors (e.g., %<-) use token.length
     } else if (token.value) {
         return token.value.length;

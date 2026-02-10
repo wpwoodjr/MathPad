@@ -1201,6 +1201,23 @@ function runAllTests() {
                 ['4', 'number'],
                 ['->', 'punctuation']
             ]
+        },
+        {
+            name: 'invalid base highlights full token (ff#99)',
+            line: 'y2: ff#99',
+            assertions: [
+                ['y2', 'variable-def'],
+                [':', 'punctuation'],
+                ['ff#99', 'error']
+            ]
+        },
+        {
+            name: 'invalid base digits highlights full token (4z#16->)',
+            line: '4z#16->',
+            assertions: [
+                ['4z#16', 'error'],
+                ['->', 'punctuation']
+            ]
         }
     ];
 

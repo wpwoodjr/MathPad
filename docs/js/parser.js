@@ -26,7 +26,8 @@ const TokenType = {
     ARROW_RIGHT: 'ARROW_RIGHT',     // ->
     ARROW_FULL: 'ARROW_FULL',       // ->>
     DOUBLE_COLON: 'DOUBLE_COLON',   // ::
-    FORMATTER: 'FORMATTER'          // $ % # (format suffixes)
+    FORMATTER: 'FORMATTER',          // $ % # (format suffixes)
+    UNEXPECTED_CHAR: 'UNEXPECTED_CHAR' // unrecognized characters in input
 };
 
 // AST Node types
@@ -140,7 +141,9 @@ class Tokenizer {
                 digits += this.advance();
             }
             if (!digits) {
-                return this.makeToken(TokenType.ERROR, `Invalid 0${prefix} literal`, startLine, startCol);
+                const token = this.makeToken(TokenType.ERROR, `Invalid 0${prefix} literal`, startLine, startCol);
+                token.length = 2; // 0x, 0b, or 0o
+                return token;
             }
             const base = prefix === 'x' ? 16 : prefix === 'b' ? 2 : 8;
             const raw = '0' + this.text[this.pos - digits.length - 1] + digits;
@@ -160,7 +163,11 @@ class Tokenizer {
         // Digit-start base literals are always numeric values (can't be variable names)
         const baseLiteral = this.tryConsumeBaseLiteral(raw);
         if (baseLiteral) {
-            if (baseLiteral.error) return this.makeToken(TokenType.ERROR, baseLiteral.error, startLine, startCol);
+            if (baseLiteral.error) {
+                const token = this.makeToken(TokenType.ERROR, baseLiteral.error, startLine, startCol);
+                token.length = this.col - startCol;
+                return token;
+            }
             return this.makeToken(TokenType.NUMBER, baseLiteral, startLine, startCol);
         }
 
@@ -188,7 +195,9 @@ class Tokenizer {
                 raw += ch;
             }
             if (!this.isDigit(this.peek())) {
-                return this.makeToken(TokenType.ERROR, 'Invalid scientific notation', startLine, startCol);
+                const token = this.makeToken(TokenType.ERROR, 'Invalid scientific notation', startLine, startCol);
+                token.length = raw.length;
+                return token;
             }
             while (this.isDigit(this.peek())) {
                 ch = this.advance();
@@ -247,10 +256,12 @@ class Tokenizer {
         if (base < 2 || base > 36) {
             return { error: `Invalid base in "${raw}" - base must be between 2 and 36` };
         }
-        const parsed = parseInt(digits, base);
-        if (isNaN(parsed)) {
+        // Validate all digits are valid for the base (parseInt silently ignores trailing invalid chars)
+        const validDigits = '0123456789abcdefghijklmnopqrstuvwxyz'.slice(0, base);
+        if (!digits.split('').every(ch => validDigits.includes(ch.toLowerCase()))) {
             return { error: `Invalid constant "${raw}" - "${digits}" is not valid in base ${base}` };
         }
+        const parsed = parseInt(digits, base);
         return { value: parsed, base, raw };
     }
 
@@ -312,12 +323,18 @@ class Tokenizer {
                 const base = parseInt(baseStr, 10);
                 const raw = value + '#' + baseStr;
                 if (base < 2 || base > 36) {
-                    return this.makeToken(TokenType.ERROR, `Invalid base in "${raw}" - base must be between 2 and 36`, startLine, startCol);
+                    const token = this.makeToken(TokenType.ERROR, `Invalid base in "${raw}" - base must be between 2 and 36`, startLine, startCol);
+                    token.length = raw.length;
+                    return token;
+                }
+                // Validate all digits are valid for the base (parseInt silently ignores trailing invalid chars)
+                const validDigits = '0123456789abcdefghijklmnopqrstuvwxyz'.slice(0, base);
+                if (!value.split('').every(ch => validDigits.includes(ch.toLowerCase()))) {
+                    const token = this.makeToken(TokenType.ERROR, `Invalid constant "${raw}" - "${value}" is not valid in base ${base}`, startLine, startCol);
+                    token.length = raw.length;
+                    return token;
                 }
                 const parsed = parseInt(value, base);
-                if (isNaN(parsed)) {
-                    return this.makeToken(TokenType.ERROR, `Invalid constant "${raw}" - "${value}" is not valid in base ${base}`, startLine, startCol);
-                }
                 return this.makeToken(TokenType.NUMBER, { value: parsed, base, raw }, startLine, startCol);
             }
             // Otherwise it's a variable with format suffix — fall through to return IDENTIFIER
@@ -570,7 +587,7 @@ class Tokenizer {
 
             // Unknown character - generate error token
             this.advance();
-            this.tokens.push(this.makeToken(TokenType.ERROR, `Unexpected character '${ch}'`, startLine, startCol));
+            this.tokens.push(this.makeToken(TokenType.UNEXPECTED_CHAR, `Unexpected character '${ch}'`, startLine, startCol));
         }
 
         this.tokens.push(this.makeToken(TokenType.EOF, null, this.line, this.col));
@@ -785,6 +802,9 @@ class Parser {
             return { type: NodeType.VARIABLE, name };
         }
 
+        if (token.type === TokenType.ERROR) {
+            throw new ParseError(token.value, token.line, token.col);
+        }
         throw new ParseError(`Unexpected token: ${token.type} '${this.formatTokenValue(token)}'`, token.line, token.col);
     }
 
@@ -795,6 +815,9 @@ class Parser {
         const expr = this.parseExpression();
         if (this.peek().type !== TokenType.EOF) {
             const token = this.peek();
+            if (token.type === TokenType.ERROR) {
+                throw new ParseError(token.value, token.line, token.col);
+            }
             throw new ParseError(`Unexpected token after expression: ${token.type} '${this.formatTokenValue(token)}'`, token.line, token.col);
         }
         return expr;

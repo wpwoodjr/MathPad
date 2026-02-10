@@ -372,6 +372,20 @@ function discoverVariables(text, context, record) {
                 value: value,
                 valueText: valueText
             });
+        } else {
+            // Not a declaration — check for tokenizer errors on lines that look like code
+            // (have a marker or =). Skip plain text/label lines.
+            const { clean: cleanLine } = stripComments(line);
+            if (cleanLine.includes('=') || cleanLine.includes(':') ||
+                cleanLine.includes('<-') || cleanLine.includes('->')) {
+                const lineTokens = new Tokenizer(line).tokenize();
+                for (const tok of lineTokens) {
+                    if (tok.type === TokenType.ERROR) {
+                        errors.push(`Line ${i + 1}: ${tok.value}`);
+                        break;
+                    }
+                }
+            }
         }
     }
 

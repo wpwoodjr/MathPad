@@ -40,7 +40,7 @@ x-> 1
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 4: Unexpected token: ERROR 'Invalid constant \"hex#16\" - \"hex\" is not valid in base 16'"; StatusIsError = 1
+Status = "Solved with errors: Line 4: Invalid constant \"hex#16\" - \"hex\" is not valid in base 16"; StatusIsError = 1
 "01 Illegal constant hex#16"
 
   hex#16: 10
@@ -59,7 +59,7 @@ ff-> 15
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved 4 equations"; StatusIsError = 0
+Status = "Solved with errors: Line 10: Invalid constant \"hex#21\" - \"hex\" is not valid in base 21"; StatusIsError = 1
 "01 constant evals"
 
 x = ff#16
@@ -70,7 +70,7 @@ y#16: C#16
 y#8-> 14#8
 
 zz = hex#21
-zz-> 371
+zz->
 
 q: hex#36
 q#36-> HEX#36
@@ -81,7 +81,7 @@ w%: 10%
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 3: Cannot evaluate \"hex#88\" - Unexpected token: ERROR 'Invalid base in \"hex#88\" - base must be between 2 and 36'"; StatusIsError = 1
+Status = "Solved with errors: Line 3: Cannot evaluate \"hex#88\" - Invalid base in \"hex#88\" - base must be between 2 and 36"; StatusIsError = 1
 "02 Illegal constant hex#88"
 
 r: hex#88
