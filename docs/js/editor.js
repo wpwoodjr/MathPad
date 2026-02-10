@@ -310,13 +310,16 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
                 }
             }
         } else if (!result && line.trim() && !insideBrace) {
-            // Plain text line - label/comment
-            const labelEnd = parser.cleanLine.trimEnd().length;
-            if (labelEnd > 0) {
-                labelRegions.push({
-                    start: lineStart,
-                    end: lineStart + labelEnd
-                });
+            // Plain text line - label/comment (but not if it has error tokens — let those highlight red)
+            const hasError = parser.tokens.some(t => t.type === TokenType.ERROR);
+            if (!hasError) {
+                const labelEnd = parser.cleanLine.trimEnd().length;
+                if (labelEnd > 0) {
+                    labelRegions.push({
+                        start: lineStart,
+                        end: lineStart + labelEnd
+                    });
+                }
             }
         }
 
@@ -413,7 +416,7 @@ function getTokenLength(token, text, start) {
     } else if (token.type === TokenType.NEWLINE) {
         return 1;
     } else if (token.type === TokenType.ERROR) {
-        return 1; // ERROR tokens are single unknown characters
+        return token.length || 1; // Multi-char errors (e.g., %<-) use token.length
     } else if (token.value) {
         return token.value.length;
     }

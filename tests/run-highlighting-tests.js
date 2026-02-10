@@ -1169,6 +1169,38 @@ function runAllTests() {
                 ['c', 'variable'],
                 ['->', 'punctuation']
             ]
+        },
+        {
+            name: 'format specifier on input marker is error (z%<- 30%)',
+            line: 'z%<- 30%',
+            assertions: [
+                ['z', 'variable-def'],
+                ['%<-', 'error'],
+                ['30%', 'number']
+            ]
+        },
+        {
+            name: 'formatter in expression output is error (x%+4->)',
+            line: 'x%+4->',
+            context: 'x: 4',
+            assertions: [
+                ['x', 'variable'],
+                ['%', 'error'],
+                ['+', 'operator'],
+                ['4', 'number'],
+                ['->', 'punctuation']
+            ]
+        },
+        {
+            name: 'formatter after number in expression is error (3$+4->)',
+            line: '3$+4->',
+            assertions: [
+                ['3', 'number'],
+                ['$', 'error'],
+                ['+', 'operator'],
+                ['4', 'number'],
+                ['->', 'punctuation']
+            ]
         }
     ];
 

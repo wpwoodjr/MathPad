@@ -497,6 +497,14 @@ class LineParser {
                  tokensBeforeMarker[firstOperatorIdx - 1].type === TokenType.NUMBER)) {
                 exprStartIdx = firstOperatorIdx - 1;
             }
+            // If preceded by a FORMATTER ($/%/#), back up through it to include in expression
+            // e.g., "x%+4" or "3$+4" — the FORMATTER is part of the expression (error), not a label
+            if (firstOperatorIdx > 1 &&
+                tokensBeforeMarker[firstOperatorIdx - 1].type === TokenType.FORMATTER &&
+                (tokensBeforeMarker[firstOperatorIdx - 2].type === TokenType.IDENTIFIER ||
+                 tokensBeforeMarker[firstOperatorIdx - 2].type === TokenType.NUMBER)) {
+                exprStartIdx = firstOperatorIdx - 2;
+            }
         }
 
         // Check if expression start token is preceded by base literal tokens

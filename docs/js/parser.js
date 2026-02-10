@@ -541,8 +541,8 @@ class Tokenizer {
                     }
                     if (next === '<' && this.peek(2) === '-') {
                         this.advance(); this.advance(); this.advance();
-                        const token = this.makeToken(TokenType.ARROW_LEFT, ch + '<-', startLine, startCol);
-                        token.format = format;
+                        const token = this.makeToken(TokenType.ERROR, `Format specifier '${ch}' not supported on input marker '<-'`, startLine, startCol);
+                        token.length = 3; // %<- or $<-
                         this.tokens.push(token);
                         continue;
                     }
