@@ -15,4 +15,17 @@ Percent format full precision
 (0.075)%->>
 Space separates percent literal from percent marker
 (20000-19985)/20000 %->>
+Money literal expression output
+$10->
+$10$->
+10$->
+Percent literal and format
+10%->
+10%%->
+Percent literal vs format in expressions
+x: 4
+3+4%+4->
+3+4%+4%->
+3+4%+4%%->
+3+x%+4->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

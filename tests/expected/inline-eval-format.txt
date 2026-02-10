@@ -1,0 +1,36 @@
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Inline eval format tests"
+
+"Percent literal: 10% = 0.1"
+result1: 0.1
+
+"Percent literal: 50% = 0.5"
+result2: 0.5
+
+"Variable with % format suffix"
+rate%: 7.5%
+result3: 7.5%
+
+"Variable with $ format suffix"
+price$: 100
+result4: $100.00
+
+"Expression with percent literal"
+result5: 1.5
+
+"Bare variable inline eval"
+x: 42
+result6: 42
+
+"Expression with $ format suffix"
+$50.00 // \price/2$\
+
+"Percent literal with % format suffix"
+10% // \10%%\
+
+"Percent literal (no format suffix)"
+0.1 // \10%\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -350,7 +350,7 @@ function solveEquations(text, context, declarations, record = {}) {
         }
     }
 
-    return { computedValues, solved, errors, solveFailures };
+    return { computedValues, solved, errors, solveFailures, equations, exprOutputs };
 }
 
 /**
@@ -362,7 +362,7 @@ function solveEquations(text, context, declarations, record = {}) {
  * @param {object} record - Record settings for formatting
  * @returns {{ text: string, errors: Array }} Formatted text and any errors
  */
-function formatOutput(text, declarations, context, computedValues, record, solveFailures = new Map()) {
+function formatOutput(text, declarations, context, computedValues, record, solveFailures = new Map(), precomputedEquations = null, precomputedExprOutputs = null) {
     const errors = [];
     const format = {
         places: record.places != null ? record.places : 4,
@@ -372,17 +372,16 @@ function formatOutput(text, declarations, context, computedValues, record, solve
     };
 
     // Fill empty variable declarations with computed values (or constants)
+    // Uses pre-parsed declarations to avoid re-tokenizing lines
+    const lines = text.split('\n');
     for (const info of declarations) {
         if (!info.valueText) {
+            let value = null;
             if (context.variables.has(info.name)) {
-                // Has a computed/solved value - use it
-                const value = context.variables.get(info.name);
-                text = setVariableValue(text, info.name, value, format);
+                value = context.variables.get(info.name);
             } else if (context.constants.has(info.name) && !context.shadowedConstants.has(info.name)) {
-                // No computed value but constant exists and is not shadowed - output the constant
-                const value = context.constants.get(info.name);
-                context.usedConstants.add(info.name); // Track usage
-                text = setVariableValue(text, info.name, value, format);
+                value = context.constants.get(info.name);
+                context.usedConstants.add(info.name);
             } else {
                 // Check if there was a solve failure for this variable (e.g., limits violation)
                 const failure = solveFailures.get(info.name);
@@ -396,12 +395,27 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                         errors.push(`Line ${info.lineIndex + 1}: Variable '${info.name}' has no value to output`);
                     }
                 }
+                continue;
             }
+            // Use pre-parsed declaration to insert value directly (no re-tokenization)
+            const decl = info.declaration;
+            const formatted = formatVariableValue(value, decl.format, decl.fullPrecision, {
+                places: format.places,
+                stripZeros: format.stripZeros,
+                numberFormat: format.format,
+                base: decl.base,
+                groupDigits: format.groupDigits
+            });
+            const commentInfo = { comment: decl.comment, commentUnquoted: decl.commentUnquoted };
+            const newLine = replaceValueOnLine(lines[info.lineIndex], info.name, decl.marker, !!decl.limits, formatted, commentInfo);
+            if (newLine !== null) lines[info.lineIndex] = newLine;
         }
     }
+    text = lines.join('\n');
 
     // Handle incomplete equations and expression outputs using pre-computed values
-    const { equations, exprOutputs } = findEquationsAndOutputs(text);
+    const equations = precomputedEquations || findEquationsAndOutputs(text).equations;
+    const exprOutputs = precomputedExprOutputs || findEquationsAndOutputs(text).exprOutputs;
     for (const eq of equations) {
         const key = `__incomplete_${eq.startLine}`;
         if (computedValues.has(key)) {
@@ -411,7 +425,7 @@ function formatOutput(text, declarations, context, computedValues, record, solve
             text = text.replace(new RegExp(eqPattern), eq.text + ' ' + formatted);
         }
     }
-    const lines = text.split('\n');
+    const exprLines = text.split('\n');
     for (const output of exprOutputs) {
         const key = `__exprout_${output.startLine}`;
         if (computedValues.has(key)) {
@@ -422,18 +436,18 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                 : formatNumber(value, places, format.stripZeros, format.format, 10, format.groupDigits);
 
             // Find the marker in the line and insert the value after it
-            const line = lines[output.startLine];
+            const line = exprLines[output.startLine];
             const { clean: cleanLine } = stripComments(line);
             const markerIdx = cleanLine.lastIndexOf(marker);
 
             if (markerIdx !== -1) {
                 const markerEndIndex = markerIdx + marker.length;
                 const commentInfo = { comment: output.comment, commentUnquoted: output.commentUnquoted };
-                lines[output.startLine] = buildOutputLine(line, markerEndIndex, formatted, commentInfo);
+                exprLines[output.startLine] = buildOutputLine(line, markerEndIndex, formatted, commentInfo);
             }
         }
     }
-    text = lines.join('\n');
+    text = exprLines.join('\n');
 
     return { text, errors };
 }
@@ -516,8 +530,8 @@ function solveRecord(text, context, record) {
     const solveResult = solveEquations(text, context, declarations, record);
     errors.push(...solveResult.errors);
 
-    // Pass 3: Format Output (inserts values into text)
-    const formatResult = formatOutput(text, declarations, context, solveResult.computedValues, record, solveResult.solveFailures);
+    // Pass 3: Format Output (inserts values into text, reuses equations/exprOutputs from pass 2)
+    const formatResult = formatOutput(text, declarations, context, solveResult.computedValues, record, solveResult.solveFailures, solveResult.equations, solveResult.exprOutputs);
     text = formatResult.text;
     errors.push(...formatResult.errors);
 

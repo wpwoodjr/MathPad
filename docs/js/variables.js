@@ -282,8 +282,11 @@ function discoverVariables(text, context, record) {
             const evalInfo = filteredMatches[j];
             try {
                 // Strip format suffix ($, %, or #base) before parsing - it's used for output formatting only
+                // Use tokenizer to detect if trailing $ or % is a FORMATTER token (not part of a literal)
                 let exprToParse = evalInfo.expression;
-                if (exprToParse.endsWith('$') || exprToParse.endsWith('%')) {
+                const exprTokens = new Tokenizer(exprToParse).tokenize();
+                const lastNonEof = exprTokens.length >= 2 ? exprTokens[exprTokens.length - 2] : null;
+                if (lastNonEof && lastNonEof.type === TokenType.FORMATTER && (lastNonEof.value === '$' || lastNonEof.value === '%')) {
                     exprToParse = exprToParse.slice(0, -1);
                 } else {
                     // Strip #base suffix only for identifier#digits (e.g., \a#16\)
@@ -387,13 +390,15 @@ function getInlineEvalFormat(expression, record, variables = null) {
     const trimmed = expression.trim();
     let varFormat = null;
 
-    // Check if expression ends with format suffix ($, %, or #base)
+    // Use tokenizer to detect if trailing $ or % is a FORMATTER token (not part of a literal)
     let baseName = trimmed;
     let base = 10;
-    if (trimmed.endsWith('$')) {
+    const exprTokens = new Tokenizer(trimmed).tokenize();
+    const lastNonEof = exprTokens.length >= 2 ? exprTokens[exprTokens.length - 2] : null;
+    if (lastNonEof && lastNonEof.type === TokenType.FORMATTER && lastNonEof.value === '$') {
         baseName = trimmed.slice(0, -1);
         varFormat = 'money';
-    } else if (trimmed.endsWith('%')) {
+    } else if (lastNonEof && lastNonEof.type === TokenType.FORMATTER && lastNonEof.value === '%') {
         baseName = trimmed.slice(0, -1);
         varFormat = 'percent';
     } else {
@@ -471,48 +476,6 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
 
     // Regular number formatting
     return formatNumber(value, places, stripZeros, numberFormat, base, groupDigits, null);
-}
-
-/**
- * Insert or update a variable value in text
- * Fills ALL empty declarations of the variable
- * Returns the modified text
- */
-function setVariableValue(text, varName, value, format = {}) {
-    const lines = text.split('\n');
-    let modified = false;
-
-    // Format defaults
-    const regularPlaces = format.places != null ? format.places : 2;
-    const stripZeros = format.stripZeros != null ? format.stripZeros : true;
-    const groupDigits = format.groupDigits != null ? format.groupDigits : false;
-    const numberFormat = format.format != null ? format.format : 'float';
-
-    // Process each line looking for declarations of this variable
-    for (let i = 0; i < lines.length; i++) {
-        const decl = parseVariableLine(lines[i]);
-        if (!decl || decl.name !== varName) continue;
-
-        // Skip if already has a value
-        if (decl.valueText) continue;
-
-        const formattedValue = formatVariableValue(value, decl.format, decl.fullPrecision, {
-            places: regularPlaces,
-            stripZeros,
-            numberFormat,
-            base: decl.base,
-            groupDigits
-        });
-
-        const commentInfo = { comment: decl.comment, commentUnquoted: decl.commentUnquoted };
-        const newLine = replaceValueOnLine(lines[i], varName, decl.marker, !!decl.limits, formattedValue, commentInfo);
-        if (newLine !== null) {
-            lines[i] = newLine;
-            modified = true;
-        }
-    }
-
-    return modified ? lines.join('\n') : text;
 }
 
 /**
@@ -1027,7 +990,7 @@ if (typeof module !== 'undefined' && module.exports) {
         VarType, ClearBehavior,
         parseVarNameAndFormat, parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
-        buildOutputLine, setVariableValue, clearVariables, findEquations,
+        buildOutputLine, replaceValueOnLine, clearVariables, findEquations,
         findExpressionOutputs, findEquationsAndOutputs, clearExpressionOutputs,
         findInlineEvaluations, replaceInlineEvaluation,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext,

@@ -69,7 +69,6 @@ function loadModules() {
     global.ClearBehavior = variables.ClearBehavior;
     global.parseVariableLine = variables.parseVariableLine;
     global.parseAllVariables = variables.parseAllVariables;
-    global.setVariableValue = variables.setVariableValue;
     global.clearVariables = variables.clearVariables;
     global.findEquations = variables.findEquations;
     global.createEvalContext = variables.createEvalContext;
@@ -82,6 +81,7 @@ function loadModules() {
     global.findEquationsAndOutputs = variables.findEquationsAndOutputs;
     global.clearExpressionOutputs = variables.clearExpressionOutputs;
     global.buildOutputLine = variables.buildOutputLine;
+    global.replaceValueOnLine = variables.replaceValueOnLine;
 
     // Storage (minimal dependencies)
     const storage = require(path.join(jsPath, 'storage.js'));

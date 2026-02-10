@@ -1,7 +1,7 @@
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved 1 equation"; StatusIsError = 0
+Status = "Solved with errors: Line 28: Unexpected token after expression: FORMATTER '%'"; StatusIsError = 1
 "Money format on expression out..."
 Money format on expression output
 3+4$-> $7.00
@@ -18,4 +18,17 @@ Percent format full precision
 (0.075)%->> 7.5%
 Space separates percent literal from percent marker
 (20000-19985)/20000 %->> 0.075%
+Money literal expression output
+$10-> 10
+$10$-> $10.00
+10$-> $10.00
+Percent literal and format
+10%-> 0.1
+10%%-> 10%
+Percent literal vs format in expressions
+x: 4
+3+4%+4-> 7.04
+3+4%+4%-> 3.08
+3+4%+4%%-> 308%
+3+x%+4->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
