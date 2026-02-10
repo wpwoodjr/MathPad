@@ -135,7 +135,9 @@ function tokenizeMathPad(text, options = {}) {
                 inInlineEval = false;
                 continue;
             case TokenType.FORMATTER:
-                // Style $, %, # to match the preceding identifier only in declaration or inline eval context
+                // $/%  before markers are merged into marker tokens by the tokenizer,
+                // so standalone FORMATTER is only for suffix on variable names.
+                // # (base suffix) matches the preceding identifier style in declaration context
                 if ((lastTokenWasVarDef || lastTokenWasBuiltin) && tokenStart === lastTokenEnd) {
                     highlightType = lastTokenWasBuiltin ? 'builtin' : 'variable-def';
                 } else if (inInlineEval && lastTokenWasVar && tokenStart === lastTokenEnd) {
@@ -269,6 +271,8 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
             // For declarations, label is everything before the variable
             const markerInfo = parser.findBestMarker();
             if (markerInfo) {
+                // $/%  format specifiers are merged into the marker token by the tokenizer,
+                // so markerInfo.index already points to the correct position.
                 const varInfo = parser.getImmediateVarBeforeMarker(markerInfo.index);
                 if (varInfo && varInfo.varStartPos > 0) {
                     labelRegions.push({

@@ -276,21 +276,19 @@ class LineParser {
         // Get the text just before the marker
         const beforeMarker = this.cleanLine.substring(0, markerCol - 1);
 
-        // Check for variable pattern at end: identifier optionally followed by $, %, or #digits
-        // Also handle limits: identifier[low:high]
+        // Check for variable pattern: identifier(#digits)?([limits])?
+        // $/%  format specifiers are merged into the marker token by the tokenizer,
+        // so markerToken.col already points past the variable text.
         // Variable names must start with letter or underscore (not digit)
-        const varMatch = beforeMarker.match(/([a-zA-Z_]\w*)([$%]|#\d+)?(\s*\[[^\]]+\])?\s*$/);
+        const varMatch = beforeMarker.match(/([a-zA-Z_]\w*)(#\d+)?(\s*\[[^\]]+\])?\s*$/);
         if (varMatch) {
             const name = varMatch[1];
-            const formatSuffix = varMatch[2];
+            const baseSuffix = varMatch[2];  // #digits
             const limitsText = varMatch[3];
 
-            let format = null;
             let base = 10;
-            if (formatSuffix === '$') format = 'money';
-            else if (formatSuffix === '%') format = 'percent';
-            else if (formatSuffix && formatSuffix.startsWith('#')) {
-                base = parseInt(formatSuffix.substring(1));
+            if (baseSuffix) {
+                base = parseInt(baseSuffix.substring(1));
             }
 
             let limits = null;
@@ -311,7 +309,6 @@ class LineParser {
 
             return {
                 name,
-                format,
                 base,
                 limits,
                 hasLimits: !!limitsText,
@@ -392,8 +389,8 @@ class LineParser {
      */
     extractValueAndComment(markerIndex) {
         const markerToken = this.tokens[markerIndex];
-        const markerStr = getMarkerString(markerToken);
-        const markerEnd = markerToken.col + markerStr.length - 1;
+        // Use token.value.length for position — handles format prefix ($-> is 3 chars, -> is 2)
+        const markerEnd = markerToken.col + markerToken.value.length - 1;
         const afterMarker = this.cleanLine.substring(markerEnd).trim();
 
         if (!afterMarker) {
@@ -542,11 +539,14 @@ class LineParser {
             return null;
         }
 
+        // Format specifier ($/%  before marker) is merged into the marker token
+        // by the tokenizer — read it directly from the token's format property.
+        const markerFormat = markerToken.format || null;
+
         // Determine if this is declaration or expression output
         const isExpression = this.isExpressionLHS(markerIndex);
 
         if (!isExpression) {
-            // Variable declaration
             const varInfo = this.getImmediateVarBeforeMarker(markerIndex);
             if (!varInfo) {
                 return null;
@@ -608,7 +608,7 @@ class LineParser {
                 base: varInfo.base,
                 fullPrecision,
                 marker,
-                format: varInfo.format,
+                format: markerFormat,
                 comment: finalComment,
                 commentUnquoted
             };
@@ -636,6 +636,7 @@ class LineParser {
                 valueText,
                 fullPrecision,
                 recalculates,
+                format: markerFormat,
                 comment: finalComment,
                 commentUnquoted
             };

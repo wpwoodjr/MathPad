@@ -526,6 +526,36 @@ class Tokenizer {
 
             // Format suffixes: $ (money), % (percent), # (base)
             if (ch === '$' || ch === '%' || ch === '#') {
+                // For $ and %, check if followed by a declaration marker — merge into one token
+                if (ch !== '#') {
+                    const format = ch === '$' ? 'money' : 'percent';
+                    const next = this.peek(1);
+                    if (next === '-' && this.peek(2) === '>') {
+                        const type = this.peek(3) === '>' ? TokenType.ARROW_FULL : TokenType.ARROW_RIGHT;
+                        const marker = type === TokenType.ARROW_FULL ? '->>' : '->';
+                        for (let i = 0; i <= marker.length; i++) this.advance();
+                        const token = this.makeToken(type, ch + marker, startLine, startCol);
+                        token.format = format;
+                        this.tokens.push(token);
+                        continue;
+                    }
+                    if (next === '<' && this.peek(2) === '-') {
+                        this.advance(); this.advance(); this.advance();
+                        const token = this.makeToken(TokenType.ARROW_LEFT, ch + '<-', startLine, startCol);
+                        token.format = format;
+                        this.tokens.push(token);
+                        continue;
+                    }
+                    if (next === ':') {
+                        const type = this.peek(2) === ':' ? TokenType.DOUBLE_COLON : TokenType.COLON;
+                        const marker = type === TokenType.DOUBLE_COLON ? '::' : ':';
+                        for (let i = 0; i <= marker.length; i++) this.advance();
+                        const token = this.makeToken(type, ch + marker, startLine, startCol);
+                        token.format = format;
+                        this.tokens.push(token);
+                        continue;
+                    }
+                }
                 this.advance();
                 this.tokens.push(this.makeToken(TokenType.FORMATTER, ch, startLine, startCol));
                 continue;

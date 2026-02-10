@@ -274,8 +274,7 @@ function runAllTests() {
             line: 'price$: 100',
             assertions: [
                 ['price', 'variable-def'],
-                ['$', 'variable-def'],
-                [':', 'punctuation'],
+                ['$:', 'punctuation'],
                 ['100', 'number']
             ]
         },
@@ -284,8 +283,7 @@ function runAllTests() {
             line: 'rate%: 5',
             assertions: [
                 ['rate', 'variable-def'],
-                ['%', 'variable-def'],
-                [':', 'punctuation'],
+                ['%:', 'punctuation'],
                 ['5', 'number']
             ]
         },
@@ -515,18 +513,17 @@ function runAllTests() {
         },
         // Money format variable with money limits
         {
-            name: 'money format with money limits (fv2$[$0:$0.20]: $0.13)',
-            line: 'future value fv2$[$0:$0.20]: $0.13',
+            name: 'money format with money limits (fv2[$0:$0.20]$: $0.13)',
+            line: 'future value fv2[$0:$0.20]$: $0.13',
             assertions: [
                 ['future value ', 'comment'],
                 ['fv2', 'variable-def'],
-                ['$', 'variable-def'],
                 ['[', 'bracket'],
                 ['$0', 'number'],
                 [':', 'punctuation'],
                 ['$0.20', 'number'],
                 [']', 'bracket'],
-                [':', 'punctuation'],
+                ['$:', 'punctuation'],
                 ['$0.13', 'number']
             ]
         },
@@ -537,8 +534,7 @@ function runAllTests() {
             assertions: [
                 ['interest rate ', 'comment'],
                 ['rate1', 'variable-def'],
-                ['%', 'variable-def'],
-                [':', 'punctuation'],
+                ['%:', 'punctuation'],
                 ['6', 'number']
             ]
         },
@@ -558,8 +554,7 @@ function runAllTests() {
             line: 'rate1%-> 600%',
             assertions: [
                 ['rate1', 'variable-def'],
-                ['%', 'variable-def'],
-                ['->', 'punctuation'],
+                ['%->', 'punctuation'],
                 ['600%', 'number']
             ]
         },
@@ -569,27 +564,25 @@ function runAllTests() {
             line: 'rate%: 6+6%',
             assertions: [
                 ['rate', 'variable-def'],
-                ['%', 'variable-def'],
-                [':', 'punctuation'],
+                ['%:', 'punctuation'],
                 ['6', 'number'],
                 ['+', 'operator'],
                 ['6%', 'number']
             ]
         },
-        // Percent format with limits, value, label, and quoted comment
+        // Percent format with limits, value, label, and quoted comment (new syntax: var[limits]%:)
         {
-            name: 'percent format full (Enter yint%[0:5.1%]: 5% "annual interest rate %")',
-            line: 'Enter yint%[0:5.1%]: 5% "annual interest rate %"',
+            name: 'percent format full (Enter yint[0:5.1%]%: 5% "annual interest rate %")',
+            line: 'Enter yint[0:5.1%]%: 5% "annual interest rate %"',
             assertions: [
                 ['Enter ', 'comment'],
                 ['yint', 'variable-def'],
-                ['%', 'variable-def'],
                 ['[', 'bracket'],
                 ['0', 'number'],
                 [':', 'punctuation'],
                 ['5.1%', 'number'],
                 [']', 'bracket'],
-                [':', 'punctuation'],
+                ['%:', 'punctuation'],
                 ['5%', 'number'],
                 ['"annual interest rate %"', 'comment']
             ]
@@ -1119,6 +1112,62 @@ function runAllTests() {
                 [':', 'punctuation'],
                 ['x', 'variable'],
                 ['%', 'error']
+            ]
+        },
+        // Format specifier on marker tests
+        {
+            name: 'money format specifier on expression output (3+4$->)',
+            line: '3+4$->',
+            assertions: [
+                ['3', 'number'],
+                ['+', 'operator'],
+                ['4', 'number'],
+                ['$->', 'punctuation']
+            ]
+        },
+        {
+            name: 'percent format specifier on expression output ((0.075)%->)',
+            line: '(0.075)%->',
+            assertions: [
+                ['(', 'paren'],
+                ['0.075', 'number'],
+                [')', 'paren'],
+                ['%->', 'punctuation']
+            ]
+        },
+        {
+            name: 'money format specifier on colon output (3+4$:)',
+            line: '3+4$:',
+            assertions: [
+                ['3', 'number'],
+                ['+', 'operator'],
+                ['4', 'number'],
+                ['$:', 'punctuation']
+            ]
+        },
+        {
+            name: 'space separates percent literal from percent marker ((20000-19985)/20000 %->>)',
+            line: '(20000-19985)/20000 %->>',
+            assertions: [
+                ['(', 'paren'],
+                ['20000', 'number'],
+                ['-', 'operator'],
+                ['19985', 'number'],
+                [')', 'paren'],
+                ['/', 'operator'],
+                ['20000', 'number'],
+                ['%->>', 'punctuation']
+            ]
+        },
+        {
+            name: 'standalone formatter not before marker is error (a+b%+c->)',
+            line: 'a+b%+c->',
+            context: 'a: 1\nb: 2\nc: 3',
+            assertions: [
+                ['b', 'variable'],
+                ['%', 'error'],
+                ['c', 'variable'],
+                ['->', 'punctuation']
             ]
         }
     ];

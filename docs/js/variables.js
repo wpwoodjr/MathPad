@@ -104,14 +104,14 @@ function replaceValueOnLine(line, varName, marker, hasLimits, newValue, commentI
 
     let markerIndex;
     if (hasLimits) {
-        // Match variable with limits and any marker type (longer markers first)
-        const bracketMatch = cleanLine.match(new RegExp(`\\w+(?:[$%]|#\\d+)?\\s*\\[[^\\]]+\\]\\s*${escapeRegex(marker)}`));
+        // Match variable with limits: name(#base)? [limits] ($|%)? marker
+        const bracketMatch = cleanLine.match(new RegExp(`\\w+(?:#\\d+)?\\s*\\[[^\\]]+\\]\\s*(?:[$%])?\\s*${escapeRegex(marker)}`));
         if (bracketMatch) {
             markerIndex = bracketMatch.index + bracketMatch[0].length;
         }
     } else {
         // varName doesn't include $, %, or #base suffix, but text may have it
-        const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}(?:[$%]|#\\d+)?\\s*(${escapeRegex(marker)})`));
+        const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}(?:#\\d+)?\\s*(?:[$%])?\\s*(${escapeRegex(marker)})`));
         if (markerMatch) {
             markerIndex = markerMatch.index + markerMatch[0].length;
         }
@@ -637,6 +637,7 @@ function findEquationsAndOutputs(text) {
                 fullPrecision: markedResult.fullPrecision,
                 recalculates: markedResult.recalculates,
                 existingValue: markedResult.valueText,
+                format: markedResult.format,
                 comment: markedResult.comment,
                 commentUnquoted: markedResult.commentUnquoted
             });

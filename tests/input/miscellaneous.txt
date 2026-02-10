@@ -160,7 +160,7 @@ pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
 pmt$: -$607.61 "monthly payment"
 pv$: $100,000.00 "loan amount"
 fv$: $0.00 "future value (balloon payment)"
-yint%[0:0.5]: "annual interest rate %"
+yint[0:0.5]%: "annual interest rate %"
 n: 360 "number of payments (30 years)"
 
 "Monthly interest rate from annual"
@@ -235,7 +235,7 @@ pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
 pmt$: -$607.61 "monthly payment"
 pv$: $100,000.00 "loan amount"
 fv$: $0.00 "future value (balloon payment)"
-yint%[0:.01]: "annual interest rate % (limits 0-1% too narrow for 6.12%)"
+yint[0:.01]%: "annual interest rate % (limits 0-1% too narrow for 6.12%)"
 n: 360 "number of payments (30 years)"
 
 "Monthly interest rate from annual"

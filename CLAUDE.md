@@ -78,7 +78,7 @@ Scripts load in order in `index.html`: parser → evaluator → solver → varia
 **Variable Declaration** (from `parseVariableLine`):
 ```javascript
 {
-  name: string,           // e.g., "pmt$", "rate%"
+  name: string,           // e.g., "pmt", "rate"
   type: VarType,          // STANDARD, INPUT, OUTPUT, FULL_PRECISION
   valueText: string,      // raw value text
   limits: { low, high },  // search limits if specified
@@ -139,8 +139,11 @@ Save to localStorage
 | `var->>` | FULL_PRECISION | All decimals shown |
 | `var:: value` | FULL_PRECISION | Full precision input |
 | `var[low:high]:` | With limits | Constrain search range |
-| `price$:` | Money format | Display with $ prefix |
+| `price$:` | Money format | `$`/`%` before marker = format specifier |
 | `rate%: 7.5%` | Percentage | Stores as decimal (0.075) |
+| `expr$->` | Expression output | Format result as money |
+| `expr%->` | Expression output | Format result as percent |
+| `var[lo:hi]%:` | Limits + format | Limits before format specifier |
 
 ## Special Records
 

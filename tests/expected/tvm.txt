@@ -29,8 +29,8 @@ pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
 "Variables"
 pmt$: -$607.00 "monthly payment"
 pv$: $99,999.612 "loan amount"
-fv$[$0:$0.20]: $0.13 "future value (balloon payment)"
-yint%[0:5.1%]: 5% "annual interest rate %"
+fv[$0:$0.20]$: $0.13 "future value (balloon payment)"
+yint[0:5.1%]%: 5% "annual interest rate %"
 n[270:360]: 278.9181 "number of payments (30 years)"
 
 "Monthly interest rate from annual"

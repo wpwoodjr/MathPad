@@ -315,7 +315,8 @@ function solveEquations(text, context, declarations, record = {}) {
             computedValues.set(`__exprout_${output.startLine}`, {
                 value,
                 fullPrecision: output.fullPrecision,
-                marker: output.marker
+                marker: output.marker,
+                format: output.format
             });
         } catch (e) {
             // Report parse/eval errors including undefined variables
@@ -414,9 +415,11 @@ function formatOutput(text, declarations, context, computedValues, record, solve
     for (const output of exprOutputs) {
         const key = `__exprout_${output.startLine}`;
         if (computedValues.has(key)) {
-            const { value, fullPrecision, marker } = computedValues.get(key);
+            const { value, fullPrecision, marker, format: varFormat } = computedValues.get(key);
             const places = fullPrecision ? 15 : format.places;
-            const formatted = formatNumber(value, places, format.stripZeros, format.format, 10, format.groupDigits);
+            const formatted = varFormat
+                ? formatVariableValue(value, varFormat, fullPrecision, format)
+                : formatNumber(value, places, format.stripZeros, format.format, 10, format.groupDigits);
 
             // Find the marker in the line and insert the value after it
             const line = lines[output.startLine];
