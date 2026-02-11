@@ -1165,7 +1165,6 @@ body.panel-resizing * {
     color: var(--text-primary);
     font-family: var(--font-mono);
     font-size: 15px;
-    font-style: italic;
     line-height: 27px;
 }
 
@@ -1177,6 +1176,29 @@ body.panel-resizing * {
     padding-left: 8px;
     line-height: 27px;
     flex-shrink: 0;
+}
+
+.variable-row[data-type="label"] {
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    white-space: normal;
+}
+
+.variable-row[data-type="label"] .variable-comment {
+    line-height: 1.4;
+    padding-left: 4px;
+    flex-shrink: 1;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.variable-row[data-type="label"].variable-label-spacer {
+    height: 6px;
+}
+
+.variable-row[data-type="label"]:hover {
+    background: transparent;
 }
 
 .variable-solve-btn {

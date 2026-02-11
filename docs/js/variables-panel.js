@@ -80,6 +80,14 @@ class VariablesPanel {
 
         this.refSectionLineIndex = refSectionLineIndex;
 
+        // Detect --Variables-- section marker
+        const varsSectionStart = text.indexOf('--Variables--');
+        const varsSectionLineIndex = varsSectionStart >= 0
+            ? text.substring(0, varsSectionStart).split('\n').length - 1
+            : -1; // -1 means no marker → current behavior
+
+        this.varsSectionLineIndex = varsSectionLineIndex;
+
         const newDeclarations = parseAllVariables(text);
 
         // Build map keyed by lineIndex for diffing
@@ -108,6 +116,54 @@ class VariablesPanel {
                     value: null,
                     valueText: output.existingValue,
                     isExpressionOutput: true
+                });
+            }
+        }
+
+        // If --Variables-- marker present, filter to only items below it
+        if (varsSectionLineIndex >= 0) {
+            for (const lineIndex of [...newDeclMap.keys()]) {
+                if (lineIndex <= varsSectionLineIndex) {
+                    newDeclMap.delete(lineIndex);
+                }
+            }
+
+            // Strip // line comments from declarations below the marker
+            for (const [lineIndex, info] of newDeclMap) {
+                if (info.declaration && info.declaration.comment && info.declaration.commentUnquoted) {
+                    info.declaration.comment = null;
+                    info.declaration.commentUnquoted = false;
+                }
+            }
+
+            // Add label/spacer rows for non-declaration lines below the marker
+            const lines = text.split('\n');
+            for (let i = varsSectionLineIndex + 1; i < lines.length; i++) {
+                if (newDeclMap.has(i)) continue; // Already a declaration
+                if (i >= refSectionLineIndex) continue; // In reference section
+
+                const line = lines[i];
+                const trimmed = line.trim();
+
+                // Skip the reference section marker line
+                if (trimmed.startsWith('"--- Reference')) continue;
+
+                // Skip // comment-only lines
+                if (trimmed.startsWith('//')) continue;
+
+                // Strip surrounding quotes from quoted strings
+                let labelText = trimmed;
+                if (labelText.startsWith('"') && labelText.endsWith('"') && labelText.length >= 2) {
+                    labelText = labelText.slice(1, -1);
+                }
+
+                // Empty lines → spacer row
+                // Plain text lines → label row
+                newDeclMap.set(i, {
+                    name: labelText,
+                    declaration: { marker: null, comment: null },
+                    lineIndex: i,
+                    isLabel: true
                 });
             }
         }
@@ -159,6 +215,28 @@ class VariablesPanel {
      * Add a variable row to the panel
      */
     addVariableRow(info) {
+        // Handle label/spacer rows (from --Variables-- section)
+        if (info.isLabel) {
+            const row = document.createElement('div');
+            row.className = 'variable-row';
+            row.dataset.lineIndex = info.lineIndex;
+            row.dataset.type = 'label';
+
+            if (info.name) {
+                // Label row with text - use same styling as declaration comments
+                const label = document.createElement('span');
+                label.className = 'variable-comment';
+                label.textContent = info.name;
+                row.appendChild(label);
+            } else {
+                // Spacer row
+                row.classList.add('variable-label-spacer');
+            }
+
+            this.insertRowInOrder(row, info.lineIndex);
+            return;
+        }
+
         const row = document.createElement('div');
         row.className = 'variable-row';
         row.dataset.lineIndex = info.lineIndex;
@@ -197,7 +275,7 @@ class VariablesPanel {
         const limitsStr = decl.limits ? `[${decl.limits.lowExpr}:${decl.limits.highExpr}]` : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
-        nameLabel.textContent = info.name + formatSep + formatSuffix + limitsStr + (decl.marker || ':');
+        nameLabel.textContent = info.name + limitsStr + formatSep + formatSuffix + (decl.marker || ':');
         // Add tooltip explaining variable type
         if (isInRefSection) {
             nameLabel.title = 'Reference (from Constants/Functions)';
