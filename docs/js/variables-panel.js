@@ -100,7 +100,7 @@ class VariablesPanel {
                         type: output.recalculates ? VarType.OUTPUT : VarType.STANDARD,
                         clearBehavior: output.recalculates ? ClearBehavior.ON_SOLVE : ClearBehavior.NONE,
                         fullPrecision: output.fullPrecision,
-                        format: null,
+                        format: output.format || null,
                         comment: output.comment,
                         commentUnquoted: output.commentUnquoted
                     },
@@ -192,10 +192,12 @@ class VariablesPanel {
 
         // Variable name label (includes format suffix, limits, and marker)
         const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : '';
+        // Always separate format suffix with a space for clarity
+        const formatSep = formatSuffix ? ' ' : '';
         const limitsStr = decl.limits ? `[${decl.limits.lowExpr}:${decl.limits.highExpr}]` : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
-        nameLabel.textContent = info.name + formatSuffix + limitsStr + (decl.marker || ':');
+        nameLabel.textContent = info.name + formatSep + formatSuffix + limitsStr + (decl.marker || ':');
         // Add tooltip explaining variable type
         if (isInRefSection) {
             nameLabel.title = 'Reference (from Constants/Functions)';
