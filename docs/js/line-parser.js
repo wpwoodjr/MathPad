@@ -452,7 +452,7 @@ class LineParser {
         }
 
         if (firstOperatorIdx === -1) {
-            // No operators found - check for adjacent numbers/identifiers (invalid syntax)
+            // No operators found - check for adjacent numbers/identifiers
             // or single identifier/number (valid simple expression)
             let lastValueIdx = -1;
             let hasAdjacentValues = false;
@@ -469,8 +469,14 @@ class LineParser {
             }
             if (lastValueIdx !== -1) {
                 if (hasAdjacentValues) {
-                    // Multiple adjacent values - include all of them as the expression
-                    // (the parser will fail with a proper error)
+                    // Multiple adjacent values - if last is a NUMBER preceded by an
+                    // IDENTIFIER, the identifier is label text (e.g., "Enter 3.25$->>")
+                    if (tokensBeforeMarker[lastValueIdx].type === TokenType.NUMBER &&
+                        lastValueIdx > 0 &&
+                        tokensBeforeMarker[lastValueIdx - 1].type === TokenType.IDENTIFIER) {
+                        return beforeMarker.substring(tokensBeforeMarker[lastValueIdx].col - 1).trim();
+                    }
+                    // Otherwise include all as expression (parser will error)
                     return beforeMarker.trim();
                 }
                 return beforeMarker.substring(tokensBeforeMarker[lastValueIdx].col - 1).trim();

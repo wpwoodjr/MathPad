@@ -1026,6 +1026,17 @@ function runAllTests() {
                 ['1.', 'number']
             ]
         },
+        // Label text before number expression output
+        {
+            name: 'label before number expression output (Enter 3.25 $->> $3.25)',
+            line: 'Enter 3.25 $->> $3.25',
+            assertions: [
+                ['Enter ', 'comment'],
+                ['3.25', 'number'],
+                ['$->>', 'punctuation'],
+                ['$3.25', 'number']
+            ]
+        },
         // Output with trailing dot number and label
         {
             name: 'output with trailing dot number (test a-> 1. output)',
