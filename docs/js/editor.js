@@ -941,10 +941,13 @@ class SimpleEditor {
         this.redoStack = [];
 
         ta.value = newValue;
+        const newCursor = from + text.length;
+        ta.selectionStart = newCursor;
+        ta.selectionEnd = newCursor;
         this.lastSavedState = {
             value: newValue,
-            cursorStart: ta.selectionStart,
-            cursorEnd: ta.selectionEnd
+            cursorStart: newCursor,
+            cursorEnd: newCursor
         };
 
         this.updateHighlighting();
@@ -963,8 +966,10 @@ class SimpleEditor {
         const end = ta.selectionEnd;
 
         // Find the full line range
+        // If selection end is at the start of a line, don't include that line
+        const effectiveEnd = (end > start && end > 0 && value[end - 1] === '\n') ? end - 1 : end;
         const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-        const lineEnd = value.indexOf('\n', end);
+        const lineEnd = value.indexOf('\n', effectiveEnd);
         const blockEnd = lineEnd === -1 ? value.length : lineEnd;
 
         const block = value.substring(lineStart, blockEnd);
@@ -992,11 +997,9 @@ class SimpleEditor {
         const delta = newBlock.length - block.length;
         const perLineDelta = allCommented ? -3 : 3;
 
-        // Adjust start position
-        let newStart = start + perLineDelta;
+        let newStart = (start === lineStart) ? lineStart : start + perLineDelta;
         if (newStart < lineStart) newStart = lineStart;
 
-        // Adjust end position
         let newEnd = end + delta;
         if (newEnd < lineStart) newEnd = lineStart;
 
@@ -1012,8 +1015,10 @@ class SimpleEditor {
         const value = ta.value;
 
         // Find the full line range
+        // If selection end is at the start of a line, don't include that line
+        const effectiveEnd = (end > start && end > 0 && value[end - 1] === '\n') ? end - 1 : end;
         const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-        const lineEnd = value.indexOf('\n', end);
+        const lineEnd = value.indexOf('\n', effectiveEnd);
         const blockEnd = lineEnd === -1 ? value.length : lineEnd;
 
         const block = value.substring(lineStart, blockEnd);
@@ -1023,8 +1028,9 @@ class SimpleEditor {
 
         this.replaceRange(lineStart, blockEnd, newBlock);
 
-        // Adjust selection: start moves by 2, end moves by 2 per line
-        ta.selectionStart = start + 2;
+        // Adjust selection
+        let newStart = (start === lineStart) ? lineStart : start + 2;
+        ta.selectionStart = newStart;
         ta.selectionEnd = end + (lines.length * 2);
     }
 
@@ -1036,8 +1042,10 @@ class SimpleEditor {
         const value = ta.value;
 
         // Find the full line range
+        // If selection end is at the start of a line, don't include that line
+        const effectiveEnd = (end > start && end > 0 && value[end - 1] === '\n') ? end - 1 : end;
         const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-        const lineEnd = value.indexOf('\n', end);
+        const lineEnd = value.indexOf('\n', effectiveEnd);
         const blockEnd = lineEnd === -1 ? value.length : lineEnd;
 
         const block = value.substring(lineStart, blockEnd);
@@ -1061,7 +1069,7 @@ class SimpleEditor {
         this.replaceRange(lineStart, blockEnd, newBlock);
 
         // Adjust selection
-        let newStart = start - firstLineRemoved;
+        let newStart = (start === lineStart) ? lineStart : start - firstLineRemoved;
         if (newStart < lineStart) newStart = lineStart;
         let newEnd = end - totalRemoved;
         if (newEnd < lineStart) newEnd = lineStart;
