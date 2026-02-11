@@ -1,3 +1,18 @@
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Constants"
+c: 3*10**8
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Constant expression evaluation"
+
+c->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0

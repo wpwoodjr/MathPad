@@ -530,7 +530,7 @@ class VariablesPanel {
         // Remove any remaining commas
         text = text.replace(/,/g, '');
 
-        const value = parseFloat(text);
+        const value = Number(text);
         return isNaN(value) ? null : value * multiplier;
     }
 

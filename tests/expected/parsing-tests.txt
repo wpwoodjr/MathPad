@@ -1,3 +1,21 @@
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 1: Variable \"c\" conflicts with a constant"; StatusIsError = 1
+"Constants"
+c: 3*10**8
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Constant expression evaluation"
+
+c-> 300,000,000
+
+"--- Reference Constants and Functions ---"
+c: 300000000
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0

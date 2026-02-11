@@ -847,13 +847,20 @@ function replaceInlineEvaluation(text, evalInfo, result) {
 function parseConstantsRecord(text) {
     const constants = new Map();
     const lines = text.split('\n');
+    const tempContext = new EvalContext();
 
     for (const line of lines) {
         const decl = parseVariableLine(line);
         if (decl && decl.valueText) {
-            const value = parseFloat(decl.valueText);
-            if (!isNaN(value)) {
-                constants.set(decl.name, { value, comment: decl.comment });
+            try {
+                const ast = parseExpression(decl.valueText);
+                const value = evaluate(ast, tempContext);
+                if (typeof value === 'number') {
+                    constants.set(decl.name, { value, comment: decl.comment });
+                    tempContext.setVariable(decl.name, value);
+                }
+            } catch (e) {
+                // Expression couldn't be evaluated (e.g., references unknown variable)
             }
         }
     }
