@@ -16,6 +16,7 @@ class EvalContext {
         this.degreesMode = false; // false = radians, true = degrees
         this.usedConstants = new Set();
         this.usedFunctions = new Set();
+        this.preSolveValues = null; // Map of variable name → value before solve started
     }
 
     setVariable(name, value) {
@@ -39,6 +40,10 @@ class EvalContext {
         if (this.constants.has(name) && !this.shadowedConstants.has(name)) {
             this.usedConstants.add(name); // Track constant usage
             return this.constants.get(name);
+        }
+        // Fall back to pre-solve value (captured before outputs were cleared)
+        if (this.preSolveValues && this.preSolveValues.has(name)) {
+            return this.preSolveValues.get(name);
         }
         return undefined;
     }
@@ -100,6 +105,7 @@ class EvalContext {
         ctx.degreesMode = this.degreesMode;
         ctx.usedConstants = this.usedConstants; // Share tracking with parent
         ctx.usedFunctions = this.usedFunctions;
+        ctx.preSolveValues = this.preSolveValues; // Share pre-solve values
         return ctx;
     }
 
@@ -453,6 +459,24 @@ function evaluate(node, context) {
                 default:
                     throw new EvalError(`Unknown unary operator: ${node.op}`);
             }
+        }
+
+        case 'POSTFIX_OP': {
+            if (node.op === '?') {
+                if (node.operand.type !== 'VARIABLE') {
+                    throw new EvalError('? operator can only be applied to variables');
+                }
+                try {
+                    evaluate(node.operand, context);
+                    return 1;
+                } catch (e) {
+                    if (e.message && e.message.includes('has no value')) {
+                        return 0;
+                    }
+                    throw e;
+                }
+            }
+            throw new EvalError(`Unknown postfix operator: ${node.op}`);
         }
 
         case 'BINARY_OP': {

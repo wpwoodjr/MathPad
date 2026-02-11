@@ -1,0 +1,66 @@
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Test 1: ? on variable with value returns 1"
+
+y: 5
+y?->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Test 2: ? on declared but empty variable returns 0"
+
+y:
+y?->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Test 3: if(y?; y; default) with empty y uses default"
+
+y:
+z: if(y?; y; 4)
+z->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Test 4: if(y?; y; default) with y=5 uses y"
+
+y: 5
+z: if(y?; y; 4)
+z->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Test 5: Pre-solve fallback - z keeps its previous output value"
+
+y:
+z: if(y?; y; z)
+z-> 35
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Test 6: Undeclared variable errors"
+
+z: if(y2?; y2; 4)
+z->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Test 7: Solve counter using pre-solve fallback"
+
+numSolves: numSolves + 1
+numSolves-> 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

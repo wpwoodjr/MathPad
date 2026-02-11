@@ -36,6 +36,7 @@ const NodeType = {
     VARIABLE: 'VARIABLE',
     BINARY_OP: 'BINARY_OP',
     UNARY_OP: 'UNARY_OP',
+    POSTFIX_OP: 'POSTFIX_OP',
     FUNCTION_CALL: 'FUNCTION_CALL',
     ASSIGNMENT: 'ASSIGNMENT',
     EQUATION: 'EQUATION'
@@ -756,7 +757,17 @@ class Parser {
             const operand = this.parseUnary();
             return { type: NodeType.UNARY_OP, op, operand };
         }
-        return this.parsePrimary();
+        return this.parsePostfix();
+    }
+
+    // Level 11: Postfix ?
+    parsePostfix() {
+        let expr = this.parsePrimary();
+        if (this.peek().type === TokenType.OPERATOR && this.peek().value === '?') {
+            this.advance();
+            expr = { type: NodeType.POSTFIX_OP, op: '?', operand: expr };
+        }
+        return expr;
     }
 
     // Primary: numbers, variables, function calls, parenthesized expressions

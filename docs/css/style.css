@@ -685,6 +685,42 @@ button {
     font-size: 13px;
 }
 
+.detail-group .number-with-buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.detail-group .number-with-buttons input[type="number"] {
+    flex: 1;
+    -moz-appearance: textfield;
+}
+
+.detail-group .number-with-buttons input[type="number"]::-webkit-inner-spin-button,
+.detail-group .number-with-buttons input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.detail-group .number-with-buttons button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.detail-group .number-with-buttons button:hover {
+    background-color: var(--bg-hover);
+}
+
 .detail-group select:focus,
 .detail-group input:focus {
     outline: none;

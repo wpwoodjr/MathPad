@@ -514,6 +514,13 @@ function solveRecord(text, context, record) {
     // Remove any existing references section before solving
     text = removeReferencesSection(text);
 
+    // Capture pre-solve values for output variables (before they are cleared)
+    // These are available via the ? operator and as fallback in getVariable()
+    context.preSolveValues = capturePreSolveValues(text);
+
+    // Clear output variables so they become unknowns for solving
+    text = clearVariables(text, 'output');
+
     // Clear expression outputs that recalculate (-> and ->>)
     text = clearExpressionOutputs(text);
 

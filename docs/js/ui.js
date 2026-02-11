@@ -524,8 +524,12 @@ function renderDetailsPanel() {
 
         <div class="detail-group">
             <label>Decimal Places</label>
-            <input type="number" id="detail-places" min="0" max="15" value="${record.places != null ? record.places : 2}"
-                   onchange="updateRecordDetail('places', parseInt(this.value))">
+            <div class="number-with-buttons">
+                <button onclick="var i=document.getElementById('detail-places'); i.stepDown(); i.dispatchEvent(new Event('change'))">−</button>
+                <input type="number" id="detail-places" min="0" max="15" value="${record.places != null ? record.places : 2}"
+                       onchange="updateRecordDetail('places', parseInt(this.value))">
+                <button onclick="var i=document.getElementById('detail-places'); i.stepUp(); i.dispatchEvent(new Event('change'))">+</button>
+            </div>
         </div>
 
         <div class="detail-group">
@@ -860,8 +864,12 @@ function renderSettingsModal() {
 
         <div class="detail-group">
             <label>Decimal Places</label>
-            <input type="number" min="0" max="15" value="${record.places != null ? record.places : 2}"
-                   onchange="updateRecordDetail('places', parseInt(this.value))">
+            <div class="number-with-buttons">
+                <button onclick="var i=this.parentElement.querySelector('input'); i.stepDown(); i.dispatchEvent(new Event('change'))">−</button>
+                <input type="number" min="0" max="15" value="${record.places != null ? record.places : 2}"
+                       onchange="updateRecordDetail('places', parseInt(this.value))">
+                <button onclick="var i=this.parentElement.querySelector('input'); i.stepUp(); i.dispatchEvent(new Event('change'))">+</button>
+            </div>
         </div>
 
         <div class="detail-group">
@@ -1151,13 +1159,10 @@ function handleSolve() {
         const textBeforeCursor = text.substring(0, cursorPos);
         const cursorLine = textBeforeCursor.split('\n').length - 1;
 
-        // Clear output variables first so they become unknowns
-        text = clearVariables(text, 'output');
-
         // Create evaluation context with constants and user functions
         const context = createEvalContext(UI.data.records, record, text);
 
-        // Solve the record
+        // Solve the record (captures pre-solve values and clears outputs internally)
         const result = solveRecord(text, context, record);
         text = result.text;
 

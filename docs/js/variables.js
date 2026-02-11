@@ -506,6 +506,28 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
  *            'output' clears output variables only (-> and ->>)
  *            'all' clears all variables
  */
+/**
+ * Capture pre-solve values for output variables (before they are cleared).
+ * These are available via the ? operator and as fallback in getVariable().
+ */
+function capturePreSolveValues(text) {
+    const declarations = parseAllVariables(text);
+    const preSolveValues = new Map();
+    for (const decl of declarations) {
+        if (decl.value !== null) {
+            const cb = decl.declaration.clearBehavior || (
+                decl.declaration.type === VarType.OUTPUT ? ClearBehavior.ON_SOLVE :
+                decl.declaration.type === VarType.INPUT ? ClearBehavior.ON_CLEAR :
+                ClearBehavior.NONE
+            );
+            if (cb === ClearBehavior.ON_SOLVE) {
+                preSolveValues.set(decl.name, decl.value);
+            }
+        }
+    }
+    return preSolveValues;
+}
+
 function clearVariables(text, clearType = 'input') {
     const lines = text.split('\n');
 
@@ -1018,7 +1040,7 @@ if (typeof module !== 'undefined' && module.exports) {
         VarType, ClearBehavior,
         parseVarNameAndFormat, parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
-        buildOutputLine, replaceValueOnLine, clearVariables, findEquations,
+        buildOutputLine, replaceValueOnLine, capturePreSolveValues, clearVariables, findEquations,
         findExpressionOutputs, findEquationsAndOutputs, clearExpressionOutputs,
         findInlineEvaluations, replaceInlineEvaluation,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext,

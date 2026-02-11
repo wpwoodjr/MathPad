@@ -69,6 +69,7 @@ function loadModules() {
     global.ClearBehavior = variables.ClearBehavior;
     global.parseVariableLine = variables.parseVariableLine;
     global.parseAllVariables = variables.parseAllVariables;
+    global.capturePreSolveValues = variables.capturePreSolveValues;
     global.clearVariables = variables.clearVariables;
     global.findEquations = variables.findEquations;
     global.createEvalContext = variables.createEvalContext;
@@ -159,10 +160,7 @@ function solveAllRecords(data) {
         // Create eval context with constants and functions
         const context = createEvalContext(records, record, record.text);
 
-        // Clear output variables before solving
-        record.text = clearVariables(record.text, 'output');
-
-        // Solve
+        // Solve (captures pre-solve values and clears outputs internally)
         const result = solveRecord(record.text, context, record);
         record.text = result.text;
 

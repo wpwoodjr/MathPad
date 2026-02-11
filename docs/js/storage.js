@@ -9,14 +9,59 @@ const STORAGE_VERSION = 2;
  * Default data structure
  */
 function createDefaultData() {
-    // Generate TVM record ID first so we can set it as the initial record
-    const tvmRecordId = generateId();
+    // Generate Retirement record ID first so we can set it as the initial record
+    const retirementRecordId = generateId();
 
     return {
         version: STORAGE_VERSION,
         records: [
             {
-                id: tvmRecordId,
+                id: retirementRecordId,
+                title: 'Example: Retirement Calculator',
+                text: `"Retirement Calculator"
+
+--Equations--
+"TVM calculation"
+pmt = -(-pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+"Monthly interest rate from annual"
+n = years * 12
+"Return net of fees"
+return - fees = mint * 12
+"Count number of solves"
+solveCount: solveCount + 1
+solveCount-> 0
+
+--Variables--
+"Update values, then re-calculate any variable by clicking its solve icon \u27F2"
+
+"Enter the present value of retirement account(s):"
+pv$: $1,000,000.00
+
+"Enter life expectancy:"
+years: 20
+
+"Enter the payment to receive each month:"
+pmt$: $5,291.64
+
+"Enter annual gross return:"
+return%: 8.96%
+
+"Enter management fees:"
+fees%: 0.65%
+
+"Future value of account(s)"
+fv$: if(pv?; pv*2; fv)
+fv$-> $2,000,000.00`,
+                category: 'Finance',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: false
+            },
+            {
+                id: generateId(),
                 title: 'Example: TVM',
                 text: `"Time Value of Money"
 
@@ -215,7 +260,7 @@ disc(a;b;c) = b**2 - 4*a*c`,
         ],
         categories: ['Unfiled', 'Finance', 'Math', 'Science', 'Reference', 'Personal'],
         settings: {
-            lastRecordId: tvmRecordId
+            lastRecordId: retirementRecordId
         }
     };
 }
