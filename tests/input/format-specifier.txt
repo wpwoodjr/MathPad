@@ -8,6 +8,8 @@ Money format on colon output
 3+4$: $7.00
 Full precision money format
 3+4$->>
+Full precision money with variable
+x$->>
 Variable with money format still works
 pmt$->
 pmt = 7

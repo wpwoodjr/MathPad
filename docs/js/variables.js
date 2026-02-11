@@ -463,7 +463,14 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
     if (varFormat === 'money') {
         const absValue = Math.abs(value);
         if (fullPrecision) {
-            const formatted = formatNumber(absValue, places, stripZeros, numberFormat, 10, groupDigits, null);
+            let formatted = formatNumber(absValue, places, stripZeros, numberFormat, 10, groupDigits, null);
+            // Ensure at least 2 decimal places for money
+            const dot = formatted.indexOf('.');
+            if (dot === -1) {
+                formatted += '.00';
+            } else if (formatted.length - dot - 1 < 2) {
+                formatted += '0'.repeat(2 - (formatted.length - dot - 1));
+            }
             return value < 0 ? '-$' + formatted : '$' + formatted;
         } else {
             // Use 2 decimal places for money by default

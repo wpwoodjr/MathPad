@@ -1,7 +1,7 @@
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 28: Unexpected token after expression: FORMATTER '%'"; StatusIsError = 1
+Status = "Solved with errors: Line 30: Unexpected token after expression: FORMATTER '%'"; StatusIsError = 1
 "Money format on expression out..."
 Money format on expression output
 3+4$-> $7.00
@@ -10,7 +10,9 @@ Expression with percent format
 Money format on colon output
 3+4$: $7.00
 Full precision money format
-3+4$->> $7
+3+4$->> $7.00
+Full precision money with variable
+x$->> $4.00
 Variable with money format still works
 pmt$-> $7.00
 pmt = 7
