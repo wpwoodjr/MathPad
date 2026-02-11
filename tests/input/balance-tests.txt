@@ -119,9 +119,9 @@ places: 13
 isClose(a; b; places)->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 12; StripZeros = 1
+Places = 14; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"Test 9: Polynomial f(x)=0 at places=12 (noise just within abs cap) - balances"
+"Test 9: Polynomial f(x)=0 at places=14 (noise just within tolerance) - balances"
 
 c5: 1
 c4: -2
@@ -170,9 +170,9 @@ n: 360 "number of payments (30 years)"
 mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 13; StripZeros = 1
+Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"Test 9b: Polynomial f(x)=0 at places=13 (noise exceeds abs cap) - doesn't balance"
+"Test 9b: Polynomial f(x)=0 at places=15 (noise exceeds tolerance) - doesn't balance"
 
 c5: 1
 c4: -2

@@ -42,7 +42,7 @@ rate%-> 606%
 Category = "Finance"; Secret = 0
 Places = 6; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 14: Equation doesn't balance: yint = mint * 12 (0.0605 ≠ 0.060500167939065756)"; StatusIsError = 1
+Status = "Solved with errors: Line 14: Equation doesn't balance: yint = mint * 12 (0.0605 ≠ 0.060500167939317714)"; StatusIsError = 1
 "Solve with 6 decimal places - should fail balance check"
 
 "Payment calculation"
@@ -80,7 +80,7 @@ yint = mint * 12
 Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 14: Equation doesn't balance: mint = yint / 12 (0.003655927952362684 ≠ 0.005104166666666667)"; StatusIsError = 1
+Status = "Solved with errors: Line 14: Equation doesn't balance: mint = yint / 12 (0.00365592795236271 ≠ 0.005104166666666667)"; StatusIsError = 1
 "TVM with wrong pmt - should fail balance check"
 
 "Payment calculation"
@@ -99,7 +99,7 @@ mint = yint / 12
 Category = "Finance"; Secret = 0
 Places = 8; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 14: Equation doesn't balance: mint = yint / 12 (0.005104166726622282 ≠ 0.005104166666666667)"; StatusIsError = 1
+Status = "Solved with errors: Line 14: Equation doesn't balance: mint = yint / 12 (0.0051041667266223355 ≠ 0.005104166666666667)"; StatusIsError = 1
 "High precision (8 places) - exposes rounding error in $ values"
 
 "Payment calculation"
@@ -114,4 +114,26 @@ n: 360 "number of payments (30 years)"
 
 "Monthly interest rate from annual"
 mint = yint / 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 3 equations"; StatusIsError = 0
+"Solve for pv with return and fv"
+
+"TVM calculation"
+pmt = -(-pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Monthly interest rate from annual"
+n = years * 12
+
+"Return net of fees"
+return = mint * 12
+
+--Variables--
+pv$: $1,000,057.34
+years: 20
+pmt$: $19,990.49
+return%: 24.19%
+fv$: $2,000,112.80
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

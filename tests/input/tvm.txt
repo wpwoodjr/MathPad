@@ -106,3 +106,26 @@ n: 360 "number of payments (30 years)"
 "Monthly interest rate from annual"
 mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Solve for pv with return and fv"
+
+"TVM calculation"
+pmt = -(-pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Monthly interest rate from annual"
+n = years * 12
+
+"Return net of fees"
+return = mint * 12
+
+--Variables--
+pv$:
+years: 20
+pmt$: $19,990.49
+return%: 24.19%
+fv$: $2,000,112.80
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

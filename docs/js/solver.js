@@ -51,17 +51,17 @@ function brent(f, a, b, tol = 1e-12, maxIter = 100) {
     let mflag = true;
 
     for (let iter = 0; iter < maxIter; iter++) {
+        // Relative bracket tolerance: scales with magnitude of root
+        const bracketTol = 2 * EPS * Math.abs(b) + tol;
+
         // Check for convergence - must actually be near a root, not just bracket collapse
         if (Math.abs(fb) < tol) {
             return b;
         }
-        // If bracket has collapsed, check if we're close enough to a root
-        // Use a looser tolerance (1e-6) since bracket collapse may happen before strict convergence
-        if (Math.abs(b - a) < tol) {
-            if (Math.abs(fb) < 1e-6) {
-                return b;
-            }
-            throw new SolverError('Bracket collapsed without finding root');
+        // If bracket has collapsed to machine precision, return best estimate
+        // The caller's balance check will determine if the result is acceptable
+        if (Math.abs(b - a) < bracketTol) {
+            return b;
         }
 
         let s;
@@ -76,12 +76,13 @@ function brent(f, a, b, tol = 1e-12, maxIter = 100) {
             s = b - fb * (b - a) / (fb - fa);
         }
 
-        // Conditions for accepting s
-        const cond1 = (s < (3 * a + b) / 4 || s > b);
+        // Conditions for accepting s (reject and use bisection if any are true)
+        // cond1: s is outside the interval between (3a+b)/4 and b
+        const cond1 = (s - (3 * a + b) / 4) * (s - b) > 0;
         const cond2 = mflag && Math.abs(s - b) >= Math.abs(b - c) / 2;
         const cond3 = !mflag && Math.abs(s - b) >= Math.abs(c - d) / 2;
-        const cond4 = mflag && Math.abs(b - c) < tol;
-        const cond5 = !mflag && Math.abs(c - d) < tol;
+        const cond4 = mflag && Math.abs(b - c) < bracketTol;
+        const cond5 = !mflag && Math.abs(c - d) < bracketTol;
 
         if (cond1 || cond2 || cond3 || cond4 || cond5) {
             // Bisection method
