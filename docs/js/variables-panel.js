@@ -260,9 +260,9 @@ class VariablesPanel {
         // Set data-type for CSS styling based on clear behavior
         if (isInRefSection) {
             row.dataset.type = 'reference';
-        } else if (clearBehavior === ClearBehavior.ON_CLEAR || decl.type === VarType.INPUT) {
+        } else if (decl.type === VarType.INPUT) {
             row.dataset.type = 'input';
-        } else if (clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT) {
+        } else if (decl.type === VarType.OUTPUT) {
             row.dataset.type = 'output';
         } else {
             row.dataset.type = 'standard';
@@ -279,17 +279,19 @@ class VariablesPanel {
         // Add tooltip explaining variable type
         if (isInRefSection) {
             nameLabel.title = 'Reference (from Constants/Functions)';
-        } else if (clearBehavior === ClearBehavior.ON_CLEAR || decl.type === VarType.INPUT) {
+        } else if (decl.type === VarType.INPUT) {
             nameLabel.title = 'Input variable (cleared on Clear)';
-        } else if (clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT) {
-            nameLabel.title = 'Output variable (cleared on Solve)';
+        } else if (decl.type === VarType.OUTPUT) {
+            nameLabel.title = clearBehavior === ClearBehavior.ON_SOLVE_ONLY
+                ? 'Persistent output variable (not cleared by Clear)'
+                : 'Output variable (cleared on Solve)';
         }
 
         // Value input or display
         // Output types (-> and ->>) are read-only
         // References section values are also read-only (auto-generated)
         // Expression outputs are always read-only
-        const isOutput = clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
+        const isOutput = decl.type === VarType.OUTPUT;
         const isExpressionOutput = info.isExpressionOutput || false;
         const isEditable = !isOutput && !isInRefSection && !isExpressionOutput;
         let valueElement;

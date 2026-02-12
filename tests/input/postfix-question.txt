@@ -64,3 +64,12 @@ Status = "Input and output variables cleared"; StatusIsError = 0
 numSolves: numSolves + 1
 numSolves-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Input and output variables cleared"; StatusIsError = 0
+"Count number of solves"
+
+solveCount: if(solveCount?; solveCount + 1; 1)
+solveCount=> Use => to persist across clears
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

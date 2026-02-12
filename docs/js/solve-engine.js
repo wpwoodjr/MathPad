@@ -390,7 +390,7 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                 } else {
                     // Output declaration with no value is an error
                     const decl = info.declaration;
-                    const isOutput = decl.clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
+                    const isOutput = decl.type === VarType.OUTPUT;
                     if (isOutput) {
                         errors.push(`Line ${info.lineIndex + 1}: Variable '${info.name}' has no value to output`);
                     }
@@ -518,11 +518,9 @@ function solveRecord(text, context, record) {
     // These are available via the ? operator and as fallback in getVariable()
     context.preSolveValues = capturePreSolveValues(text);
 
-    // Clear output variables so they become unknowns for solving
-    text = clearVariables(text, 'output');
-
-    // Clear expression outputs that recalculate (-> and ->>)
-    text = clearExpressionOutputs(text);
+    // Clear output variables and expression outputs so they become unknowns for solving
+    // Uses 'solve' mode to also clear persistent outputs (=> =>>)
+    text = clearVariables(text, 'solve');
 
     // Clear usage tracking from any previous solve
     context.clearUsageTracking();

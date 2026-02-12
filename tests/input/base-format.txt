@@ -54,4 +54,16 @@ y->>
 a: 77
 b = \a#16\
 b->
+
+"persistent output =>"
+p: 42
+p=> 99
+p#16=> FF#16
+p#16=>>
+
+"persistent full precision =>>"
+q: 0o77
+q=>>
+q#8=>>
+q#16=>>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

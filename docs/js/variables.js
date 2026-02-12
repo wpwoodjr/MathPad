@@ -7,9 +7,10 @@
  * Determines when a variable's value is cleared
  */
 const ClearBehavior = {
-    NONE: 'none',       // : or :: (persistent, never cleared)
-    ON_CLEAR: 'onClear', // <- (cleared by Clear button)
-    ON_SOLVE: 'onSolve'  // -> or ->> (cleared by Clear button AND before solving)
+    NONE: 'none',            // : or :: (persistent, never cleared)
+    ON_CLEAR: 'onClear',     // <- (cleared by Clear button)
+    ON_SOLVE: 'onSolve',     // -> or ->> (cleared by Clear button AND before solving)
+    ON_SOLVE_ONLY: 'onSolveOnly' // => or =>> (cleared before solving, but NOT by Clear button)
 };
 
 /**
@@ -315,7 +316,7 @@ function discoverVariables(text, context, record) {
         const decl = parseVariableLine(line);
         if (decl) {
             const name = decl.name;
-            const isOutput = decl.clearBehavior === ClearBehavior.ON_SOLVE || decl.type === VarType.OUTPUT;
+            const isOutput = decl.type === VarType.OUTPUT;
 
             // Check if shadowing a constant
             if (context.constants.has(name)) {
@@ -520,7 +521,7 @@ function capturePreSolveValues(text) {
                 decl.declaration.type === VarType.INPUT ? ClearBehavior.ON_CLEAR :
                 ClearBehavior.NONE
             );
-            if (cb === ClearBehavior.ON_SOLVE) {
+            if (cb === ClearBehavior.ON_SOLVE || cb === ClearBehavior.ON_SOLVE_ONLY) {
                 preSolveValues.set(decl.name, decl.value);
             }
         }
@@ -545,7 +546,8 @@ function clearVariables(text, clearType = 'input') {
         const shouldClear =
             clearType === 'all' ||
             (clearType === 'input' && (clearBehavior === ClearBehavior.ON_CLEAR || clearBehavior === ClearBehavior.ON_SOLVE)) ||
-            (clearType === 'output' && clearBehavior === ClearBehavior.ON_SOLVE);
+            (clearType === 'output' && clearBehavior === ClearBehavior.ON_SOLVE) ||
+            (clearType === 'solve' && (clearBehavior === ClearBehavior.ON_SOLVE || clearBehavior === ClearBehavior.ON_SOLVE_ONLY));
 
         if (shouldClear && decl.valueText) {
             const commentInfo = { comment: decl.comment, commentUnquoted: decl.commentUnquoted };
@@ -558,9 +560,9 @@ function clearVariables(text, clearType = 'input') {
 
     let result = lines.join('\n');
 
-    // Also clear expression outputs (expr-> and expr->>) when clearing output or input types
-    if (clearType === 'output' || clearType === 'input' || clearType === 'all') {
-        result = clearExpressionOutputs(result);
+    // Also clear expression outputs when clearing output or input types
+    if (clearType === 'solve' || clearType === 'output' || clearType === 'input' || clearType === 'all') {
+        result = clearExpressionOutputs(result, clearType);
     }
 
     return result;
@@ -688,14 +690,17 @@ function findExpressionOutputs(text) {
 }
 
 /**
- * Clear expression output values for recalculating outputs (-> and ->>)
+ * Clear expression output values for recalculating outputs
+ * @param {string} clearType - 'solve' clears all recalculating outputs; otherwise skips persistent (=> =>>)
  */
-function clearExpressionOutputs(text) {
+function clearExpressionOutputs(text, clearType) {
     const lines = text.split('\n');
     const outputs = findExpressionOutputs(text);
 
     for (const output of outputs) {
-        if (output.recalculates && output.existingValue) {
+        // Skip persistent outputs (=> =>>) unless solving
+        const isPersistent = output.marker === '=>' || output.marker === '=>>';
+        if (output.recalculates && output.existingValue && (clearType === 'solve' || !isPersistent)) {
             // Clear the value portion for -> and ->> outputs
             const line = lines[output.startLine];
 
@@ -908,6 +913,9 @@ function parseFunctionsRecord(text) {
             const name = match[1].toLowerCase();
             const paramsText = match[2].trim();
             const bodyText = match[3].trim();
+
+            // Skip if bodyText starts with > (the = was part of => or =>> marker)
+            if (bodyText.startsWith('>')) return;
 
             // Don't redefine an existing function - that's an equation, not a definition
             // e.g., if f(x) = x**2 exists, then f(z) = 0 is an equation to solve

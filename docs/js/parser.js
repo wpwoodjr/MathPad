@@ -25,6 +25,8 @@ const TokenType = {
     ARROW_LEFT: 'ARROW_LEFT',       // <-
     ARROW_RIGHT: 'ARROW_RIGHT',     // ->
     ARROW_FULL: 'ARROW_FULL',       // ->>
+    ARROW_PERSIST: 'ARROW_PERSIST',           // =>
+    ARROW_PERSIST_FULL: 'ARROW_PERSIST_FULL', // =>>
     DOUBLE_COLON: 'DOUBLE_COLON',   // ::
     FORMATTER: 'FORMATTER',          // $ % # (format suffixes)
     UNEXPECTED_CHAR: 'UNEXPECTED_CHAR' // unrecognized characters in input
@@ -310,7 +312,8 @@ class Tokenizer {
                 const nextCh2 = this.peek(offset + 1);
                 const isMarker = nextCh === ':' || nextCh === '[' ||
                                  (nextCh === '<' && nextCh2 === '-') ||
-                                 (nextCh === '-' && nextCh2 === '>');
+                                 (nextCh === '-' && nextCh2 === '>') ||
+                                 (nextCh === '=' && nextCh2 === '>');
                 isBaseLiteral = !isMarker;
             }
 
@@ -388,6 +391,12 @@ class Tokenizer {
         const ch3 = this.peek(2);
 
         // Check three-character operators FIRST
+        if (ch === '=' && ch2 === '>' && ch3 === '>') {
+            this.advance();
+            this.advance();
+            this.advance();
+            return this.makeToken(TokenType.ARROW_PERSIST_FULL, '=>>', startLine, startCol);
+        }
         if (ch === '-' && ch2 === '>' && ch3 === '>') {
             this.advance();
             this.advance();
@@ -408,6 +417,11 @@ class Tokenizer {
             this.advance();
             this.advance();
             return this.makeToken(TokenType.ARROW_RIGHT, '->', startLine, startCol);
+        }
+        if (twoChar === '=>') {
+            this.advance();
+            this.advance();
+            return this.makeToken(TokenType.ARROW_PERSIST, '=>', startLine, startCol);
         }
         // Note: :: is handled in the main tokenize() loop for COLON
 
@@ -551,6 +565,15 @@ class Tokenizer {
                     if (next === '-' && this.peek(2) === '>') {
                         const type = this.peek(3) === '>' ? TokenType.ARROW_FULL : TokenType.ARROW_RIGHT;
                         const marker = type === TokenType.ARROW_FULL ? '->>' : '->';
+                        for (let i = 0; i <= marker.length; i++) this.advance();
+                        const token = this.makeToken(type, ch + marker, startLine, startCol);
+                        token.format = format;
+                        this.tokens.push(token);
+                        continue;
+                    }
+                    if (next === '=' && this.peek(2) === '>') {
+                        const type = this.peek(3) === '>' ? TokenType.ARROW_PERSIST_FULL : TokenType.ARROW_PERSIST;
+                        const marker = type === TokenType.ARROW_PERSIST_FULL ? '=>>' : '=>';
                         for (let i = 0; i <= marker.length; i++) this.advance();
                         const token = this.makeToken(type, ch + marker, startLine, startCol);
                         token.format = format;

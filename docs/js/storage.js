@@ -23,35 +23,39 @@ function createDefaultData() {
 --Equations--
 "TVM calculation"
 pmt = -(-pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
-"Monthly interest rate from annual"
+"Number of periods"
 n = years * 12
-"Return net of fees"
+"Annual return net of fees"
 return - fees = mint * 12
-"Count number of solves"
+"Future value of account(s)"
+fv = pv * (1 + gain)**years
+"Number of solves"
 solveCount: solveCount + 1
-solveCount-> 0
+solveCount=> 0 // Use => to persist across clears
 
 --Variables--
-"Update values, then re-calculate any variable by clicking its solve icon \u27F2"
+"Update value(s), then re-calculate any variable by clicking its solve icon \u27F2"
 
-"Enter the present value of retirement account(s):"
-pv$: $1,000,000.00
+"Enter present value of retirement account(s):"
+pv$: $1,000,000
 
 "Enter life expectancy:"
 years: 20
 
 "Enter the payment to receive each month:"
-pmt$: $5,291.64
+pmt$: $5,000
 
-"Enter annual gross return:"
-return%: 8.96%
+"Enter net annual account(s) appreciation:"
+gain%: 2%
 
 "Enter management fees:"
 fees%: 0.65%
 
+"Enter gross annual return:"
+return%: 7.76%
+
 "Future value of account(s)"
-fv$: if(pv?; pv*2; fv)
-fv$-> $2,000,000.00`,
+fv$-> $1,485,947.40`,
                 category: 'Finance',
                 places: 2,
                 stripZeros: true,

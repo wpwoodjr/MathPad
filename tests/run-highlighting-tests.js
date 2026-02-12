@@ -1229,6 +1229,31 @@ function runAllTests() {
                 ['4z#16', 'error'],
                 ['->', 'punctuation']
             ]
+        },
+        // Persistent output marker (=>)
+        {
+            name: 'persistent output with trailing comment (solveCount=> 1 this will persist across clears)',
+            line: 'solveCount=> 1 this will persist across clears',
+            assertions: [
+                ['solveCount', 'variable-def'],
+                ['=>', 'punctuation'],
+                ['1', 'number'],
+                ['this will persist across clears', 'comment']
+            ]
+        },
+        {
+            name: "persistent full precision expression output (Yes sqrt(x)=>> 4 doesn't it?)",
+            line: "Yes sqrt(x)=>> 4 doesn't it?",
+            assertions: [
+                ['Yes ', 'comment'],
+                ['sqrt', 'builtin'],
+                ['(', 'paren'],
+                ['x', 'variable'],
+                [')', 'paren'],
+                ['=>>', 'punctuation'],
+                ['4', 'number'],
+                ["doesn't it?", 'comment']
+            ]
         }
     ];
 

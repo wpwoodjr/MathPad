@@ -29,7 +29,9 @@ const LineType = {
  */
 const MARKER_PRECEDENCE = {
     '->>': 3,
+    '=>>': 3,
     '->': 2,
+    '=>': 2,
     '<-': 2,
     '::': 1,
     ':': 0
@@ -43,7 +45,9 @@ function isMarkerToken(token) {
            token.type === TokenType.DOUBLE_COLON ||
            token.type === TokenType.ARROW_LEFT ||
            token.type === TokenType.ARROW_RIGHT ||
-           token.type === TokenType.ARROW_FULL;
+           token.type === TokenType.ARROW_FULL ||
+           token.type === TokenType.ARROW_PERSIST ||
+           token.type === TokenType.ARROW_PERSIST_FULL;
 }
 
 /**
@@ -56,6 +60,8 @@ function getMarkerString(token) {
         case TokenType.ARROW_LEFT: return '<-';
         case TokenType.ARROW_RIGHT: return '->';
         case TokenType.ARROW_FULL: return '->>';
+        case TokenType.ARROW_PERSIST: return '=>';
+        case TokenType.ARROW_PERSIST_FULL: return '=>>';
         default: return null;
     }
 }
@@ -397,8 +403,9 @@ class LineParser {
             return { valueText: '', unitComment: null };
         }
 
-        // For output markers (-> and ->>), trailing non-numeric text is unit comment
-        if (markerToken.type === TokenType.ARROW_RIGHT || markerToken.type === TokenType.ARROW_FULL) {
+        // For output markers (-> ->> => =>>), trailing non-numeric text is unit comment
+        if (markerToken.type === TokenType.ARROW_RIGHT || markerToken.type === TokenType.ARROW_FULL ||
+            markerToken.type === TokenType.ARROW_PERSIST || markerToken.type === TokenType.ARROW_PERSIST_FULL) {
             return splitValueAndComment(afterMarker);
         }
 
@@ -599,6 +606,24 @@ class LineParser {
                         commentUnquoted = true;
                     }
                     break;
+                case TokenType.ARROW_PERSIST:
+                    type = VarType.OUTPUT;
+                    clearBehavior = ClearBehavior.ON_SOLVE_ONLY;
+                    fullPrecision = false;
+                    if (!finalComment && unitComment) {
+                        finalComment = unitComment;
+                        commentUnquoted = true;
+                    }
+                    break;
+                case TokenType.ARROW_PERSIST_FULL:
+                    type = VarType.OUTPUT;
+                    clearBehavior = ClearBehavior.ON_SOLVE_ONLY;
+                    fullPrecision = true;
+                    if (!finalComment && unitComment) {
+                        finalComment = unitComment;
+                        commentUnquoted = true;
+                    }
+                    break;
                 case TokenType.DOUBLE_COLON:
                     type = VarType.STANDARD;
                     clearBehavior = ClearBehavior.NONE;
@@ -632,9 +657,12 @@ class LineParser {
             const { valueText, unitComment } = this.extractValueAndComment(markerIndex);
 
             const fullPrecision = markerToken.type === TokenType.DOUBLE_COLON ||
-                                  markerToken.type === TokenType.ARROW_FULL;
+                                  markerToken.type === TokenType.ARROW_FULL ||
+                                  markerToken.type === TokenType.ARROW_PERSIST_FULL;
             const recalculates = markerToken.type === TokenType.ARROW_RIGHT ||
-                                 markerToken.type === TokenType.ARROW_FULL;
+                                 markerToken.type === TokenType.ARROW_FULL ||
+                                 markerToken.type === TokenType.ARROW_PERSIST ||
+                                 markerToken.type === TokenType.ARROW_PERSIST_FULL;
 
             let finalComment = this.trailingComment;
             let commentUnquoted = false;

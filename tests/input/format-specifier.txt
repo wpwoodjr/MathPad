@@ -30,4 +30,18 @@ x: 4
 3+4%+4%->
 3+4%+4%%->
 3+x%+4->
+Persistent money format
+3+4$=>
+3+4$=>>
+Persistent percent format
+(0.075)%=>
+(0.075)%=>>
+Persistent variable output with money
+pmt2 = 7
+pmt2$=>
+Persistent percent literal and format
+10%=>
+10%%=>
+10%=>>
+10%%=>>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

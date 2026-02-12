@@ -64,3 +64,12 @@ Status = "Nothing to solve"; StatusIsError = 0
 numSolves: numSolves + 1
 numSolves-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Count number of solves"
+
+solveCount: if(solveCount?; solveCount + 1; 1)
+solveCount=> 1 Use => to persist across clears
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

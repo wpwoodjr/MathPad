@@ -259,7 +259,7 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
         if (!inReferenceSection && result && result.kind === 'declaration') {
             const decl = result;
             const isDefMarker = decl.marker === ':' || decl.marker === '<-' || decl.marker === '::';
-            const isOutMarker = decl.marker === '->' || decl.marker === '->>';
+            const isOutMarker = decl.marker === '->' || decl.marker === '->>' || decl.marker === '=>' || decl.marker === '=>>';
             if (isDefMarker || (shadowConstants && isOutMarker && referenceConstants.has(decl.name))) {
                 if (!localVariables.has(decl.name)) {
                     localVariables.set(decl.name, lineStart);
@@ -474,7 +474,8 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
     }
     const nextChars = text.slice(checkPos, checkPos + 3);
     if (nextChars.startsWith(':') || nextChars.startsWith('<-') ||
-        nextChars.startsWith('->') || nextChars.startsWith('?:') ||
+        nextChars.startsWith('->') || nextChars.startsWith('=>') ||
+        nextChars.startsWith('?:') ||
         nextChars.startsWith('#') || nextChars.startsWith('[')) {
         // Check if this is part of an expression (has operator before it)
         // If so, it's not a variable-def, just a variable in an expression output
