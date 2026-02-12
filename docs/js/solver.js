@@ -233,8 +233,14 @@ function solveEquation(f, limits = null, guess = 1) {
         if (values[i].fx * values[i + 1].fx < 0) {
             try {
                 const root = brent(f, values[i].x, values[i + 1].x);
+                // Validate root: f(root) must be smaller than bracket endpoints,
+                // not a singularity where the bracket collapsed around a pole
                 if (isFinite(root)) {
-                    roots.push(root);
+                    const fRoot = safeEval(f, root);
+                    const maxEndpoint = Math.max(Math.abs(values[i].fx), Math.abs(values[i + 1].fx));
+                    if (isFinite(fRoot) && Math.abs(fRoot) <= maxEndpoint) {
+                        roots.push(root);
+                    }
                 }
             } catch (e) {
                 // This bracket didn't work, try next

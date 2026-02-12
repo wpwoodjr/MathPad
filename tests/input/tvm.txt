@@ -129,3 +129,26 @@ return%: 24.19%
 fv$: $2,000,112.80
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+"Solve for years - TVM with singularity at n=0"
+
+"TVM calculation"
+pmt = -(-pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+
+"Monthly interest rate from annual"
+n = years * 12
+
+"Return net of fees"
+return - fees = mint * 12
+
+--Variables--
+pv$: $4,204,527.03
+years:
+pmt$: $20,000
+return%: 2%
+fees%: 0.65%
+fv$: 0
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
