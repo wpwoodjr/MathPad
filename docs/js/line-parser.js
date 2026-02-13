@@ -565,65 +565,17 @@ class LineParser {
             // Extract value and unit comment
             const { valueText, unitComment } = this.extractValueAndComment(markerIndex);
 
-            // Determine type based on marker
-            let type, clearBehavior, fullPrecision;
+            // Read type, precision, and clear behavior directly from marker token
+            const type = markerToken.varType;
+            const clearBehavior = markerToken.clearBehavior;
+            const fullPrecision = markerToken.fullPrecision;
+
             let finalComment = this.trailingComment;
             let commentUnquoted = false;
-
-            switch (markerToken.type) {
-                case TokenType.ARROW_LEFT:
-                    type = VarType.INPUT;
-                    clearBehavior = ClearBehavior.ON_CLEAR;
-                    fullPrecision = false;
-                    break;
-                case TokenType.ARROW_RIGHT:
-                    type = VarType.OUTPUT;
-                    clearBehavior = ClearBehavior.ON_SOLVE;
-                    fullPrecision = false;
-                    // Use unit comment if no quoted comment
-                    if (!finalComment && unitComment) {
-                        finalComment = unitComment;
-                        commentUnquoted = true;
-                    }
-                    break;
-                case TokenType.ARROW_FULL:
-                    type = VarType.OUTPUT;
-                    clearBehavior = ClearBehavior.ON_SOLVE;
-                    fullPrecision = true;
-                    if (!finalComment && unitComment) {
-                        finalComment = unitComment;
-                        commentUnquoted = true;
-                    }
-                    break;
-                case TokenType.ARROW_PERSIST:
-                    type = VarType.OUTPUT;
-                    clearBehavior = ClearBehavior.ON_SOLVE_ONLY;
-                    fullPrecision = false;
-                    if (!finalComment && unitComment) {
-                        finalComment = unitComment;
-                        commentUnquoted = true;
-                    }
-                    break;
-                case TokenType.ARROW_PERSIST_FULL:
-                    type = VarType.OUTPUT;
-                    clearBehavior = ClearBehavior.ON_SOLVE_ONLY;
-                    fullPrecision = true;
-                    if (!finalComment && unitComment) {
-                        finalComment = unitComment;
-                        commentUnquoted = true;
-                    }
-                    break;
-                case TokenType.DOUBLE_COLON:
-                    type = VarType.STANDARD;
-                    clearBehavior = ClearBehavior.NONE;
-                    fullPrecision = true;
-                    break;
-                case TokenType.COLON:
-                default:
-                    type = VarType.STANDARD;
-                    clearBehavior = ClearBehavior.NONE;
-                    fullPrecision = false;
-                    break;
+            // Output markers use unit comment if no quoted comment
+            if (type === 'output' && !finalComment && unitComment) {
+                finalComment = unitComment;
+                commentUnquoted = true;
             }
 
             return {
@@ -645,13 +597,8 @@ class LineParser {
             const expression = this.extractExpressionText(markerIndex);
             const { valueText, unitComment } = this.extractValueAndComment(markerIndex);
 
-            const fullPrecision = markerToken.type === TokenType.DOUBLE_COLON ||
-                                  markerToken.type === TokenType.ARROW_FULL ||
-                                  markerToken.type === TokenType.ARROW_PERSIST_FULL;
-            const recalculates = markerToken.type === TokenType.ARROW_RIGHT ||
-                                 markerToken.type === TokenType.ARROW_FULL ||
-                                 markerToken.type === TokenType.ARROW_PERSIST ||
-                                 markerToken.type === TokenType.ARROW_PERSIST_FULL;
+            const fullPrecision = markerToken.fullPrecision;
+            const recalculates = markerToken.varType === 'output';
 
             let finalComment = this.trailingComment;
             let commentUnquoted = false;

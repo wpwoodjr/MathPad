@@ -124,11 +124,50 @@ class Tokenizer {
 
     makeToken(type, value, startLine, startCol) {
         const token = { type, value, line: startLine, col: startCol };
-        if (type === TokenType.COLON || type === TokenType.DOUBLE_COLON ||
-            type === TokenType.ARROW_LEFT || type === TokenType.ARROW_RIGHT ||
-            type === TokenType.ARROW_FULL || type === TokenType.ARROW_PERSIST ||
-            type === TokenType.ARROW_PERSIST_FULL) {
-            token.isMarker = true;
+        // Marker metadata — string values match VarType/ClearBehavior enums in variables.js
+        switch (type) {
+            case TokenType.COLON:
+                token.isMarker = true;
+                token.varType = 'standard';
+                token.clearBehavior = 'none';
+                token.fullPrecision = false;
+                break;
+            case TokenType.DOUBLE_COLON:
+                token.isMarker = true;
+                token.varType = 'standard';
+                token.clearBehavior = 'none';
+                token.fullPrecision = true;
+                break;
+            case TokenType.ARROW_LEFT:
+                token.isMarker = true;
+                token.varType = 'input';
+                token.clearBehavior = 'onClear';
+                token.fullPrecision = false;
+                break;
+            case TokenType.ARROW_RIGHT:
+                token.isMarker = true;
+                token.varType = 'output';
+                token.clearBehavior = 'onSolve';
+                token.fullPrecision = false;
+                break;
+            case TokenType.ARROW_FULL:
+                token.isMarker = true;
+                token.varType = 'output';
+                token.clearBehavior = 'onSolve';
+                token.fullPrecision = true;
+                break;
+            case TokenType.ARROW_PERSIST:
+                token.isMarker = true;
+                token.varType = 'output';
+                token.clearBehavior = 'onSolveOnly';
+                token.fullPrecision = false;
+                break;
+            case TokenType.ARROW_PERSIST_FULL:
+                token.isMarker = true;
+                token.varType = 'output';
+                token.clearBehavior = 'onSolveOnly';
+                token.fullPrecision = true;
+                break;
         }
         return token;
     }
