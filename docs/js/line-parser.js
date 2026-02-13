@@ -282,10 +282,9 @@ class LineParser {
             const baseSuffix = varMatch[2];  // #digits
             const limitsText = varMatch[3];
 
-            let base = 10;
-            if (baseSuffix) {
-                base = parseInt(baseSuffix.substring(1));
-            }
+            // Base from #digits suffix in text, or from merged marker token (e.g., #16->)
+            const markerToken = this.tokens[markerIndex];
+            let base = markerToken.base || (baseSuffix ? parseInt(baseSuffix.substring(1)) : 10);
 
             let limits = null;
             if (limitsText) {
@@ -669,6 +668,7 @@ class LineParser {
                 fullPrecision,
                 recalculates,
                 format: markerFormat,
+                base: markerToken.base || 10,
                 comment: finalComment,
                 commentUnquoted
             };

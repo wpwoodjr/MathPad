@@ -68,7 +68,6 @@ function tokenizeMathPad(text, options = {}) {
     let lastTokenWasVarDef = false;
     let lastTokenWasVar = false;
     let lastTokenWasBuiltin = false;
-    let lastTokenWasBaseFormatter = false;  // Track # formatter for base suffix (e.g., xx#16)
     let lastTokenEnd = 0;
     let inInlineEval = false;  // Track whether we're inside \..\ inline eval markers
     let prevHighlightType = null;
@@ -98,12 +97,7 @@ function tokenizeMathPad(text, options = {}) {
         let highlightType;
         switch (token.type) {
             case TokenType.NUMBER:
-                // Style number as variable-def/builtin if it's the base in a format suffix (e.g., 16 in xx#16)
-                if (lastTokenWasBaseFormatter && tokenStart === lastTokenEnd) {
-                    highlightType = lastTokenWasBuiltin ? 'builtin' : 'variable-def';
-                } else {
-                    highlightType = 'number';
-                }
+                highlightType = 'number';
                 break;
             case TokenType.IDENTIFIER: {
                 const next = parserTokens[ti + 1];
@@ -138,7 +132,6 @@ function tokenizeMathPad(text, options = {}) {
                 lastTokenWasVarDef = false;
                 lastTokenWasVar = false;
                 lastTokenWasBuiltin = false;
-                lastTokenWasBaseFormatter = false;
                 prevHighlightType = null;
                 inInlineEval = false;
                 continue;
@@ -174,8 +167,6 @@ function tokenizeMathPad(text, options = {}) {
         lastTokenWasVarDef = (highlightType === 'variable-def');
         lastTokenWasVar = (highlightType === 'variable');
         lastTokenWasBuiltin = (highlightType === 'builtin');
-        // Track if this is a # formatter for styling following base number (e.g., 16 in xx#16)
-        lastTokenWasBaseFormatter = (token.type === TokenType.FORMATTER && token.value === '#' && (highlightType === 'variable-def' || highlightType === 'builtin'));
         lastTokenEnd = tokenEnd;
 
         tokens.push({ from: tokenStart, to: tokenEnd, type: highlightType });
@@ -470,7 +461,6 @@ function getIdentifierHighlightType(name, tokenStart, nextToken, prevHighlightTy
     // Check if the next token is a variable declaration marker
     const isMarker = nextToken && (
         nextToken.isMarker ||
-        (nextToken.type === TokenType.FORMATTER && nextToken.value === '#') ||
         nextToken.type === TokenType.LBRACKET ||
         nextToken.type === TokenType.ERROR
     );

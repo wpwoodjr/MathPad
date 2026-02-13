@@ -646,6 +646,7 @@ function findEquationsAndOutputs(text) {
                 recalculates: markedResult.recalculates,
                 existingValue: markedResult.valueText,
                 format: markedResult.format,
+                base: markedResult.base,
                 comment: markedResult.comment,
                 commentUnquoted: markedResult.commentUnquoted
             });

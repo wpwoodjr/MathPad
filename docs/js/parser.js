@@ -566,7 +566,7 @@ class Tokenizer {
             // Format suffixes: $ (money), % (percent), # (base)
             if (ch === '$' || ch === '%' || ch === '#') {
                 // For $ and %, check if followed by a declaration marker — merge into one token
-                if (ch !== '#') {
+                if (ch === '$' || ch === '%') {
                     const format = ch === '$' ? 'money' : 'percent';
                     const next = this.peek(1);
                     if (next === '-' && this.peek(2) === '>') {
@@ -602,6 +602,44 @@ class Tokenizer {
                         token.format = format;
                         this.tokens.push(token);
                         continue;
+                    }
+                } else if (ch === '#') {
+                    // For #, check if followed by digits then a marker — merge #base<marker> into one token
+                    let baseLen = 0;
+                    while (this.isDigit(this.peek(1 + baseLen))) baseLen++;
+                    if (baseLen > 0) {
+                        const afterBase = 1 + baseLen;
+                        const p1 = this.peek(afterBase);
+                        const p2 = this.peek(afterBase + 1);
+                        const p3 = this.peek(afterBase + 2);
+                        let markerType = null, markerStr = null;
+                        if (p1 === '-' && p2 === '>') {
+                            if (p3 === '>') { markerType = TokenType.ARROW_FULL; markerStr = '->>'; }
+                            else { markerType = TokenType.ARROW_RIGHT; markerStr = '->'; }
+                        } else if (p1 === '=' && p2 === '>') {
+                            if (p3 === '>') { markerType = TokenType.ARROW_PERSIST_FULL; markerStr = '=>>'; }
+                            else { markerType = TokenType.ARROW_PERSIST; markerStr = '=>'; }
+                        } else if (p1 === '<' && p2 === '-') {
+                            // #base<- is an error, like $<- and %<-
+                            const digits = this.text.slice(this.pos + 1, this.pos + 1 + baseLen);
+                            for (let i = 0; i < 1 + baseLen + 2; i++) this.advance();
+                            const token = this.makeToken(TokenType.ERROR, `Format specifier '#' not supported on input marker '<-'`, startLine, startCol);
+                            token.length = 1 + baseLen + 2; // #digits<-
+                            this.tokens.push(token);
+                            continue;
+                        } else if (p1 === ':') {
+                            if (p2 === ':') { markerType = TokenType.DOUBLE_COLON; markerStr = '::'; }
+                            else { markerType = TokenType.COLON; markerStr = ':'; }
+                        }
+                        if (markerType) {
+                            const digits = this.text.slice(this.pos + 1, this.pos + 1 + baseLen);
+                            for (let i = 0; i < 1 + baseLen + markerStr.length; i++) this.advance();
+                            const value = '#' + digits + markerStr;
+                            const token = this.makeToken(markerType, value, startLine, startCol);
+                            token.base = parseInt(digits);
+                            this.tokens.push(token);
+                            continue;
+                        }
                     }
                 }
                 this.advance();

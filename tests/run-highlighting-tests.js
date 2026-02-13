@@ -139,9 +139,7 @@ function runAllTests() {
             line: 'ff#16->',
             assertions: [
                 ['ff', 'variable-def'],
-                ['#', 'variable-def'],
-                ['16', 'variable-def'],
-                ['->', 'punctuation']
+                ['#16->', 'punctuation']
             ]
         },
         {
@@ -166,9 +164,7 @@ function runAllTests() {
             line: 'xx#16->',
             assertions: [
                 ['xx', 'variable-def'],
-                ['#', 'variable-def'],
-                ['16', 'variable-def'],
-                ['->', 'punctuation']
+                ['#16->', 'punctuation']
             ]
         },
         {
@@ -915,9 +911,7 @@ function runAllTests() {
             context: 'a: 77',
             assertions: [
                 ['a', 'variable-def'],
-                ['#', 'variable-def'],
-                ['16', 'variable-def'],
-                ['->', 'punctuation'],
+                ['#16->', 'punctuation'],
                 ['4D#16', 'number']
             ]
         },
@@ -928,9 +922,7 @@ function runAllTests() {
             context: 'a: 78',
             assertions: [
                 ['a', 'variable-def'],
-                ['#', 'variable-def'],
-                ['16', 'variable-def'],
-                ['->', 'punctuation'],
+                ['#16->', 'punctuation'],
                 ['4E#16', 'number']
             ]
         },
@@ -1003,6 +995,15 @@ function runAllTests() {
                 ['+', 'operator'],
                 ['f#32', 'number'],
                 ['->', 'punctuation']
+            ]
+        },
+        // Base format specifier on expression output with base literal
+        {
+            name: 'base literal with base format expression output (36#16#31->)',
+            line: '36#16#31->',
+            assertions: [
+                ['36#16', 'number'],
+                ['#31->', 'punctuation']
             ]
         },
         // Formatter suffix in expression context is an error
@@ -1085,9 +1086,7 @@ function runAllTests() {
             options: { referenceConstants: new Set(['c']) },
             assertions: [
                 ['c', 'builtin'],
-                ['#', 'builtin'],
-                ['16', 'builtin'],
-                ['->', 'punctuation'],
+                ['#16->', 'punctuation'],
                 ['11DE784A#16', 'number']
             ]
         },

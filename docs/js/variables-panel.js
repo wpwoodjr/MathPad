@@ -109,6 +109,7 @@ class VariablesPanel {
                         clearBehavior: output.recalculates ? ClearBehavior.ON_SOLVE : ClearBehavior.NONE,
                         fullPrecision: output.fullPrecision,
                         format: output.format || null,
+                        base: output.base,
                         comment: output.comment,
                         commentUnquoted: output.commentUnquoted
                     },
@@ -180,7 +181,7 @@ class VariablesPanel {
                 const existing = this.declarations.get(lineIndex);
                 // If name, marker, format, limits, or comment changed, remove old row and add new one
                 const limitsChanged = JSON.stringify(existing.declaration.limits) !== JSON.stringify(info.declaration.limits);
-                const formatChanged = existing.declaration.format !== info.declaration.format;
+                const formatChanged = existing.declaration.format !== info.declaration.format || existing.declaration.base !== info.declaration.base;
                 if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment) {
                     toRemove.push(lineIndex);
                     toAdd.push(info);
@@ -269,7 +270,7 @@ class VariablesPanel {
         }
 
         // Variable name label (includes format suffix, limits, and marker)
-        const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : '';
+        const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : decl.base && decl.base !== 10 ? `#${decl.base}` : '';
         // Always separate format suffix with a space for clarity
         const formatSep = formatSuffix ? ' ' : '';
         const limitsStr = decl.limits ? `[${decl.limits.lowExpr}:${decl.limits.highExpr}]` : '';
