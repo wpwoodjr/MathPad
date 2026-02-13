@@ -71,8 +71,11 @@ function tokenizeMathPad(text, options = {}) {
     let lastTokenWasBaseFormatter = false;  // Track # formatter for base suffix (e.g., xx#16)
     let lastTokenEnd = 0;
     let inInlineEval = false;  // Track whether we're inside \..\ inline eval markers
+    let prevHighlightType = null;
 
-    for (const token of parserTokens) {
+    for (let ti = 0; ti < parserTokens.length; ti++) {
+        const token = parserTokens[ti];
+
         // Skip EOF token
         if (token.type === TokenType.EOF) continue;
 
@@ -87,6 +90,7 @@ function tokenizeMathPad(text, options = {}) {
         if (inCommentRegion) {
             pos = tokenEnd;
             lastTokenWasVarDef = false;
+            prevHighlightType = null;
             continue;
         }
 
@@ -101,9 +105,12 @@ function tokenizeMathPad(text, options = {}) {
                     highlightType = 'number';
                 }
                 break;
-            case TokenType.IDENTIFIER:
-                highlightType = getIdentifierHighlightType(token.value, text, tokenStart, tokenEnd, userDefinedFunctions, commentRegions, referenceConstants, referenceFunctions, localVariables);
+            case TokenType.IDENTIFIER: {
+                const next = parserTokens[ti + 1];
+                const nextToken = (next && next.type !== TokenType.NEWLINE && next.type !== TokenType.EOF) ? next : null;
+                highlightType = getIdentifierHighlightType(token.value, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants, referenceFunctions, localVariables);
                 break;
+            }
             case TokenType.OPERATOR:
                 highlightType = 'operator';
                 break;
@@ -132,6 +139,7 @@ function tokenizeMathPad(text, options = {}) {
                 lastTokenWasVar = false;
                 lastTokenWasBuiltin = false;
                 lastTokenWasBaseFormatter = false;
+                prevHighlightType = null;
                 inInlineEval = false;
                 continue;
             case TokenType.FORMATTER:
@@ -160,6 +168,8 @@ function tokenizeMathPad(text, options = {}) {
             inInlineEval = !inInlineEval;
         }
 
+        // Track highlight type for lookback in identifier classification
+        prevHighlightType = highlightType;
         // Track if this token is a variable-def, variable, or builtin for styling following $ or % or #
         lastTokenWasVarDef = (highlightType === 'variable-def');
         lastTokenWasVar = (highlightType === 'variable');
@@ -434,7 +444,7 @@ function getTokenLength(token, text, start) {
 /**
  * Determine highlight type for an identifier
  */
-function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefinedFunctions, commentRegions = [], referenceConstants = new Set(), referenceFunctions = new Set(), localVariables = new Map()) {
+function getIdentifierHighlightType(name, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants = new Set(), referenceFunctions = new Set(), localVariables = new Map()) {
     const nameLower = name.toLowerCase();
 
     // Check if a local variable shadows a constant at this position
@@ -445,12 +455,7 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
     }
 
     // Look ahead for ( to detect function calls
-    let lookAhead = tokenEnd;
-    while (lookAhead < text.length && (text[lookAhead] === ' ' || text[lookAhead] === '\t')) {
-        lookAhead++;
-    }
-
-    if (lookAhead < text.length && text[lookAhead] === '(') {
+    if (nextToken?.type === TokenType.LPAREN) {
         // User-defined functions (local) override everything
         if (userDefinedFunctions && userDefinedFunctions.has(nameLower)) {
             return 'function';
@@ -462,42 +467,22 @@ function getIdentifierHighlightType(name, text, tokenStart, tokenEnd, userDefine
         return 'function';
     }
 
-    // Check if this is a variable declaration
-    // Account for $ or % suffix before the marker
-    let checkPos = lookAhead;
-    if (checkPos < text.length && (text[checkPos] === '$' || text[checkPos] === '%')) {
-        checkPos++;
-        // Skip whitespace after suffix
-        while (checkPos < text.length && (text[checkPos] === ' ' || text[checkPos] === '\t')) {
-            checkPos++;
-        }
-    }
-    const nextChars = text.slice(checkPos, checkPos + 3);
-    if (nextChars.startsWith(':') || nextChars.startsWith('<-') ||
-        nextChars.startsWith('->') || nextChars.startsWith('=>') ||
-        nextChars.startsWith('?:') ||
-        nextChars.startsWith('#') || nextChars.startsWith('[')) {
-        // Check if this is part of an expression (has operator before it)
+    // Check if the next token is a variable declaration marker
+    const isMarker = nextToken && (
+        nextToken.isMarker ||
+        (nextToken.type === TokenType.FORMATTER && nextToken.value === '#') ||
+        nextToken.type === TokenType.LBRACKET ||
+        nextToken.type === TokenType.ERROR
+    );
+
+    if (isMarker) {
+        // Check if this is part of an expression (has operator/paren/bracket before it)
         // If so, it's not a variable-def, just a variable in an expression output
-        let lookBack = tokenStart - 1;
-        while (lookBack >= 0 && (text[lookBack] === ' ' || text[lookBack] === '\t')) {
-            lookBack--;
-        }
-        if (lookBack >= 0) {
-            const charBefore = text[lookBack];
-            // If preceded by operator or closing paren/bracket, it's part of an expression
-            // But only if that character is NOT in a comment region (e.g., label text)
-            if ('+-*/%^)]=<>!&|~'.includes(charBefore)) {
-                const charPos = lookBack;
-                const inCommentRegion = commentRegions.some(r => charPos >= r.start && charPos < r.end);
-                if (!inCommentRegion) {
-                    // Check if it's a reference constant (not shadowed by local variable)
-                    if (referenceConstants.has(name) && !isShadowed(name)) {
-                        return 'builtin';
-                    }
-                    return 'variable';
-                }
+        if (prevHighlightType === 'operator' || prevHighlightType === 'paren' || prevHighlightType === 'bracket') {
+            if (referenceConstants.has(name) && !isShadowed(name)) {
+                return 'builtin';
             }
+            return 'variable';
         }
         // Check if it's a reference constant being output (not shadowed)
         // e.g., "pi->" should highlight pi as builtin, not variable-def

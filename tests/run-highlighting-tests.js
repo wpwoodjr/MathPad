@@ -31,7 +31,7 @@ function loadModules() {
     global.LineType = lineParser.LineType;
     global.LineParser = lineParser.LineParser;
     global.parseMarkedLineNew = lineParser.parseMarkedLineNew;
-    global.isMarkerToken = lineParser.isMarkerToken;
+
     global.getMarkerString = lineParser.getMarkerString;
 
     // Evaluator (depends on parser)

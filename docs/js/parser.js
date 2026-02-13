@@ -123,7 +123,14 @@ class Tokenizer {
     }
 
     makeToken(type, value, startLine, startCol) {
-        return { type, value, line: startLine, col: startCol };
+        const token = { type, value, line: startLine, col: startCol };
+        if (type === TokenType.COLON || type === TokenType.DOUBLE_COLON ||
+            type === TokenType.ARROW_LEFT || type === TokenType.ARROW_RIGHT ||
+            type === TokenType.ARROW_FULL || type === TokenType.ARROW_PERSIST ||
+            type === TokenType.ARROW_PERSIST_FULL) {
+            token.isMarker = true;
+        }
+        return token;
     }
 
     tokenizeNumber() {

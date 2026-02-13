@@ -40,16 +40,6 @@ const MARKER_PRECEDENCE = {
 /**
  * Check if a token is a declaration marker
  */
-function isMarkerToken(token) {
-    return token.type === TokenType.COLON ||
-           token.type === TokenType.DOUBLE_COLON ||
-           token.type === TokenType.ARROW_LEFT ||
-           token.type === TokenType.ARROW_RIGHT ||
-           token.type === TokenType.ARROW_FULL ||
-           token.type === TokenType.ARROW_PERSIST ||
-           token.type === TokenType.ARROW_PERSIST_FULL;
-}
-
 /**
  * Get marker string from token
  */
@@ -221,7 +211,7 @@ class LineParser {
     findAllMarkers() {
         const markers = [];
         for (let i = 0; i < this.tokens.length; i++) {
-            if (isMarkerToken(this.tokens[i])) {
+            if (this.tokens[i].isMarker) {
                 markers.push({ token: this.tokens[i], index: i });
             }
         }
@@ -701,7 +691,6 @@ if (typeof module !== 'undefined' && module.exports) {
         LineType,
         LineParser,
         parseMarkedLineNew,
-        isMarkerToken,
         getMarkerString,
         splitValueAndComment
     };
