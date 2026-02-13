@@ -2,31 +2,7 @@
  * MathPad Variables - Variable declaration handling and text manipulation
  */
 
-/**
- * Clear behavior for variable declarations
- * Determines when a variable's value is cleared
- */
-const ClearBehavior = {
-    NONE: 'none',            // : or :: (persistent, never cleared)
-    ON_CLEAR: 'onClear',     // <- (cleared by Clear button)
-    ON_SOLVE: 'onSolve',     // -> or ->> (cleared by Clear button AND before solving)
-    ON_SOLVE_ONLY: 'onSolveOnly' // => or =>> (cleared before solving, but NOT by Clear button)
-};
-
-/**
- * Legacy VarType enum - kept for backwards compatibility
- * Maps to ClearBehavior:
- *   STANDARD -> ClearBehavior.NONE
- *   INPUT -> ClearBehavior.ON_CLEAR
- *   OUTPUT -> ClearBehavior.ON_SOLVE
- *   FULL_PRECISION -> depends on marker (:: -> NONE, ->> -> ON_SOLVE)
- */
-const VarType = {
-    STANDARD: 'standard',      // varname:
-    INPUT: 'input',            // varname<-
-    OUTPUT: 'output',          // varname-> or varname->>
-    FULL_PRECISION: 'full'     // varname:: or varname->>
-};
+// VarType and ClearBehavior enums are defined in parser.js (loaded first)
 
 /**
  * Extract base variable name, format, and numeric base from a name that may have suffixes
@@ -1046,7 +1022,6 @@ function escapeRegex(str) {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        VarType, ClearBehavior,
         parseVarNameAndFormat, parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         buildOutputLine, replaceValueOnLine, capturePreSolveValues, clearVariables, findEquations,

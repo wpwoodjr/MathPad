@@ -27,6 +27,8 @@ const jsPath = path.join(__dirname, '..', 'docs', 'js');
 function loadModules() {
     // Parser (no dependencies)
     const parser = require(path.join(jsPath, 'parser.js'));
+    global.VarType = parser.VarType;
+    global.ClearBehavior = parser.ClearBehavior;
     global.TokenType = parser.TokenType;
     global.NodeType = parser.NodeType;
     global.Tokenizer = parser.Tokenizer;
@@ -64,8 +66,7 @@ function loadModules() {
 
     // Variables (depends on parser, evaluator)
     const variables = require(path.join(jsPath, 'variables.js'));
-    global.VarType = variables.VarType;
-    global.ClearBehavior = variables.ClearBehavior;
+    // VarType and ClearBehavior are already set from parser.js above
     global.parseVariableLine = variables.parseVariableLine;
     global.parseAllVariables = variables.parseAllVariables;
     global.capturePreSolveValues = variables.capturePreSolveValues;

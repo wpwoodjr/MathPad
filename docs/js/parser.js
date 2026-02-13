@@ -3,6 +3,21 @@
  * Handles all MathPad syntax including operators, functions, variables, and equations
  */
 
+// Variable type enum - determines variable behavior
+const VarType = {
+    STANDARD: 'standard',      // varname: or varname::
+    INPUT: 'input',            // varname<-
+    OUTPUT: 'output',          // varname-> or varname->>
+};
+
+// Clear behavior enum - determines when a variable's value is cleared
+const ClearBehavior = {
+    NONE: 'none',            // : or :: (persistent, never cleared)
+    ON_CLEAR: 'onClear',     // <- (cleared by Clear button)
+    ON_SOLVE: 'onSolve',     // -> or ->> (cleared by Clear button AND before solving)
+    ON_SOLVE_ONLY: 'onSolveOnly' // => or =>> (cleared before solving, but NOT by Clear button)
+};
+
 // Token types
 const TokenType = {
     NUMBER: 'NUMBER',
@@ -124,48 +139,48 @@ class Tokenizer {
 
     makeToken(type, value, startLine, startCol) {
         const token = { type, value, line: startLine, col: startCol };
-        // Marker metadata — string values match VarType/ClearBehavior enums in variables.js
+        // Marker metadata
         switch (type) {
             case TokenType.COLON:
                 token.isMarker = true;
-                token.varType = 'standard';
-                token.clearBehavior = 'none';
+                token.varType = VarType.STANDARD;
+                token.clearBehavior = ClearBehavior.NONE;
                 token.fullPrecision = false;
                 break;
             case TokenType.DOUBLE_COLON:
                 token.isMarker = true;
-                token.varType = 'standard';
-                token.clearBehavior = 'none';
+                token.varType = VarType.STANDARD;
+                token.clearBehavior = ClearBehavior.NONE;
                 token.fullPrecision = true;
                 break;
             case TokenType.ARROW_LEFT:
                 token.isMarker = true;
-                token.varType = 'input';
-                token.clearBehavior = 'onClear';
+                token.varType = VarType.INPUT;
+                token.clearBehavior = ClearBehavior.ON_CLEAR;
                 token.fullPrecision = false;
                 break;
             case TokenType.ARROW_RIGHT:
                 token.isMarker = true;
-                token.varType = 'output';
-                token.clearBehavior = 'onSolve';
+                token.varType = VarType.OUTPUT;
+                token.clearBehavior = ClearBehavior.ON_SOLVE;
                 token.fullPrecision = false;
                 break;
             case TokenType.ARROW_FULL:
                 token.isMarker = true;
-                token.varType = 'output';
-                token.clearBehavior = 'onSolve';
+                token.varType = VarType.OUTPUT;
+                token.clearBehavior = ClearBehavior.ON_SOLVE;
                 token.fullPrecision = true;
                 break;
             case TokenType.ARROW_PERSIST:
                 token.isMarker = true;
-                token.varType = 'output';
-                token.clearBehavior = 'onSolveOnly';
+                token.varType = VarType.OUTPUT;
+                token.clearBehavior = ClearBehavior.ON_SOLVE_ONLY;
                 token.fullPrecision = false;
                 break;
             case TokenType.ARROW_PERSIST_FULL:
                 token.isMarker = true;
-                token.varType = 'output';
-                token.clearBehavior = 'onSolveOnly';
+                token.varType = VarType.OUTPUT;
+                token.clearBehavior = ClearBehavior.ON_SOLVE_ONLY;
                 token.fullPrecision = true;
                 break;
         }
@@ -976,6 +991,7 @@ function parseExpression(text) {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        VarType, ClearBehavior,
         TokenType, NodeType, Tokenizer, Parser, ParseError,
         tokenize, parseExpression, stripComments
     };

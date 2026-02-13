@@ -573,7 +573,7 @@ class LineParser {
             let finalComment = this.trailingComment;
             let commentUnquoted = false;
             // Output markers use unit comment if no quoted comment
-            if (type === 'output' && !finalComment && unitComment) {
+            if (type === VarType.OUTPUT && !finalComment && unitComment) {
                 finalComment = unitComment;
                 commentUnquoted = true;
             }
@@ -598,7 +598,7 @@ class LineParser {
             const { valueText, unitComment } = this.extractValueAndComment(markerIndex);
 
             const fullPrecision = markerToken.fullPrecision;
-            const recalculates = markerToken.varType === 'output';
+            const recalculates = markerToken.varType === VarType.OUTPUT;
 
             let finalComment = this.trailingComment;
             let commentUnquoted = false;
