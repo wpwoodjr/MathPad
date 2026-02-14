@@ -1195,6 +1195,7 @@ function handleSolve() {
 
         // Update variables panel
         if (editorInfo.variablesManager) {
+            editorInfo.variablesManager.enableFlash();
             editorInfo.variablesManager.updateFromText(text);
             editorInfo.variablesManager.setErrors(result.errors);
             editorInfo.variablesManager.clearLastEdited();
@@ -1260,6 +1261,7 @@ function handleClearInput() {
 
     // Update variables panel and clear errors
     if (editorInfo.variablesManager) {
+        editorInfo.variablesManager.enableFlash();
         editorInfo.variablesManager.updateFromText(text);
         editorInfo.variablesManager.clearErrors();
     }

@@ -16,6 +16,14 @@ class VariablesPanel {
         this.inputElements = new Map();
         this.lastEditedVar = null; // Track most recently edited variable name
         this.errorLines = new Set(); // Lines with errors
+        this.flashChanges = false;
+        this._oldDisplayValues = null;
+
+        this.container.addEventListener('animationend', (e) => {
+            if (e.target.classList.contains('value-changed')) {
+                e.target.classList.remove('value-changed');
+            }
+        });
 
         // Handle Tab key to cycle through inputs
         this.container.addEventListener('keydown', (e) => {
@@ -29,6 +37,10 @@ class VariablesPanel {
                 }
             }
         });
+    }
+
+    enableFlash() {
+        this.flashChanges = true;
     }
 
     /**
@@ -199,6 +211,17 @@ class VariablesPanel {
             }
         }
 
+        // Snapshot old display values before removing rows (for flash comparison on re-added rows)
+        if (this.flashChanges) {
+            this._oldDisplayValues = new Map();
+            for (const lineIndex of toRemove) {
+                const existing = this.declarations.get(lineIndex);
+                if (existing) {
+                    this._oldDisplayValues.set(lineIndex, this.formatValueForDisplay(existing));
+                }
+            }
+        }
+
         // Apply changes - remove first, then add, then update
         toRemove.forEach(lineIndex => this.removeVariableRow(lineIndex));
         toAdd.forEach(info => this.addVariableRow(info));
@@ -212,6 +235,8 @@ class VariablesPanel {
         }
 
         this.declarations = newDeclMap;
+        this.flashChanges = false;
+        this._oldDisplayValues = null;
     }
 
     /**
@@ -375,6 +400,15 @@ class VariablesPanel {
 
         // Insert in order (by line number)
         this.insertRowInOrder(row, info.lineIndex);
+
+        // Flash newly added/rebuilt rows if their value changed
+        if (this.flashChanges && !info.isLabel) {
+            const newValue = this.formatValueForDisplay(info);
+            const oldValue = this._oldDisplayValues ? this._oldDisplayValues.get(info.lineIndex) : undefined;
+            if (oldValue !== undefined ? newValue !== oldValue : !!newValue) {
+                row.classList.add('value-changed');
+            }
+        }
     }
 
     /**
@@ -388,10 +422,16 @@ class VariablesPanel {
         // Skip update if element has focus (to not disrupt typing)
         if (valueElement && document.activeElement !== valueElement) {
             const newValue = this.formatValueForDisplay(info);
+            const oldValue = valueElement.tagName === 'INPUT' ? valueElement.value : valueElement.textContent;
             if (valueElement.tagName === 'INPUT') {
                 valueElement.value = newValue;
             } else {
                 valueElement.textContent = newValue;
+            }
+            if (this.flashChanges && newValue !== oldValue) {
+                row.classList.remove('value-changed');
+                void row.offsetWidth; // force reflow to restart animation
+                row.classList.add('value-changed');
             }
         }
     }

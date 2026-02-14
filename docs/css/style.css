@@ -1269,6 +1269,15 @@ body.panel-resizing * {
     color: white;
 }
 
+@keyframes variable-flash {
+    from { background-color: rgba(0, 122, 204, 0.3); }
+    to { background-color: transparent; }
+}
+
+.variable-row.value-changed {
+    animation: variable-flash 1.5s ease-out;
+}
+
 /* Print styles */
 @media print {
     .app-header,
