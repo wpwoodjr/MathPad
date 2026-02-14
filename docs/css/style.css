@@ -1111,7 +1111,6 @@ body.panel-resizing * {
 
 .variables-panel {
     height: 50%;
-    min-height: 80px;
     background: var(--bg-secondary);
     overflow: auto;
     border-bottom: 1px solid var(--border-color);

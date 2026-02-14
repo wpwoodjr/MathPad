@@ -438,7 +438,16 @@ function showEditor(recordId) {
         const variablesPanel = editorInfo.container.querySelector('.variables-panel');
         if (record.dividerHeight) {
             if (variablesPanel) {
-                variablesPanel.style.height = record.dividerHeight + 'px';
+                // Clamp saved height to current container bounds
+                const containerHeight = editorInfo.container.offsetHeight;
+                const divider = editorInfo.container.querySelector('.panel-divider');
+                const formulasPanel = editorInfo.container.querySelector('.formulas-panel');
+                const varHeader = variablesPanel.querySelector('.variables-header');
+                const fmtHeader = formulasPanel ? formulasPanel.querySelector('.formulas-header') : null;
+                const minTop = varHeader ? varHeader.offsetHeight : 0;
+                const maxTop = containerHeight - (divider ? divider.offsetHeight : 0) - (fmtHeader ? fmtHeader.offsetHeight : 0);
+                const clamped = Math.max(minTop, Math.min(maxTop, record.dividerHeight));
+                variablesPanel.style.height = clamped + 'px';
             }
         } else if (variablesPanel) {
             // Auto-fit: size to content, clamped between 1/4 and 3/4 of container
@@ -1349,11 +1358,22 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
         document.body.classList.add('panel-resizing');
     });
 
+    // Minimum heights to keep headers visible
+    function getMinTop() {
+        const header = topPanel.querySelector('.variables-header');
+        return header ? header.offsetHeight : 0;
+    }
+    function getMinBottom() {
+        const header = bottomPanel.querySelector('.formulas-header');
+        return header ? header.offsetHeight : 0;
+    }
+
     divider.addEventListener('pointermove', (e) => {
         if (!divider.hasPointerCapture(e.pointerId)) return;
         const delta = e.clientY - startY;
-        // Min 80px for variables panel, allow formulas panel to shrink to 0
-        const newHeight = Math.max(80, Math.min(maxHeight, startHeight + delta));
+        const minTop = getMinTop();
+        const maxTop = maxHeight - divider.offsetHeight - getMinBottom();
+        const newHeight = Math.max(minTop, Math.min(maxTop, startHeight + delta));
         topPanel.style.height = newHeight + 'px';
     });
 
@@ -1377,6 +1397,23 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
 
     divider.addEventListener('pointerup', endDrag);
     divider.addEventListener('pointercancel', endDrag);
+
+    // Clamp panel height on window resize so divider stays visible
+    window.addEventListener('resize', () => {
+        const containerHeight = topPanel.parentElement.offsetHeight;
+        const minTop = getMinTop();
+        const maxTop = containerHeight - divider.offsetHeight - getMinBottom();
+        const current = topPanel.offsetHeight;
+        const clamped = Math.max(minTop, Math.min(maxTop, current));
+        if (clamped !== current) {
+            topPanel.style.height = clamped + 'px';
+            const record = findRecord(UI.data, UI.currentRecordId);
+            if (record) {
+                record.dividerHeight = clamped;
+                debouncedSave(UI.data);
+            }
+        }
+    });
 }
 
 // Export functions to global scope for HTML onclick handlers
