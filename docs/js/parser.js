@@ -352,8 +352,9 @@ class Tokenizer {
             let isBaseLiteral = false;
 
             // Check if preceded by an operator — always a base literal in expression context
+            // Exception: \ (inline eval delimiter) is not expression context
             const lastToken = this.tokens.length > 0 ? this.tokens[this.tokens.length - 1] : null;
-            if (lastToken && (lastToken.type === TokenType.OPERATOR ||
+            if (lastToken && (lastToken.type === TokenType.OPERATOR && lastToken.value !== '\\' ||
                               lastToken.type === TokenType.LPAREN ||
                               lastToken.type === TokenType.SEMICOLON ||
                               lastToken.type === TokenType.COMMA)) {
@@ -370,6 +371,7 @@ class Tokenizer {
                 const nextCh = this.peek(offset);
                 const nextCh2 = this.peek(offset + 1);
                 const isMarker = nextCh === ':' || nextCh === '[' ||
+                                 nextCh === '\\' ||
                                  (nextCh === '<' && nextCh2 === '-') ||
                                  (nextCh === '-' && nextCh2 === '>') ||
                                  (nextCh === '=' && nextCh2 === '>');

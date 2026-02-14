@@ -267,24 +267,29 @@ function discoverVariables(text, context, record, allTokens) {
         const { tokens: lineTokens, pos: nextPos } = nextLineTokens(allTokens, tPos, i + 1);
         tPos = nextPos;
 
-        // Find backslash operator pairs in lineTokens for \expr\ detection
-        const backslashTokens = [];
+        // Find backslash operator pairs and tokens between them for \expr\ detection
+        const backslashIndices = [];
         for (let j = 0; j < lineTokens.length; j++) {
             if (lineTokens[j].type === TokenType.OPERATOR && lineTokens[j].value === '\\') {
-                backslashTokens.push(lineTokens[j]);
+                backslashIndices.push(j);
             }
         }
 
         // Build inline eval matches from pairs (each pair = one \expr\)
         let lineModified = false;
         const inlineMatches = [];
-        for (let j = 0; j + 1 < backslashTokens.length; j += 2) {
-            const openTok = backslashTokens[j];
-            const closeTok = backslashTokens[j + 1];
+        for (let j = 0; j + 1 < backslashIndices.length; j += 2) {
+            const openIdx = backslashIndices[j];
+            const closeIdx = backslashIndices[j + 1];
+            const openTok = lineTokens[openIdx];
+            const closeTok = lineTokens[closeIdx];
             const start = openTok.col - 1;   // 0-based string index of opening \
             const end = closeTok.col;         // 0-based index after closing \
+            // Tokens between the backslashes (the expression content)
+            const innerTokens = lineTokens.slice(openIdx + 1, closeIdx);
             inlineMatches.push({
                 expression: line.substring(start + 1, end - 1).trim(),
+                innerTokens,
                 start,
                 end
             });
@@ -294,24 +299,23 @@ function discoverVariables(text, context, record, allTokens) {
         for (let j = inlineMatches.length - 1; j >= 0; j--) {
             const evalInfo = inlineMatches[j];
             try {
-                // Strip format suffix ($, %, or #base) before parsing - it's used for output formatting only
-                // Use tokenizer to detect if trailing $ or % is a FORMATTER token (not part of a literal)
-                let exprToParse = evalInfo.expression;
-                const exprTokens = new Tokenizer(exprToParse).tokenize();
-                const lastNonEof = exprTokens.length >= 2 ? exprTokens[exprTokens.length - 2] : null;
-                if (lastNonEof && lastNonEof.type === TokenType.FORMATTER && (lastNonEof.value === '$' || lastNonEof.value === '%')) {
-                    exprToParse = exprToParse.slice(0, -1);
-                } else {
-                    // Strip #base suffix only for identifier#digits (e.g., \a#16\)
-                    // Don't strip for digit-start literals (e.g., \4D#16\ = 77)
-                    const baseMatch = exprToParse.match(/^([a-zA-Z_]\w*)#(\d+)$/);
-                    if (baseMatch) {
-                        exprToParse = baseMatch[1];
-                    }
+                // Strip format suffix ($, %, #base) before parsing — for output formatting only.
+                // The tokenizer produces FORMATTER($), FORMATTER(%), or FORMATTER(#)+NUMBER
+                // at the end of inline evals, just like before declaration markers.
+                let exprTokens = evalInfo.innerTokens;
+                const lastTok = exprTokens.length > 0 ? exprTokens[exprTokens.length - 1] : null;
+                if (lastTok && lastTok.type === TokenType.FORMATTER &&
+                    (lastTok.value === '$' || lastTok.value === '%')) {
+                    exprTokens = exprTokens.slice(0, -1);
+                } else if (exprTokens.length >= 2 && lastTok && lastTok.type === TokenType.NUMBER &&
+                           exprTokens[exprTokens.length - 2].type === TokenType.FORMATTER &&
+                           exprTokens[exprTokens.length - 2].value === '#') {
+                    // #base suffix (e.g., \a#16\) — strip FORMATTER(#) + NUMBER
+                    exprTokens = exprTokens.slice(0, -2);
                 }
-                const ast = parseExpression(exprToParse);
+                const ast = parseTokens(exprTokens);
                 const value = evaluate(ast, context);
-                const format = getInlineEvalFormat(evalInfo.expression, record, null);
+                const format = getInlineEvalFormat(evalInfo.innerTokens, record, null);
                 const formatted = formatVariableValue(value, format.varFormat, false, format);
                 line = line.substring(0, evalInfo.start) + formatted + line.substring(evalInfo.end);
                 lineModified = true;
@@ -425,35 +429,33 @@ function discoverVariables(text, context, record, allTokens) {
  * Get format settings for an inline evaluation expression
  * Looks up variable's format property for $ (money) and % (percentage) formatting
  */
-function getInlineEvalFormat(expression, record, variables = null) {
-    const trimmed = expression.trim();
+function getInlineEvalFormat(exprTokens, record, variables = null) {
     let varFormat = null;
-
-    // Use tokenizer to detect if trailing $ or % is a FORMATTER token (not part of a literal)
-    let baseName = trimmed;
     let base = 10;
-    const exprTokens = new Tokenizer(trimmed).tokenize();
-    const lastNonEof = exprTokens.length >= 2 ? exprTokens[exprTokens.length - 2] : null;
-    if (lastNonEof && lastNonEof.type === TokenType.FORMATTER && lastNonEof.value === '$') {
-        baseName = trimmed.slice(0, -1);
+    let baseName = null;
+
+    // Detect trailing format suffix from tokens: FORMATTER($), FORMATTER(%), or FORMATTER(#)+NUMBER
+    const lastTok = exprTokens.length > 0 ? exprTokens[exprTokens.length - 1] : null;
+    if (lastTok && lastTok.type === TokenType.FORMATTER && lastTok.value === '$') {
         varFormat = 'money';
-    } else if (lastNonEof && lastNonEof.type === TokenType.FORMATTER && lastNonEof.value === '%') {
-        baseName = trimmed.slice(0, -1);
+    } else if (lastTok && lastTok.type === TokenType.FORMATTER && lastTok.value === '%') {
         varFormat = 'percent';
-    } else {
-        // Check for #base suffix on identifier (e.g., a#16)
-        const baseMatch = trimmed.match(/^([a-zA-Z_]\w*)#(\d+)$/);
-        if (baseMatch) {
-            baseName = baseMatch[1];
-            base = parseInt(baseMatch[2]);
-        }
+    } else if (exprTokens.length >= 2 && lastTok && lastTok.type === TokenType.NUMBER &&
+               exprTokens[exprTokens.length - 2].type === TokenType.FORMATTER &&
+               exprTokens[exprTokens.length - 2].value === '#') {
+        base = lastTok.value.value;
     }
 
-    // If expression is a simple variable name, look up its format from the variables map
-    if (variables && /^[a-zA-Z_]\w*$/.test(baseName)) {
+    // If expression is a single identifier (possibly with suffix stripped), look up its format
+    if (exprTokens.length === 1 && exprTokens[0].type === TokenType.IDENTIFIER) {
+        baseName = exprTokens[0].value;
+    } else if (exprTokens.length >= 2 && exprTokens[0].type === TokenType.IDENTIFIER &&
+               exprTokens[1].type === TokenType.FORMATTER) {
+        baseName = exprTokens[0].value;
+    }
+    if (variables && baseName) {
         const varInfo = variables.get(baseName);
         if (varInfo && varInfo.declaration && varInfo.declaration.format) {
-            // Variable has a format property - use it (overrides suffix if present)
             varFormat = varInfo.declaration.format;
         }
     }
