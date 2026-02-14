@@ -608,9 +608,15 @@ class LineParser {
                 commentUnquoted = true;
             }
 
+            // Capture label text from tokens before the variable name
+            const label = varInfo.varTokenStartIndex > 0
+                ? tokensToText(this.tokens.slice(0, varInfo.varTokenStartIndex)).trim()
+                : null;
+
             return {
                 kind: 'declaration',
                 name: varInfo.name,
+                label,
                 type,
                 clearBehavior,
                 limits: varInfo.limits,

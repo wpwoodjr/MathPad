@@ -196,7 +196,7 @@ class VariablesPanel {
                 // If name, marker, format, limits, or comment changed, remove old row and add new one
                 const limitsChanged = JSON.stringify(existing.declaration.limits) !== JSON.stringify(info.declaration.limits);
                 const formatChanged = existing.declaration.format !== info.declaration.format || existing.declaration.base !== info.declaration.base;
-                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment) {
+                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || existing.declaration.label !== info.declaration.label || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment) {
                     toRemove.push(lineIndex);
                     toAdd.push(info);
                 } else if (this.declarationChanged(existing, info)) {
@@ -301,7 +301,8 @@ class VariablesPanel {
         const limitsStr = decl.limits ? `[${tokensToText(decl.limits.lowTokens).trim()}:${tokensToText(decl.limits.highTokens).trim()}]` : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
-        nameLabel.textContent = info.name + limitsStr + formatSep + formatSuffix + (decl.marker || ':');
+        const labelPrefix = decl.label ? decl.label + ' ' : '';
+        nameLabel.textContent = labelPrefix + info.name + limitsStr + formatSep + formatSuffix + (decl.marker || ':');
         // Add tooltip explaining variable type
         if (isInRefSection) {
             nameLabel.title = 'Reference (from Constants/Functions)';
