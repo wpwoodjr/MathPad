@@ -489,15 +489,6 @@ button {
     font-size: 14px;
 }
 
-.editor-wrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-}
-
 /* Simple Editor Styles */
 .simple-editor {
     display: flex;
@@ -1310,10 +1301,6 @@ body.panel-resizing * {
     .editor-container {
         position: static;
         overflow: visible;
-    }
-
-    .editor-wrapper {
-        position: static;
     }
 
     .simple-editor {
