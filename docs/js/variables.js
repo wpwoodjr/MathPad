@@ -5,6 +5,50 @@
 // VarType and ClearBehavior enums are defined in parser.js (loaded first)
 
 /**
+ * Walk the flat token array to collect tokens for a given text line.
+ * NEWLINE and EOF tokens are skipped. For lines inside multi-line comments,
+ * no tokens have that line number, so an empty array is returned naturally.
+ * @param {Array} allTokens - Flat token array from tokenizer
+ * @param {number} pos - Current cursor position in the token array
+ * @param {number} lineNum - 1-based line number to collect tokens for
+ * @returns {{ tokens: Array, pos: number }} Collected tokens and updated cursor
+ */
+function nextLineTokens(allTokens, pos, lineNum) {
+    const tokens = [];
+    while (pos < allTokens.length) {
+        const t = allTokens[pos];
+        if (t.type === TokenType.EOF) break;
+        if (t.type === TokenType.NEWLINE) { pos++; continue; }
+        if (t.line > lineNum) break;
+        tokens.push(t);
+        pos++;
+    }
+    return { tokens, pos };
+}
+
+
+/** Precompute byte offset of each line start in text */
+function computeLineOffsets(text) {
+    const offsets = [0];
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '\n') offsets.push(i + 1);
+    }
+    return offsets;
+}
+
+/** Convert token (line, col) to 0-based text offset */
+function tokenOffset(lineOffsets, token) {
+    return lineOffsets[token.line - 1] + token.col - 1;
+}
+
+/** Extract a single line's text from original text (no trailing \n) */
+function getLineText(text, lineOffsets, lineNum) {
+    const start = lineOffsets[lineNum - 1];
+    const end = lineNum < lineOffsets.length ? lineOffsets[lineNum] - 1 : text.length;
+    return text.substring(start, end);
+}
+
+/**
  * Extract base variable name, format, and numeric base from a name that may have suffixes
  * e.g., "pmt$" -> { baseName: "pmt", format: "money", base: 10 }
  *       "rate%" -> { baseName: "rate", format: "percent", base: 10 }
@@ -48,16 +92,33 @@ function parseVarNameAndFormat(nameWithSuffix) {
  */
 function buildOutputLine(line, markerEndIndex, newValue, commentInfo = null) {
     // Extract // line comment from original line and re-append at end
-    const { stripped, lineComment } = stripComments(line);
+    const lcStart = findLineCommentStart(line);
+    const lineComment = lcStart !== -1 ? line.substring(lcStart) : null;
     const lineCommentSuffix = lineComment ? ' ' + lineComment.trimEnd() : '';
-    line = lineComment ? stripped.trimEnd() : line;
+    if (lcStart !== -1) line = line.substring(0, lcStart).trimEnd();
 
     // Determine trailing comment/unit text
     let trailingPart = '';
     if (commentInfo && commentInfo.comment) {
-        // Use provided comment info from parsing
-        if (commentInfo.commentUnquoted) {
-            trailingPart = ' ' + commentInfo.comment;
+        if (commentInfo.comment.includes('\n')) {
+            // Multi-line comment: preserve original line's trailing text (the start
+            // of the multi-line comment). Don't reconstruct — continuation lines
+            // are still in the text and would be duplicated.
+            const afterMarker = line.substring(markerEndIndex);
+            const quoteIdx = afterMarker.indexOf('"');
+            if (quoteIdx !== -1) {
+                trailingPart = ' ' + afterMarker.substring(quoteIdx);
+            }
+        } else if (commentInfo.commentUnquoted) {
+            // Preserve original spacing before the unquoted unit comment
+            const afterMarker = line.substring(markerEndIndex);
+            const commentIdx = afterMarker.indexOf(commentInfo.comment);
+            if (commentIdx !== -1) {
+                const valueEnd = afterMarker.substring(0, commentIdx).trimEnd().length;
+                trailingPart = afterMarker.substring(valueEnd);
+            } else {
+                trailingPart = ' ' + commentInfo.comment;
+            }
         } else {
             trailingPart = ' "' + commentInfo.comment + '"';
         }
@@ -76,39 +137,6 @@ function buildOutputLine(line, markerEndIndex, newValue, commentInfo = null) {
     return beforeValue + valuePart + trailingPart + lineCommentSuffix;
 }
 
-function replaceValueOnLine(line, varName, marker, hasLimits, newValue, commentInfo = null) {
-    const { clean: cleanLine } = stripComments(line);
-
-    let markerIndex;
-    if (hasLimits) {
-        // Match variable with limits: name(#base)? [limits] ($|%)? marker
-        const bracketMatch = cleanLine.match(new RegExp(`\\w+(?:#\\d+)?\\s*\\[[^\\]]+\\]\\s*(?:[$%])?\\s*${escapeRegex(marker)}`));
-        if (bracketMatch) {
-            markerIndex = bracketMatch.index + bracketMatch[0].length;
-        }
-    } else {
-        // varName doesn't include $, %, or #base suffix, but text may have it
-        const markerMatch = cleanLine.match(new RegExp(`${escapeRegex(varName)}(?:#\\d+)?\\s*(?:[$%])?\\s*(${escapeRegex(marker)})`));
-        if (markerMatch) {
-            markerIndex = markerMatch.index + markerMatch[0].length;
-        }
-    }
-
-    if (markerIndex === undefined) return null;
-
-    return buildOutputLine(line, markerIndex, newValue, commentInfo);
-}
-
-/**
- * Extract numeric value and trailing unit text from output value
- * For output variables, trailing text like "mm Hg" is treated as a unit comment
- * @param {string} rhs - The right-hand side text after the marker
- * @returns {{ valueText: string, unitComment: string|null }}
- */
-function extractValueAndUnit(rhs) {
-    return splitValueAndComment(rhs);
-}
-
 /**
  * Parse a line with a marker (:, ::, ->, ->>, <-)
  * Returns { kind: 'declaration' | 'expression-output', ... } or null
@@ -122,9 +150,11 @@ function extractValueAndUnit(rhs) {
  * This function delegates to the grammar-based LineParser in line-parser.js.
  * The LineParser uses tokenization for more reliable parsing than regex.
  */
-function parseMarkedLine(line) {
+function parseMarkedLine(line, tokens) {
     // Use the grammar-based parser from line-parser.js
-    const parser = new LineParser(line);
+    const parser = tokens
+        ? LineParser.fromTokens(tokens)
+        : new LineParser(line);
     return parser.parse();
 }
 
@@ -133,8 +163,8 @@ function parseMarkedLine(line) {
  * Returns declaration info or null if not a variable declaration
  * (Wrapper around parseMarkedLine for backwards compatibility)
  */
-function parseVariableLine(line) {
-    const result = parseMarkedLine(line);
+function parseVariableLine(line, tokens) {
+    const result = parseMarkedLine(line, tokens);
     if (result && result.kind === 'declaration') {
         // Remove 'kind' field for backwards compatibility
         const { kind, ...declaration } = result;
@@ -177,19 +207,23 @@ function findVariablesInExpression(node) {
  * Parse all variable declarations from text (simple parse, no evaluation)
  * Returns array of { name, declaration, lineIndex, value, valueText }
  */
-function parseAllVariables(text) {
+function parseAllVariables(text, allTokens) {
     const lines = text.split('\n');
     const declarations = [];
+    let tPos = 0;
 
     for (let i = 0; i < lines.length; i++) {
-        const decl = parseVariableLine(lines[i]);
+        const { tokens: lineTokens, pos: nextPos } = nextLineTokens(allTokens, tPos, i + 1);
+        tPos = nextPos;
+
+        const decl = parseVariableLine(lines[i], lineTokens);
         if (decl) {
             // Parse numeric literals only (no expression evaluation)
-            // Expressions stay as valueText for display
+            // Expressions stay as valueTokens for the solve phase
             let value = null;
-            if (decl.valueText) {
+            if (decl.valueTokens && decl.valueTokens.length > 0) {
                 try {
-                    const ast = parseExpression(decl.valueText);
+                    const ast = parseTokens(decl.valueTokens);
                     if (ast && ast.type === NodeType.NUMBER) {
                         value = ast.value;
                     }
@@ -203,7 +237,8 @@ function parseAllVariables(text) {
                 declaration: decl,
                 lineIndex: i,
                 value: value,
-                valueText: decl.valueText
+                valueTokens: decl.valueTokens,
+                markerEndCol: decl.markerEndCol
             });
         }
     }
@@ -219,44 +254,45 @@ function parseAllVariables(text) {
  * @param {object} record - Record settings for formatting
  * @returns {{ text: string, declarations: Array, errors: Array }}
  */
-function discoverVariables(text, context, record) {
+function discoverVariables(text, context, record, allTokens) {
     const lines = text.split('\n');
     const declarations = [];
     const errors = [];
     const definedVars = new Set();
+    let tPos = 0;
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        // Evaluate any \expr\ in this line
-        const inlineRegex = /\\([^\\]+)\\/g;
-        let match;
-        let lineModified = false;
+        const { tokens: lineTokens, pos: nextPos } = nextLineTokens(allTokens, tPos, i + 1);
+        tPos = nextPos;
 
-        // Process inline expressions from right to left to preserve positions
+        // Find backslash operator pairs in lineTokens for \expr\ detection
+        const backslashTokens = [];
+        for (let j = 0; j < lineTokens.length; j++) {
+            if (lineTokens[j].type === TokenType.OPERATOR && lineTokens[j].value === '\\') {
+                backslashTokens.push(lineTokens[j]);
+            }
+        }
+
+        // Build inline eval matches from pairs (each pair = one \expr\)
+        let lineModified = false;
         const inlineMatches = [];
-        while ((match = inlineRegex.exec(line)) !== null) {
+        for (let j = 0; j + 1 < backslashTokens.length; j += 2) {
+            const openTok = backslashTokens[j];
+            const closeTok = backslashTokens[j + 1];
+            const start = openTok.col - 1;   // 0-based string index of opening \
+            const end = closeTok.col;         // 0-based index after closing \
             inlineMatches.push({
-                fullMatch: match[0],
-                expression: match[1].trim(),
-                start: match.index,
-                end: match.index + match[0].length
+                expression: line.substring(start + 1, end - 1).trim(),
+                start,
+                end
             });
         }
 
-        // Filter out inline matches inside // or "..." comments
-        const { stripped, lineComment } = stripComments(line);
-        const filteredMatches = inlineMatches.filter(m => {
-            if (lineComment && m.start >= stripped.length) return false;
-            let inQuote = false;
-            for (let k = 0; k < m.start; k++) {
-                if (line[k] === '"') inQuote = !inQuote;
-            }
-            return !inQuote;
-        });
-
-        for (let j = filteredMatches.length - 1; j >= 0; j--) {
-            const evalInfo = filteredMatches[j];
+        // Process inline expressions from right to left to preserve positions
+        for (let j = inlineMatches.length - 1; j >= 0; j--) {
+            const evalInfo = inlineMatches[j];
             try {
                 // Strip format suffix ($, %, or #base) before parsing - it's used for output formatting only
                 // Use tokenizer to detect if trailing $ or % is a FORMATTER token (not part of a literal)
@@ -289,7 +325,8 @@ function discoverVariables(text, context, record) {
         }
 
         // Parse variable declaration from this line
-        const decl = parseVariableLine(line);
+        // If line was modified by inline eval, tokens are stale — re-tokenize
+        const decl = parseVariableLine(line, lineModified ? undefined : lineTokens);
         if (decl) {
             const name = decl.name;
             const isOutput = decl.type === VarType.OUTPUT;
@@ -326,14 +363,14 @@ function discoverVariables(text, context, record) {
 
             // Evaluate the value if present
             let value = null;
-            let valueText = decl.valueText;
+            const valueTokens = decl.valueTokens;
 
-            if (valueText && !isOutput) {
+            if (valueTokens && valueTokens.length > 0 && !isOutput) {
                 try {
-                    const ast = parseExpression(valueText);
+                    const ast = parseTokens(valueTokens);
                     value = evaluate(ast, context);
                 } catch (e) {
-                    errors.push(`Line ${i + 1}: Cannot evaluate "${valueText}" - ${e.message}`);
+                    errors.push(`Line ${i + 1}: Cannot evaluate "${tokensToText(valueTokens).trim()}" - ${e.message}`);
                 }
 
                 // Add to context for subsequent lines
@@ -347,16 +384,24 @@ function discoverVariables(text, context, record) {
                 declaration: decl,
                 lineIndex: i,
                 value: value,
-                valueText: valueText
+                valueTokens: valueTokens,
+                markerEndCol: decl.markerEndCol
             });
         } else {
             // Not a declaration — check for tokenizer errors on lines that look like code
-            // (have a marker or =). Skip plain text/label lines.
-            const { clean: cleanLine } = stripComments(line);
-            if (cleanLine.includes('=') || cleanLine.includes(':') ||
-                cleanLine.includes('<-') || cleanLine.includes('->')) {
-                const lineTokens = new Tokenizer(line).tokenize();
-                for (const tok of lineTokens) {
+            const hasCodeMarker = lineTokens.some(t =>
+                (t.type === TokenType.OPERATOR && t.value === '=') ||
+                t.type === TokenType.COLON ||
+                t.type === TokenType.DOUBLE_COLON ||
+                t.type === TokenType.ARROW_LEFT ||
+                t.type === TokenType.ARROW_RIGHT ||
+                t.type === TokenType.ARROW_FULL ||
+                t.type === TokenType.ARROW_PERSIST ||
+                t.type === TokenType.ARROW_PERSIST_FULL
+            );
+            if (hasCodeMarker) {
+                const tokensForCheck = lineModified ? new Tokenizer(line).tokenize() : lineTokens;
+                for (const tok of tokensForCheck) {
                     if (tok.type === TokenType.ERROR) {
                         errors.push(`Line ${i + 1}: ${tok.value}`);
                         break;
@@ -366,10 +411,13 @@ function discoverVariables(text, context, record) {
         }
     }
 
+    const newText = lines.join('\n');
+    const newTokens = new Tokenizer(newText).tokenize();
     return {
-        text: lines.join('\n'),
+        text: newText,
         declarations: declarations,
-        errors: errors
+        errors: errors,
+        allTokens: newTokens
     };
 }
 
@@ -487,8 +535,8 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
  * Capture pre-solve values for output variables (before they are cleared).
  * These are available via the ? operator and as fallback in getVariable().
  */
-function capturePreSolveValues(text) {
-    const declarations = parseAllVariables(text);
+function capturePreSolveValues(text, allTokens) {
+    const declarations = parseAllVariables(text, allTokens);
     const preSolveValues = new Map();
     for (const decl of declarations) {
         if (decl.value !== null) {
@@ -505,43 +553,48 @@ function capturePreSolveValues(text) {
     return preSolveValues;
 }
 
-function clearVariables(text, clearType = 'input') {
+function clearVariables(text, clearType = 'input', allTokens) {
     const lines = text.split('\n');
+    let tPos = 0;
 
     for (let i = 0; i < lines.length; i++) {
-        const decl = parseVariableLine(lines[i]);
-        if (!decl) continue;
+        const { tokens: lineTokens, pos: nextPos } = nextLineTokens(allTokens, tPos, i + 1);
+        tPos = nextPos;
 
-        // Use ClearBehavior for logic, with VarType fallback for compatibility
-        const clearBehavior = decl.clearBehavior || (
-            decl.type === VarType.INPUT ? ClearBehavior.ON_CLEAR :
-            decl.type === VarType.OUTPUT ? ClearBehavior.ON_SOLVE :
-            ClearBehavior.NONE
-        );
+        const result = parseMarkedLine(lines[i], lineTokens);
+        if (!result) continue;
 
-        const shouldClear =
-            clearType === 'all' ||
-            (clearType === 'input' && (clearBehavior === ClearBehavior.ON_CLEAR || clearBehavior === ClearBehavior.ON_SOLVE)) ||
-            (clearType === 'output' && clearBehavior === ClearBehavior.ON_SOLVE) ||
-            (clearType === 'solve' && (clearBehavior === ClearBehavior.ON_SOLVE || clearBehavior === ClearBehavior.ON_SOLVE_ONLY));
+        let shouldClear = false;
 
-        if (shouldClear && decl.valueText) {
-            const commentInfo = { comment: decl.comment, commentUnquoted: decl.commentUnquoted };
-            const newLine = replaceValueOnLine(lines[i], decl.name, decl.marker, !!decl.limits, '', commentInfo);
-            if (newLine !== null) {
-                lines[i] = newLine;
-            }
+        if (result.kind === 'declaration') {
+            // Use ClearBehavior for logic, with VarType fallback for compatibility
+            const clearBehavior = result.clearBehavior || (
+                result.type === VarType.INPUT ? ClearBehavior.ON_CLEAR :
+                result.type === VarType.OUTPUT ? ClearBehavior.ON_SOLVE :
+                ClearBehavior.NONE
+            );
+
+            shouldClear =
+                clearType === 'all' ||
+                (clearType === 'input' && (clearBehavior === ClearBehavior.ON_CLEAR || clearBehavior === ClearBehavior.ON_SOLVE)) ||
+                (clearType === 'output' && clearBehavior === ClearBehavior.ON_SOLVE) ||
+                (clearType === 'solve' && (clearBehavior === ClearBehavior.ON_SOLVE || clearBehavior === ClearBehavior.ON_SOLVE_ONLY));
+        } else if (result.kind === 'expression-output' && result.recalculates) {
+            // Skip persistent outputs (=> =>>) unless solving
+            const isPersistent = result.marker === '=>' || result.marker === '=>>';
+            shouldClear = clearType === 'solve' || !isPersistent;
+        }
+
+        if (shouldClear && result.valueTokens && result.valueTokens.length > 0) {
+            const commentInfo = { comment: result.comment, commentUnquoted: result.commentUnquoted };
+            const markerEndIndex = result.markerEndCol - 1;
+            lines[i] = buildOutputLine(lines[i], markerEndIndex, '', commentInfo);
         }
     }
 
-    let result = lines.join('\n');
-
-    // Also clear expression outputs when clearing output or input types
-    if (clearType === 'solve' || clearType === 'output' || clearType === 'input' || clearType === 'all') {
-        result = clearExpressionOutputs(result, clearType);
-    }
-
-    return result;
+    const newText = lines.join('\n');
+    const newTokens = new Tokenizer(newText).tokenize();
+    return { text: newText, allTokens: newTokens };
 }
 
 /**
@@ -551,155 +604,164 @@ function clearVariables(text, clearType = 'input') {
  * @param {string} text - The formula text
  * @returns {{ equations: Array, exprOutputs: Array }}
  */
-function findEquationsAndOutputs(text) {
-    const lines = text.split('\n');
+function findEquationsAndOutputs(text, allTokens) {
+    const lineOffsets = computeLineOffsets(text);
+    const maxLine = lineOffsets.length;
     const equations = [];
     const exprOutputs = [];
     let inBrace = false;
-    let braceStart = -1;
-    let braceContent = [];
-    let braceStartCol = 0;
+    let braceStartTok = null;
 
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const { clean: cleanLine } = stripComments(line);
+    // Group tokens by line and process
+    let prevLine = -1;
+    let lineTokens = [];
 
+    for (const t of allTokens) {
+        if (t.type === TokenType.NEWLINE) continue;
+        if (t.type === TokenType.EOF || t.line > maxLine) break;
+
+        if (t.line !== prevLine) {
+            if (lineTokens.length > 0) processLine(prevLine, lineTokens);
+            lineTokens = [];
+            prevLine = t.line;
+        }
+        lineTokens.push(t);
+    }
+    if (lineTokens.length > 0) processLine(prevLine, lineTokens);
+
+    return { equations, exprOutputs };
+
+    function processLine(lineNum, lineTokens) {
         // Handle braced equations (state machine for multi-line braces)
-        const braceOpenIdx = cleanLine.indexOf('{');
-        if (braceOpenIdx !== -1 && !inBrace) {
+        const lbraceTok = lineTokens.find(t => t.type === TokenType.LBRACE);
+        const rbraceTok = lineTokens.find(t => t.type === TokenType.RBRACE);
+
+        if (lbraceTok && !inBrace) {
             inBrace = true;
-            braceStart = i;
-            braceStartCol = braceOpenIdx;
-            braceContent = [];
+            braceStartTok = lbraceTok;
 
-            const afterBrace = cleanLine.substring(braceOpenIdx + 1);
-            const braceCloseIdx = afterBrace.indexOf('}');
-
-            if (braceCloseIdx !== -1) {
+            if (rbraceTok) {
+                // Single-line brace — extract content between { and }
+                const content = text.substring(
+                    tokenOffset(lineOffsets, lbraceTok) + 1,
+                    tokenOffset(lineOffsets, rbraceTok)
+                ).trim();
+                // Find = token within braces to split sides
+                const eqTokInBrace = lineTokens.find(t =>
+                    t.type === TokenType.OPERATOR && t.value === '=' &&
+                    t.col > lbraceTok.col && t.col < rbraceTok.col
+                );
+                const braceStart = tokenOffset(lineOffsets, lbraceTok) + 1;
+                const braceEnd = tokenOffset(lineOffsets, rbraceTok);
                 equations.push({
-                    text: afterBrace.substring(0, braceCloseIdx).trim(),
-                    startLine: i,
-                    endLine: i,
+                    text: content,
+                    leftText: eqTokInBrace ? text.substring(braceStart, tokenOffset(lineOffsets, eqTokInBrace)).trim() : null,
+                    rightText: eqTokInBrace ? text.substring(tokenOffset(lineOffsets, eqTokInBrace) + 1, braceEnd).trim() : null,
+                    startLine: lineNum - 1,   // 0-based for solve-engine.js
+                    endLine: lineNum - 1,
                     isBraced: true,
-                    startCol: braceOpenIdx,
-                    endCol: braceOpenIdx + 1 + braceCloseIdx + 1
+                    startCol: lbraceTok.col - 1,
+                    endCol: rbraceTok.col
                 });
                 inBrace = false;
-            } else {
-                braceContent.push(afterBrace);
             }
-            continue;
+            // else: multi-line brace start — just record braceStartTok
+            return;
         }
 
         if (inBrace) {
-            const braceCloseIdx = cleanLine.indexOf('}');
-            if (braceCloseIdx !== -1) {
-                braceContent.push(cleanLine.substring(0, braceCloseIdx));
+            if (rbraceTok) {
+                // Multi-line brace ends — extract ALL content as single substring
+                const rawContent = text.substring(
+                    tokenOffset(lineOffsets, braceStartTok) + 1,
+                    tokenOffset(lineOffsets, rbraceTok)
+                );
+                const normalizedContent = rawContent.replace(/\s+/g, ' ').trim();
+                // Split on = for pre-parsed sides (regex fallback for multi-line)
+                const eqMatch = normalizedContent.match(/^(.+?)=(.+)$/);
                 equations.push({
-                    text: braceContent.join(' ').trim(),
-                    startLine: braceStart,
-                    endLine: i,
+                    text: normalizedContent,
+                    leftText: eqMatch ? eqMatch[1].trim() : null,
+                    rightText: eqMatch ? eqMatch[2].trim() : null,
+                    startLine: braceStartTok.line - 1,
+                    endLine: lineNum - 1,
                     isBraced: true,
-                    startCol: braceStartCol,
-                    endCol: braceCloseIdx + 1
+                    startCol: braceStartTok.col - 1,
+                    endCol: rbraceTok.col
                 });
                 inBrace = false;
-            } else {
-                braceContent.push(cleanLine);
             }
-            continue;
+            return;
         }
 
-        // Parse the line once using parseMarkedLine (single tokenization)
-        const markedResult = parseMarkedLine(line);
+        // Parse the line once using parseMarkedLine (reuses pre-tokenized tokens)
+        const lineText = getLineText(text, lineOffsets, lineNum);
+        const markedResult = parseMarkedLine(lineText, lineTokens);
 
         if (markedResult && markedResult.kind === 'expression-output') {
             exprOutputs.push({
-                text: markedResult.expression,
+                exprTokens: markedResult.exprTokens,
                 marker: markedResult.marker,
-                startLine: i,
+                markerEndCol: markedResult.markerEndCol,
+                startLine: lineNum - 1,
                 fullPrecision: markedResult.fullPrecision,
                 recalculates: markedResult.recalculates,
-                existingValue: markedResult.valueText,
+                valueTokens: markedResult.valueTokens,
                 format: markedResult.format,
                 base: markedResult.base,
                 comment: markedResult.comment,
                 commentUnquoted: markedResult.commentUnquoted
             });
-            continue;
+            return;
         }
 
         if (markedResult) {
             // Declaration line - skip
-            continue;
+            return;
         }
 
-        // Check for equation: line with = that's not a comparison operator
-        const eqIdx = cleanLine.indexOf('=');
-        if (eqIdx !== -1) {
-            const prevChar = eqIdx > 0 ? cleanLine[eqIdx - 1] : '';
-            const nextChar = eqIdx < cleanLine.length - 1 ? cleanLine[eqIdx + 1] : '';
-
-            if (prevChar !== '=' && prevChar !== '!' && prevChar !== '<' && prevChar !== '>' &&
-                nextChar !== '=') {
-                const eqText = extractEquationFromLine(cleanLine.trim());
-                equations.push({
-                    text: eqText,
-                    startLine: i,
-                    endLine: i,
-                    isBraced: false,
-                    startCol: 0,
-                    endCol: line.length
-                });
-            }
+        // Check for equation using tokens (tokenizer distinguishes = from ==, !=, <=, >=, =>)
+        const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && t.value === '=');
+        if (eqTok) {
+            const eqInfo = extractEquationFromLine(lineText, lineTokens, eqTok);
+            equations.push({
+                text: eqInfo.text,
+                leftText: eqInfo.leftText,
+                rightText: eqInfo.rightText,
+                startLine: lineNum - 1,
+                endLine: lineNum - 1,
+                isBraced: false,
+                startCol: 0,
+                endCol: lineText.length
+            });
         }
     }
-
-    return { equations, exprOutputs };
 }
 
 /**
  * Find expression outputs in text: expr:, expr::, expr->, expr->>
  * Thin wrapper around findEquationsAndOutputs for callers that only need outputs.
  */
-function findExpressionOutputs(text) {
-    return findEquationsAndOutputs(text).exprOutputs;
+function findExpressionOutputs(text, allTokens) {
+    return findEquationsAndOutputs(text, allTokens).exprOutputs;
 }
 
 /**
  * Clear expression output values for recalculating outputs
  * @param {string} clearType - 'solve' clears all recalculating outputs; otherwise skips persistent (=> =>>)
  */
-function clearExpressionOutputs(text, clearType) {
+function clearExpressionOutputs(text, clearType, allTokens) {
     const lines = text.split('\n');
-    const outputs = findExpressionOutputs(text);
+    const outputs = findExpressionOutputs(text, allTokens);
 
     for (const output of outputs) {
         // Skip persistent outputs (=> =>>) unless solving
         const isPersistent = output.marker === '=>' || output.marker === '=>>';
-        if (output.recalculates && output.existingValue && (clearType === 'solve' || !isPersistent)) {
-            // Clear the value portion for -> and ->> outputs
+        if (output.recalculates && output.valueTokens && output.valueTokens.length > 0 && (clearType === 'solve' || !isPersistent)) {
             const line = lines[output.startLine];
-
-            // Strip // line comment before processing, re-append later
-            const { clean: cleanLine, stripped: lineNoLC, lineComment } = stripComments(line);
-            const lineCommentSuffix = lineComment ? ' ' + lineComment.trimEnd() : '';
-
-            // Find the marker position and clear everything after it (except comments)
-            const markerIdx = cleanLine.lastIndexOf(output.marker);
-            if (markerIdx !== -1) {
-                const beforeMarker = lineNoLC.substring(0, markerIdx + output.marker.length);
-                // Use parsed comment info
-                let trailingText = '';
-                if (output.comment) {
-                    if (output.commentUnquoted) {
-                        trailingText = ' ' + output.comment;
-                    } else {
-                        trailingText = ' "' + output.comment + '"';
-                    }
-                }
-                lines[output.startLine] = beforeMarker + trailingText + lineCommentSuffix;
-            }
+            const markerEndIndex = output.markerEndCol - 1;
+            const commentInfo = { comment: output.comment, commentUnquoted: output.commentUnquoted };
+            lines[output.startLine] = buildOutputLine(line, markerEndIndex, '', commentInfo);
         }
     }
 
@@ -711,44 +773,35 @@ function clearExpressionOutputs(text, clearType) {
  * For example: "equation c = a + b test" -> "c = a + b"
  * Returns the extracted equation text, or the original if it parses fine or can't be fixed.
  */
-function extractEquationFromLine(lineText) {
-    // Handle braced equations: { expr = expr }
-    // The braces are part of the equation syntax, not label text
-    const trimmed = lineText.trim();
-    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-        // Extract content inside braces, process it, then add braces back
-        const innerContent = trimmed.slice(1, -1).trim();
-        const innerExtracted = extractEquationFromLineInner(innerContent);
-        // Find original brace positions to preserve whitespace
-        const openBrace = lineText.indexOf('{');
-        const closeBrace = lineText.lastIndexOf('}');
-        return lineText.slice(0, openBrace + 1) + ' ' + innerExtracted + ' ' + lineText.slice(closeBrace);
-    }
+function extractEquationFromLine(lineText, lineTokens) {
+    let leftText, rightText;
 
-    return extractEquationFromLineInner(lineText);
-}
+    const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && t.value === '=');
+    if (!eqTok) return { text: lineText, leftText: null, rightText: null };
+    leftText = lineText.substring(0, eqTok.col - 1).trim();
+    rightText = lineText.substring(eqTok.col).trim();
 
-function extractEquationFromLineInner(lineText) {
-    // First, check if the line parses correctly as-is
-    const eqMatch = lineText.match(/^(.+?)=(.+)$/);
-    if (!eqMatch) return lineText;
-
-    const leftText = eqMatch[1].trim();
-    const rightText = eqMatch[2].trim();
-
-    // Try parsing both sides
+    // Try parsing both sides (parseExpression handles comments)
+    // parseExpression returns null for empty input, so check for truthy result
     let leftOk = false, rightOk = false;
     try {
-        parseExpression(leftText);
-        leftOk = true;
+        leftOk = !!parseExpression(leftText);
     } catch (e) {}
     try {
-        parseExpression(rightText);
-        rightOk = true;
+        rightOk = !!parseExpression(rightText);
     } catch (e) {}
 
-    // If both sides parse, no extraction needed
-    if (leftOk && rightOk) return lineText;
+    // Incomplete equation (expr =) — return leftText for consumer use
+    if (leftOk && !rightText) {
+        return { text: lineText, leftText, rightText: null };
+    }
+
+    // If both sides parse, return equation (preserves original spacing around =)
+    if (leftOk && rightOk) {
+        const afterEq = lineText.substring(eqTok.col);
+        const leadingSpace = afterEq.substring(0, afterEq.length - afterEq.trimStart().length);
+        return { text: lineText.substring(0, eqTok.col) + leadingSpace + rightText, leftText, rightText };
+    }
 
     // Try to extract the actual equation
     // For LHS: find the last identifier (possibly with function call) before =
@@ -772,9 +825,10 @@ function extractEquationFromLineInner(lineText) {
         for (let i = tokens.length; i > 0; i--) {
             const candidate = tokens.slice(0, i).join(' ');
             try {
-                parseExpression(candidate);
-                extractedRight = candidate;
-                break;
+                if (parseExpression(candidate)) {
+                    extractedRight = candidate;
+                    break;
+                }
             } catch (e) {
                 // Try shorter
             }
@@ -782,26 +836,25 @@ function extractEquationFromLineInner(lineText) {
     }
 
     // Verify the extracted equation parses
-    const extracted = extractedLeft + ' = ' + extractedRight;
     try {
-        const finalMatch = extracted.match(/^(.+?)=(.+)$/);
-        if (finalMatch) {
-            parseExpression(finalMatch[1].trim());
-            parseExpression(finalMatch[2].trim());
-            return extracted;
+        const lhs = parseExpression(extractedLeft);
+        const rhs = parseExpression(extractedRight);
+        if (lhs && rhs) {
+            return { text: extractedLeft + ' = ' + extractedRight, leftText: extractedLeft, rightText: extractedRight };
         }
     } catch (e) {}
 
-    // Couldn't extract a valid equation, return original
-    return lineText;
+    // Couldn't extract a clean equation — return original text with raw split sides
+    // so consumers can still attempt to parse each side and report specific errors
+    return { text: lineText, leftText: leftText || null, rightText: rightText || null };
 }
 
 /**
  * Find equations in text (lines or blocks with = that are not variable declarations)
  * Thin wrapper around findEquationsAndOutputs for callers that only need equations.
  */
-function findEquations(text) {
-    return findEquationsAndOutputs(text).equations;
+function findEquations(text, allTokens) {
+    return findEquationsAndOutputs(text, allTokens).equations;
 }
 
 /**
@@ -848,16 +901,21 @@ function replaceInlineEvaluation(text, evalInfo, result) {
  * Parse the Constants record
  * Returns a map of constant name -> value
  */
-function parseConstantsRecord(text) {
+function parseConstantsRecord(text, allTokens) {
+    if (!allTokens) allTokens = new Tokenizer(text).tokenize();
     const constants = new Map();
     const lines = text.split('\n');
     const tempContext = new EvalContext();
+    let tPos = 0;
 
-    for (const line of lines) {
-        const decl = parseVariableLine(line);
-        if (decl && decl.valueText) {
+    for (let i = 0; i < lines.length; i++) {
+        const { tokens: lineTokens, pos: nextPos } = nextLineTokens(allTokens, tPos, i + 1);
+        tPos = nextPos;
+
+        const decl = parseVariableLine(lines[i], lineTokens);
+        if (decl && decl.valueTokens && decl.valueTokens.length > 0) {
             try {
-                const ast = parseExpression(decl.valueText);
+                const ast = parseTokens(decl.valueTokens);
                 const value = evaluate(ast, tempContext);
                 if (typeof value === 'number') {
                     constants.set(decl.name, { value, comment: decl.comment });
@@ -875,110 +933,142 @@ function parseConstantsRecord(text) {
 /**
  * Parse the Functions record
  * Returns a map of function name -> { params: [], bodyText: string }
+ * Walks the token stream directly — no line splitting, no comment stripping.
  */
-function parseFunctionsRecord(text) {
+function parseFunctionsRecord(text, allTokens) {
+    if (!allTokens) allTokens = new Tokenizer(text).tokenize();
     const functions = new Map();
-    const lines = text.split('\n');
+    const lineOffsets = computeLineOffsets(text);
+    const maxLine = lineOffsets.length;
 
-    // Helper to extract function definition from text
-    function extractFunction(content, sourceText) {
-        // Normalize whitespace (multi-line braces may have newlines)
-        content = content.replace(/\s+/g, ' ').trim();
-        // Pattern: funcname(arg1;arg2;...) = expression
-        const match = content.match(/(\w+)\s*\(\s*([^)]*)\s*\)\s*=\s*(.+)$/);
-        if (match) {
-            const name = match[1].toLowerCase();
-            const paramsText = match[2].trim();
-            const bodyText = match[3].trim();
-
-            // Skip if bodyText starts with > (the = was part of => or =>> marker)
-            if (bodyText.startsWith('>')) return;
-
-            // Don't redefine an existing function - that's an equation, not a definition
-            // e.g., if f(x) = x**2 exists, then f(z) = 0 is an equation to solve
-            if (functions.has(name)) return;
-
-            const params = paramsText ?
-                paramsText.split(';').map(p => p.trim()) : [];
-
-            functions.set(name, { params, bodyText, sourceText });
-        }
-    }
-
+    // Walk token stream, tracking brace state
+    let i = 0;
     let inBrace = false;
-    let braceContent = [];
-    let braceSourceLines = [];
+    let braceTokens = [];      // non-COMMENT tokens inside braces
+    let braceStartTok = null;
 
-    for (const line of lines) {
-        // Remove comments for parsing
-        const { stripped } = stripComments(line);
-        const cleanLine = stripped.replace(/"[^"]*"/g, '').trim();
+    while (i < allTokens.length) {
+        const t = allTokens[i];
+        if (t.type === TokenType.EOF || t.line > maxLine) break;
+        if (t.type === TokenType.NEWLINE || t.type === TokenType.COMMENT) { i++; continue; }
 
-        if (inBrace) {
-            const closeIdx = cleanLine.indexOf('}');
-            if (closeIdx !== -1) {
-                braceContent.push(cleanLine.substring(0, closeIdx));
-                braceSourceLines.push(line);
-                extractFunction(braceContent.join(' '), braceSourceLines.join('\n').trim());
-                inBrace = false;
-                braceContent = [];
-                braceSourceLines = [];
-            } else {
-                braceContent.push(cleanLine);
-                braceSourceLines.push(line);
-            }
+        if (t.type === TokenType.LBRACE && !inBrace) {
+            inBrace = true;
+            braceStartTok = t;
+            braceTokens = [];
+            i++;
             continue;
         }
 
-        if (!cleanLine) continue;
-
-        const openIdx = cleanLine.indexOf('{');
-        if (openIdx !== -1) {
-            const afterBrace = cleanLine.substring(openIdx + 1);
-            const closeIdx = afterBrace.indexOf('}');
-            if (closeIdx !== -1) {
-                // Single-line braced content
-                extractFunction(afterBrace.substring(0, closeIdx).trim(), line.trim());
+        if (inBrace) {
+            if (t.type === TokenType.RBRACE) {
+                tryMatchFunction(braceTokens, braceStartTok, t);
+                inBrace = false;
             } else {
-                // Multi-line brace starts
-                inBrace = true;
-                braceContent = [afterBrace];
-                braceSourceLines = [line];
+                braceTokens.push(t);
             }
-        } else {
-            // Try matching function definition at start of line
-            extractFunction(cleanLine, line.trim());
+            i++;
+            continue;
         }
+
+        // Non-braced: collect non-comment tokens for current line
+        // Stop at LBRACE so the outer loop's brace handler takes over
+        const currentLine = t.line;
+        const lineTokens = [];
+        while (i < allTokens.length) {
+            const lt = allTokens[i];
+            if (lt.type === TokenType.EOF || lt.type === TokenType.NEWLINE) break;
+            if (lt.line !== currentLine) break;
+            if (lt.type === TokenType.LBRACE) break;
+            if (lt.type !== TokenType.COMMENT) lineTokens.push(lt);
+            i++;
+        }
+
+        tryMatchFunction(lineTokens, null, null);
     }
 
     return functions;
+
+    function tryMatchFunction(tokens, lbraceTok, rbraceTok) {
+        // Pattern: IDENTIFIER LPAREN [params] RPAREN OPERATOR('=') body...
+        if (tokens.length < 4) return;
+        if (tokens[0].type !== TokenType.IDENTIFIER) return;
+        if (tokens[1].type !== TokenType.LPAREN) return;
+
+        // Find RPAREN
+        let rparenIdx = -1;
+        for (let j = 2; j < tokens.length; j++) {
+            if (tokens[j].type === TokenType.RPAREN) { rparenIdx = j; break; }
+        }
+        if (rparenIdx === -1) return;
+
+        // Next must be OPERATOR('=')
+        if (rparenIdx + 1 >= tokens.length) return;
+        const eqTok = tokens[rparenIdx + 1];
+        if (eqTok.type !== TokenType.OPERATOR || eqTok.value !== '=') return;
+
+        // Must have body tokens after =
+        if (rparenIdx + 2 >= tokens.length) return;
+
+        const name = tokens[0].value.toLowerCase();
+        if (functions.has(name)) return;  // don't redefine
+
+        // Extract params from tokens between LPAREN and RPAREN
+        const params = [];
+        for (let j = 2; j < rparenIdx; j++) {
+            if (tokens[j].type === TokenType.IDENTIFIER) params.push(tokens[j].value);
+        }
+
+        // Body text: from original text, after = to end boundary
+        const bodyStart = tokenOffset(lineOffsets, eqTok) + 1;
+        let bodyEnd;
+        if (rbraceTok) {
+            bodyEnd = tokenOffset(lineOffsets, rbraceTok);
+        } else {
+            // End of line
+            const lastTok = tokens[tokens.length - 1];
+            bodyEnd = lastTok.line < lineOffsets.length
+                ? lineOffsets[lastTok.line] - 1
+                : text.length;
+        }
+        const bodyText = text.substring(bodyStart, bodyEnd).trim();
+
+        // Source text: full line(s) for display in references section
+        const startLine = lbraceTok ? lbraceTok.line : tokens[0].line;
+        const endLine = rbraceTok ? rbraceTok.line : tokens[tokens.length - 1].line;
+        const sourceStart = lineOffsets[startLine - 1];
+        const sourceEnd = endLine < lineOffsets.length
+            ? lineOffsets[endLine] - 1
+            : text.length;
+        const sourceText = text.substring(sourceStart, sourceEnd).trim();
+
+        functions.set(name, { params, bodyText, sourceText });
+    }
 }
 
 /**
  * Create an EvalContext with constants and user functions loaded
- * @param {Array} records - Array of all records (to find Constants and Functions records)
  * @param {Object} record - Current record (uses record.degreesMode)
+ * @param {Map} parsedConstants - Pre-parsed constants from parseConstantsRecord()
+ * @param {Map} parsedFunctions - Pre-parsed functions from parseFunctionsRecord()
  * @param {string} localText - Optional text of current record for local function definitions
+ * @param {Array} allTokens - Optional pre-tokenized tokens for localText
  * @returns {EvalContext} Configured evaluation context
  */
-function createEvalContext(records, record, localText = null) {
+function createEvalContext(record, parsedConstants, parsedFunctions, localText = null, allTokens = null) {
     const context = new EvalContext();
     context.degreesMode = (record && record.degreesMode) || false;
 
-    // Load constants from Constants record
-    const constantsRecord = records.find(r => isReferenceRecord(r, 'Constants'));
-    if (constantsRecord) {
-        const constants = parseConstantsRecord(constantsRecord.text);
-        for (const [name, { value, comment }] of constants) {
+    // Load constants (callers provide pre-parsed results from getReferenceInfo)
+    if (parsedConstants) {
+        for (const [name, { value, comment }] of parsedConstants) {
             context.setConstant(name, value, comment);
         }
     }
 
-    // Load user functions from Functions record
-    const functionsRecord = records.find(r => isReferenceRecord(r, 'Functions'));
-    if (functionsRecord) {
-        const functions = parseFunctionsRecord(functionsRecord.text);
-        for (const [name, { params, bodyText, sourceText }] of functions) {
+    // Load user functions (callers provide pre-parsed results from getReferenceInfo)
+    if (parsedFunctions) {
+        for (const [name, { params, bodyText, sourceText }] of parsedFunctions) {
             try {
                 const bodyAST = parseExpression(bodyText);
                 context.setUserFunction(name, params, bodyAST, sourceText);
@@ -994,7 +1084,7 @@ function createEvalContext(records, record, localText = null) {
         // Strip any existing references section before parsing local functions
         // This prevents function definitions in the references section from being treated as local
         const strippedText = localText.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
-        const localFunctions = parseFunctionsRecord(strippedText);
+        const localFunctions = parseFunctionsRecord(strippedText, allTokens);
         for (const [name, { params, bodyText, sourceText }] of localFunctions) {
             try {
                 const bodyAST = parseExpression(bodyText);
@@ -1009,13 +1099,6 @@ function createEvalContext(records, record, localText = null) {
     return context;
 }
 
-/**
- * Helper: escape special regex characters
- */
-function escapeRegex(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 // Reference to formatNumber from evaluator.js (will be available globally)
 // This is declared here for reference, actual function is in evaluator.js
 
@@ -1024,7 +1107,7 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         parseVarNameAndFormat, parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
-        buildOutputLine, replaceValueOnLine, capturePreSolveValues, clearVariables, findEquations,
+        buildOutputLine, capturePreSolveValues, clearVariables, findEquations,
         findExpressionOutputs, findEquationsAndOutputs, clearExpressionOutputs,
         findInlineEvaluations, replaceInlineEvaluation,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext,

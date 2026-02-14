@@ -431,12 +431,8 @@ function deepCopyAST(node) {
  * Check if an equation is a simple definition: variable = expression
  * Returns { variable, expression AST } or null
  */
-function isDefinitionEquation(eqText) {
-    const eqMatch = eqText.match(/^(.+?)=(.+)$/);
-    if (!eqMatch) return null;
-
-    const leftText = eqMatch[1].trim();
-    const rightText = eqMatch[2].trim();
+function isDefinitionEquation(eqText, leftText, rightText) {
+    if (!leftText || !rightText) return null;
 
     // Check if left side is a simple variable name (may have $ or % suffix)
     // Must start with a letter or underscore, not a digit (to avoid matching "1000 = expr")
@@ -459,12 +455,8 @@ function isDefinitionEquation(eqText) {
  * Handles cases like: a/b = c => a = b*c, a + b = c => a = c - b, etc.
  * Returns { variable, expressionAST } or null
  */
-function deriveSubstitution(eqText, context) {
-    const eqMatch = eqText.match(/^(.+?)=(.+)$/);
-    if (!eqMatch) return null;
-
-    const leftText = eqMatch[1].trim();
-    const rightText = eqMatch[2].trim();
+function deriveSubstitution(eqText, context, leftText, rightText) {
+    if (!leftText || !rightText) return null;
 
     // First check if it's already a simple definition (but only if variable is unknown)
     // Must start with a letter or underscore, not a digit
@@ -623,10 +615,10 @@ function buildSubstitutionMap(equations, context, errors = []) {
     for (const eq of equations) {
         try {
             // First try simple definition
-            let def = isDefinitionEquation(eq.text);
+            let def = isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
             if (!def || context.hasVariable(def.variable)) {
                 // Try algebraic derivation
-                def = deriveSubstitution(eq.text, context);
+                def = deriveSubstitution(eq.text, context, eq.leftText, eq.rightText);
             }
 
             if (!def || context.hasVariable(def.variable) || substitutions.has(def.variable)) {

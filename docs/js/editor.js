@@ -28,12 +28,12 @@ function tokenizeMathPad(text, options = {}) {
     // Strip the reference section first so definitions there aren't treated as local
     const strippedText = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
 
-    // Find user-defined functions (may shadow builtins/reference functions)
-    const userDefinedFunctions = new Set(parseFunctionsRecord(strippedText).keys());
-
     // Tokenize first to find quoted comments (they take precedence)
     const tokenizer = new Tokenizer(text);
     const parserTokens = tokenizer.tokenize();
+
+    // Find user-defined functions (reuse full-text tokens; maxLine bounds to strippedText)
+    const userDefinedFunctions = new Set(parseFunctionsRecord(strippedText, parserTokens).keys());
 
     // Find quoted comment regions from tokenizer
     const quotedCommentRegions = [];
@@ -186,7 +186,7 @@ function tokenizeMathPad(text, options = {}) {
     // Sort tokens by position
     tokens.sort((a, b) => a.from - b.from);
 
-    return tokens;
+    return { tokens, parserTokens };
 }
 
 /**
@@ -207,15 +207,14 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
     let lineStart = 0;
     let insideBrace = false;
 
-    // Group tokens by line (split at NEWLINE tokens)
-    const tokensByLine = [[]];
-    let lineIdx = 0;
+    // Group tokens by line (using token.line property, which correctly
+    // handles multi-line comments that span multiple lines as a single token)
+    const tokensByLine = Array.from({length: lines.length}, () => []);
     for (const token of parserTokens) {
-        if (token.type === TokenType.NEWLINE) {
-            lineIdx++;
-            tokensByLine[lineIdx] = [];
-        } else if (token.type !== TokenType.EOF) {
-            tokensByLine[lineIdx].push(token);
+        if (token.type === TokenType.NEWLINE || token.type === TokenType.EOF) continue;
+        const idx = token.line - 1;  // token.line is 1-based
+        if (idx >= 0 && idx < tokensByLine.length) {
+            tokensByLine[idx].push(token);
         }
     }
 
@@ -253,7 +252,7 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
         }
 
         // Create LineParser from pre-tokenized input (no re-tokenization)
-        const parser = LineParser.fromTokens(line, tokensByLine[i] || [], i);
+        const parser = LineParser.fromTokens(tokensByLine[i] || [], i);
         const result = parser.parse();
 
         // --- Shadow detection (non-reference lines only) ---
@@ -276,16 +275,17 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
                 // $/%  format specifiers are merged into the marker token by the tokenizer,
                 // so markerInfo.index already points to the correct position.
                 const varInfo = parser.getImmediateVarBeforeMarker(markerInfo.index);
-                if (varInfo && varInfo.varStartPos > 0) {
+                if (varInfo && varInfo.varTokenStartIndex > 0) {
+                    const varStartCol = parser.tokens[varInfo.varTokenStartIndex].col;
                     labelRegions.push({
                         start: lineStart,
-                        end: lineStart + varInfo.varStartPos
+                        end: lineStart + varStartCol - 1
                     });
                 }
             }
-        } else if (result && result.kind === 'expression-output' && result.expression) {
-            // For expression outputs, label is everything before where the expression starts
-            const exprStart = line.indexOf(result.expression);
+        } else if (result && result.kind === 'expression-output' && result.exprTokens.length > 0) {
+            // For expression outputs, label is everything before the first expression token
+            const exprStart = result.exprTokens[0].col - 1;
             if (exprStart > 0) {
                 labelRegions.push({
                     start: lineStart,
@@ -294,28 +294,20 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
             }
         } else if (!result && line.includes('=')) {
             // Equation line - find label text before and after the equation
-            if (line.includes('{')) {
-                const bracePos = line.indexOf('{');
-                if (bracePos > 0) {
-                    labelRegions.push({
-                        start: lineStart,
-                        end: lineStart + bracePos
-                    });
-                }
-            } else {
-                const eqRegions = findEquationLabelRegions(line);
-                for (const r of eqRegions) {
-                    labelRegions.push({
-                        start: lineStart + r.start,
-                        end: lineStart + r.end
-                    });
-                }
+            const eqRegions = findEquationLabelRegions(line, tokensByLine[i]);
+            for (const r of eqRegions) {
+                labelRegions.push({
+                    start: lineStart + r.start,
+                    end: lineStart + r.end
+                });
             }
         } else if (!result && line.trim() && !insideBrace) {
             // Plain text line - label/comment (but not if it has error tokens — let those highlight red)
             const hasError = parser.tokens.some(t => t.type === TokenType.ERROR || t.type === TokenType.UNEXPECTED_CHAR);
-            if (!hasError) {
-                const labelEnd = parser.cleanLine.trimEnd().length;
+            if (!hasError && parser.tokens.length > 0) {
+                const lastTok = parser.tokens[parser.tokens.length - 1];
+                const raw = lastTok.type === TokenType.NUMBER ? lastTok.value.raw : lastTok.value;
+                const labelEnd = lastTok.col - 1 + raw.length;
                 if (labelEnd > 0) {
                     labelRegions.push({
                         start: lineStart,
@@ -347,17 +339,27 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
  * For "equation c = a + b test", returns regions for "equation " and " test"
  * Uses extractEquationFromLine from variables.js
  */
-function findEquationLabelRegions(line) {
+function findEquationLabelRegions(line, lineTokens) {
     const regions = [];
 
+    // For braced equations, everything before { is label
+    const lbrace = lineTokens.find(t => t.type === TokenType.LBRACE);
+    if (lbrace) {
+        const bracePos = lbrace.col - 1;
+        if (bracePos > 0) {
+            regions.push({ start: 0, end: bracePos });
+        }
+        return regions;
+    }
+
     // Use the existing function to extract the valid equation
-    const extracted = extractEquationFromLine(line);
+    const result = extractEquationFromLine(line, lineTokens);
 
     // If extraction returned the same line, no label text
-    if (extracted === line) return regions;
+    if (result.text === line) return regions;
 
     // Find where the extracted equation appears in the original line
-    const eqStart = line.indexOf(extracted);
+    const eqStart = line.indexOf(result.text);
     if (eqStart === -1) return regions;
 
     // Everything before the equation is label text
@@ -366,7 +368,7 @@ function findEquationLabelRegions(line) {
     }
 
     // Everything after the equation is label text
-    const eqEnd = eqStart + extracted.length;
+    const eqEnd = eqStart + result.text.length;
     if (eqEnd < line.length) {
         regions.push({ start: eqEnd, end: line.length });
     }
@@ -826,10 +828,12 @@ class SimpleEditor {
      * @param {Set|Array} constants - Names of constants from Reference section
      * @param {Set|Array} functions - Names of functions from Reference section
      */
-    setReferenceInfo(constants, functions, shadowConstants = false) {
+    setReferenceInfo(constants, functions, shadowConstants = false, parsedConstants = null, parsedFunctions = null) {
         this.referenceConstants = new Set(constants || []);
         this.referenceFunctions = new Set(Array.from(functions || []).map(n => n.toLowerCase()));
         this.shadowConstants = shadowConstants;
+        this.parsedConstants = parsedConstants;
+        this.parsedFunctions = parsedFunctions;
         this.updateHighlighting();
     }
 
@@ -1056,11 +1060,12 @@ class SimpleEditor {
 
     updateHighlighting() {
         const text = this.textarea.value;
-        const tokens = tokenizeMathPad(text, {
+        const { tokens, parserTokens } = tokenizeMathPad(text, {
             referenceConstants: this.referenceConstants,
             referenceFunctions: this.referenceFunctions,
             shadowConstants: this.shadowConstants
         });
+        this.parserTokens = parserTokens;
 
         let html = '';
         let lastPos = 0;

@@ -1,0 +1,60 @@
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Selected = 1
+"Test 1: Multi-line comment containing code-like content"
+
+"this comment has
+a: 5
+inside it"
+y: 10
+z: 20
+y + z->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 2: Multi-line comment before equation"
+
+"this comment has
+x = 42
+inside it"
+x: 3
+y: 7
+x + y = z
+z->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 3: Multi-line comment with expression output syntax"
+
+"this comment has
+a + b->
+inside it"
+a: 4
+b: 6
+a + b->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Comments"
+
+x:1
+
+"
+45->
+"
+x ->           testing          (here)
+" this is
+a multi lime comment		       with spaces	and tabs
+yes"
+
+x->>
+
+y: 2
+y -> " this is
+a multi lime comment
+yes" y->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

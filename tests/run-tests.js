@@ -36,7 +36,8 @@ function loadModules() {
     global.ParseError = parser.ParseError;
     global.tokenize = parser.tokenize;
     global.parseExpression = parser.parseExpression;
-    global.stripComments = parser.stripComments;
+    global.parseTokens = parser.parseTokens;
+    global.findLineCommentStart = parser.findLineCommentStart;
 
     // Line Parser (depends on parser)
     const lineParser = require(path.join(jsPath, 'line-parser.js'));
@@ -44,6 +45,7 @@ function loadModules() {
     global.LineParser = lineParser.LineParser;
     global.parseMarkedLineNew = lineParser.parseMarkedLineNew;
     global.getMarkerString = lineParser.getMarkerString;
+    global.tokensToText = lineParser.tokensToText;
 
     // Evaluator (depends on parser for AST types)
     const evaluator = require(path.join(jsPath, 'evaluator.js'));
@@ -82,7 +84,6 @@ function loadModules() {
     global.findEquationsAndOutputs = variables.findEquationsAndOutputs;
     global.clearExpressionOutputs = variables.clearExpressionOutputs;
     global.buildOutputLine = variables.buildOutputLine;
-    global.replaceValueOnLine = variables.replaceValueOnLine;
 
     // Storage (minimal dependencies)
     const storage = require(path.join(jsPath, 'storage.js'));
@@ -156,12 +157,23 @@ function compareOutput(actual, expected) {
 function solveAllRecords(data) {
     const records = data.records;
 
+    // Pre-parse Constants and Functions records once (matches UI flow via getReferenceInfo)
+    const constantsRecord = records.find(r => isReferenceRecord(r, 'Constants'));
+    const functionsRecord = records.find(r => isReferenceRecord(r, 'Functions'));
+    const constantsTokens = constantsRecord ? new Tokenizer(constantsRecord.text).tokenize() : null;
+    const functionsTokens = functionsRecord ? new Tokenizer(functionsRecord.text).tokenize() : null;
+    const parsedConstants = constantsRecord ? parseConstantsRecord(constantsRecord.text, constantsTokens) : null;
+    const parsedFunctions = functionsRecord ? parseFunctionsRecord(functionsRecord.text, functionsTokens) : null;
+
     for (const record of records) {
+        // Tokenize record text once, pass through to all consumers
+        const allTokens = new Tokenizer(record.text).tokenize();
+
         // Create eval context with constants and functions
-        const context = createEvalContext(records, record, record.text);
+        const context = createEvalContext(record, parsedConstants, parsedFunctions, record.text, allTokens);
 
         // Solve (captures pre-solve values and clears outputs internally)
-        const result = solveRecord(record.text, context, record);
+        const result = solveRecord(record.text, context, record, allTokens);
         record.text = result.text;
 
         // Store any errors in the record (match UI behavior: prefix + first error only)

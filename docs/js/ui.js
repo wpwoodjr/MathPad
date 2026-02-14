@@ -247,30 +247,36 @@ function openRecord(recordId) {
  * @returns {{ constants: Set, functions: Set }}
  */
 function getReferenceInfo() {
-    const constants = new Set();
-    const functions = new Set();
+    const constantNames = new Set();
+    const functionNames = new Set();
+    let parsedConstants = null;
+    let parsedFunctions = null;
 
     if (UI.data && UI.data.records) {
-        // Get constants from Constants record
+        // Parse Constants record (reuse editor tokens if available)
         const constantsRecord = UI.data.records.find(r => isReferenceRecord(r, 'Constants'));
         if (constantsRecord) {
-            const parsed = parseConstantsRecord(constantsRecord.text);
-            for (const name of parsed.keys()) {
-                constants.add(name);
+            const editorInfo = UI.editors.get(constantsRecord.id);
+            const tokens = editorInfo ? editorInfo.editor.parserTokens : null;
+            parsedConstants = parseConstantsRecord(constantsRecord.text, tokens);
+            for (const name of parsedConstants.keys()) {
+                constantNames.add(name);
             }
         }
 
-        // Get functions from Functions record
+        // Parse Functions record (reuse editor tokens if available)
         const functionsRecord = UI.data.records.find(r => isReferenceRecord(r, 'Functions'));
         if (functionsRecord) {
-            const parsed = parseFunctionsRecord(functionsRecord.text);
-            for (const name of parsed.keys()) {
-                functions.add(name.toLowerCase());
+            const editorInfo = UI.editors.get(functionsRecord.id);
+            const tokens = editorInfo ? editorInfo.editor.parserTokens : null;
+            parsedFunctions = parseFunctionsRecord(functionsRecord.text, tokens);
+            for (const name of parsedFunctions.keys()) {
+                functionNames.add(name.toLowerCase());
             }
         }
     }
 
-    return { constants, functions };
+    return { constants: constantNames, functions: functionNames, parsedConstants, parsedFunctions };
 }
 
 /**
@@ -278,11 +284,11 @@ function getReferenceInfo() {
  * Call this when Constants or Functions records are modified, or when shadowConstants changes
  */
 function updateAllEditorsReferenceInfo() {
-    const { constants, functions } = getReferenceInfo();
+    const { constants, functions, parsedConstants, parsedFunctions } = getReferenceInfo();
     for (const [id, { editor }] of UI.editors) {
         const record = UI.data.records.find(r => r.id === id);
         const shadowConstants = (record && record.shadowConstants) || false;
-        editor.setReferenceInfo(constants, functions, shadowConstants);
+        editor.setReferenceInfo(constants, functions, shadowConstants, parsedConstants, parsedFunctions);
     }
 }
 
@@ -375,8 +381,8 @@ function createEditorForRecord(record) {
     variablesManager.updateFromText(record.text);
 
     // Set reference info for highlighting
-    const { constants, functions } = getReferenceInfo();
-    editor.setReferenceInfo(constants, functions, record.shadowConstants || false);
+    const { constants, functions, parsedConstants, parsedFunctions } = getReferenceInfo();
+    editor.setReferenceInfo(constants, functions, record.shadowConstants || false, parsedConstants, parsedFunctions);
 
     // Update undo/redo button states when stacks change
     editor.onUndoStateChange((canUndo, canRedo) => {
@@ -625,8 +631,8 @@ function updateRecordDetail(field, value) {
     if (field === 'shadowConstants') {
         const editorInfo = UI.editors.get(record.id);
         if (editorInfo) {
-            const { constants, functions } = getReferenceInfo();
-            editorInfo.editor.setReferenceInfo(constants, functions, value);
+            const { constants, functions, parsedConstants, parsedFunctions } = getReferenceInfo();
+            editorInfo.editor.setReferenceInfo(constants, functions, value, parsedConstants, parsedFunctions);
         }
     }
 }
@@ -1160,10 +1166,13 @@ function handleSolve() {
         const cursorLine = textBeforeCursor.split('\n').length - 1;
 
         // Create evaluation context with constants and user functions
-        const context = createEvalContext(UI.data.records, record, text);
+        const parserTokens = editorInfo.editor.parserTokens;
+        const context = createEvalContext(record,
+            editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
+            text, parserTokens);
 
         // Solve the record (captures pre-solve values and clears outputs internally)
-        const result = solveRecord(text, context, record);
+        const result = solveRecord(text, context, record, parserTokens);
         text = result.text;
 
         // Update editor with results (undoable so Ctrl+Z works)
@@ -1224,8 +1233,9 @@ function handleClearInput() {
     const textBeforeCursor = text.substring(0, cursorPos);
     const cursorLine = textBeforeCursor.split('\n').length - 1;
 
-    text = clearVariables(text, 'input');
-    text = clearVariables(text, 'output');
+    let clearResult = clearVariables(text, 'input', editorInfo.editor.parserTokens);
+    clearResult = clearVariables(clearResult.text, 'output', clearResult.allTokens);
+    text = clearResult.text;
 
     // Remove references section
     text = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');

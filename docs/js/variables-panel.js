@@ -88,7 +88,8 @@ class VariablesPanel {
 
         this.varsSectionLineIndex = varsSectionLineIndex;
 
-        const newDeclarations = parseAllVariables(text);
+        const allTokens = this.editor.parserTokens;
+        const newDeclarations = parseAllVariables(text, allTokens);
 
         // Build map keyed by lineIndex for diffing
         const newDeclMap = new Map();
@@ -98,11 +99,11 @@ class VariablesPanel {
 
         // Also include expression outputs (expr:, expr::, expr->, expr->>)
         if (typeof findExpressionOutputs === 'function') {
-            const exprOutputs = findExpressionOutputs(text);
+            const exprOutputs = findExpressionOutputs(text, allTokens);
             for (const output of exprOutputs) {
                 // Convert expression output to declaration-like format
                 newDeclMap.set(output.startLine, {
-                    name: output.text,  // The expression text
+                    name: tokensToText(output.exprTokens).trim(),
                     declaration: {
                         marker: output.marker,
                         type: output.recalculates ? VarType.OUTPUT : VarType.STANDARD,
@@ -114,8 +115,9 @@ class VariablesPanel {
                         commentUnquoted: output.commentUnquoted
                     },
                     lineIndex: output.startLine,
+                    markerEndCol: output.markerEndCol,
                     value: null,
-                    valueText: output.existingValue,
+                    valueTokens: output.valueTokens,
                     isExpressionOutput: true
                 });
             }
@@ -273,7 +275,7 @@ class VariablesPanel {
         const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : decl.base && decl.base !== 10 ? `#${decl.base}` : '';
         // Always separate format suffix with a space for clarity
         const formatSep = formatSuffix ? ' ' : '';
-        const limitsStr = decl.limits ? `[${decl.limits.lowExpr}:${decl.limits.highExpr}]` : '';
+        const limitsStr = decl.limits ? `[${tokensToText(decl.limits.lowTokens).trim()}:${tokensToText(decl.limits.highTokens).trim()}]` : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
         nameLabel.textContent = info.name + limitsStr + formatSep + formatSuffix + (decl.marker || ':');
@@ -341,7 +343,7 @@ class VariablesPanel {
                 const currentInfo = this.declarations.get(info.lineIndex) || info;
                 // Clear the value if present, UNLESS user just edited this variable
                 const justEdited = this.lastEditedVar === info.name;
-                if (currentInfo.valueText && !justEdited) {
+                if (this.formatValueForDisplay(currentInfo) && !justEdited) {
                     valueElement.value = '';
                     this.handleValueChange(info.lineIndex, '');
                 }
@@ -437,11 +439,9 @@ class VariablesPanel {
         const lines = text.split('\n');
 
         if (lineIndex >= 0 && lineIndex < lines.length) {
-            const newLine = replaceValueOnLine(lines[lineIndex], varName, decl.marker, !!decl.limits, formattedValue);
-            if (newLine !== null) {
-                lines[lineIndex] = newLine;
-                text = lines.join('\n');
-            }
+            const markerEndIndex = info.markerEndCol - 1;
+            lines[lineIndex] = buildOutputLine(lines[lineIndex], markerEndIndex, formattedValue);
+            text = lines.join('\n');
         }
 
         // Only notify listeners if text actually changed
@@ -501,7 +501,9 @@ class VariablesPanel {
      * since the formula pane already has the formatted text
      */
     formatValueForDisplay(info) {
-        return info.valueText || '';
+        if (info.valueText != null) return info.valueText;
+        if (info.valueTokens && info.valueTokens.length > 0) return tokensToText(info.valueTokens).trim();
+        return '';
     }
 
     /**
@@ -556,7 +558,7 @@ class VariablesPanel {
      */
     declarationChanged(existing, newInfo) {
         return existing.value !== newInfo.value ||
-               existing.valueText !== newInfo.valueText ||
+               this.formatValueForDisplay(existing) !== this.formatValueForDisplay(newInfo) ||
                existing.declaration.type !== newInfo.declaration.type ||
                existing.name !== newInfo.name;
     }
@@ -631,8 +633,6 @@ class VariablesPanel {
         }
     }
 }
-
-// Note: escapeRegex function is defined in variables.js
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

@@ -38,9 +38,6 @@ const MARKER_PRECEDENCE = {
 };
 
 /**
- * Check if a token is a declaration marker
- */
-/**
  * Get marker string from token
  */
 function getMarkerString(token) {
@@ -57,140 +54,108 @@ function getMarkerString(token) {
 }
 
 /**
- * Split output value text into numeric value and trailing unit comment.
- * Uses the tokenizer for number recognition (regular, negative, money, percent,
- * scientific, special values, base format literals like 4D#16, FF#16).
- * @param {string} text - The text after the output marker, trimmed
- * @returns {{ valueText: string, unitComment: string|null }}
+ * Get the raw source text for any token
  */
-function splitValueAndComment(text) {
-    if (!text) return { valueText: '', unitComment: null };
-
-    // Use tokenizer to find numeric value at start
-    const tokens = tokenize(text);
-    let valueTokenCount = 0;
-
-    if (tokens.length > 0 && tokens[0].type === TokenType.NUMBER) {
-        valueTokenCount = 1;
-    } else if (tokens.length > 1 && tokens[0].type === TokenType.OPERATOR &&
-               tokens[0].value === '-' && tokens[1].type === TokenType.NUMBER) {
-        // Negative number: operator(-) followed by number
-        valueTokenCount = 2;
+function tokenToRaw(token) {
+    if (token.type === TokenType.NUMBER) return token.value.raw;
+    if (token.type === TokenType.ERROR || token.type === TokenType.UNEXPECTED_CHAR) {
+        // Use .raw if stored by the tokenizer
+        if (token.raw) return token.raw;
+        // Fallback: extract character from "Unexpected character 'X'" messages
+        const charMatch = token.value.match(/character '(.)'/);
+        if (charMatch) return charMatch[1];
+        // Last resort: return empty (tokensToText will use token.length for spacing)
+        return '';
     }
+    return token.value;
+}
 
-    if (valueTokenCount > 0) {
-        const nextToken = tokens[valueTokenCount];
-        // If next token is EOF, the entire text is the value
-        if (nextToken.type === TokenType.EOF) {
-            return { valueText: text, unitComment: null };
-        }
-        const splitPos = nextToken.col - 1;
-        const valueText = text.substring(0, splitPos).trim();
-        const trailing = text.substring(splitPos).trim();
-        // Don't allow trailing comment to start with a digit, $, or -digit (ambiguous with value)
-        if (trailing && /^[\d$]|^-\d/.test(trailing)) {
-            return { valueText: text, unitComment: null };
-        }
-        return { valueText, unitComment: trailing || null };
+/**
+ * Reconstruct parseable text from a token array.
+ * Uses token .ws (leading whitespace) when available for exact whitespace preservation
+ * (including tabs). Falls back to column-position-based spacing.
+ */
+function tokensToText(tokens) {
+    if (tokens.length === 0) return '';
+    let result = '';
+    for (const t of tokens) {
+        if (t.ws) result += t.ws;
+        result += tokenToRaw(t);
     }
-
-    // No numeric value found - entire text is unit comment (for cleared output variables)
-    return { valueText: '', unitComment: text || null };
+    return result;
 }
 
 /**
  * LineParser class - parses a single line to extract declarations or expression outputs
+ *
+ * Works purely from the token stream — no line text required.
  */
 class LineParser {
+    /**
+     * Create a LineParser by tokenizing a line of text
+     * @param {string} line - The line text to parse
+     * @param {number} lineNumber - Line number (0-based)
+     */
     constructor(line, lineNumber = 0) {
-        this.originalLine = line;
-        this.lineNumber = lineNumber;
-
-        // Strip // line comment and "..." quoted strings
-        const comments = stripComments(line);
-        this.lineComment = comments.lineComment;
-        line = comments.stripped;
-
-        // Extract trailing quoted comment before tokenizing
-        const trailingCommentMatch = line.match(/"([^"]*)"\s*$/);
-        this.trailingComment = trailingCommentMatch ? trailingCommentMatch[1] : null;
-
-        // cleanLine has both // and "..." replaced with spaces
-        this.cleanLine = comments.clean;
-
-        // Tokenize the clean line
-        const tokenizer = new Tokenizer(this.cleanLine);
-        this.tokens = tokenizer.tokenize();
-
-        // Filter out NEWLINE and EOF for easier parsing, but keep track of original positions
-        this.tokens = this.tokens.filter(t => t.type !== TokenType.NEWLINE && t.type !== TokenType.EOF);
-        this.pos = 0;
+        const tokenizer = new Tokenizer(line);
+        const allTokens = tokenizer.tokenize();
+        // Delegate to the token-based initializer
+        const fromTokens = LineParser.fromTokens(allTokens, lineNumber);
+        this.lineNumber = fromTokens.lineNumber;
+        this.pos = fromTokens.pos;
+        this.lineComment = fromTokens.lineComment;
+        this.trailingComment = fromTokens.trailingComment;
+        this.tokens = fromTokens.tokens;
     }
 
     /**
      * Create a LineParser from pre-tokenized input (avoids re-tokenizing)
-     * Derives cleanLine and trailingComment from the token stream.
-     * @param {string} originalLine - The original line text
-     * @param {Array} tokens - Tokens for this line from the full-text tokenizer
-     *                         (may include COMMENT, NEWLINE, EOF tokens)
+     * Derives comment metadata purely from the token stream.
+     * @param {Array} tokens - Tokens for this line (may include COMMENT, NEWLINE, EOF tokens)
      * @param {number} lineNumber - Line number (0-based)
      * @returns {LineParser}
      */
-    static fromTokens(originalLine, tokens, lineNumber = 0) {
+    static fromTokens(tokens, lineNumber = 0) {
         const parser = Object.create(LineParser.prototype);
-        parser.originalLine = originalLine;
         parser.lineNumber = lineNumber;
         parser.pos = 0;
 
-        // Derive cleanLine and metadata from comment tokens
-        let cleanLine = originalLine;
+        // Extract comment info from COMMENT tokens
         let lineComment = null;
         let trailingComment = null;
+        const commentTokens = tokens.filter(t => t.type === TokenType.COMMENT);
 
-        // Process comment tokens to build cleanLine (replace with spaces)
-        // Walk backwards so replacements don't shift positions
-        const commentTokens = [];
-        for (const t of tokens) {
-            if (t.type === TokenType.COMMENT) {
-                commentTokens.push(t);
+        for (const t of commentTokens) {
+            if (t.lineComment) {
+                lineComment = '//' + t.value;
             }
         }
 
-        for (let i = commentTokens.length - 1; i >= 0; i--) {
-            const t = commentTokens[i];
-            const startIdx = t.col - 1; // col is 1-based
+        // Structural tokens (no COMMENT, NEWLINE, EOF)
+        const structuralTokens = tokens.filter(t =>
+            t.type !== TokenType.COMMENT &&
+            t.type !== TokenType.NEWLINE &&
+            t.type !== TokenType.EOF
+        );
 
-            if (t.lineComment) {
-                // // comment: everything from start to end of line
-                lineComment = originalLine.substring(startIdx);
-                cleanLine = cleanLine.substring(0, startIdx);
-            } else {
-                // "..." quoted comment: value doesn't include quotes, length = value.length + 2
-                const len = t.value.length + 2;
-                // Extract trailing quoted comment (last quoted string before any // comment)
-                if (trailingComment === null) {
-                    // Check if this is at the end of the non-line-comment portion
-                    const afterQuote = cleanLine.substring(startIdx + len).trim();
-                    if (!afterQuote) {
-                        trailingComment = t.value;
-                    }
-                }
-                cleanLine = cleanLine.substring(0, startIdx) +
-                            ' '.repeat(len) +
-                            cleanLine.substring(startIdx + len);
+        // Trailing quoted comment: last non-lineComment COMMENT token
+        // that comes after all structural tokens
+        const quotedComments = commentTokens.filter(t => !t.lineComment);
+        if (quotedComments.length > 0) {
+            const lastQuoted = quotedComments[quotedComments.length - 1];
+            const lastStructural = structuralTokens.length > 0
+                ? structuralTokens[structuralTokens.length - 1]
+                : null;
+            // It's trailing if no structural token comes after it
+            if (!lastStructural ||
+                lastQuoted.col > lastStructural.col + tokenToRaw(lastStructural).length - 1) {
+                trailingComment = lastQuoted.value;
             }
         }
 
         parser.lineComment = lineComment;
         parser.trailingComment = trailingComment;
-        parser.cleanLine = cleanLine;
-
-        // Filter to structural tokens only (no COMMENT, NEWLINE, EOF)
-        parser.tokens = tokens.filter(t =>
-            t.type !== TokenType.COMMENT &&
-            t.type !== TokenType.NEWLINE &&
-            t.type !== TokenType.EOF
-        );
+        parser.tokens = structuralTokens;
 
         return parser;
     }
@@ -259,55 +224,78 @@ class LineParser {
     }
 
     /**
-     * Check if the token immediately before the marker is a single identifier
-     * (possibly with suffix $ % or #base)
+     * Walk tokens backward from the marker to find the variable declaration group.
+     * Returns { name, base, limits, hasLimits, varTokenStartIndex } or null.
+     *
+     * Handles: IDENTIFIER, optional #base suffix (FORMATTER + NUMBER or merged into marker),
+     * optional [limits] (LBRACKET...RBRACKET), and optional $/%  FORMATTER tokens.
      */
     getImmediateVarBeforeMarker(markerIndex) {
         if (markerIndex === 0) return null;
 
         const markerToken = this.tokens[markerIndex];
-        const markerCol = markerToken.col;
+        // Base may be merged into the marker token (e.g., #16->)
+        let base = markerToken.base || 10;
+        let limits = null;
+        let hasLimits = false;
+        let idx = markerIndex - 1;
 
-        // Look for what's immediately before the marker in the original line
-        // Get the text just before the marker
-        const beforeMarker = this.cleanLine.substring(0, markerCol - 1);
+        // Skip standalone $ or % FORMATTER tokens (normally merged into marker,
+        // but appear separately when there's whitespace: "x$ :")
+        while (idx >= 0 && this.tokens[idx].type === TokenType.FORMATTER &&
+               (this.tokens[idx].value === '$' || this.tokens[idx].value === '%')) {
+            idx--;
+        }
 
-        // Check for variable pattern: identifier(#digits)?([limits])?
-        // $/%  format specifiers are merged into the marker token by the tokenizer,
-        // so markerToken.col already points past the variable text.
-        // Variable names must start with letter or underscore (not digit)
-        const varMatch = beforeMarker.match(/([a-zA-Z_]\w*)(#\d+)?(\s*\[[^\]]+\])?\s*$/);
-        if (varMatch) {
-            const name = varMatch[1];
-            const baseSuffix = varMatch[2];  // #digits
-            const limitsText = varMatch[3];
-
-            // Base from #digits suffix in text, or from merged marker token (e.g., #16->)
-            const markerToken = this.tokens[markerIndex];
-            let base = markerToken.base || (baseSuffix ? parseInt(baseSuffix.substring(1)) : 10);
-
-            let limits = null;
-            if (limitsText) {
-                const limitsContent = limitsText.replace(/[\[\]\s]/g, '');
-                const colonIdx = limitsContent.indexOf(':');
-                if (colonIdx !== -1) {
+        // Check for limits: [lowExpr : highExpr]
+        if (idx >= 0 && this.tokens[idx].type === TokenType.RBRACKET) {
+            const rbracketIdx = idx;
+            let depth = 1;
+            idx--;
+            let colonInBracket = -1;
+            while (idx >= 0) {
+                const t = this.tokens[idx];
+                if (t.type === TokenType.RBRACKET) {
+                    depth++;
+                } else if (t.type === TokenType.LBRACKET) {
+                    depth--;
+                    if (depth === 0) break;
+                }
+                if (depth === 1 && t.type === TokenType.COLON) {
+                    colonInBracket = idx;
+                }
+                idx--;
+            }
+            // idx is now at LBRACKET (or -1 if unmatched)
+            if (idx >= 0) {
+                hasLimits = true;
+                if (colonInBracket !== -1) {
                     limits = {
-                        lowExpr: limitsContent.substring(0, colonIdx).trim(),
-                        highExpr: limitsContent.substring(colonIdx + 1).trim()
+                        lowTokens: this.tokens.slice(idx + 1, colonInBracket),
+                        highTokens: this.tokens.slice(colonInBracket + 1, rbracketIdx)
                     };
                 }
+                idx--; // Move past LBRACKET
             }
+        }
 
-            // Calculate where the variable starts in the line
-            const fullVarMatch = varMatch[0];
-            const varStartPos = beforeMarker.length - fullVarMatch.length;
+        // Check for #base suffix: FORMATTER('#') + NUMBER (when not merged into marker)
+        if (idx >= 1 &&
+            this.tokens[idx].type === TokenType.NUMBER &&
+            this.tokens[idx - 1].type === TokenType.FORMATTER &&
+            this.tokens[idx - 1].value === '#') {
+            base = this.tokens[idx].value.value;
+            idx -= 2;
+        }
 
+        // Expect IDENTIFIER — the variable name
+        if (idx >= 0 && this.tokens[idx].type === TokenType.IDENTIFIER) {
             return {
-                name,
+                name: this.tokens[idx].value,
                 base,
                 limits,
-                hasLimits: !!limitsText,
-                varStartPos
+                hasLimits,
+                varTokenStartIndex: idx
             };
         }
 
@@ -320,9 +308,8 @@ class LineParser {
      * An expression has operators connecting terms: "a + b", "sqrt(a)", "(a * b)"
      * A simple declaration has only label text followed by a variable name
      *
-     * Key heuristic: if there's an operator connecting to the variable immediately
-     * before the marker, it's an expression. Parentheses in label text like
-     * "Value (m/s) b" don't count because ) is followed by space then identifier.
+     * Key heuristic: check the token type immediately before the variable group.
+     * Operators, numbers, and opening parens indicate expression context.
      */
     isExpressionLHS(markerIndex) {
         if (markerIndex === 0) return false;
@@ -338,94 +325,138 @@ class LineParser {
         const varInfo = this.getImmediateVarBeforeMarker(markerIndex);
         if (!varInfo) return true;
 
-        // Get the text before the variable
-        const beforeVar = this.cleanLine.substring(0, varInfo.varStartPos).trimEnd();
-        if (!beforeVar) return false; // No label text, simple declaration
+        // No tokens before the variable group — simple declaration
+        if (varInfo.varTokenStartIndex === 0) return false;
 
-        // Check if there's an operator immediately before the variable that would
-        // connect it to the previous term (making it an expression)
-        // Operators that connect: + - * / ** ^ %
-        // Opening paren ( also indicates function call
-        // Closing paren ) with no space before var also connects: "func(x)"
-        // But ) followed by space then var is just label: "Value (m/s) x"
+        const prevToken = this.tokens[varInfo.varTokenStartIndex - 1];
 
-        const lastChar = beforeVar[beforeVar.length - 1];
-
-        // Digit immediately before variable means they're adjacent (expression, not label)
+        // Number immediately before variable means they're adjacent (expression)
         // e.g., "7v#32->" should be expression, not "7" as label + "v#32" as variable
-        if (/\d/.test(lastChar)) {
+        if (prevToken.type === TokenType.NUMBER) {
             return true;
         }
 
-        // Math operators directly connect
-        if (['+', '*', '/', '^', '%', '<', '>', '=', '!', '&', '|', '~'].includes(lastChar)) {
+        // Opening paren indicates function call or grouping
+        if (prevToken.type === TokenType.LPAREN) {
             return true;
         }
 
-        // Opening paren indicates the start of an expression or function arg
-        if (lastChar === '(') {
-            return true;
-        }
-
-        // For minus, need to check if it's binary (connecting) or could be part of label
-        if (lastChar === '-') {
-            // Check if there's something before the minus that it connects to
-            const beforeMinus = beforeVar.slice(0, -1).trimEnd();
-            if (beforeMinus && /[\w\)\]\+\*\/\^\%\<\>\=\!\&\|\~\(]$/.test(beforeMinus)) {
-                return true; // Binary minus connecting terms
+        // Operators connect terms in expressions
+        if (prevToken.type === TokenType.OPERATOR) {
+            if (prevToken.value === '-') {
+                // Check if binary minus (something connects to it before)
+                if (varInfo.varTokenStartIndex >= 2) {
+                    const prevPrev = this.tokens[varInfo.varTokenStartIndex - 2];
+                    if (prevPrev.type === TokenType.IDENTIFIER ||
+                        prevPrev.type === TokenType.NUMBER ||
+                        prevPrev.type === TokenType.RPAREN ||
+                        prevPrev.type === TokenType.RBRACKET ||
+                        prevPrev.type === TokenType.OPERATOR ||
+                        prevPrev.type === TokenType.LPAREN) {
+                        return true; // Binary minus connecting terms
+                    }
+                }
+                return false; // Unary minus or label with dash
             }
+            return true; // Other operators directly connect
         }
 
         return false;
     }
 
     /**
-     * Extract value and optional unit comment from text after marker
+     * Extract value tokens and optional unit comment from tokens after the marker.
+     * Returns { valueTokens: Token[], unitComment: string|null }
      */
     extractValueAndComment(markerIndex) {
         const markerToken = this.tokens[markerIndex];
-        // Use token.value.length for position — handles format prefix ($-> is 3 chars, -> is 2)
-        const markerEnd = markerToken.col + markerToken.value.length - 1;
-        const afterMarker = this.cleanLine.substring(markerEnd).trim();
+        const afterTokens = this.tokens.slice(markerIndex + 1);
 
-        if (!afterMarker) {
-            return { valueText: '', unitComment: null };
+        if (afterTokens.length === 0) {
+            return { valueTokens: [], unitComment: null };
         }
 
-        // For output markers (-> ->> => =>>), trailing non-numeric text is unit comment
-        if (markerToken.type === TokenType.ARROW_RIGHT || markerToken.type === TokenType.ARROW_FULL ||
-            markerToken.type === TokenType.ARROW_PERSIST || markerToken.type === TokenType.ARROW_PERSIST_FULL) {
-            return splitValueAndComment(afterMarker);
+        // For non-output markers (: :: <-), all tokens are value (no unit comment split)
+        if (markerToken.type !== TokenType.ARROW_RIGHT && markerToken.type !== TokenType.ARROW_FULL &&
+            markerToken.type !== TokenType.ARROW_PERSIST && markerToken.type !== TokenType.ARROW_PERSIST_FULL) {
+            return { valueTokens: afterTokens, unitComment: null };
         }
 
-        // For other markers, the whole thing is value
-        return { valueText: afterMarker, unitComment: null };
+        // For output markers, split value and trailing unit comment
+        let valueTokenCount = 0;
+
+        if (afterTokens[0].type === TokenType.NUMBER) {
+            valueTokenCount = 1;
+        } else if (afterTokens.length > 1 && afterTokens[0].type === TokenType.OPERATOR &&
+                   afterTokens[0].value === '-' && afterTokens[1].type === TokenType.NUMBER) {
+            valueTokenCount = 2;
+        }
+
+        if (valueTokenCount > 0) {
+            // If value covers all tokens, no unit comment
+            if (valueTokenCount >= afterTokens.length) {
+                return { valueTokens: afterTokens, unitComment: null };
+            }
+
+            // Don't split if trailing starts with digit, $, or -digit (ambiguous with value)
+            const nextToken = afterTokens[valueTokenCount];
+            if (nextToken.type === TokenType.NUMBER ||
+                (nextToken.type === TokenType.FORMATTER && nextToken.value === '$') ||
+                (nextToken.type === TokenType.OPERATOR && nextToken.value === '-' &&
+                 valueTokenCount + 1 < afterTokens.length &&
+                 afterTokens[valueTokenCount + 1].type === TokenType.NUMBER)) {
+                return { valueTokens: afterTokens, unitComment: null };
+            }
+
+            const valueTokens = afterTokens.slice(0, valueTokenCount);
+            const commentTokens = afterTokens.slice(valueTokenCount);
+            return { valueTokens, unitComment: tokensToText(commentTokens).trim() || null };
+        }
+
+        // No numeric value found - entire text is unit comment (for cleared output variables)
+        return { valueTokens: [], unitComment: tokensToText(afterTokens).trim() || null };
     }
 
     /**
-     * Extract expression text before the marker
-     * Handles cases like "result: (a * b)->" where we need to find the actual expression
-     * Also handles "Result x+y->" where "Result " is label text
+     * Extract expression tokens before the marker.
+     * Returns the token slice for the expression (no text conversion).
+     * Handles cases like "result: (a * b)->" and "Result x+y->".
      */
-    extractExpressionText(markerIndex) {
-        if (markerIndex === 0) return '';
+    extractExpressionTokens(markerIndex) {
+        if (markerIndex === 0) return [];
 
-        const markerToken = this.tokens[markerIndex];
-        const beforeMarker = this.cleanLine.substring(0, markerToken.col - 1).trimEnd();
+        // Get all tokens before the marker
+        const tokensBeforeMarker = this.tokens.slice(0, markerIndex);
+        if (tokensBeforeMarker.length === 0) return [];
 
-        // Check for "label: expression" pattern (colon followed by space)
-        const colonSpaceIdx = beforeMarker.lastIndexOf(': ');
-        if (colonSpaceIdx !== -1) {
-            return beforeMarker.substring(colonSpaceIdx + 2).trim();
+        // Check for "label: expression" pattern — find last COLON (not inside brackets)
+        // that is followed by a space
+        let lastColonIdx = -1;
+        let bracketDepth = 0;
+        for (let i = tokensBeforeMarker.length - 1; i >= 0; i--) {
+            if (tokensBeforeMarker[i].type === TokenType.RBRACKET) bracketDepth++;
+            else if (tokensBeforeMarker[i].type === TokenType.LBRACKET) bracketDepth--;
+            else if (bracketDepth === 0 && tokensBeforeMarker[i].type === TokenType.COLON) {
+                // Check that there's a space after the colon (label separator pattern)
+                if (i + 1 < tokensBeforeMarker.length) {
+                    const colonToken = tokensBeforeMarker[i];
+                    const nextToken = tokensBeforeMarker[i + 1];
+                    const colonEnd = colonToken.col + tokenToRaw(colonToken).length;
+                    if (nextToken.col > colonEnd) {
+                        lastColonIdx = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (lastColonIdx !== -1) {
+            return tokensBeforeMarker.slice(lastColonIdx + 1);
         }
 
         // Find where the expression actually starts
         // Strategy: find the first operator and trace back to find the start of the expression
         // For "Result x+y" we want to find "x+y" - the x starts the expression
-
-        // Get all tokens before the marker
-        const tokensBeforeMarker = this.tokens.slice(0, markerIndex);
-        if (tokensBeforeMarker.length === 0) return '';
 
         // First pass: find where the first operator is
         let firstOperatorIdx = -1;
@@ -470,14 +501,14 @@ class LineParser {
                     if (tokensBeforeMarker[lastValueIdx].type === TokenType.NUMBER &&
                         lastValueIdx > 0 &&
                         tokensBeforeMarker[lastValueIdx - 1].type === TokenType.IDENTIFIER) {
-                        return beforeMarker.substring(tokensBeforeMarker[lastValueIdx].col - 1).trim();
+                        return tokensBeforeMarker.slice(lastValueIdx);
                     }
                     // Otherwise include all as expression (parser will error)
-                    return beforeMarker.trim();
+                    return tokensBeforeMarker;
                 }
-                return beforeMarker.substring(tokensBeforeMarker[lastValueIdx].col - 1).trim();
+                return tokensBeforeMarker.slice(lastValueIdx);
             }
-            return beforeMarker.trim();
+            return tokensBeforeMarker;
         }
 
         // Found first operator - the expression starts with the token before it
@@ -520,8 +551,7 @@ class LineParser {
         }
 
         // Get the expression from the start token to the marker
-        const startToken = tokensBeforeMarker[exprStartIdx];
-        return beforeMarker.substring(startToken.col - 1).trim();
+        return tokensBeforeMarker.slice(exprStartIdx);
     }
 
     /**
@@ -529,7 +559,7 @@ class LineParser {
      */
     parse() {
         // Skip blank lines
-        if (this.tokens.length === 0 || this.cleanLine.trim() === '') {
+        if (this.tokens.length === 0) {
             return null;
         }
 
@@ -541,11 +571,11 @@ class LineParser {
 
         const { token: markerToken, index: markerIndex } = markerInfo;
         const marker = getMarkerString(markerToken);
+        const markerEndCol = markerToken.col + markerToken.value.length;  // 1-based col after marker
 
-        // Check for braced equation before marker - skip if RHS starts with {
-        const markerEnd = markerToken.col + marker.length - 1;
-        const afterMarker = this.cleanLine.substring(markerEnd).trim();
-        if (afterMarker.startsWith('{')) {
+        // Check for braced equation after marker - skip if RHS starts with {
+        if (markerIndex + 1 < this.tokens.length &&
+            this.tokens[markerIndex + 1].type === TokenType.LBRACE) {
             return null;
         }
 
@@ -562,8 +592,8 @@ class LineParser {
                 return null;
             }
 
-            // Extract value and unit comment
-            const { valueText, unitComment } = this.extractValueAndComment(markerIndex);
+            // Extract value tokens and unit comment
+            const { valueTokens, unitComment } = this.extractValueAndComment(markerIndex);
 
             // Read type, precision, and clear behavior directly from marker token
             const type = markerToken.varType;
@@ -584,18 +614,19 @@ class LineParser {
                 type,
                 clearBehavior,
                 limits: varInfo.limits,
-                valueText: valueText,
+                valueTokens,
                 base: varInfo.base,
                 fullPrecision,
                 marker,
+                markerEndCol,
                 format: markerFormat,
                 comment: finalComment,
                 commentUnquoted
             };
         } else {
             // Expression output
-            const expression = this.extractExpressionText(markerIndex);
-            const { valueText, unitComment } = this.extractValueAndComment(markerIndex);
+            const exprTokens = this.extractExpressionTokens(markerIndex);
+            const { valueTokens, unitComment } = this.extractValueAndComment(markerIndex);
 
             const fullPrecision = markerToken.fullPrecision;
             const recalculates = markerToken.varType === VarType.OUTPUT;
@@ -609,9 +640,10 @@ class LineParser {
 
             return {
                 kind: 'expression-output',
-                expression,
+                exprTokens,
                 marker,
-                valueText,
+                markerEndCol,
+                valueTokens,
                 fullPrecision,
                 recalculates,
                 format: markerFormat,
@@ -639,6 +671,7 @@ if (typeof module !== 'undefined' && module.exports) {
         LineParser,
         parseMarkedLineNew,
         getMarkerString,
-        splitValueAndComment
+        tokenToRaw,
+        tokensToText
     };
 }

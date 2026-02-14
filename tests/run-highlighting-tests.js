@@ -26,15 +26,16 @@ function loadModules() {
     global.ParseError = parser.ParseError;
     global.tokenize = parser.tokenize;
     global.parseExpression = parser.parseExpression;
-    global.stripComments = parser.stripComments;
+    global.parseTokens = parser.parseTokens;
+    global.findLineCommentStart = parser.findLineCommentStart;
 
     // Line Parser (depends on parser)
     const lineParser = require(path.join(jsPath, 'line-parser.js'));
     global.LineType = lineParser.LineType;
     global.LineParser = lineParser.LineParser;
     global.parseMarkedLineNew = lineParser.parseMarkedLineNew;
-
     global.getMarkerString = lineParser.getMarkerString;
+    global.tokensToText = lineParser.tokensToText;
 
     // Evaluator (depends on parser)
     const evaluator = require(path.join(jsPath, 'evaluator.js'));
@@ -69,7 +70,7 @@ function getTokens(line, context = '', options = {}) {
     const lineStart = context ? context.length + 1 : 0;
     const lineEnd = lineStart + line.length;
 
-    const tokens = tokenizeMathPad(fullText, options);
+    const { tokens } = tokenizeMathPad(fullText, options);
     return tokens
         .filter(t => t.from >= lineStart && t.from < lineEnd)
         .map(t => ({
@@ -397,6 +398,16 @@ function runAllTests() {
             line: '"line 1\nline 2\nline 3"',
             assertions: [
                 ['"line 1\nline 2\nline 3"', 'comment']
+            ]
+        },
+        // Declaration after multi-line comment is not highlighted as comment
+        {
+            name: 'declaration after multi-line comment ("-\\n45->\\n" then x ->)',
+            line: 'x ->',
+            context: '"\n45->\n"',
+            assertions: [
+                ['x', 'variable-def'],
+                ['->', 'punctuation']
             ]
         },
         // Multi-line braced equation (first line)

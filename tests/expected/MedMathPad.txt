@@ -347,7 +347,7 @@ Enter serum BUN<-6
 osmolality=(2*Na)+(glucose/18)+(BUN/2.8)
 
 --Output--
-osmolality-> 27 mOsm/L
+osmolality-> 27  mOsm/L
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1

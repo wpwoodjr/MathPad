@@ -15,9 +15,16 @@ if (!testName) { console.error("Usage: node tests/gen-expected.js TESTNAME"); pr
 
 const input = fs.readFileSync(path.join(__dirname, "input", testName + ".txt"), "utf8");
 const data = importFromText(input);
+const constantsRecord = data.records.find(r => isReferenceRecord(r, 'Constants'));
+const functionsRecord = data.records.find(r => isReferenceRecord(r, 'Functions'));
+const constantsTokens = constantsRecord ? new Tokenizer(constantsRecord.text).tokenize() : null;
+const functionsTokens = functionsRecord ? new Tokenizer(functionsRecord.text).tokenize() : null;
+const parsedConstants = constantsRecord ? parseConstantsRecord(constantsRecord.text, constantsTokens) : null;
+const parsedFunctions = functionsRecord ? parseFunctionsRecord(functionsRecord.text, functionsTokens) : null;
 for (const record of data.records) {
-    const context = createEvalContext(data.records, record, record.text);
-    const result = solveRecord(record.text, context, record);
+    const allTokens = new Tokenizer(record.text).tokenize();
+    const context = createEvalContext(record, parsedConstants, parsedFunctions, record.text, allTokens);
+    const result = solveRecord(record.text, context, record, allTokens);
     record.text = result.text;
     if (result.errors && result.errors.length > 0) {
         record.status = "Solved with errors: " + result.errors[0];

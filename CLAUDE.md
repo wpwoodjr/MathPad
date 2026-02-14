@@ -39,13 +39,15 @@ ui.js (main orchestration, ~1300 lines)
   ├→ editor.js (syntax highlighting)
   ├→ variables-panel.js (variable display)
   ├→ parser.js (tokenizer & AST)
+  ├→ line-parser.js (token-based line parsing)
   └→ solver.js (equation solving)
         ├→ evaluator.js (expression evaluation)
         ├→ variables.js (variable parsing)
+        ├→ line-parser.js
         └→ parser.js
 ```
 
-Scripts load in order in `index.html`: parser → evaluator → solver → variables → storage → editor → variables-panel → ui → app
+Scripts load in order in `index.html`: parser → line-parser → evaluator → solver → variables → storage → editor → variables-panel → ui → app
 
 ### Key Modules
 
@@ -55,7 +57,8 @@ Scripts load in order in `index.html`: parser → evaluator → solver → varia
 | `solver.js` | Brent's root-finding algorithm, equation detection, substitution derivation |
 | `evaluator.js` | Expression evaluation, 50+ built-in functions, `formatNumber()` |
 | `variables.js` | Variable declaration parsing, `parseVariableLine()`, `setVariableValue()` |
-| `parser.js` | Tokenizer, AST generation for expressions |
+| `parser.js` | Tokenizer (with `.ws` whitespace and `.raw` error text on tokens), AST generation |
+| `line-parser.js` | Token-based line parser for variable declarations and expression outputs |
 | `storage.js` | localStorage persistence, import/export to text format |
 | `editor.js` | SimpleEditor class with syntax highlighting |
 
@@ -75,15 +78,23 @@ Scripts load in order in `index.html`: parser → evaluator → solver → varia
 }
 ```
 
-**Variable Declaration** (from `parseVariableLine`):
+**Variable Declaration** (from `parseVariableLine` → `LineParser.parse()`):
 ```javascript
 {
-  name: string,           // e.g., "pmt", "rate"
-  type: VarType,          // STANDARD, INPUT, OUTPUT, FULL_PRECISION
-  valueText: string,      // raw value text
-  limits: { low, high },  // search limits if specified
+  kind: 'declaration' | 'expression-output',
+  name: string,           // e.g., "pmt", "rate" (declarations only)
+  exprTokens: Token[],    // expression tokens (expression outputs only)
+  type: VarType,          // STANDARD, INPUT, OUTPUT
+  clearBehavior: ClearBehavior, // NONE, ON_CLEAR, ON_SOLVE, ON_SOLVE_ONLY
+  valueTokens: Token[],   // value tokens after marker
+  limits: { lowTokens, highTokens }, // search limit tokens if specified
+  base: number,           // numeric base (default 10)
+  fullPrecision: boolean, // ->> or :: marker
   format: 'money' | 'percent' | null,
-  marker: ':' | '<-' | '->' | '->>' | '::' | '#'
+  marker: ':' | '<-' | '->' | '->>' | '::' | '=>' | '=>>',
+  markerEndCol: number,   // 1-based column after marker (for value insertion)
+  comment: string | null, // trailing quoted or unquoted comment
+  commentUnquoted: boolean
 }
 ```
 
@@ -172,9 +183,10 @@ equation text
 **Adding a built-in function**: Add to `builtins` object in `evaluator.js`
 
 **Adding a variable type**:
-1. Add to `VarType` enum in `variables.js`
-2. Add regex pattern and handler in `declarationPatterns` array
-3. Handle in `solveRecord()` if special behavior needed
+1. Add to `VarType` enum in `parser.js`
+2. Add marker token type and metadata in `parser.js` tokenizer
+3. Handle in `line-parser.js` `LineParser` and `getMarkerString()`
+4. Handle in `solveRecord()` if special behavior needed
 
 **Modifying solving behavior**: Edit `solveRecord()` in `ui.js` (iterative loop around line 700-1100)
 

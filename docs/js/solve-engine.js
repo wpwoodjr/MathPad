@@ -48,15 +48,10 @@ function findVariablesInAST(node) {
 /**
  * Solve a single equation in context
  */
-function solveEquationInContext(eqText, eqLine, context, variables, substitutions = new Map()) {
-    // Parse the equation: left = right
-    const eqMatch = eqText.match(/^(.+?)=(.+)$/);
-    if (!eqMatch) {
-        throw new Error('Invalid equation format');
+function solveEquationInContext(eqText, eqLine, context, variables, substitutions = new Map(), leftText, rightText) {
+    if (!leftText || !rightText) {
+        return { solved: false };
     }
-
-    const leftText = eqMatch[1].trim();
-    const rightText = eqMatch[2].trim();
 
     // Parse both sides
     let leftAST = parseExpression(leftText);
@@ -120,8 +115,8 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
     const varInfo = variables.get(unknown);
     if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
         try {
-            const lowAST = parseExpression(varInfo.declaration.limits.lowExpr);
-            const highAST = parseExpression(varInfo.declaration.limits.highExpr);
+            const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
+            const highAST = parseTokens(varInfo.declaration.limits.highTokens);
             limits = {
                 low: evaluate(lowAST, context),
                 high: evaluate(highAST, context)
@@ -167,7 +162,7 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
  * @param {Object} record - Record settings (for places -> tolerance)
  * @returns {{ computedValues: Map, solved: number, errors: Array, solveFailures: Map }}
  */
-function solveEquations(text, context, declarations, record = {}) {
+function solveEquations(text, context, declarations, record = {}, allTokens) {
     // Derive balance tolerance from decimal places: 0.5 * 10^(-places)
     // This matches rounding precision - if diff < tolerance, values display the same
     const places = record.places != null ? record.places : 4;
@@ -189,7 +184,7 @@ function solveEquations(text, context, declarations, record = {}) {
     }
 
     // Compute equations and expression outputs ONCE (text doesn't change within this function)
-    const { equations, exprOutputs } = findEquationsAndOutputs(text);
+    const { equations, exprOutputs } = findEquationsAndOutputs(text, allTokens);
 
     // Iterative solving
     const maxIterations = 50;
@@ -207,10 +202,9 @@ function solveEquations(text, context, declarations, record = {}) {
                 if (eq.text.includes('\\')) continue;
 
                 // Handle incomplete equations (expr =)
-                const incompleteMatch = eq.text.match(/^(.+?)\s*=\s*$/);
-                if (incompleteMatch) {
+                if (eq.leftText && !eq.rightText) {
                     try {
-                        let ast = parseExpression(incompleteMatch[1].trim());
+                        let ast = parseExpression(eq.leftText);
                         // Extract just the ASTs from substitutions for evaluation
                         const subAsts = new Map([...substitutions].map(([k, v]) => [k, v.ast]));
                         ast = substituteInAST(ast, subAsts);
@@ -225,7 +219,7 @@ function solveEquations(text, context, declarations, record = {}) {
                 }
 
                 // Handle definition equations (var = expr)
-                const def = isDefinitionEquation(eq.text);
+                const def = isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
                 if (def) {
                     const varInfo = variables.get(def.variable);
                     const rhsVars = findVariablesInAST(def.expressionAST);
@@ -254,8 +248,8 @@ function solveEquations(text, context, declarations, record = {}) {
                             // Check limits if defined
                             if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
                                 try {
-                                    const lowAST = parseExpression(varInfo.declaration.limits.lowExpr);
-                                    const highAST = parseExpression(varInfo.declaration.limits.highExpr);
+                                    const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
+                                    const highAST = parseTokens(varInfo.declaration.limits.highTokens);
                                     const low = evaluate(lowAST, context);
                                     const high = evaluate(highAST, context);
                                     if (value < low || value > high) {
@@ -284,7 +278,7 @@ function solveEquations(text, context, declarations, record = {}) {
                 }
 
                 // Try to solve the equation numerically (substitutions will be applied)
-                const result = solveEquationInContext(eq.text, eq.startLine, context, variables, substitutions);
+                const result = solveEquationInContext(eq.text, eq.startLine, context, variables, substitutions, eq.leftText, eq.rightText);
                 if (result.solved) {
                     context.setVariable(result.variable, result.value);
                     computedValues.set(result.variable, result.value);
@@ -305,11 +299,11 @@ function solveEquations(text, context, declarations, record = {}) {
     // For : and :: (non-recalculating), skip if there's already a value
     for (const output of exprOutputs) {
         // Skip non-recalculating outputs that already have a value
-        if (!output.recalculates && output.existingValue) {
+        if (!output.recalculates && output.valueTokens && output.valueTokens.length > 0) {
             continue;
         }
         try {
-            const ast = parseExpression(output.text);
+            const ast = parseTokens(output.exprTokens);
             const value = evaluate(ast, context);
             // Store with marker info for formatting
             computedValues.set(`__exprout_${output.startLine}`, {
@@ -329,11 +323,10 @@ function solveEquations(text, context, declarations, record = {}) {
     // Check equation consistency (reuses precomputed equations)
     for (const eq of equations) {
         try {
-            const eqMatch = eq.text.match(/^(.+?)=(.+)$/);
-            if (!eqMatch) continue;
+            if (!eq.leftText || !eq.rightText) continue;
 
-            const leftAST = parseExpression(eqMatch[1].trim());
-            const rightAST = parseExpression(eqMatch[2].trim());
+            const leftAST = parseExpression(eq.leftText);
+            const rightAST = parseExpression(eq.rightText);
 
             const allVars = new Set([...findVariablesInAST(leftAST), ...findVariablesInAST(rightAST)]);
             const unknowns = [...allVars].filter(v => !context.hasVariable(v));
@@ -363,7 +356,7 @@ function solveEquations(text, context, declarations, record = {}) {
  * @param {object} record - Record settings for formatting
  * @returns {{ text: string, errors: Array }} Formatted text and any errors
  */
-function formatOutput(text, declarations, context, computedValues, record, solveFailures = new Map(), precomputedEquations = null, precomputedExprOutputs = null) {
+function formatOutput(text, declarations, context, computedValues, record, solveFailures = new Map(), precomputedEquations, precomputedExprOutputs) {
     const errors = [];
     const format = {
         places: record.places != null ? record.places : 4,
@@ -376,7 +369,7 @@ function formatOutput(text, declarations, context, computedValues, record, solve
     // Uses pre-parsed declarations to avoid re-tokenizing lines
     const lines = text.split('\n');
     for (const info of declarations) {
-        if (!info.valueText) {
+        if (!info.valueTokens || info.valueTokens.length === 0) {
             let value = null;
             if (context.variables.has(info.name)) {
                 value = context.variables.get(info.name);
@@ -408,15 +401,15 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                 groupDigits: format.groupDigits
             });
             const commentInfo = { comment: decl.comment, commentUnquoted: decl.commentUnquoted };
-            const newLine = replaceValueOnLine(lines[info.lineIndex], info.name, decl.marker, !!decl.limits, formatted, commentInfo);
-            if (newLine !== null) lines[info.lineIndex] = newLine;
+            const markerEndIndex = info.markerEndCol - 1;
+            lines[info.lineIndex] = buildOutputLine(lines[info.lineIndex], markerEndIndex, formatted, commentInfo);
         }
     }
     text = lines.join('\n');
 
     // Handle incomplete equations and expression outputs using pre-computed values
-    const equations = precomputedEquations || findEquationsAndOutputs(text).equations;
-    const exprOutputs = precomputedExprOutputs || findEquationsAndOutputs(text).exprOutputs;
+    const equations = precomputedEquations;
+    const exprOutputs = precomputedExprOutputs;
     for (const eq of equations) {
         const key = `__incomplete_${eq.startLine}`;
         if (computedValues.has(key)) {
@@ -436,16 +429,11 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                 ? formatVariableValue(value, varFormat, fullPrecision, format)
                 : formatNumber(value, places, format.stripZeros, format.format, exprBase || 10, format.groupDigits);
 
-            // Find the marker in the line and insert the value after it
+            // Insert the value after the marker
             const line = exprLines[output.startLine];
-            const { clean: cleanLine } = stripComments(line);
-            const markerIdx = cleanLine.lastIndexOf(marker);
-
-            if (markerIdx !== -1) {
-                const markerEndIndex = markerIdx + marker.length;
-                const commentInfo = { comment: output.comment, commentUnquoted: output.commentUnquoted };
-                exprLines[output.startLine] = buildOutputLine(line, markerEndIndex, formatted, commentInfo);
-            }
+            const markerEndIndex = output.markerEndCol - 1;
+            const commentInfo = { comment: output.comment, commentUnquoted: output.commentUnquoted };
+            exprLines[output.startLine] = buildOutputLine(line, markerEndIndex, formatted, commentInfo);
         }
     }
     text = exprLines.join('\n');
@@ -511,29 +499,34 @@ function appendReferencesSection(text, context) {
 /**
  * Main solve function - orchestrates discovery, solving, and formatting
  */
-function solveRecord(text, context, record) {
+function solveRecord(text, context, record, parserTokens) {
     // Remove any existing references section before solving
     text = removeReferencesSection(text);
 
+    let allTokens = parserTokens;
+
     // Capture pre-solve values for output variables (before they are cleared)
     // These are available via the ? operator and as fallback in getVariable()
-    context.preSolveValues = capturePreSolveValues(text);
+    context.preSolveValues = capturePreSolveValues(text, allTokens);
 
     // Clear output variables and expression outputs so they become unknowns for solving
     // Uses 'solve' mode to also clear persistent outputs (=> =>>)
-    text = clearVariables(text, 'solve');
+    const clearResult = clearVariables(text, 'solve', allTokens);
+    text = clearResult.text;
+    allTokens = clearResult.allTokens;
 
     // Clear usage tracking from any previous solve
     context.clearUsageTracking();
 
     // Pass 1: Variable Discovery (evaluates \expr\, parses declarations)
-    const discovery = discoverVariables(text, context, record);
+    const discovery = discoverVariables(text, context, record, allTokens);
     text = discovery.text;
+    allTokens = discovery.allTokens;
     const declarations = discovery.declarations;
     const errors = [...discovery.errors];
 
     // Pass 2: Equation Solving (computes values, no text modification)
-    const solveResult = solveEquations(text, context, declarations, record);
+    const solveResult = solveEquations(text, context, declarations, record, allTokens);
     errors.push(...solveResult.errors);
 
     // Pass 3: Format Output (inserts values into text, reuses equations/exprOutputs from pass 2)

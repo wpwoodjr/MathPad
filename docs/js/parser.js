@@ -73,21 +73,6 @@ function findLineCommentStart(line) {
 }
 
 /**
- * Strip comments from a line: both // line comments and "..." quoted strings
- * Returns:
- *   clean - both // and "..." replaced with spaces (position-preserving)
- *   stripped - only // removed ("..." still present for regex matching)
- *   lineComment - the "// ..." text or null (for re-appending)
- */
-function stripComments(line) {
-    const lcStart = findLineCommentStart(line);
-    const lineComment = lcStart !== -1 ? line.substring(lcStart) : null;
-    const stripped = lcStart !== -1 ? line.substring(0, lcStart) : line;
-    const clean = stripped.replace(/"[^"]*"/g, match => ' '.repeat(match.length));
-    return { clean, stripped, lineComment };
-}
-
-/**
  * Tokenizer class - converts source text to tokens
  */
 class Tokenizer {
@@ -97,6 +82,7 @@ class Tokenizer {
         this.line = 1;
         this.col = 1;
         this.tokens = [];
+        this.pendingWs = '';
     }
 
     peek(offset = 0) {
@@ -116,9 +102,11 @@ class Tokenizer {
     }
 
     skipWhitespace() {
+        let ws = '';
         while (this.peek() && /[ \t\r]/.test(this.peek())) {
-            this.advance();
+            ws += this.advance();
         }
+        return ws;
     }
 
     isDigit(ch) {
@@ -139,6 +127,11 @@ class Tokenizer {
 
     makeToken(type, value, startLine, startCol) {
         const token = { type, value, line: startLine, col: startCol };
+        // Attach pending whitespace to token
+        if (this.pendingWs) {
+            token.ws = this.pendingWs;
+            this.pendingWs = '';
+        }
         // Marker metadata
         switch (type) {
             case TokenType.COLON:
@@ -190,6 +183,7 @@ class Tokenizer {
     tokenizeNumber() {
         const startLine = this.line;
         const startCol = this.col;
+        const startPos = this.pos;
         let value = '';
 
         // Check for 0x/0b/0o prefix literals before consuming digits
@@ -207,6 +201,7 @@ class Tokenizer {
             if (!digits) {
                 const token = this.makeToken(TokenType.ERROR, `Invalid 0${prefix} literal`, startLine, startCol);
                 token.length = 2; // 0x, 0b, or 0o
+                token.raw = this.text.substring(startPos, this.pos);
                 return token;
             }
             const base = prefix === 'x' ? 16 : prefix === 'b' ? 2 : 8;
@@ -230,6 +225,7 @@ class Tokenizer {
             if (baseLiteral.error) {
                 const token = this.makeToken(TokenType.ERROR, baseLiteral.error, startLine, startCol);
                 token.length = this.col - startCol;
+                token.raw = this.text.substring(startPos, this.pos);
                 return token;
             }
             return this.makeToken(TokenType.NUMBER, baseLiteral, startLine, startCol);
@@ -261,6 +257,7 @@ class Tokenizer {
             if (!this.isDigit(this.peek())) {
                 const token = this.makeToken(TokenType.ERROR, 'Invalid scientific notation', startLine, startCol);
                 token.length = raw.length;
+                token.raw = this.text.substring(startPos, this.pos);
                 return token;
             }
             while (this.isDigit(this.peek())) {
@@ -332,6 +329,7 @@ class Tokenizer {
     tokenizeIdentifier() {
         const startLine = this.line;
         const startCol = this.col;
+        const startPos = this.pos;
         let value = '';
 
         while (this.isAlphaNum(this.peek())) {
@@ -390,6 +388,7 @@ class Tokenizer {
                 if (base < 2 || base > 36) {
                     const token = this.makeToken(TokenType.ERROR, `Invalid base in "${raw}" - base must be between 2 and 36`, startLine, startCol);
                     token.length = raw.length;
+                    token.raw = this.text.substring(startPos, this.pos);
                     return token;
                 }
                 // Validate all digits are valid for the base (parseInt silently ignores trailing invalid chars)
@@ -397,6 +396,7 @@ class Tokenizer {
                 if (!value.split('').every(ch => validDigits.includes(ch.toLowerCase()))) {
                     const token = this.makeToken(TokenType.ERROR, `Invalid constant "${raw}" - "${value}" is not valid in base ${base}`, startLine, startCol);
                     token.length = raw.length;
+                    token.raw = this.text.substring(startPos, this.pos);
                     return token;
                 }
                 const parsed = parseInt(value, base);
@@ -415,13 +415,8 @@ class Tokenizer {
 
         this.advance(); // opening "
         while (this.peek() && this.peek() !== '"') {
-            const ch = this.advance();
-            value += ch;
-            // Track line/col for newlines within comment
-            if (ch === '\n') {
-                this.line++;
-                this.col = 1;
-            }
+            value += this.advance();
+            // advance() already tracks line/col for \n characters
         }
         if (this.peek() === '"') {
             this.advance(); // closing "
@@ -506,6 +501,7 @@ class Tokenizer {
 
     tokenize() {
         this.tokens = [];
+        this.pendingWs = '';
 
         while (this.pos < this.text.length) {
             const startLine = this.line;
@@ -514,7 +510,7 @@ class Tokenizer {
 
             // Whitespace (not newline)
             if (/[ \t\r]/.test(ch)) {
-                this.skipWhitespace();
+                this.pendingWs += this.skipWhitespace();
                 continue;
             }
 
@@ -645,6 +641,7 @@ class Tokenizer {
                         this.advance(); this.advance(); this.advance();
                         const token = this.makeToken(TokenType.ERROR, `Format specifier '${ch}' not supported on input marker '<-'`, startLine, startCol);
                         token.length = 3; // %<- or $<-
+                        token.raw = ch + '<-';
                         this.tokens.push(token);
                         continue;
                     }
@@ -679,6 +676,7 @@ class Tokenizer {
                             for (let i = 0; i < 1 + baseLen + 2; i++) this.advance();
                             const token = this.makeToken(TokenType.ERROR, `Format specifier '#' not supported on input marker '<-'`, startLine, startCol);
                             token.length = 1 + baseLen + 2; // #digits<-
+                            token.raw = '#' + digits + '<-';
                             this.tokens.push(token);
                             continue;
                         } else if (p1 === ':') {
@@ -710,7 +708,9 @@ class Tokenizer {
 
             // Unknown character - generate error token
             this.advance();
-            this.tokens.push(this.makeToken(TokenType.UNEXPECTED_CHAR, `Unexpected character '${ch}'`, startLine, startCol));
+            const unexpToken = this.makeToken(TokenType.UNEXPECTED_CHAR, `Unexpected character '${ch}'`, startLine, startCol);
+            unexpToken.raw = ch;
+            this.tokens.push(unexpToken);
         }
 
         this.tokens.push(this.makeToken(TokenType.EOF, null, this.line, this.col));
@@ -984,6 +984,11 @@ function parseExpression(text) {
     return parser.parse();
 }
 
+function parseTokens(tokens) {
+    const parser = new Parser(tokens);
+    return parser.parse();
+}
+
 // Note: parseVariableDeclaration, findEquations, and findInlineEvaluations
 // have been consolidated into variables.js to eliminate duplication.
 // Use parseVariableLine, findEquations, findInlineEvaluations from variables.js instead.
@@ -993,6 +998,6 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         VarType, ClearBehavior,
         TokenType, NodeType, Tokenizer, Parser, ParseError,
-        tokenize, parseExpression, stripComments
+        tokenize, parseExpression, parseTokens, findLineCommentStart
     };
 }
