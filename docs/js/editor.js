@@ -322,6 +322,19 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
                             end: lineStart + firstBS.col - 1
                         });
                     }
+                    // Label regions between backslash pairs (closing \ of one pair to opening \ of next)
+                    for (let p = 1; p + 1 < bsIndices.length; p += 2) {
+                        const closeBS = parser.tokens[bsIndices[p]];
+                        const openBS = parser.tokens[bsIndices[p + 1]];
+                        const gapStart = closeBS.col; // after closing backslash
+                        const gapEnd = openBS.col - 1; // before opening backslash
+                        if (gapEnd > gapStart) {
+                            labelRegions.push({
+                                start: lineStart + gapStart,
+                                end: lineStart + gapEnd
+                            });
+                        }
+                    }
                     // Label region after last backslash
                     const lastBS = parser.tokens[bsIndices[bsIndices.length - 1]];
                     const afterBS = lastBS.col; // col is 1-based, so col = position after the backslash
