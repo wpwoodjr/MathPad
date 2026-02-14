@@ -1283,6 +1283,31 @@ function runAllTests() {
                 ['4', 'number'],
                 ["doesn't it?", 'comment']
             ]
+        },
+        // Inline eval
+        {
+            name: 'inline eval (\\3+4\\)',
+            line: '\\3+4\\',
+            assertions: [
+                ['\\', 'inline-marker'],
+                ['3', 'number'],
+                ['+', 'operator'],
+                ['4', 'number'],
+                ['\\', 'inline-marker']
+            ]
+        },
+        {
+            name: 'inline eval with labels (Here we are testing \\3+4\\ again)',
+            line: 'Here we are testing \\3+4\\ again',
+            assertions: [
+                ['Here we are testing ', 'comment'],
+                ['\\', 'inline-marker'],
+                ['3', 'number'],
+                ['+', 'operator'],
+                ['4', 'number'],
+                ['\\', 'inline-marker'],
+                [' again', 'comment']
+            ]
         }
     ];
 

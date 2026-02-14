@@ -302,17 +302,49 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, p
                 });
             }
         } else if (!result && line.trim() && !insideBrace) {
-            // Plain text line - label/comment (but not if it has error tokens — let those highlight red)
+            // Plain text line - label/comment (but not if it has error tokens)
             const hasError = parser.tokens.some(t => t.type === TokenType.ERROR || t.type === TokenType.UNEXPECTED_CHAR);
             if (!hasError && parser.tokens.length > 0) {
-                const lastTok = parser.tokens[parser.tokens.length - 1];
-                const raw = lastTok.type === TokenType.NUMBER ? lastTok.value.raw : lastTok.value;
-                const labelEnd = lastTok.col - 1 + raw.length;
-                if (labelEnd > 0) {
-                    labelRegions.push({
-                        start: lineStart,
-                        end: lineStart + labelEnd
-                    });
+                // Find backslash pairs for inline evals — label regions go around them
+                const bsIndices = [];
+                for (let j = 0; j < parser.tokens.length; j++) {
+                    if (parser.tokens[j].type === TokenType.OPERATOR && parser.tokens[j].value === '\\') {
+                        bsIndices.push(j);
+                    }
+                }
+
+                if (bsIndices.length >= 2) {
+                    // Label region before first backslash
+                    const firstBS = parser.tokens[bsIndices[0]];
+                    if (firstBS.col - 1 > 0) {
+                        labelRegions.push({
+                            start: lineStart,
+                            end: lineStart + firstBS.col - 1
+                        });
+                    }
+                    // Label region after last backslash
+                    const lastBS = parser.tokens[bsIndices[bsIndices.length - 1]];
+                    const afterBS = lastBS.col; // col is 1-based, so col = position after the backslash
+                    const lastTok = parser.tokens[parser.tokens.length - 1];
+                    const raw = lastTok.type === TokenType.NUMBER ? lastTok.value.raw : lastTok.value;
+                    const labelEnd = lastTok.col - 1 + raw.length;
+                    if (afterBS < labelEnd) {
+                        labelRegions.push({
+                            start: lineStart + afterBS,
+                            end: lineStart + labelEnd
+                        });
+                    }
+                } else {
+                    // No inline evals — whole line is label
+                    const lastTok = parser.tokens[parser.tokens.length - 1];
+                    const raw = lastTok.type === TokenType.NUMBER ? lastTok.value.raw : lastTok.value;
+                    const labelEnd = lastTok.col - 1 + raw.length;
+                    if (labelEnd > 0) {
+                        labelRegions.push({
+                            start: lineStart,
+                            end: lineStart + labelEnd
+                        });
+                    }
                 }
             }
         }
