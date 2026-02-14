@@ -302,22 +302,26 @@ function createEditorForRecord(record) {
     container.id = `editor-${record.id}`;
     container.style.display = 'none';
 
-    // Create formulas panel (top)
+    // Create formulas panel
     const formulasPanel = document.createElement('div');
     formulasPanel.className = 'formulas-panel';
+    const formulasHeader = document.createElement('div');
+    formulasHeader.className = 'formulas-header';
+    formulasHeader.textContent = 'Formulas';
+    formulasPanel.appendChild(formulasHeader);
 
     // Create resize divider
     const divider = document.createElement('div');
     divider.className = 'panel-divider';
 
-    // Create variables panel (bottom)
+    // Create variables panel (top)
     const variablesPanel = document.createElement('div');
     variablesPanel.className = 'variables-panel';
-    variablesPanel.innerHTML = '<div class="variables-header">Variables</div><div class="variables-table"></div>';
+    variablesPanel.innerHTML = '<div class="variables-table"></div>';
 
-    container.appendChild(formulasPanel);
-    container.appendChild(divider);
     container.appendChild(variablesPanel);
+    container.appendChild(divider);
+    container.appendChild(formulasPanel);
     UI.editorContainer.appendChild(container);
 
     // Create SimpleEditor in formulas panel
@@ -375,7 +379,7 @@ function createEditorForRecord(record) {
     });
 
     // Set up divider drag
-    setupPanelResizer(divider, formulasPanel, variablesPanel);
+    setupPanelResizer(divider, variablesPanel, formulasPanel);
 
     // Initial variables render
     variablesManager.updateFromText(record.text);
@@ -423,12 +427,23 @@ function showEditor(recordId) {
     const editorInfo = UI.editors.get(recordId);
     const record = findRecord(UI.data, recordId);
     if (editorInfo && record) {
-        // Restore divider position
+        // Restore or auto-fit divider position
+        const variablesPanel = editorInfo.container.querySelector('.variables-panel');
         if (record.dividerHeight) {
-            const variablesPanel = editorInfo.container.querySelector('.variables-panel');
             if (variablesPanel) {
                 variablesPanel.style.height = record.dividerHeight + 'px';
             }
+        } else if (variablesPanel) {
+            // Auto-fit: size to content, clamped between 1/4 and 3/4 of container
+            requestAnimationFrame(() => {
+                const containerHeight = editorInfo.container.offsetHeight;
+                const table = variablesPanel.querySelector('.variables-table');
+                const contentHeight = table ? table.scrollHeight : 0;
+                const minHeight = containerHeight * 0.25;
+                const maxHeight = containerHeight * 0.75;
+                const fitHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight));
+                variablesPanel.style.height = fitHeight + 'px';
+            });
         }
         // Restore scroll position and set cursor to end of first visible line
         requestAnimationFrame(() => {
@@ -1298,19 +1313,19 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
         e.preventDefault();
         divider.setPointerCapture(e.pointerId);
         startY = e.clientY;
-        startHeight = bottomPanel.offsetHeight;
+        startHeight = topPanel.offsetHeight;
         // Cache container height to avoid layout thrashing during drag
-        maxHeight = bottomPanel.parentElement.offsetHeight;
+        maxHeight = topPanel.parentElement.offsetHeight;
         divider.classList.add('dragging');
         document.body.classList.add('panel-resizing');
     });
 
     divider.addEventListener('pointermove', (e) => {
         if (!divider.hasPointerCapture(e.pointerId)) return;
-        const delta = startY - e.clientY;
+        const delta = e.clientY - startY;
         // Min 80px for variables panel, allow formulas panel to shrink to 0
         const newHeight = Math.max(80, Math.min(maxHeight, startHeight + delta));
-        bottomPanel.style.height = newHeight + 'px';
+        topPanel.style.height = newHeight + 'px';
     });
 
     function endDrag() {
@@ -1320,14 +1335,14 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
         // Save divider position to current record
         const record = findRecord(UI.data, UI.currentRecordId);
         if (record) {
-            record.dividerHeight = bottomPanel.offsetHeight;
+            record.dividerHeight = topPanel.offsetHeight;
             debouncedSave(UI.data);
         }
 
         // Update editor's saved height if keyboard is up (so restoreHeight uses new position)
         const editorInfo = UI.editors.get(UI.currentRecordId);
         if (editorInfo && editorInfo.editor.isAdjustedForKeyboard) {
-            editorInfo.editor.originalVariablesHeight = bottomPanel.style.height;
+            editorInfo.editor.originalVariablesHeight = topPanel.style.height;
         }
     }
 

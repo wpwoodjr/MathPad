@@ -3,6 +3,26 @@
  */
 
 /**
+ * Syntax-highlight a label text string, returning HTML
+ */
+function highlightLabelText(text) {
+    const { tokens } = tokenizeMathPad(text);
+    let html = '';
+    let lastPos = 0;
+    for (const token of tokens) {
+        if (token.from > lastPos) {
+            html += escapeHtml(text.slice(lastPos, token.from));
+        }
+        html += `<span class="tok-${token.type}">${escapeHtml(text.slice(token.from, token.to))}</span>`;
+        lastPos = token.to;
+    }
+    if (lastPos < text.length) {
+        html += escapeHtml(text.slice(lastPos));
+    }
+    return html;
+}
+
+/**
  * VariablesPanel - Manages the structured variables view
  */
 class VariablesPanel {
@@ -152,10 +172,30 @@ class VariablesPanel {
             }
 
             // Add label/spacer rows for non-declaration lines below the marker
+            // Build a map of line → comment text from tokens (handles multi-line comments)
+            const commentLines = new Map(); // startLine → { text, endLine, isQuoted }
+            const consumedLines = new Set(); // lines consumed by multi-line comments
+            if (allTokens) {
+                for (const t of allTokens) {
+                    if (t.type !== TokenType.COMMENT) continue;
+                    if (t.line - 1 <= varsSectionLineIndex) continue;
+                    if (t.lineComment) continue; // skip // comments
+                    const startLine = t.line - 1; // 0-based
+                    // Count lines in the comment value
+                    const valueLines = t.value.split('\n');
+                    const endLine = startLine + valueLines.length - 1;
+                    commentLines.set(startLine, { text: t.value, endLine, isQuoted: true });
+                    for (let l = startLine + 1; l <= endLine; l++) {
+                        consumedLines.add(l);
+                    }
+                }
+            }
+
             const lines = text.split('\n');
             for (let i = varsSectionLineIndex + 1; i < lines.length; i++) {
                 if (newDeclMap.has(i)) continue; // Already a declaration
                 if (i >= refSectionLineIndex) continue; // In reference section
+                if (consumedLines.has(i)) continue; // Part of a multi-line comment
 
                 const line = lines[i];
                 const trimmed = line.trim();
@@ -166,10 +206,18 @@ class VariablesPanel {
                 // Skip // comment-only lines
                 if (trimmed.startsWith('//')) continue;
 
-                // Strip surrounding quotes from quoted strings
-                let labelText = trimmed;
-                if (labelText.startsWith('"') && labelText.endsWith('"') && labelText.length >= 2) {
-                    labelText = labelText.slice(1, -1);
+                // Use token-based comment text if available (handles multi-line)
+                const commentInfo = commentLines.get(i);
+                let labelText = commentInfo ? commentInfo.text : line;
+                let isQuoted = commentInfo ? true : false;
+
+                if (!commentInfo) {
+                    // Fallback: strip surrounding quotes for single-line
+                    const stripped = labelText.trim();
+                    if (stripped.startsWith('"') && stripped.endsWith('"') && stripped.length >= 2) {
+                        labelText = stripped.slice(1, -1);
+                        isQuoted = true;
+                    }
                 }
 
                 // Empty lines → spacer row
@@ -178,7 +226,8 @@ class VariablesPanel {
                     name: labelText,
                     declaration: { marker: null, comment: null },
                     lineIndex: i,
-                    isLabel: true
+                    isLabel: true,
+                    isQuoted
                 });
             }
         }
@@ -254,7 +303,21 @@ class VariablesPanel {
                 // Label row with text - use same styling as declaration comments
                 const label = document.createElement('span');
                 label.className = 'variable-comment';
-                label.textContent = info.name;
+                let labelText = info.name;
+                if (labelText.startsWith('*')) {
+                    labelText = labelText.slice(1).trimStart();
+                    label.style.color = 'var(--star-label-color)';
+                    row.style.background = 'var(--bg-hover)';
+                }
+                if (info.isQuoted) {
+                    label.style.whiteSpace = 'pre-wrap';
+                }
+                if (!info.isQuoted) {
+                    // Syntax-highlight non-quoted labels (equations, expressions)
+                    label.innerHTML = highlightLabelText(labelText);
+                } else {
+                    label.textContent = labelText;
+                }
                 row.appendChild(label);
             } else {
                 // Spacer row

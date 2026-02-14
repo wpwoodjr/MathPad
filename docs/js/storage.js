@@ -5,6 +5,25 @@
 const STORAGE_KEY = 'mathpad_data';
 const STORAGE_VERSION = 2;
 
+const DEFAULT_SETTINGS_RECORD = {
+    title: 'Default Settings',
+    text: `"New Record"
+
+--Variables--
+"*Template for new records"
+
+"First line becomes the default title"
+
+"Settings are used as defaults for new records"`,
+    category: 'Reference',
+    places: 4,
+    stripZeros: true,
+    groupDigits: true,
+    format: 'float',
+    degreesMode: false,
+    shadowConstants: false
+};
+
 /**
  * Default data structure
  */
@@ -34,7 +53,8 @@ solveCount: solveCount + 1
 solveCount=> 0 // Use => to persist across clears
 
 --Variables--
-"Update value(s), then re-calculate any variable by clicking its solve icon \u27F2"
+"*Update value(s), then re-calculate any variable by clicking its solve icon \u27F2"
+
 
 "Enter present value of retirement account(s):"
 pv$: $1,000,000
@@ -72,15 +92,19 @@ fv$-> $1,485,947.40`,
 "Payment calculation"
 pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
 
-"Variables"
+"Monthly interest rate from annual"
+mint = yint / 12
+
+--Variables--
+"*Update value(s), then re-calculate any variable by clicking its solve icon \u27F2"
+
+
 pmt$: "monthly payment"
 pv$: $100,000 "loan amount"
 fv$: 0 "future value (balloon payment)"
 yint%: 6.125% "annual interest rate %"
 n: 360 "number of payments (30 years)"
-
-"Monthly interest rate from annual"
-mint = yint / 12`,
+`,
                 category: 'Finance',
                 places: 2,
                 stripZeros: true,
@@ -95,16 +119,23 @@ mint = yint / 12`,
                 text: `"Quadratic equation solver"
 "ax^2 + bx + c = 0"
 
-disc = b**2 - 4*a*c
-x1 = (-b + sqrt(disc)) / (2*a)
-x2 = (-b - sqrt(disc)) / (2*a)
+--Variables--
+"*Press Solve to solve the equation. Try different values for a, b, and c."
 
 a: 1
 b: -5
 c: 6
 disc->
 x1->
-x2->`,
+x2->
+
+
+"*Here are the equations:"
+
+disc = b**2 - 4*a*c
+x1 = (-b + sqrt(disc)) / (2*a)
+x2 = (-b - sqrt(disc)) / (2*a)
+`,
                 category: 'Math',
                 places: 2,
                 stripZeros: true,
@@ -118,18 +149,26 @@ x2->`,
                 title: 'Example: Basel Series',
                 text: `"Basel Series (recursive and non-recursive solutions)"
 
-"Basel series is the sum of 1/n**2 where n goes from 1 to infinity"
+--Variables--
+"*The Basel series is the sum of 1/n**2 where n goes from 1 to infinity"
+
 "It is equal to pi**2/6"
-  pi**2/6->
+  pi**2/6-> "(to 10 places)"
+
 
 "Here we develop a recursive solution"
 "We are limited to how high n can go by the recursion limit"
+"First define the function:"
   basel(low; high) = if(low > high; 0; 1/low**2 + basel(low+1; high))
   basel(1; 750)->
 
+
 "Here we develop a solution using the built-in sum function"
 "Since sum is not subject to recursion limits we can sum to much higher n"
-  sum(1/n**2; n; 1; 10000000)->`,
+  sum(1/n**2; n; 1; 10000000)->
+
+"--- Reference Constants and Functions ---"
+pi: 3.141592653589793`,
                 category: 'Math',
                 places: 10,
                 stripZeros: true,
@@ -143,9 +182,11 @@ x2->`,
                 title: 'Example: Factorial',
                 text: `"Factorial (recursive and non-recursive solutions)"
 
-"Factorial of n is the product of all integers from 1 to n"
+--Variables--
+"*Factorial of n is the product of all integers from 1 to n"
 "n! = 1 * 2 * 3 * ... * n"
 "Note: 170! is the largest factorial that fits in a floating point number"
+
 
 "Here we develop a recursive solution"
   fac(n) = if(n <= 1; 1; n * fac(n - 1))
@@ -168,7 +209,6 @@ x2->`,
                 id: generateId(),
                 title: 'Example: Fifth Degree Polynomial',
                 text: `"Fifth degree polynomial"
-"Compute all 5 roots"
 
 c5: 1
 c4: -2
@@ -176,23 +216,27 @@ c3: -10
 c2: 20
 c1: 9
 c0: -14
-
 f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 
+--Variables--
+"*Press Solve to compute all 5 roots"
+
+
+
 f(x1; c5; c4; c3; c2; c1; c0) = 0
-x1:
+x1->
 
 f(x2; c5; c4; c3; c2; c1; c0) = 0
-x2[2:2.5]:
+x2[2:2.5]-> "search for solution in range 2 to 2.5"
 
 f(x3; c5; c4; c3; c2; c1; c0) = 0
-x3[2.5:3]:
+x3[2.5:3]-> "-> solves to record's default precision"
 
 f(x4; c5; c4; c3; c2; c1; c0) = 0
-x4[-1:0]:
+x4[-1:0]->> "->> provides full precision"
 
 f(x5; c5; c4; c3; c2; c1; c0) = 0
-x5[-4:-2]:`,
+x5[-4:-2]->>`,
                 category: 'Math',
                 places: 4,
                 stripZeros: true,
@@ -205,6 +249,11 @@ x5[-4:-2]:`,
                 id: generateId(),
                 title: 'Constants',
                 text: `"Physical and mathematical constants"
+
+--Variables--
+"*Constants defined here are available in all records"
+" (unless 'Shadow constants' is set for the record)"
+
 pi: 3.141592653589793
 e: 2.71828182845905
 c: 299792458 "speed of light m/s"
@@ -225,6 +274,11 @@ golden: 1.61803398874989 "golden ratio"`,
                 id: generateId(),
                 title: 'Functions',
                 text: `"User-defined functions"
+
+--Variables--
+"*Functions defined here are available in all records"
+
+
 "Compound interest"
 compound(p;r;n;t) = p * (1 + r/n)**(n*t)
 
@@ -247,20 +301,7 @@ disc(a;b;c) = b**2 - 4*a*c`,
                 degreesMode: false,
                 shadowConstants: false
             },
-            {
-                id: generateId(),
-                title: 'Default Settings',
-                text: `"New Record"
-"Template for new records"
-"First line becomes the default title"`,
-                category: 'Reference',
-                places: 4,
-                stripZeros: true,
-                groupDigits: true,
-                format: 'float',
-                degreesMode: false,
-                shadowConstants: false
-            }
+            { id: generateId(), ...DEFAULT_SETTINGS_RECORD }
         ],
         categories: ['Unfiled', 'Finance', 'Math', 'Science', 'Reference', 'Personal'],
         settings: {
@@ -373,20 +414,7 @@ function ensureDefaultSettingsRecord(data) {
     }
     const hasDefaultSettings = data.records.some(r => isReferenceRecord(r, 'Default Settings'));
     if (!hasDefaultSettings) {
-        data.records.push({
-            id: generateId(),
-            title: 'Default Settings',
-            text: `"New Record"
-"Template for new records"
-"First line becomes the default title"`,
-            category: 'Reference',
-            places: 4,
-            stripZeros: true,
-            groupDigits: true,
-            format: 'float',
-            degreesMode: false,
-            shadowConstants: false
-        });
+        data.records.push({ id: generateId(), ...DEFAULT_SETTINGS_RECORD });
     }
 }
 
@@ -673,43 +701,23 @@ function readTextFile(file) {
 /**
  * Create a new record using Default Settings as template if available
  */
-function createRecord(data = null) {
-    // Look for Default Settings record to use as template
-    let defaults = {
-        title: 'New Record',
-        places: 4,
-        stripZeros: true,
-        groupDigits: true,
-        format: 'float',
-        degreesMode: false,
-        shadowConstants: false
-    };
-
-    if (data && data.records) {
-        const defaultSettings = data.records.find(r => isReferenceRecord(r, 'Default Settings'));
-        if (defaultSettings) {
-            // Use Default Settings values as template
-            defaults.title = defaultSettings.text.split('\n')[0].replace(/^"|"$/g, '') || 'New Record';
-            defaults.places = defaultSettings.places != null ? defaultSettings.places : 4;
-            defaults.stripZeros = defaultSettings.stripZeros != null ? defaultSettings.stripZeros : true;
-            defaults.groupDigits = defaultSettings.groupDigits != null ? defaultSettings.groupDigits : true;
-            defaults.format = defaultSettings.format || 'float';
-            defaults.degreesMode = defaultSettings.degreesMode != null ? defaultSettings.degreesMode : false;
-            defaults.shadowConstants = defaultSettings.shadowConstants != null ? defaultSettings.shadowConstants : false;
-        }
-    }
+function createRecord(data) {
+    // Ensure Default Settings record exists, then use it as template
+    ensureDefaultSettingsRecord(data);
+    const ds = data.records.find(r => isReferenceRecord(r, 'Default Settings'));
+    const title = ds.text.split('\n')[0].replace(/^"|"$/g, '') || 'New Record';
 
     return {
         id: generateId(),
-        title: defaults.title,
-        text: `"${defaults.title}"\n\n`,
-        category: 'Unfiled',  // Always Unfiled for new records
-        places: defaults.places,
-        stripZeros: defaults.stripZeros,
-        groupDigits: defaults.groupDigits,
-        format: defaults.format,
-        degreesMode: defaults.degreesMode,
-        shadowConstants: defaults.shadowConstants,
+        title,
+        text: `"${title}"\n\n`,
+        category: 'Unfiled',
+        places: ds.places,
+        stripZeros: ds.stripZeros,
+        groupDigits: ds.groupDigits,
+        format: ds.format,
+        degreesMode: ds.degreesMode,
+        shadowConstants: ds.shadowConstants,
         status: '',
         statusIsError: false
     };

@@ -25,6 +25,7 @@
     --error-color: #f44747;
     --warning-color: #cca700;
     --success-color: #4ec9b0;
+    --star-label-color: #57ffa3;
 
     /* Syntax highlighting */
     --syn-number: #b5cea8;
@@ -82,6 +83,7 @@
     --error-color: #e51400;
     --warning-color: #bf8803;
     --success-color: #16825d;
+    --star-label-color: #007d38;
 
     /* Syntax highlighting */
     --syn-number: #098658;
@@ -499,8 +501,9 @@ button {
 /* Simple Editor Styles */
 .simple-editor {
     display: flex;
+    flex: 1;
+    min-height: 0;
     width: 100%;
-    height: 100%;
     font-family: var(--font-mono);
     font-size: 14px;
     line-height: 1.5;
@@ -1064,6 +1067,7 @@ button {
     min-height: 0;
     overflow: hidden;
     display: flex;
+    flex-direction: column;
 }
 
 .panel-divider {
@@ -1110,11 +1114,11 @@ body.panel-resizing * {
     min-height: 80px;
     background: var(--bg-secondary);
     overflow: auto;
-    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
 }
 
-.variables-header {
+.formulas-header {
     padding: 8px 12px;
     font-size: 11px;
     font-weight: 600;
@@ -1122,9 +1126,7 @@ body.panel-resizing * {
     color: var(--text-secondary);
     letter-spacing: 0.5px;
     background: var(--bg-tertiary);
-    position: sticky;
-    top: 0;
-    z-index: 1;
+    flex-shrink: 0;
 }
 
 .variables-table {
@@ -1227,6 +1229,7 @@ body.panel-resizing * {
     flex-shrink: 1;
     white-space: normal;
     word-wrap: break-word;
+    color: var(--syn-variable);
 }
 
 .variable-row[data-type="label"].variable-label-spacer {
