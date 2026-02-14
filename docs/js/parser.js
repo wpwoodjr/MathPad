@@ -640,10 +640,9 @@ class Tokenizer {
                         continue;
                     }
                     if (next === '<' && this.peek(2) === '-') {
-                        this.advance(); this.advance(); this.advance();
-                        const token = this.makeToken(TokenType.ERROR, `Format specifier '${ch}' not supported on input marker '<-'`, startLine, startCol);
-                        token.length = 3; // %<- or $<-
-                        token.raw = ch + '<-';
+                        for (let i = 0; i < 3; i++) this.advance();
+                        const token = this.makeToken(TokenType.ARROW_LEFT, ch + '<-', startLine, startCol);
+                        token.format = format;
                         this.tokens.push(token);
                         continue;
                     }
@@ -673,14 +672,8 @@ class Tokenizer {
                             if (p3 === '>') { markerType = TokenType.ARROW_PERSIST_FULL; markerStr = '=>>'; }
                             else { markerType = TokenType.ARROW_PERSIST; markerStr = '=>'; }
                         } else if (p1 === '<' && p2 === '-') {
-                            // #base<- is an error, like $<- and %<-
-                            const digits = this.text.slice(this.pos + 1, this.pos + 1 + baseLen);
-                            for (let i = 0; i < 1 + baseLen + 2; i++) this.advance();
-                            const token = this.makeToken(TokenType.ERROR, `Format specifier '#' not supported on input marker '<-'`, startLine, startCol);
-                            token.length = 1 + baseLen + 2; // #digits<-
-                            token.raw = '#' + digits + '<-';
-                            this.tokens.push(token);
-                            continue;
+                            markerType = TokenType.ARROW_LEFT;
+                            markerStr = '<-';
                         } else if (p1 === ':') {
                             if (p2 === ':') { markerType = TokenType.DOUBLE_COLON; markerStr = '::'; }
                             else { markerType = TokenType.COLON; markerStr = ':'; }

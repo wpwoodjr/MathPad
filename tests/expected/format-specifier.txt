@@ -47,4 +47,13 @@ Persistent percent literal and format
 10%%=> 10%
 10%=>> 0.1
 10%%=>> 10%
+Money format on input marker
+price$<- $100.00
+price + 5$-> $105.00
+Percent format on input marker
+rate%<- 7.5%
+rate * 200$-> $15.00
+Base format on input marker
+val#16<- ff#16
+val + 1#16-> 256
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

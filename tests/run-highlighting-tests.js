@@ -1193,12 +1193,30 @@ function runAllTests() {
             ]
         },
         {
-            name: 'format specifier on input marker is error (z%<- 30%)',
+            name: 'money format specifier on input marker (z$<- $100)',
+            line: 'z$<- $100',
+            assertions: [
+                ['z', 'variable-def'],
+                ['$<-', 'punctuation'],
+                ['$100', 'number']
+            ]
+        },
+        {
+            name: 'percent format specifier on input marker (z%<- 30%)',
             line: 'z%<- 30%',
             assertions: [
                 ['z', 'variable-def'],
-                ['%<-', 'error'],
+                ['%<-', 'punctuation'],
                 ['30%', 'number']
+            ]
+        },
+        {
+            name: 'base format specifier on input marker (z#16<- ff#16)',
+            line: 'z#16<- ff#16',
+            assertions: [
+                ['z', 'variable-def'],
+                ['#16<-', 'punctuation'],
+                ['ff#16', 'number']
             ]
         },
         {
