@@ -542,11 +542,7 @@ function capturePreSolveValues(text, allTokens) {
     const preSolveValues = new Map();
     for (const decl of declarations) {
         if (decl.value !== null) {
-            const cb = decl.declaration.clearBehavior || (
-                decl.declaration.type === VarType.OUTPUT ? ClearBehavior.ON_SOLVE :
-                decl.declaration.type === VarType.INPUT ? ClearBehavior.ON_CLEAR :
-                ClearBehavior.NONE
-            );
+            const cb = decl.declaration.clearBehavior;
             if (cb === ClearBehavior.ON_SOLVE || cb === ClearBehavior.ON_SOLVE_ONLY) {
                 preSolveValues.set(decl.name, decl.value);
             }
@@ -569,12 +565,7 @@ function clearVariables(text, clearType = 'input', allTokens) {
         let shouldClear = false;
 
         if (result.kind === 'declaration') {
-            // Use ClearBehavior for logic, with VarType fallback for compatibility
-            const clearBehavior = result.clearBehavior || (
-                result.type === VarType.INPUT ? ClearBehavior.ON_CLEAR :
-                result.type === VarType.OUTPUT ? ClearBehavior.ON_SOLVE :
-                ClearBehavior.NONE
-            );
+            const clearBehavior = result.clearBehavior;
 
             shouldClear =
                 clearType === 'all' ||

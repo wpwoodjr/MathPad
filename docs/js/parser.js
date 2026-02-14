@@ -5,8 +5,7 @@
 
 // Variable type enum - determines variable behavior
 const VarType = {
-    STANDARD: 'standard',      // varname: or varname::
-    INPUT: 'input',            // varname<-
+    INPUT: 'input',            // varname: or varname:: or varname<-
     OUTPUT: 'output',          // varname-> or varname->>
 };
 
@@ -136,13 +135,13 @@ class Tokenizer {
         switch (type) {
             case TokenType.COLON:
                 token.isMarker = true;
-                token.varType = VarType.STANDARD;
+                token.varType = VarType.INPUT;
                 token.clearBehavior = ClearBehavior.NONE;
                 token.fullPrecision = false;
                 break;
             case TokenType.DOUBLE_COLON:
                 token.isMarker = true;
-                token.varType = VarType.STANDARD;
+                token.varType = VarType.INPUT;
                 token.clearBehavior = ClearBehavior.NONE;
                 token.fullPrecision = true;
                 break;

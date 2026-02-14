@@ -118,7 +118,7 @@ class VariablesPanel {
                     name: tokensToText(output.exprTokens).trim(),
                     declaration: {
                         marker: output.marker,
-                        type: output.recalculates ? VarType.OUTPUT : VarType.STANDARD,
+                        type: output.recalculates ? VarType.OUTPUT : VarType.INPUT,
                         clearBehavior: output.recalculates ? ClearBehavior.ON_SOLVE : ClearBehavior.NONE,
                         fullPrecision: output.fullPrecision,
                         format: output.format || null,
@@ -288,12 +288,10 @@ class VariablesPanel {
         // Set data-type for CSS styling based on clear behavior
         if (isInRefSection) {
             row.dataset.type = 'reference';
-        } else if (decl.type === VarType.INPUT) {
-            row.dataset.type = 'input';
         } else if (decl.type === VarType.OUTPUT) {
             row.dataset.type = 'output';
         } else {
-            row.dataset.type = 'standard';
+            row.dataset.type = 'input';
         }
 
         // Variable name label (includes format suffix, limits, and marker)
@@ -307,12 +305,14 @@ class VariablesPanel {
         // Add tooltip explaining variable type
         if (isInRefSection) {
             nameLabel.title = 'Reference (from Constants/Functions)';
-        } else if (decl.type === VarType.INPUT) {
+        } else if (clearBehavior === ClearBehavior.ON_CLEAR) {
             nameLabel.title = 'Input variable (cleared on Clear)';
         } else if (decl.type === VarType.OUTPUT) {
             nameLabel.title = clearBehavior === ClearBehavior.ON_SOLVE_ONLY
-                ? 'Persistent output variable (not cleared by Clear)'
-                : 'Output variable (cleared on Solve)';
+                ? 'Output variable (cleared on Solve)'
+                : 'Output variable (cleared on Solve or Clear)';
+        } else {
+            nameLabel.title = 'Input variable (persistent)';
         }
 
         // Value input or display
