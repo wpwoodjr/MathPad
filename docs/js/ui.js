@@ -317,7 +317,13 @@ function createEditorForRecord(record) {
     // Create variables panel (top)
     const variablesPanel = document.createElement('div');
     variablesPanel.className = 'variables-panel';
-    variablesPanel.innerHTML = '<div class="variables-table"></div>';
+    const variablesHeader = document.createElement('div');
+    variablesHeader.className = 'variables-header';
+    variablesHeader.textContent = getTitleFromContent(record.text);
+    variablesPanel.appendChild(variablesHeader);
+    const variablesTable = document.createElement('div');
+    variablesTable.className = 'variables-table';
+    variablesPanel.appendChild(variablesTable);
 
     container.appendChild(variablesPanel);
     container.appendChild(divider);
@@ -345,6 +351,7 @@ function createEditorForRecord(record) {
 
         // Update title if first comment changed
         updateRecordTitleFromContent(record);
+        updateVariablesHeader(record);
 
         // Update variables panel (unless change originated from there)
         if (!syncFromVariables) {
@@ -438,7 +445,9 @@ function showEditor(recordId) {
             requestAnimationFrame(() => {
                 const containerHeight = editorInfo.container.offsetHeight;
                 const table = variablesPanel.querySelector('.variables-table');
-                const contentHeight = table ? table.scrollHeight : 0;
+                const header = variablesPanel.querySelector('.variables-header');
+                const headerHeight = header ? header.offsetHeight : 0;
+                const contentHeight = (table ? table.scrollHeight : 0) + headerHeight;
                 const minHeight = containerHeight * 0.25;
                 const maxHeight = containerHeight * 0.75;
                 const fitHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight));
@@ -685,6 +694,36 @@ function renameRecord(recordId) {
         saveData(UI.data);
         renderSidebar();
         renderTabBar();
+        updateVariablesHeader(record);
+    }
+}
+
+/**
+ * Extract title from the first line of record text, using tokens if available
+ */
+function getTitleFromContent(text, tokens) {
+    if (tokens) {
+        const firstComment = tokens.find(t => t.type === TokenType.COMMENT && !t.lineComment);
+        if (firstComment && firstComment.line === 1) return firstComment.value || 'Untitled';
+    }
+    // Fallback: parse first line
+    const firstLine = (text || '').split('\n')[0].trim();
+    const completeQuote = firstLine.match(/^"([^"]+)"$/);
+    const startQuote = firstLine.match(/^"(.+)$/);
+    if (completeQuote) return completeQuote[1];
+    if (startQuote) return startQuote[1];
+    return firstLine || 'Untitled';
+}
+
+/**
+ * Update the variables panel header with the record title
+ */
+function updateVariablesHeader(record) {
+    const editorInfo = UI.editors.get(record.id);
+    if (!editorInfo) return;
+    const header = editorInfo.container.querySelector('.variables-header');
+    if (header) {
+        header.textContent = getTitleFromContent(record.text, editorInfo.editor.parserTokens);
     }
 }
 
@@ -696,20 +735,9 @@ function updateRecordTitleFromContent(record) {
     if (isReferenceRecord(record)) {
         return;
     }
-    const firstLine = record.text.split('\n')[0].trim();
-
-    // Extract title: strip quotes if present, otherwise use first line
-    // Handle: "complete quote", "start of multi-line, or plain text
-    let newTitle;
-    const completeQuote = firstLine.match(/^"([^"]+)"$/);
-    const startQuote = firstLine.match(/^"(.+)$/);
-    if (completeQuote) {
-        newTitle = completeQuote[1];
-    } else if (startQuote) {
-        newTitle = startQuote[1]; // Multi-line comment, use content after opening quote
-    } else {
-        newTitle = firstLine || 'Untitled';
-    }
+    const editorInfo = UI.editors.get(record.id);
+    const tokens = editorInfo ? editorInfo.editor.parserTokens : null;
+    let newTitle = getTitleFromContent(record.text, tokens);
 
     // Truncate long titles
     if (newTitle.length > 30) {
@@ -720,6 +748,7 @@ function updateRecordTitleFromContent(record) {
         record.title = newTitle;
         renderSidebar();
         renderTabBar();
+        updateVariablesHeader(record);
     }
 }
 
