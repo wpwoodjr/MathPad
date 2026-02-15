@@ -388,6 +388,28 @@ function createEditorForRecord(record) {
     // Set up divider drag
     setupPanelResizer(divider, variablesPanel, formulasPanel);
 
+    // Expand focused panel to full size on focus (before keyboard appears)
+    // savedDividerHeight is stored on editorInfo so keyboard handler can restore it
+    container.addEventListener('focusin', (e) => {
+        const info = UI.editors.get(record.id);
+        if (!info || info.savedDividerHeight != null) return; // already expanded
+        info.savedDividerHeight = variablesPanel.style.height;
+        const varsHeader = variablesPanel.querySelector('.variables-header');
+        const varsHeaderH = varsHeader ? varsHeader.offsetHeight : 0;
+        const dividerH = divider.offsetHeight;
+        const fmtHeader = formulasPanel.querySelector('.formulas-header');
+        const fmtHeaderH = fmtHeader ? fmtHeader.offsetHeight : 0;
+
+        if (variablesPanel.contains(e.target)) {
+            // Expand vars: fill container minus divider + formulas header
+            const maxH = container.offsetHeight - dividerH - fmtHeaderH;
+            variablesPanel.style.height = Math.max(varsHeaderH, maxH) + 'px';
+        } else if (formulasPanel.contains(e.target)) {
+            // Collapse vars to just header
+            variablesPanel.style.height = varsHeaderH + 'px';
+        }
+    });
+
     // Initial variables render
     variablesManager.updateFromText(record.text);
 
@@ -1074,6 +1096,54 @@ function setupEventListeners() {
             }
         }
     });
+
+    // Mobile keyboard handling: shrink entire UIA to fit above keyboard
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            const vpHeight = window.visualViewport.height;
+            const keyboardShowing = vpHeight < window.innerHeight * 0.85;
+            const appContainer = document.querySelector('.app-container');
+            if (!appContainer) return;
+
+            if (keyboardShowing) {
+                appContainer.style.height = vpHeight + 'px';
+                // Expand focused panel if not already expanded (handles re-focus in same field)
+                const info = UI.editors.get(UI.currentRecordId);
+                if (info && info.savedDividerHeight == null) {
+                    const active = document.activeElement;
+                    const variablesPanel = info.container.querySelector('.variables-panel');
+                    const formulasPanel = info.container.querySelector('.formulas-panel');
+                    if (variablesPanel && formulasPanel && info.container.contains(active)) {
+                        info.savedDividerHeight = variablesPanel.style.height;
+                        const varsHeader = variablesPanel.querySelector('.variables-header');
+                        const varsHeaderH = varsHeader ? varsHeader.offsetHeight : 0;
+                        const divider = info.container.querySelector('.panel-divider');
+                        const dividerH = divider ? divider.offsetHeight : 0;
+                        const fmtHeader = formulasPanel.querySelector('.formulas-header');
+                        const fmtHeaderH = fmtHeader ? fmtHeader.offsetHeight : 0;
+
+                        if (variablesPanel.contains(active)) {
+                            const maxH = info.container.offsetHeight - dividerH - fmtHeaderH;
+                            variablesPanel.style.height = Math.max(varsHeaderH, maxH) + 'px';
+                        } else if (formulasPanel.contains(active)) {
+                            variablesPanel.style.height = varsHeaderH + 'px';
+                        }
+                    }
+                }
+            } else {
+                appContainer.style.removeProperty('height');
+                // Restore divider position when keyboard dismisses
+                const info = UI.editors.get(UI.currentRecordId);
+                if (info && info.savedDividerHeight != null) {
+                    const variablesPanel = info.container.querySelector('.variables-panel');
+                    if (variablesPanel) {
+                        variablesPanel.style.height = info.savedDividerHeight;
+                    }
+                    info.savedDividerHeight = null;
+                }
+            }
+        });
+    }
 }
 
 /**
