@@ -85,11 +85,12 @@ function buildOutputLine(line, markerEndIndex, newValue, commentInfo = null) {
     // Extract // line comment from original line and re-append at end
     const lcStart = findLineCommentStart(line);
     const lineComment = lcStart !== -1 ? line.substring(lcStart) : null;
-    const lineCommentSuffix = lineComment ? ' ' + lineComment.trimEnd() : '';
     if (lcStart !== -1) line = line.substring(0, lcStart).trimEnd();
 
     // Determine trailing comment/unit text
     let trailingPart = '';
+    // Column-preserved comments: [{ col, text }]
+    const colComments = [];
     if (commentInfo && commentInfo.comment) {
         if (commentInfo.comment.includes('\n')) {
             // Multi-line comment: preserve original line's trailing text (the start
@@ -101,15 +102,9 @@ function buildOutputLine(line, markerEndIndex, newValue, commentInfo = null) {
                 trailingPart = ' ' + afterMarker.substring(quoteIdx);
             }
         } else if (commentInfo.commentUnquoted) {
-            // Preserve original spacing before the unquoted unit comment
-            const afterMarker = line.substring(markerEndIndex);
-            const commentIdx = afterMarker.indexOf(commentInfo.comment);
-            if (commentIdx !== -1) {
-                const valueEnd = afterMarker.substring(0, commentIdx).trimEnd().length;
-                trailingPart = afterMarker.substring(valueEnd);
-            } else {
-                trailingPart = ' ' + commentInfo.comment;
-            }
+            // Preserve unquoted unit comment at its original column position
+            const commentCol = markerEndIndex + line.substring(markerEndIndex).indexOf(commentInfo.comment);
+            colComments.push({ col: commentCol, text: commentInfo.comment });
         } else {
             trailingPart = ' "' + commentInfo.comment + '"';
         }
@@ -122,10 +117,22 @@ function buildOutputLine(line, markerEndIndex, newValue, commentInfo = null) {
         }
     }
 
+    // Preserve // line comment at its original column position
+    if (lineComment) {
+        colComments.push({ col: lcStart, text: lineComment.trimEnd() });
+    }
+
     const beforeValue = line.substring(0, markerEndIndex);
     const valuePart = newValue ? ' ' + newValue : '';
+    let result = beforeValue + valuePart + trailingPart;
 
-    return beforeValue + valuePart + trailingPart + lineCommentSuffix;
+    // Append column-preserved comments (unquoted comment, then // line comment)
+    for (const cc of colComments) {
+        const gap = Math.max(1, cc.col - result.length);
+        result += ' '.repeat(gap) + cc.text;
+    }
+
+    return result;
 }
 
 /**

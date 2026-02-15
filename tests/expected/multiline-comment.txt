@@ -51,7 +51,7 @@ x:1
 "
 45->
 "
-x -> 1           testing          (here)
+x -> 1         testing          (here)
 " this is
 a multi lime comment		       with spaces	and tabs
 yes"

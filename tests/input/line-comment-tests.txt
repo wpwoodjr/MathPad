@@ -93,3 +93,43 @@ b$->>
 \a%\
 \a#16\
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 10: // comment column preserved on output"
+
+a: 3
+b: 7
+a + b->                  // sum result
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 11: // comment with long value falls back to single space"
+
+x: 12345
+y: 67890
+x * y-> // product
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 12: // comment preserved on solved equation output"
+
+a: 5
+b: 3
+{ a + b = c }
+c->                      // solved value
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 13: // comment vs unquoted comment spacing"
+
+a: 1
+b: 1234567890
+a->                  // test
+a->                  test
+b->    // overflow
+b->    overflow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
