@@ -388,27 +388,8 @@ function createEditorForRecord(record) {
     // Set up divider drag
     setupPanelResizer(divider, variablesPanel, formulasPanel);
 
-    // Expand focused panel to full size on focus (before keyboard appears)
-    // savedDividerHeight is stored on editorInfo so keyboard handler can restore it
-    container.addEventListener('focusin', (e) => {
-        const info = UI.editors.get(record.id);
-        if (!info || info.savedDividerHeight != null) return; // already expanded
-        info.savedDividerHeight = variablesPanel.style.height;
-        const varsHeader = variablesPanel.querySelector('.variables-header');
-        const varsHeaderH = varsHeader ? varsHeader.offsetHeight : 0;
-        const dividerH = divider.offsetHeight;
-        const fmtHeader = formulasPanel.querySelector('.formulas-header');
-        const fmtHeaderH = fmtHeader ? fmtHeader.offsetHeight : 0;
-
-        if (variablesPanel.contains(e.target)) {
-            // Expand vars: fill container minus divider + formulas header
-            const maxH = container.offsetHeight - dividerH - fmtHeaderH;
-            variablesPanel.style.height = Math.max(varsHeaderH, maxH) + 'px';
-        } else if (formulasPanel.contains(e.target)) {
-            // Collapse vars to just header
-            variablesPanel.style.height = varsHeaderH + 'px';
-        }
-    });
+    // Panel expand/collapse for mobile keyboard is handled by the
+    // visualViewport resize handler in setupEventListeners()
 
     // Initial variables render
     variablesManager.updateFromText(record.text);
