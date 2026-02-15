@@ -970,8 +970,8 @@ class SimpleEditor {
                 return line;
             });
         } else {
-            // Comment: add "// " to all lines
-            newLines = lines.map(line => '// ' + line);
+            // Comment: add "// " to non-blank lines, leave blank lines alone
+            newLines = lines.map(line => line.trimStart() === '' ? line : '// ' + line);
         }
 
         const newBlock = newLines.join('\n');
@@ -979,9 +979,10 @@ class SimpleEditor {
 
         // Adjust selection
         const delta = newBlock.length - block.length;
-        const perLineDelta = allCommented ? -3 : 3;
+        const firstLineBlank = lines[0].trimStart() === '';
+        const firstLineDelta = allCommented ? (lines[0].startsWith('// ') ? -3 : 0) : (firstLineBlank ? 0 : 3);
 
-        let newStart = (start === lineStart) ? lineStart : start + perLineDelta;
+        let newStart = (start === lineStart) ? lineStart : start + firstLineDelta;
         if (newStart < lineStart) newStart = lineStart;
 
         let newEnd = end + delta;
