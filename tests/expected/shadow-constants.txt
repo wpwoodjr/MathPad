@@ -4,6 +4,7 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Nothing to solve"; StatusIsError = 0
 "Constants"
 "Test constants for shadow tests"
+c: 299792458
 e: 2.71828182845905
 h: 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -136,4 +137,39 @@ e->
 
 "--- Reference Constants and Functions ---"
 e: 2.71828182845905
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"shadow c+c-> expression output"
+
+c+c-> 599,584,916
+
+"--- Reference Constants and Functions ---"
+c: 299792458
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved with errors: Line 5: Variable 'c' has no value"; StatusIsError = 1
+"shadow c+c-> before and after c->"
+
+c+c-> 599,584,916
+c->
+c+c->
+
+"--- Reference Constants and Functions ---"
+c: 299792458
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"no shadow c+c-> expression output"
+
+c+c-> 599,584,916
+
+"--- Reference Constants and Functions ---"
+c: 299792458
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

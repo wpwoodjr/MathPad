@@ -876,9 +876,14 @@ class Parser {
         return this.parsePostfix();
     }
 
-    // Level 11: Postfix ?
+    // Level 11: Postfix ~ ?  (x~ = stale access, x? = has-value, x~? = has-stale-value)
     parsePostfix() {
         let expr = this.parsePrimary();
+        // Allow ~ then optional ? chaining: x~?
+        if (this.peek().type === TokenType.OPERATOR && this.peek().value === '~') {
+            this.advance();
+            expr = { type: NodeType.POSTFIX_OP, op: '~', operand: expr };
+        }
         if (this.peek().type === TokenType.OPERATOR && this.peek().value === '?') {
             this.advance();
             expr = { type: NodeType.POSTFIX_OP, op: '?', operand: expr };

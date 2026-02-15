@@ -41,7 +41,13 @@ class EvalContext {
             this.usedConstants.add(name); // Track constant usage
             return this.constants.get(name);
         }
-        // Fall back to pre-solve value (captured before outputs were cleared)
+        return undefined;
+    }
+
+    /** Like getVariable but falls back to pre-solve (stale) value if no real value */
+    getVariableWithStale(name) {
+        const value = this.getVariable(name);
+        if (value !== undefined) return value;
         if (this.preSolveValues && this.preSolveValues.has(name)) {
             return this.preSolveValues.get(name);
         }
@@ -462,8 +468,25 @@ function evaluate(node, context) {
         }
 
         case 'POSTFIX_OP': {
-            if (node.op === '?') {
+            if (node.op === '~') {
+                // x~ — get variable with stale (pre-solve) fallback
                 if (node.operand.type !== 'VARIABLE') {
+                    throw new EvalError('~ operator can only be applied to variables');
+                }
+                const value = context.getVariableWithStale(node.operand.name);
+                if (value !== undefined) {
+                    return value;
+                }
+                if (context.isDeclared(node.operand.name)) {
+                    throw new EvalError(`Variable '${node.operand.name}' has no value`);
+                }
+                throw new EvalError(`Undefined variable: ${node.operand.name}`);
+            }
+            if (node.op === '?') {
+                // x? — has real value? (no stale fallback)
+                // x~? — has real or stale value? (~ applied first, then ? wraps)
+                if (node.operand.type !== 'VARIABLE' &&
+                    !(node.operand.type === 'POSTFIX_OP' && node.operand.op === '~')) {
                     throw new EvalError('? operator can only be applied to variables');
                 }
                 try {

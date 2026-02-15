@@ -40,10 +40,10 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Nothing to solve"; StatusIsError = 0
-"Test 5: Pre-solve fallback - z keeps its previous output value"
+"Test 5: Pre-solve fallback - z~ keeps its previous output value"
 
 y:
-z: if(y?; y; z)
+z: if(y?; y; z~)
 z-> 35
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -59,17 +59,46 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Nothing to solve"; StatusIsError = 0
-"Test 7: Solve counter using pre-solve fallback"
+"Test 7: Solve counter using ~ pre-solve fallback"
 
-numSolves: numSolves + 1
+numSolves: numSolves~ + 1
 numSolves-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Nothing to solve"; StatusIsError = 0
-"Count number of solves"
+"Count number of solves using ~? and ~"
 
-solveCount: if(solveCount?; solveCount + 1; 1)
+solveCount: if(solveCount~?; solveCount~ + 1; 1)
 solveCount=> 1 Use => to persist across clears
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 4: Cannot evaluate \"y~\" - Variable 'y' has no value"; StatusIsError = 1
+"Test 9: x~ on variable with no stale value errors"
+
+y:
+z: y~
+z->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 3: Cannot evaluate \"if(abc~?; 1; 2)\" - Undefined variable: abc"; StatusIsError = 1
+"Test 10: x~? on undefined variable errors"
+
+z: if(abc~?; 1; 2) "abc is undefined"
+z->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved with errors: Line 3: Variable 'w' has no value to output"; StatusIsError = 1
+"Test 11: x? no longer sees stale values"
+
+w->
+r: w?
+r-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

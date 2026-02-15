@@ -49,7 +49,7 @@ return - fees = mint * 12
 "Future value of account(s)"
 fv = pv * (1 + gain)**years
 "Number of solves"
-solveCount: solveCount + 1
+solveCount: solveCount~ + 1 // ~ gets prior value before solve cleared it
 solveCount=> 0 // Use => to persist across clears
 
 --Variables--

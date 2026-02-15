@@ -258,6 +258,7 @@ function discoverVariables(text, context, record, allTokens) {
     const lines = text.split('\n');
     const declarations = [];
     const errors = [];
+    const earlyExprOutputs = new Map();
     const definedVars = new Set();
     let tPos = 0;
 
@@ -328,10 +329,11 @@ function discoverVariables(text, context, record, allTokens) {
             lines[i] = line;
         }
 
-        // Parse variable declaration from this line
+        // Parse declaration or expression output from this line
         // If line was modified by inline eval, tokens are stale — re-tokenize
-        const decl = parseVariableLine(line, lineModified ? undefined : lineTokens);
-        if (decl) {
+        const marked = parseMarkedLine(line, lineModified ? undefined : lineTokens);
+        if (marked && marked.kind === 'declaration') {
+            const decl = marked;
             const name = decl.name;
             const isOutput = decl.type === VarType.OUTPUT;
 
@@ -391,8 +393,27 @@ function discoverVariables(text, context, record, allTokens) {
                 valueTokens: valueTokens,
                 markerEndCol: decl.markerEndCol
             });
+        } else if (marked && marked.kind === 'expression-output') {
+            // Try evaluating expression output top-to-bottom (before later shadows)
+            // Skip non-recalculating outputs that already have a value (preserve existing)
+            const hasValue = !marked.recalculates && marked.valueTokens && marked.valueTokens.length > 0;
+            if (!hasValue) {
+                try {
+                    const ast = parseTokens(marked.exprTokens);
+                    const value = evaluate(ast, context);
+                    earlyExprOutputs.set(i, {
+                        value,
+                        fullPrecision: marked.fullPrecision,
+                        marker: marked.marker,
+                        format: marked.format,
+                        base: marked.base
+                    });
+                } catch (e) {
+                    // Can't evaluate yet — defer to solveEquations (may need solved variables)
+                }
+            }
         } else {
-            // Not a declaration — check for tokenizer errors on lines that look like code
+            // Not a declaration or expression output — check for tokenizer errors
             const hasCodeMarker = lineTokens.some(t =>
                 (t.type === TokenType.OPERATOR && t.value === '=') ||
                 t.type === TokenType.COLON ||
@@ -420,6 +441,7 @@ function discoverVariables(text, context, record, allTokens) {
     return {
         text: newText,
         declarations: declarations,
+        earlyExprOutputs: earlyExprOutputs,
         errors: errors,
         allTokens: newTokens
     };

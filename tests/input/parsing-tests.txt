@@ -141,10 +141,10 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "sci"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"Persistent output with self-referencing variables"
+"Persistent output with self-referencing variables (~ for stale)"
 
-pow2: pow2*2
-power: power + 1
+pow2: pow2~*2
+power: power~ + 1
 pow2=> 4.6116e+18
 power=> 62
 log(pow2; 2)=> 62

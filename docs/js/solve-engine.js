@@ -162,7 +162,7 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
  * @param {Object} record - Record settings (for places -> tolerance)
  * @returns {{ computedValues: Map, solved: number, errors: Array, solveFailures: Map }}
  */
-function solveEquations(text, context, declarations, record = {}, allTokens) {
+function solveEquations(text, context, declarations, record = {}, allTokens, earlyExprOutputs = new Map()) {
     // Derive balance tolerance from decimal places: 0.5 * 10^(-places)
     // This matches rounding precision - if diff < tolerance, values display the same
     const places = record.places != null ? record.places : 4;
@@ -171,6 +171,11 @@ function solveEquations(text, context, declarations, record = {}, allTokens) {
     const computedValues = new Map();
     const solveFailures = new Map(); // Track last failure per variable
     let solved = 0;
+
+    // Pre-populate with expression outputs evaluated during discovery (top-to-bottom)
+    for (const [lineIndex, result] of earlyExprOutputs) {
+        computedValues.set(`__exprout_${lineIndex}`, result);
+    }
 
     // Build variables map for lookup
     let variables = buildVariablesMap(declarations);
@@ -296,8 +301,12 @@ function solveEquations(text, context, declarations, record = {}, allTokens) {
     }
 
     // Evaluate expression outputs (expr:, expr::, expr->, expr->>)
-    // For : and :: (non-recalculating), skip if there's already a value
+    // Skip outputs already evaluated during discovery (top-to-bottom) or with existing values
     for (const output of exprOutputs) {
+        // Skip if already evaluated during discovery
+        if (computedValues.has(`__exprout_${output.startLine}`)) {
+            continue;
+        }
         // Skip non-recalculating outputs that already have a value
         if (!output.recalculates && output.valueTokens && output.valueTokens.length > 0) {
             continue;
@@ -526,7 +535,7 @@ function solveRecord(text, context, record, parserTokens) {
     const errors = [...discovery.errors];
 
     // Pass 2: Equation Solving (computes values, no text modification)
-    const solveResult = solveEquations(text, context, declarations, record, allTokens);
+    const solveResult = solveEquations(text, context, declarations, record, allTokens, discovery.earlyExprOutputs);
     errors.push(...solveResult.errors);
 
     // Pass 3: Format Output (inserts values into text, reuses equations/exprOutputs from pass 2)

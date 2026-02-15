@@ -757,6 +757,29 @@ function runAllTests() {
                 ['1', 'number']
             ]
         },
+        // Expression output with reference constant — stays builtin regardless of shadowConstants
+        // (expression outputs don't create local variables, they just evaluate expressions)
+        {
+            name: 'reference constant in expression output stays builtin (c+c->)',
+            line: 'c+c-> 599,584,916',
+            options: { referenceConstants: new Set(['c']), shadowConstants: false },
+            assertions: [
+                ['c', 'builtin'],
+                ['+', 'operator'],
+                ['->', 'punctuation'],
+                ['599,584,916', 'number']
+            ]
+        },
+        {
+            name: 'shadowConstants=true: expression output does not shadow reference (c+c->)',
+            line: 'c+c->',
+            options: { referenceConstants: new Set(['c']), shadowConstants: true },
+            assertions: [
+                ['c', 'builtin'],
+                ['+', 'operator'],
+                ['->', 'punctuation']
+            ]
+        },
         // Reference constants are case-sensitive (G and c are constants, g and C are not)
         {
             name: 'wrong-case constant is variable-def, not builtin (g->>)',
