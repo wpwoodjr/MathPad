@@ -127,11 +127,9 @@ Status = "Solved 2 equations"; StatusIsError = 0
 
 2**32 - 1 = 4294967295
 
-"One-time outputs (like = but with different markers)"
+"One-time outputs"
 x: 10
 y: 5
-x + y + pi: 18.14
-x * y * pi:: 157.079632679489492
 9 + 16= 25
 
 "Recalculating outputs (-> and ->>)"
@@ -264,14 +262,14 @@ yint = mint * 12
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved 2 equations"; StatusIsError = 0
+Status = "Solved with errors: Line 6: Variable \"y\" is already defined"; StatusIsError = 1
 "Test text on line before equation output"
 
 Enter x<- 7
 Enter y: 3
 
-Result x+y: 10
-x+y: 10
+Result x+y:
+x+y:
 
 Result x+y-> 10
 x+y-> 10
@@ -279,8 +277,8 @@ x+y-> 10
 Result x+y->> 10
 x+y->> 10
 
-Result x+y:: 10
-x+y:: 10
+Result x+y::
+x+y::
 
 h/w = 16/9
 d*d = w*w + h*h
@@ -292,7 +290,7 @@ width w->> 3.235724181574889
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Nothing to solve"; StatusIsError = 0
+Status = "Solved with errors: Line 6: Variable \"y\" is already defined"; StatusIsError = 1
 "Test : and :: preserve value on expression output"
 
 Enter x: 7

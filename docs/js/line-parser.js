@@ -315,8 +315,10 @@ class LineParser {
 
         const markerToken = this.tokens[markerIndex];
 
-        // <- always indicates input variable declaration
-        if (markerToken.type === TokenType.ARROW_LEFT) {
+        // <- : :: always indicate variable declaration, not expression output
+        if (markerToken.type === TokenType.ARROW_LEFT ||
+            markerToken.type === TokenType.COLON ||
+            markerToken.type === TokenType.DOUBLE_COLON) {
             return false;
         }
 

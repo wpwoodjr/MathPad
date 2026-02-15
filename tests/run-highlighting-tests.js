@@ -1181,16 +1181,6 @@ function runAllTests() {
             ]
         },
         {
-            name: 'money format specifier on colon output (3+4$:)',
-            line: '3+4$:',
-            assertions: [
-                ['3', 'number'],
-                ['+', 'operator'],
-                ['4', 'number'],
-                ['$:', 'punctuation']
-            ]
-        },
-        {
             name: 'space separates percent literal from percent marker ((20000-19985)/20000 %->>)',
             line: '(20000-19985)/20000 %->>',
             assertions: [
