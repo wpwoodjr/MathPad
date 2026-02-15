@@ -715,8 +715,9 @@ function renameRecord(recordId) {
  */
 function getTitleFromContent(text, tokens) {
     if (tokens) {
-        const firstComment = tokens.find(t => t.type === TokenType.COMMENT && !t.lineComment);
-        if (firstComment && firstComment.line === 1) return firstComment.value || 'Untitled';
+        const firstLine = tokens[0] || [];
+        const firstComment = firstLine.find(t => t.type === TokenType.COMMENT && !t.lineComment);
+        if (firstComment) return firstComment.value || 'Untitled';
     }
     // Fallback: parse first line
     const firstLine = (text || '').split('\n')[0].trim();

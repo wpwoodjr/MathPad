@@ -32,7 +32,6 @@ const TokenType = {
     COLON: 'COLON',
     COMMA: 'COMMA',
     COMMENT: 'COMMENT',
-    NEWLINE: 'NEWLINE',
     EOF: 'EOF',
     ERROR: 'ERROR',
     // Variable declaration markers
@@ -503,6 +502,8 @@ class Tokenizer {
     tokenize() {
         this.tokens = [];
         this.pendingWs = '';
+        const lines = [[]];  // Token[][] — accumulate per-line arrays
+        const pushToken = (token) => { this.tokens.push(token); lines[lines.length - 1].push(token); };
 
         while (this.pos < this.text.length) {
             const startLine = this.line;
@@ -515,77 +516,82 @@ class Tokenizer {
                 continue;
             }
 
-            // Newline
+            // Newline — start a new line array (no NEWLINE token emitted)
             if (ch === '\n') {
                 this.advance();
-                this.tokens.push(this.makeToken(TokenType.NEWLINE, '\n', startLine, startCol));
+                this.pendingWs = '';
+                lines.push([]);
                 continue;
             }
 
             // Comment in double quotes
             if (ch === '"') {
-                this.tokens.push(this.tokenizeComment());
+                pushToken(this.tokenizeComment());
+                // Multi-line comments consume newlines — sync line arrays
+                while (lines.length < this.line) {
+                    lines.push([]);
+                }
                 continue;
             }
 
             // Line comment: //
             if (ch === '/' && this.peek(1) === '/') {
-                this.tokens.push(this.tokenizeLineComment());
+                pushToken(this.tokenizeLineComment());
                 continue;
             }
 
             // Number
             if (this.isDigit(ch) || (ch === '.' && this.isDigit(this.peek(1)))) {
-                this.tokens.push(this.tokenizeNumber());
+                pushToken(this.tokenizeNumber());
                 continue;
             }
 
             // Identifier
             if (this.isAlpha(ch)) {
-                this.tokens.push(this.tokenizeIdentifier());
+                pushToken(this.tokenizeIdentifier());
                 continue;
             }
 
             // Parentheses
             if (ch === '(') {
                 this.advance();
-                this.tokens.push(this.makeToken(TokenType.LPAREN, '(', startLine, startCol));
+                pushToken(this.makeToken(TokenType.LPAREN, '(', startLine, startCol));
                 continue;
             }
             if (ch === ')') {
                 this.advance();
-                this.tokens.push(this.makeToken(TokenType.RPAREN, ')', startLine, startCol));
+                pushToken(this.makeToken(TokenType.RPAREN, ')', startLine, startCol));
                 continue;
             }
 
             // Brackets
             if (ch === '[') {
                 this.advance();
-                this.tokens.push(this.makeToken(TokenType.LBRACKET, '[', startLine, startCol));
+                pushToken(this.makeToken(TokenType.LBRACKET, '[', startLine, startCol));
                 continue;
             }
             if (ch === ']') {
                 this.advance();
-                this.tokens.push(this.makeToken(TokenType.RBRACKET, ']', startLine, startCol));
+                pushToken(this.makeToken(TokenType.RBRACKET, ']', startLine, startCol));
                 continue;
             }
 
             // Braces (equation delimiters)
             if (ch === '{') {
                 this.advance();
-                this.tokens.push(this.makeToken(TokenType.LBRACE, '{', startLine, startCol));
+                pushToken(this.makeToken(TokenType.LBRACE, '{', startLine, startCol));
                 continue;
             }
             if (ch === '}') {
                 this.advance();
-                this.tokens.push(this.makeToken(TokenType.RBRACE, '}', startLine, startCol));
+                pushToken(this.makeToken(TokenType.RBRACE, '}', startLine, startCol));
                 continue;
             }
 
             // Semicolon (argument separator)
             if (ch === ';') {
                 this.advance();
-                this.tokens.push(this.makeToken(TokenType.SEMICOLON, ';', startLine, startCol));
+                pushToken(this.makeToken(TokenType.SEMICOLON, ';', startLine, startCol));
                 continue;
             }
 
@@ -595,10 +601,10 @@ class Tokenizer {
                 if (this.peek(1) === ':') {
                     this.advance();
                     this.advance();
-                    this.tokens.push(this.makeToken(TokenType.DOUBLE_COLON, '::', startLine, startCol));
+                    pushToken(this.makeToken(TokenType.DOUBLE_COLON, '::', startLine, startCol));
                 } else {
                     this.advance();
-                    this.tokens.push(this.makeToken(TokenType.COLON, ':', startLine, startCol));
+                    pushToken(this.makeToken(TokenType.COLON, ':', startLine, startCol));
                 }
                 continue;
             }
@@ -610,7 +616,7 @@ class Tokenizer {
                 numToken.value.raw = '$' + numToken.value.raw;
                 numToken.line = startLine;
                 numToken.col = startCol;
-                this.tokens.push(numToken);
+                pushToken(numToken);
                 continue;
             }
 
@@ -626,7 +632,7 @@ class Tokenizer {
                         for (let i = 0; i <= marker.length; i++) this.advance();
                         const token = this.makeToken(type, ch + marker, startLine, startCol);
                         token.format = format;
-                        this.tokens.push(token);
+                        pushToken(token);
                         continue;
                     }
                     if (next === '=' && this.peek(2) === '>') {
@@ -635,14 +641,14 @@ class Tokenizer {
                         for (let i = 0; i <= marker.length; i++) this.advance();
                         const token = this.makeToken(type, ch + marker, startLine, startCol);
                         token.format = format;
-                        this.tokens.push(token);
+                        pushToken(token);
                         continue;
                     }
                     if (next === '<' && this.peek(2) === '-') {
                         for (let i = 0; i < 3; i++) this.advance();
                         const token = this.makeToken(TokenType.ARROW_LEFT, ch + '<-', startLine, startCol);
                         token.format = format;
-                        this.tokens.push(token);
+                        pushToken(token);
                         continue;
                     }
                     if (next === ':') {
@@ -651,7 +657,7 @@ class Tokenizer {
                         for (let i = 0; i <= marker.length; i++) this.advance();
                         const token = this.makeToken(type, ch + marker, startLine, startCol);
                         token.format = format;
-                        this.tokens.push(token);
+                        pushToken(token);
                         continue;
                     }
                 } else if (ch === '#') {
@@ -683,20 +689,20 @@ class Tokenizer {
                             const value = '#' + digits + markerStr;
                             const token = this.makeToken(markerType, value, startLine, startCol);
                             token.base = parseInt(digits);
-                            this.tokens.push(token);
+                            pushToken(token);
                             continue;
                         }
                     }
                 }
                 this.advance();
-                this.tokens.push(this.makeToken(TokenType.FORMATTER, ch, startLine, startCol));
+                pushToken(this.makeToken(TokenType.FORMATTER, ch, startLine, startCol));
                 continue;
             }
 
             // Operators
             const opToken = this.tokenizeOperator();
             if (opToken) {
-                this.tokens.push(opToken);
+                pushToken(opToken);
                 continue;
             }
 
@@ -704,11 +710,13 @@ class Tokenizer {
             this.advance();
             const unexpToken = this.makeToken(TokenType.UNEXPECTED_CHAR, `Unexpected character '${ch}'`, startLine, startCol);
             unexpToken.raw = ch;
-            this.tokens.push(unexpToken);
+            pushToken(unexpToken);
         }
 
-        this.tokens.push(this.makeToken(TokenType.EOF, null, this.line, this.col));
-        return this.tokens;
+        const eofToken = this.makeToken(TokenType.EOF, null, this.line, this.col);
+        this.tokens.push(eofToken);
+        lines[lines.length - 1].push(eofToken);
+        return lines;
     }
 }
 
@@ -717,7 +725,7 @@ class Tokenizer {
  */
 class Parser {
     constructor(tokens) {
-        this.tokens = tokens.filter(t => t.type !== TokenType.COMMENT && t.type !== TokenType.NEWLINE);
+        this.tokens = tokens.filter(t => t.type !== TokenType.COMMENT);
         this.pos = 0;
     }
 
@@ -978,8 +986,8 @@ function tokenize(text) {
 }
 
 function parseExpression(text) {
-    const tokens = tokenize(text);
-    const parser = new Parser(tokens);
+    const lines = tokenize(text);
+    const parser = new Parser(lines.flat());
     return parser.parse();
 }
 

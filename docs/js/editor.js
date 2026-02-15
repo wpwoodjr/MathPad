@@ -30,7 +30,10 @@ function tokenizeMathPad(text, options = {}) {
 
     // Tokenize first to find quoted comments (they take precedence)
     const tokenizer = new Tokenizer(text);
-    const parserTokens = tokenizer.tokenize();
+    const parserTokens = tokenizer.tokenize();  // Token[][]
+
+    // Flatten for sequential position-based operations (highlight loop, comment region detection)
+    const flatTokens = parserTokens.flat();
 
     // Find user-defined functions (reuse full-text tokens; maxLine bounds to strippedText)
     const userDefinedFunctions = new Set(parseFunctionsRecord(strippedText, parserTokens).keys());
@@ -38,7 +41,7 @@ function tokenizeMathPad(text, options = {}) {
     // Find quoted comment regions from tokenizer
     const quotedCommentRegions = [];
     let pos = 0;
-    for (const token of parserTokens) {
+    for (const token of flatTokens) {
         if (token.type === TokenType.EOF) continue;
         const tokenStart = findTokenPosition(text, token, pos);
         if (tokenStart === -1) continue;
@@ -55,7 +58,7 @@ function tokenizeMathPad(text, options = {}) {
         quotedCommentRegions.some(r => start < r.end && end > r.start);
 
     // Single pass: detect shadow variables AND find label regions (reuses full-text tokens, no re-tokenization)
-    const { localVariables, labelRegions } = analyzeLines(text, strippedText, referenceConstants, shadowConstants, parserTokens);
+    const { localVariables, labelRegions } = analyzeLines(text, strippedText, referenceConstants, shadowConstants, parserTokens);  // parserTokens is Token[][]
 
     // Filter label regions that overlap with quoted comments
     const commentRegions = labelRegions.filter(
@@ -71,12 +74,23 @@ function tokenizeMathPad(text, options = {}) {
     let lastTokenEnd = 0;
     let inInlineEval = false;  // Track whether we're inside \..\ inline eval markers
     let prevHighlightType = null;
+    let prevTokenLine = 0;
 
-    for (let ti = 0; ti < parserTokens.length; ti++) {
-        const token = parserTokens[ti];
+    for (let ti = 0; ti < flatTokens.length; ti++) {
+        const token = flatTokens[ti];
 
         // Skip EOF token
         if (token.type === TokenType.EOF) continue;
+
+        // Reset state on line transitions (replaces old NEWLINE token handling)
+        if (token.line !== prevTokenLine) {
+            lastTokenWasVarDef = false;
+            lastTokenWasVar = false;
+            lastTokenWasBuiltin = false;
+            prevHighlightType = null;
+            inInlineEval = false;
+            prevTokenLine = token.line;
+        }
 
         const tokenStart = findTokenPosition(text, token, pos);
         if (tokenStart === -1) continue;
@@ -100,8 +114,8 @@ function tokenizeMathPad(text, options = {}) {
                 highlightType = 'number';
                 break;
             case TokenType.IDENTIFIER: {
-                const next = parserTokens[ti + 1];
-                const nextToken = (next && next.type !== TokenType.NEWLINE && next.type !== TokenType.EOF) ? next : null;
+                const next = flatTokens[ti + 1];
+                const nextToken = (next && next.type !== TokenType.EOF && next.line === token.line) ? next : null;
                 highlightType = getIdentifierHighlightType(token.value, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants, referenceFunctions, localVariables);
                 break;
             }
@@ -127,14 +141,6 @@ function tokenizeMathPad(text, options = {}) {
             case TokenType.SEMICOLON:
                 highlightType = 'punctuation';
                 break;
-            case TokenType.NEWLINE:
-                pos = tokenEnd;
-                lastTokenWasVarDef = false;
-                lastTokenWasVar = false;
-                lastTokenWasBuiltin = false;
-                prevHighlightType = null;
-                inInlineEval = false;
-                continue;
             case TokenType.FORMATTER:
                 // $/%  before markers are merged into marker tokens by the tokenizer,
                 // so standalone FORMATTER is only for suffix on variable names.
@@ -196,27 +202,16 @@ function tokenizeMathPad(text, options = {}) {
  * @param {string} strippedText - Text with reference section removed (for shadow detection bounds)
  * @param {Set} referenceConstants - Constants from Reference section
  * @param {boolean} shadowConstants - If true, output markers also shadow constants
- * @param {Array} parserTokens - Tokens from the full-text tokenizer
+ * @param {Token[][]} tokensByLine - Per-line token arrays from the tokenizer
  * @returns {{ localVariables: Map, labelRegions: Array }}
  */
-function analyzeLines(text, strippedText, referenceConstants, shadowConstants, parserTokens) {
+function analyzeLines(text, strippedText, referenceConstants, shadowConstants, tokensByLine) {
     const lines = text.split('\n');
     const strippedLength = strippedText.length;
     const localVariables = new Map();  // name -> charOffset where shadowing starts
     const labelRegions = [];
     let lineStart = 0;
     let insideBrace = false;
-
-    // Group tokens by line (using token.line property, which correctly
-    // handles multi-line comments that span multiple lines as a single token)
-    const tokensByLine = Array.from({length: lines.length}, () => []);
-    for (const token of parserTokens) {
-        if (token.type === TokenType.NEWLINE || token.type === TokenType.EOF) continue;
-        const idx = token.line - 1;  // token.line is 1-based
-        if (idx >= 0 && idx < tokensByLine.length) {
-            tokensByLine[idx].push(token);
-        }
-    }
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -431,8 +426,6 @@ function findTokenPosition(text, token, startFrom) {
         searchValue = token.value.raw || String(token.value.value);
     } else if (token.type === TokenType.COMMENT) {
         searchValue = token.lineComment ? '//' + token.value : '"' + token.value + '"';
-    } else if (token.type === TokenType.NEWLINE) {
-        return text.indexOf('\n', startFrom);
     } else if (token.type === TokenType.ERROR || token.type === TokenType.UNEXPECTED_CHAR) {
         // Extract the actual character from error message like "Unexpected character '$'"
         const match = token.value.match(/character '(.)'/);
@@ -469,8 +462,6 @@ function getTokenLength(token, text, start) {
         return (token.value.raw || String(token.value.value)).length;
     } else if (token.type === TokenType.COMMENT) {
         return token.value.length + 2; // Include quotes
-    } else if (token.type === TokenType.NEWLINE) {
-        return 1;
     } else if (token.type === TokenType.ERROR || token.type === TokenType.UNEXPECTED_CHAR) {
         return token.length || 1; // Multi-char errors (e.g., %<-) use token.length
     } else if (token.value) {

@@ -5,25 +5,16 @@
 // VarType and ClearBehavior enums are defined in parser.js (loaded first)
 
 /**
- * Walk the flat token array to collect tokens for a given text line.
- * NEWLINE and EOF tokens are skipped. For lines inside multi-line comments,
- * no tokens have that line number, so an empty array is returned naturally.
- * @param {Array} allTokens - Flat token array from tokenizer
- * @param {number} pos - Current cursor position in the token array
- * @param {number} lineNum - 1-based line number to collect tokens for
- * @returns {{ tokens: Array, pos: number }} Collected tokens and updated cursor
+ * Get tokens for a given line index from the per-line token arrays.
+ * Filters out EOF tokens. Returns empty array for out-of-bounds indices.
+ * @param {Token[][]} allTokens - Per-line token arrays from tokenizer
+ * @param {number} lineIndex - 0-based line index
+ * @returns {Token[]} Tokens for the line
  */
-function nextLineTokens(allTokens, pos, lineNum) {
-    const tokens = [];
-    while (pos < allTokens.length) {
-        const t = allTokens[pos];
-        if (t.type === TokenType.EOF) break;
-        if (t.type === TokenType.NEWLINE) { pos++; continue; }
-        if (t.line > lineNum) break;
-        tokens.push(t);
-        pos++;
-    }
-    return { tokens, pos };
+function getLineTokens(allTokens, lineIndex) {
+    const line = allTokens[lineIndex];
+    if (!line) return [];
+    return line.filter(t => t.type !== TokenType.EOF);
 }
 
 
@@ -210,11 +201,9 @@ function findVariablesInExpression(node) {
 function parseAllVariables(text, allTokens) {
     const lines = text.split('\n');
     const declarations = [];
-    let tPos = 0;
 
     for (let i = 0; i < lines.length; i++) {
-        const { tokens: lineTokens, pos: nextPos } = nextLineTokens(allTokens, tPos, i + 1);
-        tPos = nextPos;
+        const lineTokens = getLineTokens(allTokens, i);
 
         const decl = parseVariableLine(lines[i], lineTokens);
         if (decl) {
@@ -260,13 +249,11 @@ function discoverVariables(text, context, record, allTokens) {
     const errors = [];
     const earlyExprOutputs = new Map();
     const definedVars = new Set();
-    let tPos = 0;
 
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
 
-        const { tokens: lineTokens, pos: nextPos } = nextLineTokens(allTokens, tPos, i + 1);
-        tPos = nextPos;
+        const lineTokens = getLineTokens(allTokens, i);
 
         // Find backslash operator pairs and tokens between them for \expr\ detection
         const backslashIndices = [];
@@ -425,7 +412,7 @@ function discoverVariables(text, context, record, allTokens) {
                 t.type === TokenType.ARROW_PERSIST_FULL
             );
             if (hasCodeMarker) {
-                const tokensForCheck = lineModified ? new Tokenizer(line).tokenize() : lineTokens;
+                const tokensForCheck = lineModified ? (new Tokenizer(line).tokenize()[0] || []) : lineTokens;
                 for (const tok of tokensForCheck) {
                     if (tok.type === TokenType.ERROR) {
                         errors.push(`Line ${i + 1}: ${tok.value}`);
@@ -575,11 +562,9 @@ function capturePreSolveValues(text, allTokens) {
 
 function clearVariables(text, clearType = 'input', allTokens) {
     const lines = text.split('\n');
-    let tPos = 0;
 
     for (let i = 0; i < lines.length; i++) {
-        const { tokens: lineTokens, pos: nextPos } = nextLineTokens(allTokens, tPos, i + 1);
-        tPos = nextPos;
+        const lineTokens = getLineTokens(allTokens, i);
 
         const result = parseMarkedLine(lines[i], lineTokens);
         if (!result) continue;
@@ -627,22 +612,11 @@ function findEquationsAndOutputs(text, allTokens) {
     let inBrace = false;
     let braceStartTok = null;
 
-    // Group tokens by line and process
-    let prevLine = -1;
-    let lineTokens = [];
-
-    for (const t of allTokens) {
-        if (t.type === TokenType.NEWLINE) continue;
-        if (t.type === TokenType.EOF || t.line > maxLine) break;
-
-        if (t.line !== prevLine) {
-            if (lineTokens.length > 0) processLine(prevLine, lineTokens);
-            lineTokens = [];
-            prevLine = t.line;
-        }
-        lineTokens.push(t);
+    // Process per-line token arrays
+    for (let lineIdx = 0; lineIdx < allTokens.length && lineIdx < maxLine; lineIdx++) {
+        const lineTokens = allTokens[lineIdx].filter(t => t.type !== TokenType.EOF);
+        if (lineTokens.length > 0) processLine(lineIdx + 1, lineTokens);
     }
-    if (lineTokens.length > 0) processLine(prevLine, lineTokens);
 
     return { equations, exprOutputs };
 
@@ -921,11 +895,9 @@ function parseConstantsRecord(text, allTokens) {
     const constants = new Map();
     const lines = text.split('\n');
     const tempContext = new EvalContext();
-    let tPos = 0;
 
     for (let i = 0; i < lines.length; i++) {
-        const { tokens: lineTokens, pos: nextPos } = nextLineTokens(allTokens, tPos, i + 1);
-        tPos = nextPos;
+        const lineTokens = getLineTokens(allTokens, i);
 
         const decl = parseVariableLine(lines[i], lineTokens);
         if (decl && decl.valueTokens && decl.valueTokens.length > 0) {
@@ -956,50 +928,45 @@ function parseFunctionsRecord(text, allTokens) {
     const lineOffsets = computeLineOffsets(text);
     const maxLine = lineOffsets.length;
 
-    // Walk token stream, tracking brace state
-    let i = 0;
+    // Walk per-line token arrays, tracking brace state across lines
     let inBrace = false;
     let braceTokens = [];      // non-COMMENT tokens inside braces
     let braceStartTok = null;
 
-    while (i < allTokens.length) {
-        const t = allTokens[i];
-        if (t.type === TokenType.EOF || t.line > maxLine) break;
-        if (t.type === TokenType.NEWLINE || t.type === TokenType.COMMENT) { i++; continue; }
+    for (let lineIdx = 0; lineIdx < allTokens.length; lineIdx++) {
+        if (lineIdx + 1 > maxLine) break;
 
-        if (t.type === TokenType.LBRACE && !inBrace) {
-            inBrace = true;
-            braceStartTok = t;
-            braceTokens = [];
-            i++;
-            continue;
-        }
+        for (const t of allTokens[lineIdx]) {
+            if (t.type === TokenType.EOF || t.type === TokenType.COMMENT) continue;
 
-        if (inBrace) {
-            if (t.type === TokenType.RBRACE) {
-                tryMatchFunction(braceTokens, braceStartTok, t);
-                inBrace = false;
-            } else {
-                braceTokens.push(t);
+            if (t.type === TokenType.LBRACE && !inBrace) {
+                inBrace = true;
+                braceStartTok = t;
+                braceTokens = [];
+                continue;
             }
-            i++;
-            continue;
+
+            if (inBrace) {
+                if (t.type === TokenType.RBRACE) {
+                    tryMatchFunction(braceTokens, braceStartTok, t);
+                    inBrace = false;
+                } else {
+                    braceTokens.push(t);
+                }
+                continue;
+            }
         }
 
-        // Non-braced: collect non-comment tokens for current line
-        // Stop at LBRACE so the outer loop's brace handler takes over
-        const currentLine = t.line;
-        const lineTokens = [];
-        while (i < allTokens.length) {
-            const lt = allTokens[i];
-            if (lt.type === TokenType.EOF || lt.type === TokenType.NEWLINE) break;
-            if (lt.line !== currentLine) break;
-            if (lt.type === TokenType.LBRACE) break;
-            if (lt.type !== TokenType.COMMENT) lineTokens.push(lt);
-            i++;
+        // Non-braced line: collect non-comment tokens and try to match function
+        if (!inBrace) {
+            const lineTokens = allTokens[lineIdx].filter(t =>
+                t.type !== TokenType.EOF && t.type !== TokenType.COMMENT &&
+                t.type !== TokenType.LBRACE && t.type !== TokenType.RBRACE
+            );
+            if (lineTokens.length > 0) {
+                tryMatchFunction(lineTokens, null, null);
+            }
         }
-
-        tryMatchFunction(lineTokens, null, null);
     }
 
     return functions;

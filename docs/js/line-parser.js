@@ -98,9 +98,9 @@ class LineParser {
      */
     constructor(line, lineNumber = 0) {
         const tokenizer = new Tokenizer(line);
-        const allTokens = tokenizer.tokenize();
-        // Delegate to the token-based initializer
-        const fromTokens = LineParser.fromTokens(allTokens, lineNumber);
+        const allLines = tokenizer.tokenize();
+        // Delegate to the token-based initializer (single-line input → first line)
+        const fromTokens = LineParser.fromTokens(allLines[0] || [], lineNumber);
         this.lineNumber = fromTokens.lineNumber;
         this.pos = fromTokens.pos;
         this.lineComment = fromTokens.lineComment;
@@ -111,7 +111,7 @@ class LineParser {
     /**
      * Create a LineParser from pre-tokenized input (avoids re-tokenizing)
      * Derives comment metadata purely from the token stream.
-     * @param {Array} tokens - Tokens for this line (may include COMMENT, NEWLINE, EOF tokens)
+     * @param {Array} tokens - Tokens for this line (may include COMMENT and EOF tokens)
      * @param {number} lineNumber - Line number (0-based)
      * @returns {LineParser}
      */
@@ -131,10 +131,9 @@ class LineParser {
             }
         }
 
-        // Structural tokens (no COMMENT, NEWLINE, EOF)
+        // Structural tokens (no COMMENT, EOF)
         const structuralTokens = tokens.filter(t =>
             t.type !== TokenType.COMMENT &&
-            t.type !== TokenType.NEWLINE &&
             t.type !== TokenType.EOF
         );
 
