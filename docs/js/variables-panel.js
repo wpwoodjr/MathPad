@@ -64,17 +64,6 @@ class VariablesPanel {
     }
 
     /**
-     * Scroll focused field into view when keyboard appears
-     */
-    scrollFieldIntoView(element) {
-        if (!element) return;
-        // Wait a bit for keyboard to appear, then scroll
-        setTimeout(() => {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 300);
-    }
-
-    /**
      * Get next/previous input in the variables panel (wraps around)
      */
     getNextInput(currentInput, reverse = false) {
@@ -392,6 +381,7 @@ class VariablesPanel {
             valueElement = document.createElement('input');
             valueElement.type = 'text';
             valueElement.className = 'variable-value-input';
+            valueElement.inputMode = 'decimal';
             valueElement.spellcheck = false;
             valueElement.setAttribute('autocapitalize', 'none');
             valueElement.setAttribute('autocorrect', 'off');
@@ -404,8 +394,6 @@ class VariablesPanel {
             valueElement.addEventListener('focus', (e) => {
                 // Track this as the focused variable (for clear exclusion)
                 this.lastEditedVar = info.name;
-                // Scroll into view when keyboard appears
-                this.scrollFieldIntoView(e.target);
             });
             // Also handle Enter key to commit the value
             valueElement.addEventListener('keydown', (e) => {
