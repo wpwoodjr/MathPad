@@ -116,8 +116,8 @@ n: 360 "number of payments (30 years)"
             {
                 id: generateId(),
                 title: 'Example: Quadratic',
-                text: `"Quadratic equation solver"
-"ax^2 + bx + c = 0"
+                text: `"Quadratic equation"
+  "ax^2 + bx + c = 0"
 
 --Variables--
 "*Press Solve to solve the equation. Try different values for a, b, and c."
@@ -147,7 +147,8 @@ x2 = (-b - sqrt(disc)) / (2*a)
             {
                 id: generateId(),
                 title: 'Example: Basel Series',
-                text: `"Basel Series (recursive and non-recursive solutions)"
+                text: `"Basel Series"
+  "Recursive and non-recursive solutions"
 
 --Variables--
 "*The Basel series is the sum of 1/n**2 where n goes from 1 to infinity"
@@ -180,7 +181,8 @@ pi: 3.141592653589793`,
             {
                 id: generateId(),
                 title: 'Example: Factorial',
-                text: `"Factorial (recursive and non-recursive solutions)"
+                text: `"Factorial"
+  "Recursive and non-recursive solutions"
 
 --Variables--
 "*Factorial of n is the product of all integers from 1 to n"
