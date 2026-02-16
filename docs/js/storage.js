@@ -40,17 +40,16 @@ function createDefaultData() {
                 text: `"Retirement Calculator"
 
 --Equations--
-"TVM calculation"
-pmt = -(-pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
 "Number of periods"
 n = years * 12
-"Annual return net of fees"
-return - fees = mint * 12
 "Future value of account(s)"
 fv = pv * (1 + gain)**years
+"TVM calculation"
+pmt(pv;rate;n;fv) = -(-pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+pmt = pmt(pv; (return - fees)/12; years*12; pv * (1 + gain)**years)
 "Number of solves"
-solveCount: solveCount~ + 1 // ~ gets prior value before solve cleared it
-solveCount=> 0 // Use => to persist across clears
+solveCount: solveCount~ + 1
+solveCount=> 1 // Use => to persist across clears
 
 --Variables--
 "*Update value(s), then re-calculate any variable by clicking its solve icon \u27F2"
@@ -62,20 +61,20 @@ pv$: $1,000,000
 "Enter life expectancy:"
 years: 20
 
-"Enter the payment to receive each month:"
-pmt$: $5,000
-
 "Enter net annual account(s) appreciation:"
 gain%: 2%
+
+"Future value of account(s)"
+fv$: $1,485,947.40
+
+"Enter the payment to receive each month:"
+pmt$: $5,000
 
 "Enter management fees:"
 fees%: 0.65%
 
 "Enter gross annual return:"
-return%: 7.76%
-
-"Future value of account(s)"
-fv$-> $1,485,947.40`,
+return%: 7.76%`,
                 category: 'Finance',
                 places: 2,
                 stripZeros: true,
