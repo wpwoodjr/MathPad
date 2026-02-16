@@ -135,9 +135,17 @@ function gridSearch(f, low, high, numPoints = 20) {
     let prevX = low;
     let prevF = safeEval(f, low);
 
+    if (isFinite(prevF) && prevF === 0) {
+        return [low, low]; // Exact root at lower bound
+    }
+
     for (let i = 1; i <= numPoints; i++) {
         const x = low + i * step;
         const fx = safeEval(f, x);
+
+        if (isFinite(fx) && fx === 0) {
+            return [x, x]; // Exact root on grid point
+        }
 
         if (isFinite(prevF) && isFinite(fx) && prevF * fx < 0) {
             return [prevX, x];
