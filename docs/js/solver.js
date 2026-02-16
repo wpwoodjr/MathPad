@@ -235,10 +235,15 @@ function solveEquation(f, limits = null, guess = 1) {
         .map(x => ({ x, fx: safeEval(f, x) }))
         .filter(v => isFinite(v.fx));
 
-    // Find all brackets and solve each
+    // Find all brackets (and exact zeros) and solve each
     const roots = [];
-    for (let i = 0; i < values.length - 1; i++) {
-        if (values[i].fx * values[i + 1].fx < 0) {
+    const hasNonZero = values.some(v => v.fx !== 0);
+    for (let i = 0; i < values.length; i++) {
+        // Exact zero at a test point (skip if function is identically zero)
+        if (values[i].fx === 0 && hasNonZero) {
+            roots.push(values[i].x);
+        }
+        if (i < values.length - 1 && values[i].fx * values[i + 1].fx < 0) {
             try {
                 const root = brent(f, values[i].x, values[i + 1].x);
                 // Validate root: f(root) must be smaller than bracket endpoints,

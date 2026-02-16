@@ -155,6 +155,40 @@ fv$: $0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Root at upper bound (gain=1 when fv=2*pv)"
+
+fv = pv * (1 + gain)**years
+
+Enter pv$: $100.00
+years: 1
+gain[-1:1]%:
+fv$: $200
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Root at test point without limits (gain=-1, no sign change)"
+
+fv = pv * (1 + gain)**years
+
+Enter pv$: $100.00
+years: 20
+gain%:
+fv$: $0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Root at x=0 without limits, no sign change (y=x^2)"
+
+y = x**2
+
+y: 0
+x:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
 "Solve for years - TVM with singularity at n=0"
 
