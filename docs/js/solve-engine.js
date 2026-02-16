@@ -330,6 +330,8 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
     }
 
     // Check equation consistency (reuses precomputed equations)
+    const solvedEquationVars = new Set();
+    const unsolvedEquationVars = new Set();
     for (const eq of equations) {
         try {
             if (!eq.leftText || !eq.rightText) continue;
@@ -346,6 +348,13 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
 
                 if (!checkBalance(leftVal, rightVal, balanceTolerance)) {
                     errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eq.text} (${leftVal} ≠ ${rightVal})`);
+                    for (const v of allVars) unsolvedEquationVars.add(v);
+                } else {
+                    // Only mark as solved if all equation variables are declared (user-visible)
+                    // This excludes helper equations with intermediate variables like n, mint
+                    if ([...allVars].every(v => variables.has(v))) {
+                        for (const v of allVars) solvedEquationVars.add(v);
+                    }
                 }
             }
         } catch (e) {
@@ -353,7 +362,7 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
         }
     }
 
-    return { computedValues, solved, errors, solveFailures, equations, exprOutputs };
+    return { computedValues, solved, errors, solveFailures, equations, exprOutputs, solvedEquationVars, unsolvedEquationVars };
 }
 
 /**
@@ -550,7 +559,7 @@ function solveRecord(text, context, record, parserTokens) {
         text = appendReferencesSection(text, context);
     }
 
-    return { text, solved: solveResult.solved, errors };
+    return { text, solved: solveResult.solved, errors, solvedEquationVars: solveResult.solvedEquationVars, unsolvedEquationVars: solveResult.unsolvedEquationVars };
 }
 
 // Export for use in other modules

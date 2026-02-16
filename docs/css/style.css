@@ -1168,6 +1168,22 @@ body.panel-resizing * {
     color: var(--text-primary);
 }
 
+.variable-row.has-unsolved .variable-name {
+    color: var(--warning-color);
+}
+
+.variable-row.has-unsolved .variable-value-input {
+    border-color: var(--warning-color);
+}
+
+.variable-row.has-solved .variable-name {
+    color: var(--success-color);
+}
+
+.variable-row.has-solved .variable-value-input {
+    border-color: var(--success-color);
+}
+
 .variable-row.has-error .variable-name {
     color: var(--error-color);
 }

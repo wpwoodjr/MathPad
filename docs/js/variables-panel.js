@@ -501,6 +501,9 @@ class VariablesPanel {
      * Handle value change from input
      */
     handleValueChange(lineIndex, newValue) {
+        // Clear solved/unsolved highlights since values changed
+        this.clearErrors();
+
         // Get the declaration info for this line
         const info = this.declarations.get(lineIndex);
         if (!info) return;
@@ -658,12 +661,23 @@ class VariablesPanel {
     /**
      * Set errors and highlight affected variable rows
      * @param {Array} errors - Array of error strings like "Line 3: Variable 'x' ..."
+     * @param {Set} solvedEquationVars - Variable names from balanced equations (green)
+     * @param {Set} unsolvedEquationVars - Variable names from unbalanced equations (orange)
      */
-    setErrors(errors) {
-        // Clear previous errors
-        this.errorLines.clear();
-        for (const row of this.container.querySelectorAll('.variable-row.has-error')) {
-            row.classList.remove('has-error');
+    setErrors(errors, solvedEquationVars, unsolvedEquationVars) {
+        this.clearErrors();
+
+        // Mark rows for solved/unsolved equation variables (green takes precedence)
+        if (solvedEquationVars || unsolvedEquationVars) {
+            for (const decl of this.declarations.values()) {
+                const row = this.container.querySelector(`[data-line-index="${decl.lineIndex}"]`);
+                if (!row) continue;
+                if (solvedEquationVars && solvedEquationVars.has(decl.name)) {
+                    row.classList.add('has-solved');
+                } else if (unsolvedEquationVars && unsolvedEquationVars.has(decl.name)) {
+                    row.classList.add('has-unsolved');
+                }
+            }
         }
 
         if (!errors || errors.length === 0) return;
@@ -693,6 +707,12 @@ class VariablesPanel {
         this.errorLines.clear();
         for (const row of this.container.querySelectorAll('.variable-row.has-error')) {
             row.classList.remove('has-error');
+        }
+        for (const row of this.container.querySelectorAll('.variable-row.has-solved')) {
+            row.classList.remove('has-solved');
+        }
+        for (const row of this.container.querySelectorAll('.variable-row.has-unsolved')) {
+            row.classList.remove('has-unsolved');
         }
     }
 
