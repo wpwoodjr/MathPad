@@ -397,7 +397,7 @@ class VariablesPanel {
             });
             // Also handle Enter key to commit the value
             valueElement.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' || e.key === 'Escape') {
                     e.target.blur();
                 }
             });

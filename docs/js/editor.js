@@ -36,7 +36,19 @@ function tokenizeMathPad(text, options = {}) {
     const flatTokens = parserTokens.flat();
 
     // Find user-defined functions (reuse full-text tokens; maxLine bounds to strippedText)
-    const userDefinedFunctions = new Set(parseFunctionsRecord(strippedText, parserTokens).keys());
+    const parsedFunctions = parseFunctionsRecord(strippedText, parserTokens);
+    const userDefinedFunctions = new Set(parsedFunctions.keys());
+
+    // Build map of line number → Set of param names for function definitions
+    // Params shadow reference constants within the function body
+    const functionParamLines = new Map();  // 1-based line number → Set of param names
+    for (const { params, startLine, endLine } of parsedFunctions.values()) {
+        if (params.length === 0) continue;
+        const paramSet = new Set(params);
+        for (let ln = startLine; ln <= endLine; ln++) {
+            functionParamLines.set(ln, paramSet);
+        }
+    }
 
     // Find quoted comment regions from tokenizer
     const quotedCommentRegions = [];
@@ -116,7 +128,8 @@ function tokenizeMathPad(text, options = {}) {
             case TokenType.IDENTIFIER: {
                 const next = flatTokens[ti + 1];
                 const nextToken = (next && next.type !== TokenType.EOF && next.line === token.line) ? next : null;
-                highlightType = getIdentifierHighlightType(token.value, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants, referenceFunctions, localVariables);
+                const fnParams = functionParamLines.get(token.line);
+                highlightType = getIdentifierHighlightType(token.value, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants, referenceFunctions, localVariables, fnParams);
                 break;
             }
             case TokenType.OPERATOR:
@@ -473,12 +486,12 @@ function getTokenLength(token, text, start) {
 /**
  * Determine highlight type for an identifier
  */
-function getIdentifierHighlightType(name, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants = new Set(), referenceFunctions = new Set(), localVariables = new Map()) {
+function getIdentifierHighlightType(name, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants = new Set(), referenceFunctions = new Set(), localVariables = new Map(), fnParams = null) {
     const nameLower = name.toLowerCase();
 
-    // Check if a local variable shadows a constant at this position
-    // localVariables maps name -> character position where shadowing starts
+    // Check if a local variable or function parameter shadows a constant
     function isShadowed(varName) {
+        if (fnParams && fnParams.has(varName)) return true;
         const shadowPos = localVariables.get(varName);
         return shadowPos !== undefined && tokenStart >= shadowPos;
     }
@@ -828,6 +841,11 @@ class SimpleEditor {
     }
 
     onKeyDown(e) {
+        if (e.key === 'Escape') {
+            this.textarea.blur();
+            return;
+        }
+
         // Ctrl+/ to toggle line comments
         if ((e.ctrlKey || e.metaKey) && e.key === '/') {
             e.preventDefault();

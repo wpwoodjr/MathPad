@@ -225,7 +225,7 @@ x4[2.5:3]-> 2.8979
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 12: Could not find a root in range [10, 20] for 'x1'"; StatusIsError = 1
+Status = "Solved with errors: Line 12: Could not find a root in range [10:20] for 'x1'"; StatusIsError = 1
 "Fifth degree polynomial (error when no root in range)"
 
 c5: 1

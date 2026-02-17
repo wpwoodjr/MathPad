@@ -1031,7 +1031,7 @@ function parseFunctionsRecord(text, allTokens) {
             : text.length;
         const sourceText = text.substring(sourceStart, sourceEnd).trim();
 
-        functions.set(name, { params, bodyText, sourceText });
+        functions.set(name, { params, bodyText, sourceText, startLine, endLine });
     }
 }
 
