@@ -1266,18 +1266,18 @@ body.panel-resizing * {
     border: none;
     color: var(--success-color);
     cursor: pointer;
-    font-size: 16px;
+    font-size: 18px;
     padding: 2px 4px;
     margin-right: 2px;
     border-radius: 4px;
     opacity: 0.6;
     transition: opacity 0.15s, background 0.15s;
-    width: 20px;
+    width: 22px;
     flex-shrink: 0;
 }
 
 .variable-solve-btn-placeholder {
-    width: 20px;
+    width: 22px;
     flex-shrink: 0;
     padding: 2px 4px;
     margin-right: 2px;
