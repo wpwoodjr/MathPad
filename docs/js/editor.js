@@ -660,10 +660,16 @@ class SimpleEditor {
         }
 
         // Push current state to undo stack
+        // beforeCursor = where user was before this edit (for undo)
+        // cursorStart/End = where user is after this edit (for redo)
+        const before = this.beforeEditCursor;
+        this.beforeEditCursor = null;
         this.undoStack.push({
             value: currentValue,
             cursorStart: this.textarea.selectionStart,
-            cursorEnd: this.textarea.selectionEnd
+            cursorEnd: this.textarea.selectionEnd,
+            beforeCursorStart: before ? before.start : this.textarea.selectionStart,
+            beforeCursorEnd: before ? before.end : this.textarea.selectionEnd
         });
         if (this.undoStack.length > this.maxUndoHistory) {
             this.undoStack.shift();
@@ -686,13 +692,15 @@ class SimpleEditor {
         if (this.undoStack.length < 2) return false;
 
         // Pop current state (top of stack matches current textarea) → push to redo
-        this.redoStack.push(this.undoStack.pop());
+        const popped = this.undoStack.pop();
+        this.redoStack.push(popped);
 
-        // Pop and restore previous state
+        // Restore previous state's value, but use popped entry's beforeCursor
+        // (where user was before this edit group started)
         const state = this.undoStack[this.undoStack.length - 1];
         this.textarea.value = state.value;
-        this.textarea.selectionStart = state.cursorStart;
-        this.textarea.selectionEnd = state.cursorEnd;
+        this.textarea.selectionStart = popped.beforeCursorStart ?? state.cursorStart;
+        this.textarea.selectionEnd = popped.beforeCursorEnd ?? state.cursorEnd;
 
         this.updateHighlighting();
         this.updateLineNumbers();
@@ -818,13 +826,12 @@ class SimpleEditor {
 
     onBeforeInput() {
         // At the start of a new edit group, snapshot the cursor position
-        // onto the undo stack top so undo returns to where the user clicked
+        // so undo returns to where the user clicked (not where typing ended)
         if (!this.undoDebounceTimer) {
-            const top = this.undoStack[this.undoStack.length - 1];
-            if (top) {
-                top.cursorStart = this.textarea.selectionStart;
-                top.cursorEnd = this.textarea.selectionEnd;
-            }
+            this.beforeEditCursor = {
+                start: this.textarea.selectionStart,
+                end: this.textarea.selectionEnd
+            };
         }
     }
 
