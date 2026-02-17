@@ -691,19 +691,29 @@ class SimpleEditor {
         // Need at least 2 entries: current state on top + a previous state to restore
         if (this.undoStack.length < 2) return false;
 
+        const scrollTop = this.textarea.scrollTop;
+        const cursorStart = this.textarea.selectionStart;
+        const cursorEnd = this.textarea.selectionEnd;
+
         // Pop current state (top of stack matches current textarea) → push to redo
         const popped = this.undoStack.pop();
         this.redoStack.push(popped);
 
-        // Restore previous state's value, but use popped entry's beforeCursor
-        // (where user was before this edit group started)
+        // Restore previous state's value, use popped entry's beforeCursor if available
+        // (where user was before this edit group started), otherwise keep current cursor
         const state = this.undoStack[this.undoStack.length - 1];
+        const len = state.value.length;
         this.textarea.value = state.value;
-        this.textarea.selectionStart = popped.beforeCursorStart ?? state.cursorStart;
-        this.textarea.selectionEnd = popped.beforeCursorEnd ?? state.cursorEnd;
+        this.textarea.selectionStart = Math.min(popped.beforeCursorStart ?? cursorStart, len);
+        this.textarea.selectionEnd = Math.min(popped.beforeCursorEnd ?? cursorEnd, len);
 
         this.updateHighlighting();
         this.updateLineNumbers();
+
+        this.textarea.scrollTop = scrollTop;
+        this.highlightLayer.scrollTop = scrollTop;
+        this.lineNumbers.scrollTop = scrollTop;
+
         this.notifyChange();
         this.notifyUndoState();
 
@@ -716,6 +726,8 @@ class SimpleEditor {
     redo() {
         if (this.redoStack.length === 0) return false;
 
+        const scrollTop = this.textarea.scrollTop;
+
         // Pop from redo and push to undo stack (becomes new top = current state)
         const state = this.redoStack.pop();
         this.undoStack.push(state);
@@ -726,6 +738,11 @@ class SimpleEditor {
 
         this.updateHighlighting();
         this.updateLineNumbers();
+
+        this.textarea.scrollTop = scrollTop;
+        this.highlightLayer.scrollTop = scrollTop;
+        this.lineNumbers.scrollTop = scrollTop;
+
         this.notifyChange();
         this.notifyUndoState();
 
@@ -761,8 +778,10 @@ class SimpleEditor {
     }
 
     setValue(value, undoable = false) {
-        // Save scroll position
+        // Save scroll and cursor position
         const scrollTop = this.textarea.scrollTop;
+        const cursorStart = this.textarea.selectionStart;
+        const cursorEnd = this.textarea.selectionEnd;
 
         const changed = this.textarea.value !== value;
 
@@ -775,6 +794,11 @@ class SimpleEditor {
         }
 
         this.textarea.value = value;
+
+        // Restore cursor position (clamped to new length) to prevent scroll jump
+        const len = value.length;
+        this.textarea.selectionStart = Math.min(cursorStart, len);
+        this.textarea.selectionEnd = Math.min(cursorEnd, len);
 
         if (undoable && changed) {
             // Push new state as current top of stack
@@ -799,7 +823,6 @@ class SimpleEditor {
         this.updateHighlighting();
         this.updateLineNumbers();
 
-        // Restore scroll position
         this.textarea.scrollTop = scrollTop;
         this.highlightLayer.scrollTop = scrollTop;
         this.lineNumbers.scrollTop = scrollTop;
