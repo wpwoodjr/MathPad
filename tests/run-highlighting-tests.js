@@ -362,6 +362,71 @@ function runAllTests() {
                 ['the value of a+b', 'comment']  // label text after
             ]
         },
+        // Function definition with reference constant in body (e is NOT a param)
+        {
+            name: 'fn def with ref constant in body (pow2(x;y) = e**(y * ln(x;2)))',
+            line: 'pow2(x;y) = e**(y * ln(x;2))',
+            options: { referenceConstants: new Set(['e']) },
+            assertions: [
+                ['pow2', 'function'],
+                ['(', 'paren'],
+                ['x', 'variable'],
+                [';', 'punctuation'],
+                ['y', 'variable'],
+                [')', 'paren'],
+                ['=', 'operator'],
+                ['e', 'builtin'],
+                ['**', 'operator'],
+            ]
+        },
+        // Function definition with ref constant shadowed by local variable declaration
+        {
+            name: 'fn def with locally shadowed ref constant (e:3 then pow2(x;y) = e**...)',
+            line: 'pow2(x;y) = e**(y * ln(x;2))',
+            context: 'e:3',
+            options: { referenceConstants: new Set(['e']) },
+            assertions: [
+                ['pow2', 'function'],
+                ['(', 'paren'],
+                ['x', 'variable'],
+                [';', 'punctuation'],
+                ['y', 'variable'],
+                [')', 'paren'],
+                ['=', 'operator'],
+                ['e', 'variable'],
+                ['**', 'operator'],
+            ]
+        },
+        // Function definition where param shadows reference constant
+        {
+            name: 'fn param shadows ref constant (pow(x;y;e) = e**(y * ln(x;2)))',
+            line: 'pow(x;y;e) = e**(y * ln(x;2))',
+            options: { referenceConstants: new Set(['e']) },
+            assertions: [
+                ['pow', 'function'],
+                ['(', 'paren'],
+                ['x', 'variable'],
+                [';', 'punctuation'],
+                ['y', 'variable'],
+                [';', 'punctuation'],
+                ['e', 'variable'],
+                [')', 'paren'],
+                ['=', 'operator'],
+                ['e', 'variable'],
+                ['**', 'operator'],
+            ]
+        },
+        // Multi-line braced fn: param shadows ref constant on continuation line
+        {
+            name: 'braced fn param shadows ref constant ({ pow(x;y;e) = \\n  e**(y * ln(x;2)) })',
+            line: '  e**(y * ln(x;2)) }',
+            context: '{ pow(x;y;e) =',
+            options: { referenceConstants: new Set(['e']) },
+            assertions: [
+                ['e', 'variable'],
+                ['**', 'operator'],
+            ]
+        },
         // Variable with comment
         {
             name: 'variable with trailing comment',
