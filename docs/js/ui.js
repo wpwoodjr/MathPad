@@ -1303,7 +1303,7 @@ function handleSolve() {
         if (editorInfo.variablesManager) {
             editorInfo.variablesManager.enableFlash();
             editorInfo.variablesManager.updateFromText(text);
-            editorInfo.variablesManager.setErrors(result.errors, result.solvedEquationVars, result.unsolvedEquationVars);
+            editorInfo.variablesManager.setErrors(result.errors, result.equationVarStatus);
             editorInfo.variablesManager.clearLastEdited();
         }
 

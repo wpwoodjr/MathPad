@@ -330,8 +330,8 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
     }
 
     // Check equation consistency (reuses precomputed equations)
-    const solvedEquationVars = new Set();
-    const unsolvedEquationVars = new Set();
+    // First-wins ordering: a variable's status is set by the first equation it appears in
+    const equationVarStatus = new Map(); // var name → 'solved' | 'unsolved'
     for (const eq of equations) {
         try {
             if (!eq.leftText || !eq.rightText) continue;
@@ -345,15 +345,17 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
             if (unknowns.length === 0) {
                 const leftVal = evaluate(leftAST, context);
                 const rightVal = evaluate(rightAST, context);
+                const balanced = checkBalance(leftVal, rightVal, balanceTolerance);
 
-                if (!checkBalance(leftVal, rightVal, balanceTolerance)) {
+                if (!balanced) {
                     errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eq.text} (${leftVal} ≠ ${rightVal})`);
-                    for (const v of allVars) unsolvedEquationVars.add(v);
-                } else {
-                    // Only mark as solved if all equation variables are declared (user-visible)
-                    // This excludes helper equations with intermediate variables like n, mint
-                    if ([...allVars].every(v => variables.has(v))) {
-                        for (const v of allVars) solvedEquationVars.add(v);
+                }
+
+                // Only track status for equations where all variables are declared (user-visible)
+                if ([...allVars].every(v => variables.has(v))) {
+                    const status = balanced ? 'solved' : 'unsolved';
+                    for (const v of allVars) {
+                        if (!equationVarStatus.has(v)) equationVarStatus.set(v, status);
                     }
                 }
             }
@@ -362,7 +364,7 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
         }
     }
 
-    return { computedValues, solved, errors, solveFailures, equations, exprOutputs, solvedEquationVars, unsolvedEquationVars };
+    return { computedValues, solved, errors, solveFailures, equations, exprOutputs, equationVarStatus };
 }
 
 /**
@@ -559,7 +561,7 @@ function solveRecord(text, context, record, parserTokens) {
         text = appendReferencesSection(text, context);
     }
 
-    return { text, solved: solveResult.solved, errors, solvedEquationVars: solveResult.solvedEquationVars, unsolvedEquationVars: solveResult.unsolvedEquationVars };
+    return { text, solved: solveResult.solved, errors, equationVarStatus: solveResult.equationVarStatus };
 }
 
 // Export for use in other modules

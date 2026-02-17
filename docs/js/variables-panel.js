@@ -661,21 +661,22 @@ class VariablesPanel {
     /**
      * Set errors and highlight affected variable rows
      * @param {Array} errors - Array of error strings like "Line 3: Variable 'x' ..."
-     * @param {Set} solvedEquationVars - Variable names from balanced equations (green)
-     * @param {Set} unsolvedEquationVars - Variable names from unbalanced equations (orange)
+     * @param {Map} equationVarStatus - Variable name → 'solved'|'unsolved' (first equation wins)
      */
-    setErrors(errors, solvedEquationVars, unsolvedEquationVars) {
+    setErrors(errors, equationVarStatus) {
         this.clearErrors();
 
-        // Mark rows for solved/unsolved equation variables (green takes precedence)
-        if (solvedEquationVars || unsolvedEquationVars) {
+        // Mark rows based on equation status (first-equation-wins ordering from solver)
+        if (equationVarStatus) {
             for (const decl of this.declarations.values()) {
+                const status = equationVarStatus.get(decl.name);
+                if (!status) continue;
                 const row = this.container.querySelector(`[data-line-index="${decl.lineIndex}"]`);
                 if (!row) continue;
-                if (solvedEquationVars && solvedEquationVars.has(decl.name)) {
-                    row.classList.add('has-solved');
-                } else if (unsolvedEquationVars && unsolvedEquationVars.has(decl.name)) {
+                if (status === 'unsolved') {
                     row.classList.add('has-unsolved');
+                } else {
+                    row.classList.add('has-solved');
                 }
             }
         }
