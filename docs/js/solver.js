@@ -220,7 +220,7 @@ function solveEquation(f, limits = null, guess = 1) {
         if (bracket) {
             return brent(f, bracket[0], bracket[1]);
         }
-        throw new SolverError(`Could not find a root in range [${limits.low}, ${limits.high}]`);
+        throw new SolverError(`Could not find a root in range [${limits.low}:${limits.high}]`);
     }
 
     // No limits: try logarithmic points first (covers wide range efficiently)
