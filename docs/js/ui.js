@@ -376,8 +376,8 @@ function createEditorForRecord(record) {
         editor.setCursorPosition(Math.max(0, cursorPos + delta));
     });
 
-    variablesManager.onSolve(() => {
-        handleSolve();
+    variablesManager.onSolve((undoable) => {
+        handleSolve(undoable);
     });
 
     // Save scroll position when user scrolls
@@ -1248,7 +1248,7 @@ function handleReset() {
 /**
  * Handle solve
  */
-function handleSolve() {
+function handleSolve(undoable = true) {
     if (!UI.currentRecordId) {
         setStatus('No record selected', true);
         return;
@@ -1282,7 +1282,7 @@ function handleSolve() {
         text = result.text;
 
         // Update editor with results (undoable so Ctrl+Z works)
-        editorInfo.editor.setValue(text, true);
+        editorInfo.editor.setValue(text, undoable);
 
         // Restore cursor to end of same line (keeps scroll position)
         const newLines = text.split('\n');

@@ -776,8 +776,10 @@ class SimpleEditor {
         // Save scroll position
         const scrollTop = this.textarea.scrollTop;
 
+        const changed = this.textarea.value !== value;
+
         // Save to undo history before changing (if content is different)
-        if (undoable && this.textarea.value !== value) {
+        if (undoable && changed) {
             // Clear any pending debounce timer
             if (this.undoDebounceTimer) {
                 clearTimeout(this.undoDebounceTimer);
@@ -799,14 +801,12 @@ class SimpleEditor {
 
         this.textarea.value = value;
 
-        // Update last saved state if this was an undoable change
-        if (undoable) {
-            this.lastSavedState = {
-                value,
-                cursorStart: this.textarea.selectionStart,
-                cursorEnd: this.textarea.selectionEnd
-            };
-        }
+        // Update last saved state so saveToHistoryNow doesn't see stale state
+        this.lastSavedState = {
+            value,
+            cursorStart: this.textarea.selectionStart,
+            cursorEnd: this.textarea.selectionEnd
+        };
 
         this.updateHighlighting();
         this.updateLineNumbers();
@@ -815,6 +815,10 @@ class SimpleEditor {
         this.textarea.scrollTop = scrollTop;
         this.highlightLayer.scrollTop = scrollTop;
         this.lineNumbers.scrollTop = scrollTop;
+
+        if (changed) {
+            this.notifyChange();
+        }
     }
 
     /**

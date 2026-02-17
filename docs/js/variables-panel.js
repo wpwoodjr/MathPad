@@ -424,10 +424,10 @@ class VariablesPanel {
                     valueElement.value = '';
                     this.handleValueChange(info.lineIndex, '');
                 }
-                // Clear tracking and trigger solve
+                // Clear tracking and trigger solve (non-undoable so undo skips cleared state)
                 this.lastEditedVar = null;
                 if (this.solveCallback) {
-                    this.solveCallback();
+                    this.solveCallback(false);
                 }
             });
             row.appendChild(solveBtn);
