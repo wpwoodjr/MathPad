@@ -597,6 +597,7 @@ class SimpleEditor {
         container.appendChild(this.element);
 
         // Event handlers
+        this.textarea.addEventListener('beforeinput', () => this.onBeforeInput());
         this.textarea.addEventListener('input', () => this.onInput());
         this.textarea.addEventListener('scroll', () => this.onUserScroll());
         this.textarea.addEventListener('keydown', (e) => this.onKeyDown(e));
@@ -813,6 +814,18 @@ class SimpleEditor {
         this.parsedConstants = parsedConstants;
         this.parsedFunctions = parsedFunctions;
         this.updateHighlighting();
+    }
+
+    onBeforeInput() {
+        // At the start of a new edit group, snapshot the cursor position
+        // onto the undo stack top so undo returns to where the user clicked
+        if (!this.undoDebounceTimer) {
+            const top = this.undoStack[this.undoStack.length - 1];
+            if (top) {
+                top.cursorStart = this.textarea.selectionStart;
+                top.cursorEnd = this.textarea.selectionEnd;
+            }
+        }
     }
 
     onInput() {
