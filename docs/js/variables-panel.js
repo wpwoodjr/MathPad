@@ -394,10 +394,15 @@ class VariablesPanel {
             valueElement.addEventListener('focus', (e) => {
                 // Track this as the focused variable (for clear exclusion)
                 this.lastEditedVar = info.name;
+                // Save original value for Escape restore
+                e.target.dataset.originalValue = e.target.value;
             });
-            // Also handle Enter key to commit the value
             valueElement.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === 'Escape') {
+                if (e.key === 'Escape') {
+                    // Restore original value and blur
+                    e.target.value = e.target.dataset.originalValue ?? e.target.value;
+                    e.target.blur();
+                } else if (e.key === 'Enter') {
                     e.target.blur();
                 }
             });
