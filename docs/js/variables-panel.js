@@ -250,12 +250,13 @@ class VariablesPanel {
         }
 
         // Snapshot old display values before removing rows (for flash comparison on re-added rows)
+        // Key by name (not lineIndex) so line insertions/deletions don't cause false flashes
         if (this.flashChanges) {
             this._oldDisplayValues = new Map();
             for (const lineIndex of toRemove) {
                 const existing = this.declarations.get(lineIndex);
                 if (existing) {
-                    this._oldDisplayValues.set(lineIndex, this.formatValueForDisplay(existing));
+                    this._oldDisplayValues.set(existing.name, this.formatValueForDisplay(existing));
                 }
             }
         }
@@ -465,7 +466,7 @@ class VariablesPanel {
         // Flash newly added/rebuilt rows if their value changed
         if (this.flashChanges && !info.isLabel) {
             const newValue = this.formatValueForDisplay(info);
-            const oldValue = this._oldDisplayValues ? this._oldDisplayValues.get(info.lineIndex) : undefined;
+            const oldValue = this._oldDisplayValues ? this._oldDisplayValues.get(info.name) : undefined;
             if (oldValue !== undefined ? newValue !== oldValue : !!newValue) {
                 row.classList.add('value-changed');
             }
