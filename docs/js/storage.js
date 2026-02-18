@@ -47,9 +47,6 @@ fv = pv * (1 + gain)**years
 "TVM calculation"
 pmt(pv;rate;n;fv) = -(-pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 pmt = pmt(pv; (return - fees)/12; years*12; fv)
-"Number of solves"
-solveCount: solveCount~ + 1
-solveCount=> 1 // Use => to persist across clears
 
 --Variables--
 "*Update value(s), then re-calculate any variable by clicking its solve icon \u27F2"
