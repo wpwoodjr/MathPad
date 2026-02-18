@@ -106,14 +106,22 @@ function buildOutputLine(line, markerEndIndex, newValue, commentInfo = null) {
             const commentCol = markerEndIndex + line.substring(markerEndIndex).indexOf(commentInfo.comment);
             colComments.push({ col: commentCol, text: commentInfo.comment });
         } else {
-            trailingPart = ' "' + commentInfo.comment + '"';
+            // Preserve quoted comment at its original column position
+            const afterMarker = line.substring(markerEndIndex);
+            const quoteIdx = afterMarker.indexOf('"');
+            if (quoteIdx !== -1) {
+                colComments.push({ col: markerEndIndex + quoteIdx, text: '"' + commentInfo.comment + '"' });
+            } else {
+                trailingPart = ' "' + commentInfo.comment + '"';
+            }
         }
     } else {
         // Fall back to extracting quoted comment from line (for backwards compatibility)
         const afterMarker = line.substring(markerEndIndex);
         const quotedCommentMatch = afterMarker.match(/"[^"]*"\s*$/);
         if (quotedCommentMatch) {
-            trailingPart = ' ' + quotedCommentMatch[0].trim();
+            const quoteCol = markerEndIndex + afterMarker.indexOf(quotedCommentMatch[0]);
+            colComments.push({ col: quoteCol, text: quotedCommentMatch[0].trim() });
         }
     }
 

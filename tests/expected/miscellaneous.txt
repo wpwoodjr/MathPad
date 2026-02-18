@@ -598,3 +598,18 @@ Status = "Nothing to solve"; StatusIsError = 0
 a: 1
 test a-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test comments spacing to right of values"
+
+a: 12                "test"
+b = a
+b: 12                //test
+d = a
+d: 12                "test"
+a-> 12               test
+a-> 12               "test"
+a-> 12               //test
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
