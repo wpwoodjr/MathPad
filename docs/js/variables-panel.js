@@ -165,7 +165,7 @@ class VariablesPanel {
             const commentLines = new Map(); // startLine → { text, endLine, isQuoted }
             const consumedLines = new Set(); // lines consumed by multi-line comments
             if (allTokens) {
-                for (const t of allTokens) {
+                for (const lineTokens of allTokens) for (const t of lineTokens) {
                     if (t.type !== TokenType.COMMENT) continue;
                     if (t.line - 1 <= varsSectionLineIndex) continue;
                     if (t.lineComment) continue; // skip // comments
