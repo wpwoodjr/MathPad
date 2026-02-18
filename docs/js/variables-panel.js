@@ -571,18 +571,15 @@ class VariablesPanel {
 
         // Handle money variables
         if (varFormat === 'money' || text.includes('$')) {
-            // Format as money: $1,234.56
-            const absValue = Math.abs(parsedValue);
-            // Detect decimal places from input
-            const inputWithoutMoney = text.replace(/[$,]/g, '');
-            const decimalMatch = inputWithoutMoney.match(/\.(\d+)/);
-            const places = decimalMatch ? Math.max(2, decimalMatch[1].length) : 0;
-
-            const formatted = absValue.toFixed(places);
-            const parts = formatted.split('.');
+            // Normalize: strip $ and commas, then re-add with proper formatting
+            let num = text.replace(/[$,]/g, '').trim();
+            const negative = num.startsWith('-');
+            if (negative) num = num.substring(1).trim();
+            // Add commas to integer part
+            const parts = num.split('.');
             parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
             const result = parts.join('.');
-            return parsedValue < 0 ? '-$' + result : '$' + result;
+            return (negative ? '-$' : '$') + result;
         }
 
         // Handle percentage variables

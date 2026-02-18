@@ -56,4 +56,19 @@ rate * 200$-> $15.00
 Base format on input marker
 val#16<- ff#16
 val + 1#16-> 256
+Midpoint rounding (0.075 rounds to 0.08 not 0.07)
+0.075*100%$-> $0.08
+1.005$-> $1.01
+2.675$-> $2.68
+0.074$-> $0.07
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Full precision with places=2"
+Full precision with places=2
+a: -1.00000000025
+b = a*2
+b->> -2.0000000005
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

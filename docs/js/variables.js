@@ -517,7 +517,7 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
             return value < 0 ? '-$' + formatted : '$' + formatted;
         } else {
             // Use 2 decimal places for money by default
-            const formatted = absValue.toFixed(2);
+            const formatted = toFixed(absValue, 2);
             const parts = formatted.split('.');
             parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
             const result = parts.join('.');
@@ -533,7 +533,7 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
             return formatted + '%';
         } else {
             // Use 2 decimal places for percent, strip trailing zeros
-            const formatted = percent.toFixed(2).replace(/\.?0+$/, '');
+            const formatted = toFixed(percent, 2).replace(/\.?0+$/, '');
             return formatted + '%';
         }
     }

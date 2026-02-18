@@ -53,6 +53,7 @@ function loadModules() {
     global.EvalError = evaluator.EvalError;
     global.evaluate = evaluator.evaluate;
     global.formatNumber = evaluator.formatNumber;
+    global.toFixed = evaluator.toFixed;
     global.builtinFunctions = evaluator.builtinFunctions;
     global.checkBalance = evaluator.checkBalance;
 

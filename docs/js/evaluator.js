@@ -653,6 +653,17 @@ function evaluate(node, context) {
 }
 
 /**
+ * Robust replacement for Number.toFixed() that correctly rounds decimal midpoints.
+ * Standard toFixed uses the exact binary representation, so 0.075 (stored as 0.074999...)
+ * rounds to '0.07' instead of '0.08'. This uses string-based exponential shifting:
+ * Number('0.075e2') parses directly to 7.5 (exact), avoiding the multiplication error.
+ */
+function toFixed(value, places) {
+    const rounded = Number(Math.round(Number(value + 'e' + places)) + 'e-' + places);
+    return isFinite(rounded) ? rounded.toFixed(places) : value.toFixed(places);
+}
+
+/**
  * Format a number for display
  * If varName ends with '$', format as money (up to 2 decimals, comma grouping, $ prefix)
  * If varName ends with '%', format as percentage (up to 2 decimals, % suffix)
@@ -668,7 +679,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
         if (varName.endsWith('$')) {
             // Money format: $1,234.56 with exactly 2 decimal places
             const absValue = Math.abs(value);
-            const formatted = absValue.toFixed(2);
+            const formatted = toFixed(absValue, 2);
             const parts = formatted.split('.');
             parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
             const result = parts.join('.');
@@ -677,7 +688,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
         if (varName.endsWith('%')) {
             // Percentage format: 0.075 displays as 7.5% (multiply by 100, up to 2 decimal places)
             const percent = value * 100;
-            const formatted = percent.toFixed(2).replace(/\.?0+$/, '');
+            const formatted = toFixed(percent, 2).replace(/\.?0+$/, '');
             return formatted + '%';
         }
     }
@@ -697,12 +708,12 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
         case 'eng': {
             // Engineering notation: exponent is multiple of 3
             if (value === 0) {
-                str = (0).toFixed(places);
+                str = toFixed(0, places);
             } else {
                 const exp = Math.floor(Math.log10(Math.abs(value)));
                 const engExp = Math.floor(exp / 3) * 3;
                 const mantissa = value / Math.pow(10, engExp);
-                str = mantissa.toFixed(places) + 'e' + engExp;
+                str = toFixed(mantissa, places) + 'e' + engExp;
             }
             break;
         }
@@ -712,7 +723,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
                 // Use scientific notation for very large/small numbers
                 str = value.toExponential(places);
             } else {
-                str = value.toFixed(places);
+                str = toFixed(value, places);
             }
     }
 
@@ -740,7 +751,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        EvalContext, EvalError, evaluate, formatNumber, checkBalance,
+        EvalContext, EvalError, evaluate, formatNumber, toFixed, checkBalance,
         builtinFunctions, factorial, gamma,
         dateToJulian, julianToDate, parseDate, formatDate
     };
