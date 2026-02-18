@@ -676,8 +676,10 @@ class VariablesPanel {
         this.clearErrors();
 
         // Mark rows based on equation status (first-equation-wins ordering from solver)
+        // Skip output variables — they're computed results, not user-editable inputs
         if (equationVarStatus) {
             for (const decl of this.declarations.values()) {
+                if (decl.declaration && decl.declaration.type === VarType.OUTPUT) continue;
                 const status = equationVarStatus.get(decl.name);
                 if (!status) continue;
                 const row = this.container.querySelector(`[data-line-index="${decl.lineIndex}"]`);
