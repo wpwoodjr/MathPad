@@ -210,3 +210,44 @@ fees%: 0.65%
 fv$: 0
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Finance"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+"Retirement Calculator (<<- test)"
+
+--Equations--
+"Number of periods"
+n = years * 12
+"Future value of account(s)"
+fv = pv * (1 + gain)**years
+"TVM calculation"
+pmt(pv;rate;n;fv) = -(-pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+pmt = pmt(pv; (return - fees)/12; years*12; fv)
+
+--Variables--
+"*Enter values, then press Solve"
+
+"Value of retirement account(s):"
+pv$<- $1,000,000
+
+"Life expectancy:"
+years<- 20
+
+"Enter net annual account(s) gain, or future value:"
+gain%<<-
+fv$<- $1,400,000
+
+
+"Management fees (percentage):"
+fees%<- 0.65%
+
+"Total annual return:"
+return%<- 6.5%
+
+"Monthly withdrawal amount:"
+pmt$<<-
+
+
+"*Notes:"
+"Gain and Future Value are interdependent, so if you change one then solve for the other by clicking its solve icon."
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

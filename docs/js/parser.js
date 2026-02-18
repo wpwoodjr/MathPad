@@ -36,6 +36,7 @@ const TokenType = {
     ERROR: 'ERROR',
     // Variable declaration markers
     ARROW_LEFT: 'ARROW_LEFT',       // <-
+    ARROW_LEFT_FULL: 'ARROW_LEFT_FULL', // <<-
     ARROW_RIGHT: 'ARROW_RIGHT',     // ->
     ARROW_FULL: 'ARROW_FULL',       // ->>
     ARROW_PERSIST: 'ARROW_PERSIST',           // =>
@@ -88,13 +89,16 @@ class Tokenizer {
         return idx < this.text.length ? this.text[idx] : null;
     }
 
-    advance() {
-        const ch = this.text[this.pos++];
-        if (ch === '\n') {
-            this.line++;
-            this.col = 1;
-        } else {
-            this.col++;
+    advance(count = 1) {
+        let ch;
+        for (let i = 0; i < count; i++) {
+            ch = this.text[this.pos++];
+            if (ch === '\n') {
+                this.line++;
+                this.col = 1;
+            } else {
+                this.col++;
+            }
         }
         return ch;
     }
@@ -150,6 +154,12 @@ class Tokenizer {
                 token.clearBehavior = ClearBehavior.ON_CLEAR;
                 token.fullPrecision = false;
                 break;
+            case TokenType.ARROW_LEFT_FULL:
+                token.isMarker = true;
+                token.varType = VarType.INPUT;
+                token.clearBehavior = ClearBehavior.ON_CLEAR;
+                token.fullPrecision = true;
+                break;
             case TokenType.ARROW_RIGHT:
                 token.isMarker = true;
                 token.varType = VarType.OUTPUT;
@@ -187,8 +197,7 @@ class Tokenizer {
         // Check for 0x/0b/0o prefix literals before consuming digits
         if (this.peek() === '0' && this.peek(1) && /[xXbBoO]/.test(this.peek(1))) {
             const prefix = this.peek(1).toLowerCase();
-            this.advance(); // 0
-            this.advance(); // x/b/o
+            this.advance(2); // 0x, 0b, or 0o
             let digits = '';
             const digitTest = prefix === 'x' ? this.isHexDigit
                             : prefix === 'b' ? (ch) => ch === '0' || ch === '1'
@@ -368,8 +377,10 @@ class Tokenizer {
                 }
                 const nextCh = this.peek(offset);
                 const nextCh2 = this.peek(offset + 1);
+                const nextCh3 = this.peek(offset + 2);
                 const isMarker = nextCh === ':' || nextCh === '[' ||
                                  nextCh === '\\' ||
+                                 (nextCh === '<' && nextCh2 === '<' && nextCh3 === '-') ||
                                  (nextCh === '<' && nextCh2 === '-') ||
                                  (nextCh === '-' && nextCh2 === '>') ||
                                  (nextCh === '=' && nextCh2 === '>');
@@ -428,8 +439,7 @@ class Tokenizer {
     tokenizeLineComment() {
         const startLine = this.line;
         const startCol = this.col;
-        this.advance(); // first /
-        this.advance(); // second /
+        this.advance(2); // //
         let value = '';
         while (this.peek() && this.peek() !== '\n') {
             value += this.advance();
@@ -448,16 +458,18 @@ class Tokenizer {
 
         // Check three-character operators FIRST
         if (ch === '=' && ch2 === '>' && ch3 === '>') {
-            this.advance();
-            this.advance();
-            this.advance();
+            this.advance(3);
             return this.makeToken(TokenType.ARROW_PERSIST_FULL, '=>>', startLine, startCol);
         }
         if (ch === '-' && ch2 === '>' && ch3 === '>') {
-            this.advance();
-            this.advance();
-            this.advance();
+            this.advance(3);
             return this.makeToken(TokenType.ARROW_FULL, '->>', startLine, startCol);
+        }
+
+        // Three-character operator: <<-
+        if (ch === '<' && ch2 === '<' && ch3 === '-') {
+            this.advance(3);
+            return this.makeToken(TokenType.ARROW_LEFT_FULL, '<<-', startLine, startCol);
         }
 
         // Two-character operators (check longer patterns first within this group)
@@ -465,18 +477,15 @@ class Tokenizer {
 
         // Variable declaration markers get their own token types
         if (twoChar === '<-') {
-            this.advance();
-            this.advance();
+            this.advance(2);
             return this.makeToken(TokenType.ARROW_LEFT, '<-', startLine, startCol);
         }
         if (twoChar === '->') {
-            this.advance();
-            this.advance();
+            this.advance(2);
             return this.makeToken(TokenType.ARROW_RIGHT, '->', startLine, startCol);
         }
         if (twoChar === '=>') {
-            this.advance();
-            this.advance();
+            this.advance(2);
             return this.makeToken(TokenType.ARROW_PERSIST, '=>', startLine, startCol);
         }
         // Note: :: is handled in the main tokenize() loop for COLON
@@ -484,8 +493,7 @@ class Tokenizer {
         // Other two-character operators
         const twoCharOps = ['**', '==', '!=', '<=', '>=', '<<', '>>', '&&', '||', '^^'];
         if (twoCharOps.includes(twoChar)) {
-            this.advance();
-            this.advance();
+            this.advance(2);
             return this.makeToken(TokenType.OPERATOR, twoChar, startLine, startCol);
         }
 
@@ -599,8 +607,7 @@ class Tokenizer {
             if (ch === ':') {
                 // Check for :: (full precision marker)
                 if (this.peek(1) === ':') {
-                    this.advance();
-                    this.advance();
+                    this.advance(2);
                     pushToken(this.makeToken(TokenType.DOUBLE_COLON, '::', startLine, startCol));
                 } else {
                     this.advance();
@@ -629,7 +636,7 @@ class Tokenizer {
                     if (next === '-' && this.peek(2) === '>') {
                         const type = this.peek(3) === '>' ? TokenType.ARROW_FULL : TokenType.ARROW_RIGHT;
                         const marker = type === TokenType.ARROW_FULL ? '->>' : '->';
-                        for (let i = 0; i <= marker.length; i++) this.advance();
+                        this.advance(1 + marker.length);
                         const token = this.makeToken(type, ch + marker, startLine, startCol);
                         token.format = format;
                         pushToken(token);
@@ -638,14 +645,21 @@ class Tokenizer {
                     if (next === '=' && this.peek(2) === '>') {
                         const type = this.peek(3) === '>' ? TokenType.ARROW_PERSIST_FULL : TokenType.ARROW_PERSIST;
                         const marker = type === TokenType.ARROW_PERSIST_FULL ? '=>>' : '=>';
-                        for (let i = 0; i <= marker.length; i++) this.advance();
+                        this.advance(1 + marker.length);
                         const token = this.makeToken(type, ch + marker, startLine, startCol);
                         token.format = format;
                         pushToken(token);
                         continue;
                     }
+                    if (next === '<' && this.peek(2) === '<' && this.peek(3) === '-') {
+                        this.advance(4);
+                        const token = this.makeToken(TokenType.ARROW_LEFT_FULL, ch + '<<-', startLine, startCol);
+                        token.format = format;
+                        pushToken(token);
+                        continue;
+                    }
                     if (next === '<' && this.peek(2) === '-') {
-                        for (let i = 0; i < 3; i++) this.advance();
+                        this.advance(3);
                         const token = this.makeToken(TokenType.ARROW_LEFT, ch + '<-', startLine, startCol);
                         token.format = format;
                         pushToken(token);
@@ -654,7 +668,7 @@ class Tokenizer {
                     if (next === ':') {
                         const type = this.peek(2) === ':' ? TokenType.DOUBLE_COLON : TokenType.COLON;
                         const marker = type === TokenType.DOUBLE_COLON ? '::' : ':';
-                        for (let i = 0; i <= marker.length; i++) this.advance();
+                        this.advance(1 + marker.length);
                         const token = this.makeToken(type, ch + marker, startLine, startCol);
                         token.format = format;
                         pushToken(token);
@@ -676,6 +690,9 @@ class Tokenizer {
                         } else if (p1 === '=' && p2 === '>') {
                             if (p3 === '>') { markerType = TokenType.ARROW_PERSIST_FULL; markerStr = '=>>'; }
                             else { markerType = TokenType.ARROW_PERSIST; markerStr = '=>'; }
+                        } else if (p1 === '<' && p2 === '<' && p3 === '-') {
+                            markerType = TokenType.ARROW_LEFT_FULL;
+                            markerStr = '<<-';
                         } else if (p1 === '<' && p2 === '-') {
                             markerType = TokenType.ARROW_LEFT;
                             markerStr = '<-';
@@ -685,7 +702,7 @@ class Tokenizer {
                         }
                         if (markerType) {
                             const digits = this.text.slice(this.pos + 1, this.pos + 1 + baseLen);
-                            for (let i = 0; i < 1 + baseLen + markerStr.length; i++) this.advance();
+                            this.advance(1 + baseLen + markerStr.length);
                             const value = '#' + digits + markerStr;
                             const token = this.makeToken(markerType, value, startLine, startCol);
                             token.base = parseInt(digits);

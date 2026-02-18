@@ -30,6 +30,7 @@ const LineType = {
 const MARKER_PRECEDENCE = {
     '->>': 3,
     '=>>': 3,
+    '<<-': 3,
     '->': 2,
     '=>': 2,
     '<-': 2,
@@ -45,6 +46,7 @@ function getMarkerString(token) {
         case TokenType.COLON: return ':';
         case TokenType.DOUBLE_COLON: return '::';
         case TokenType.ARROW_LEFT: return '<-';
+        case TokenType.ARROW_LEFT_FULL: return '<<-';
         case TokenType.ARROW_RIGHT: return '->';
         case TokenType.ARROW_FULL: return '->>';
         case TokenType.ARROW_PERSIST: return '=>';
@@ -195,7 +197,8 @@ class LineParser {
 
         // If there's an input arrow, always use the first one
         for (const m of markers) {
-            if (m.token.type === TokenType.ARROW_LEFT) {
+            if (m.token.type === TokenType.ARROW_LEFT ||
+                m.token.type === TokenType.ARROW_LEFT_FULL) {
                 return m;
             }
         }
@@ -315,8 +318,9 @@ class LineParser {
 
         const markerToken = this.tokens[markerIndex];
 
-        // <- : :: always indicate variable declaration, not expression output
+        // <- <<- : :: always indicate variable declaration, not expression output
         if (markerToken.type === TokenType.ARROW_LEFT ||
+            markerToken.type === TokenType.ARROW_LEFT_FULL ||
             markerToken.type === TokenType.COLON ||
             markerToken.type === TokenType.DOUBLE_COLON) {
             return false;

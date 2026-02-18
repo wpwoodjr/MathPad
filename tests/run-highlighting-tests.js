@@ -1411,6 +1411,51 @@ function runAllTests() {
                 ['\\', 'inline-marker'],
                 [' test', 'comment']
             ]
+        },
+        // Full precision input marker (<<-)
+        {
+            name: 'full precision input marker (<<-)',
+            line: 'x<<- 3.14159265358979',
+            assertions: [
+                ['x', 'variable-def'],
+                ['<<-', 'punctuation'],
+                ['3.14159265358979', 'number']
+            ]
+        },
+        {
+            name: 'money format specifier on full precision input marker (z$<<- $100)',
+            line: 'z$<<- $100',
+            assertions: [
+                ['z', 'variable-def'],
+                ['$<<-', 'punctuation'],
+                ['$100', 'number']
+            ]
+        },
+        {
+            name: 'percent format specifier on full precision input marker (z%<<- 30%)',
+            line: 'z%<<- 30%',
+            assertions: [
+                ['z', 'variable-def'],
+                ['%<<-', 'punctuation'],
+                ['30%', 'number']
+            ]
+        },
+        {
+            name: 'base format specifier on full precision input marker (z#16<<- ff#16)',
+            line: 'z#16<<- ff#16',
+            assertions: [
+                ['z', 'variable-def'],
+                ['#16<<-', 'punctuation'],
+                ['ff#16', 'number']
+            ]
+        },
+        {
+            name: 'full precision input marker with no value (x<<-)',
+            line: 'x<<-',
+            assertions: [
+                ['x', 'variable-def'],
+                ['<<-', 'punctuation']
+            ]
         }
     ];
 
