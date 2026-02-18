@@ -39,39 +39,45 @@ function createDefaultData() {
                 title: 'Example: Retirement Calculator',
                 text: `"Retirement Calculator"
 
+--Formulas--
+pmt(pv; rate; n; fv) = -(-pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+
 --Equations--
 "Number of periods"
 n = years * 12
 "Future value of account(s)"
 fv = pv * (1 + gain)**years
 "TVM calculation"
-pmt(pv;rate;n;fv) = -(-pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 pmt = pmt(pv; (return - fees)/12; years*12; fv)
 
 --Variables--
-"*Update value(s), then re-calculate any variable by clicking its solve icon \u27F2"
+"*Calculates monthly retirement withdrawals using Time Value of Money."
+"Enter values, then click \u27F2 on any variable to solve for it."
 
 
-"Enter present value of retirement account(s):"
-pv$: $1,000,000
+"Value of retirement account(s):"
+pv$<- $1,000,000
 
-"Enter life expectancy:"
-years: 20
+"Life expectancy:"
+years<- 20
 
-"Enter net annual account(s) appreciation:"
-gain%: 2%
+"Enter net annual account(s) gain or future value:"
+gain%<- 1.7%
+fv$<- $1,400,000
 
-"Future value of account(s)"
-fv$: $1,485,947.40
 
-"Enter the payment to receive each month:"
-pmt$: $5,000
+"Management fees (percentage):"
+fees%<- 0.65%
 
-"Enter management fees:"
-fees%: 0.65%
+"Total annual return:"
+return%<- 6.5%
 
-"Enter gross annual return:"
-return%: 7.76%`,
+"Monthly withdrawal amount:"
+pmt$<-
+
+
+"*Notes:"
+"Gain and fv are interdependent \u2014 if you change one, solve for the other by clicking its \u27F2.  Or enter both and solve for present value or years."`,
                 category: 'Finance',
                 places: 2,
                 stripZeros: true,
