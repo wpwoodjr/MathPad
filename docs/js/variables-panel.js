@@ -425,14 +425,18 @@ class VariablesPanel {
                 const currentInfo = this.declarations.get(info.lineIndex) || info;
                 // Clear the value if present, UNLESS user just edited this variable
                 const justEdited = this.lastEditedVar === info.name;
+                let cleared = false;
                 if (this.formatValueForDisplay(currentInfo) && !justEdited) {
                     valueElement.value = '';
                     this.handleValueChange(info.lineIndex, '');
+                    cleared = true;
                 }
-                // Clear tracking and trigger solve (non-undoable so undo skips cleared state)
+                // Clear tracking and trigger solve
+                // When cleared: non-undoable so undo collapses clear+solve into one step
+                // When not cleared: undoable so solve gets its own undo entry
                 this.lastEditedVar = null;
                 if (this.solveCallback) {
-                    this.solveCallback(false);
+                    this.solveCallback(!cleared);
                 }
             });
             row.appendChild(solveBtn);

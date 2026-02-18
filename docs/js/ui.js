@@ -345,7 +345,7 @@ function createEditorForRecord(record) {
     // Set up bidirectional sync
     let syncFromVariables = false;
 
-    editor.onChange((value, metadata) => {
+    editor.onChange((value, metadata, undoRedo) => {
         record.text = value;
         debouncedSave(UI.data);
 
@@ -353,8 +353,9 @@ function createEditorForRecord(record) {
         updateRecordTitleFromContent(record);
         updateVariablesHeader(record);
 
-        // Update variables panel (unless change originated from there)
+        // Update variables panel (unless change originated from variables panel)
         if (!syncFromVariables) {
+            if (undoRedo) variablesManager.enableFlash();
             variablesManager.updateFromText(value);
             // Restore cached highlights on undo/redo, clear on normal edits
             if (metadata) {
@@ -1286,10 +1287,8 @@ function handleSolve(undoable = true) {
         const result = solveRecord(text, context, record, parserTokens);
         text = result.text;
 
-        // Enable flash before setValue so the onChange-triggered updateFromText flashes changed values
-        if (editorInfo.variablesManager) {
-            editorInfo.variablesManager.enableFlash();
-        }
+        // Enable flash before setValue so onChange's updateFromText highlights changed values
+        editorInfo.variablesManager.enableFlash();
 
         // Update editor with results (undoable so Ctrl+Z works)
         editorInfo.editor.setValue(text, undoable);
@@ -1315,11 +1314,9 @@ function handleSolve(undoable = true) {
         record.text = text;
         debouncedSave(UI.data);
 
-        // Update variables panel with solve results (flash already triggered by onChange above)
-        if (editorInfo.variablesManager) {
-            editorInfo.variablesManager.setErrors(result.errors, result.equationVarStatus);
-            editorInfo.variablesManager.clearLastEdited();
-        }
+        // Set error/equation highlights and clear edit tracking
+        editorInfo.variablesManager.setErrors(result.errors, result.equationVarStatus);
+        editorInfo.variablesManager.clearLastEdited();
 
         if (result.errors.length > 0) {
             setStatus('Solved with errors: ' + result.errors[0], true);
@@ -1361,10 +1358,8 @@ function handleClearInput() {
     // Remove references section
     text = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
 
-    // Enable flash before setValue so the onChange-triggered updateFromText flashes changed values
-    if (editorInfo.variablesManager) {
-        editorInfo.variablesManager.enableFlash();
-    }
+    // Enable flash before setValue so onChange's updateFromText highlights changed values
+    editorInfo.variablesManager.enableFlash();
 
     // Use undoable so Ctrl+Z works
     editorInfo.editor.setValue(text, true);
@@ -1383,11 +1378,6 @@ function handleClearInput() {
     editorInfo.editor.textarea.blur();
     record.text = text;
     debouncedSave(UI.data);
-
-    // Clear errors (flash already triggered by onChange above)
-    if (editorInfo.variablesManager) {
-        editorInfo.variablesManager.clearErrors();
-    }
 
     setStatus('Cleared');
 }

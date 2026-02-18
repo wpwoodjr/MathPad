@@ -714,7 +714,7 @@ class SimpleEditor {
         this.highlightLayer.scrollTop = scrollTop;
         this.lineNumbers.scrollTop = scrollTop;
 
-        this.notifyChange(state.metadata);
+        this.notifyChange(state.metadata, true);
         this.notifyUndoState();
 
         return true;
@@ -743,7 +743,7 @@ class SimpleEditor {
         this.highlightLayer.scrollTop = scrollTop;
         this.lineNumbers.scrollTop = scrollTop;
 
-        this.notifyChange(state.metadata);
+        this.notifyChange(state.metadata, true);
         this.notifyUndoState();
 
         return true;
@@ -1153,9 +1153,9 @@ class SimpleEditor {
         this.changeListeners.push(callback);
     }
 
-    notifyChange(metadata) {
+    notifyChange(metadata, undoRedo = false) {
         for (const listener of this.changeListeners) {
-            listener(this.getValue(), metadata);
+            listener(this.getValue(), metadata, undoRedo);
         }
     }
 
