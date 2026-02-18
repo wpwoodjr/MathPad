@@ -43,8 +43,6 @@ function createDefaultData() {
 pmt(pv; rate; n; fv) = -(-pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 
 --Equations--
-"Number of periods"
-n = years * 12
 "Future value of account(s)"
 fv = pv * (1 + gain)**years
 "TVM calculation"
