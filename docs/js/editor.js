@@ -714,7 +714,7 @@ class SimpleEditor {
         this.highlightLayer.scrollTop = scrollTop;
         this.lineNumbers.scrollTop = scrollTop;
 
-        this.notifyChange();
+        this.notifyChange(state.metadata);
         this.notifyUndoState();
 
         return true;
@@ -743,7 +743,7 @@ class SimpleEditor {
         this.highlightLayer.scrollTop = scrollTop;
         this.lineNumbers.scrollTop = scrollTop;
 
-        this.notifyChange();
+        this.notifyChange(state.metadata);
         this.notifyUndoState();
 
         return true;
@@ -1153,9 +1153,20 @@ class SimpleEditor {
         this.changeListeners.push(callback);
     }
 
-    notifyChange() {
+    notifyChange(metadata) {
         for (const listener of this.changeListeners) {
-            listener(this.getValue());
+            listener(this.getValue(), metadata);
+        }
+    }
+
+    /**
+     * Set metadata on the current undo stack top entry.
+     * This metadata is passed to onChange listeners on undo/redo.
+     */
+    setTopMetadata(metadata) {
+        const top = this.undoStack[this.undoStack.length - 1];
+        if (top) {
+            top.metadata = metadata;
         }
     }
 

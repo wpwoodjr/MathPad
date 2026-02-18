@@ -345,7 +345,7 @@ function createEditorForRecord(record) {
     // Set up bidirectional sync
     let syncFromVariables = false;
 
-    editor.onChange((value) => {
+    editor.onChange((value, metadata) => {
         record.text = value;
         debouncedSave(UI.data);
 
@@ -356,7 +356,12 @@ function createEditorForRecord(record) {
         // Update variables panel (unless change originated from there)
         if (!syncFromVariables) {
             variablesManager.updateFromText(value);
-            variablesManager.clearErrors();
+            // Restore cached highlights on undo/redo, clear on normal edits
+            if (metadata) {
+                variablesManager.setErrors(metadata.errors, metadata.equationVarStatus);
+            } else {
+                variablesManager.clearErrors();
+            }
         }
         syncFromVariables = false;
 
@@ -1283,6 +1288,12 @@ function handleSolve(undoable = true) {
 
         // Update editor with results (undoable so Ctrl+Z works)
         editorInfo.editor.setValue(text, undoable);
+
+        // Cache solve results on undo entry so undo/redo can restore highlights
+        editorInfo.editor.setTopMetadata({
+            errors: result.errors,
+            equationVarStatus: result.equationVarStatus
+        });
 
         // Restore cursor to end of same line (keeps scroll position)
         const newLines = text.split('\n');
