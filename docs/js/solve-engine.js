@@ -400,7 +400,7 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                 // Check if there was a solve failure for this variable (e.g., limits violation)
                 const failure = solveFailures.get(info.name);
                 if (failure) {
-                    errors.push(`Line ${failure.line + 1}: ${failure.error} for '${info.name}'`);
+                    errors.push(`Line ${info.lineIndex + 1}: ${failure.error} for '${info.name}'`);
                 } else {
                     // Output declaration with no value is an error
                     const decl = info.declaration;

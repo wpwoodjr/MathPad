@@ -1188,6 +1188,10 @@ body.panel-resizing * {
     color: var(--error-color);
 }
 
+.variable-row.has-error .variable-value-input {
+    border-color: var(--error-color);
+}
+
 .variable-section-separator {
     padding: 8px 12px;
     color: var(--text-primary);
