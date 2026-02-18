@@ -1286,6 +1286,11 @@ function handleSolve(undoable = true) {
         const result = solveRecord(text, context, record, parserTokens);
         text = result.text;
 
+        // Enable flash before setValue so the onChange-triggered updateFromText flashes changed values
+        if (editorInfo.variablesManager) {
+            editorInfo.variablesManager.enableFlash();
+        }
+
         // Update editor with results (undoable so Ctrl+Z works)
         editorInfo.editor.setValue(text, undoable);
 
@@ -1310,10 +1315,8 @@ function handleSolve(undoable = true) {
         record.text = text;
         debouncedSave(UI.data);
 
-        // Update variables panel
+        // Update variables panel with solve results (flash already triggered by onChange above)
         if (editorInfo.variablesManager) {
-            editorInfo.variablesManager.enableFlash();
-            editorInfo.variablesManager.updateFromText(text);
             editorInfo.variablesManager.setErrors(result.errors, result.equationVarStatus);
             editorInfo.variablesManager.clearLastEdited();
         }
@@ -1358,6 +1361,11 @@ function handleClearInput() {
     // Remove references section
     text = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
 
+    // Enable flash before setValue so the onChange-triggered updateFromText flashes changed values
+    if (editorInfo.variablesManager) {
+        editorInfo.variablesManager.enableFlash();
+    }
+
     // Use undoable so Ctrl+Z works
     editorInfo.editor.setValue(text, true);
 
@@ -1376,10 +1384,8 @@ function handleClearInput() {
     record.text = text;
     debouncedSave(UI.data);
 
-    // Update variables panel and clear errors
+    // Clear errors (flash already triggered by onChange above)
     if (editorInfo.variablesManager) {
-        editorInfo.variablesManager.enableFlash();
-        editorInfo.variablesManager.updateFromText(text);
         editorInfo.variablesManager.clearErrors();
     }
 
