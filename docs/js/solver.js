@@ -233,7 +233,7 @@ function expandFromGuess(f, guess = 1) {
  *
  * @param {Function} f - Function where f(x) = 0 is the equation to solve
  * @param {Object} limits - Optional search limits { low, high }
- * @param {number} guess - Optional initial guess (used when no limits)
+ * @param {number} knownScale - Max magnitude of known variables (extends search range)
  * @returns {number} Solution value
  */
 function solveEquation(f, limits = null, knownScale = 0) {
@@ -304,8 +304,8 @@ function solveEquation(f, limits = null, knownScale = 0) {
         return roots[0];
     }
 
-    // Fallback: expand outward from guess
-    const bracket = expandFromGuess(f, guess);
+    // Fallback: expand outward from default guess
+    const bracket = expandFromGuess(f);
     if (bracket) {
         return brent(f, bracket[0], bracket[1]);
     }

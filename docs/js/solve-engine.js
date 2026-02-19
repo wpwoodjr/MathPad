@@ -4,12 +4,17 @@
  */
 
 /**
- * Build a Map from variable declarations array (first declaration per name wins)
+ * Build a Map from variable declarations array (first declaration per name wins,
+ * but input declarations take precedence over output declarations since outputs
+ * are cleared before solving)
  */
 function buildVariablesMap(declarations) {
     const map = new Map();
     for (const info of declarations) {
         if (!map.has(info.name)) {
+            map.set(info.name, info);
+        } else if (map.get(info.name).declaration.type === VarType.OUTPUT &&
+                   info.declaration.type === VarType.INPUT) {
             map.set(info.name, info);
         }
     }
@@ -278,10 +283,14 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
                                 }
                             }
 
-                            context.setVariable(def.variable, value);
-                            computedValues.set(def.variable, value);
-                            changed = true;
-                            solved++;
+                            // Only count as progress if value actually changed
+                            const oldVal = context.hasVariable(def.variable) ? context.getVariable(def.variable) : undefined;
+                            if (oldVal !== value) {
+                                context.setVariable(def.variable, value);
+                                computedValues.set(def.variable, value);
+                                changed = true;
+                                solved++;
+                            }
                         } catch (e) {
                             // Skip
                         }

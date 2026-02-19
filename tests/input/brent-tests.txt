@@ -71,3 +71,28 @@ w/hght = 9/16
 
 hght: 6.6261e34
 w->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
+"Test 5: Output and input declarations for same variable (course->> vs course:)"
+"Input declaration should win in variables map; balance error for conflicting value"
+
+mod360CHOB = mod(currentHeadingOffBow; 360)
+normalizedCHOB = if(mod360CHOB == 0 || mod360CHOB == 180; mod360CHOB + 0.01; mod360CHOB)
+
+sin(180-normalizedCHOB)/boatSpeed = sin(correction)/max(currentSpeed; 1e-4)
+sin(180-normalizedCHOB)/boatSpeed = sin(normalizedCHOB - correction)/speedMadeGood
+
+speedMadeGood->>
+correction[-90:90]->>
+course = desiredHeading + correction
+course->>
+
+--Variables--
+desiredHeading: 10
+boatSpeed: 9
+currentSpeed: 3
+currentHeadingOffBow: 25
+course: 8.1
+speedMadeGood-> 6.2
