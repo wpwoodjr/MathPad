@@ -42,7 +42,7 @@ rate%-> 606%
 Category = "Finance"; Secret = 0
 Places = 6; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 14: Equation doesn't balance: yint = mint * 12 (0.0605 ≠ 0.060500167939317714)"; StatusIsError = 1
+Status = "Solved with errors: Line 14: Equation doesn't balance: yint = mint * 12 (0.0605 ≠ 0.0605001679393178)"; StatusIsError = 1
 "Solve with 6 decimal places - should fail balance check"
 
 "Payment calculation"

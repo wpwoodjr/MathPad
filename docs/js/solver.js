@@ -16,22 +16,32 @@ class SolverError extends Error {
  * Brent's method for root finding (Van Wijngaarden-Dekker-Brent)
  * Finds x such that f(x) = 0 in the interval [a, b]
  *
+ * Uses tight absolute tolerance (128*EPSILON) for function-value convergence
+ * as an early exit when the residual is negligible. Bracket convergence
+ * handles all other cases — the caller's balance check determines if the
+ * result is acceptable.
+ *
  * @param {Function} f - Function to find root of
  * @param {number} a - Lower bound
  * @param {number} b - Upper bound
- * @param {number} tol - Tolerance (default: machine epsilon * 100)
  * @param {number} maxIter - Maximum iterations (default: 100)
  * @returns {number} Root value
  */
-function brent(f, a, b, tol = 1e-12, maxIter = 100) {
+function brent(f, a, b, maxIter = 100) {
     const EPS = Number.EPSILON;
+    // Absolute function tolerance: residual within ~128 ULPs of zero
+    const fTol = 128 * EPS;
 
     let fa = f(a);
     let fb = f(b);
 
     // Check if either endpoint is already a root
-    if (Math.abs(fa) < tol) return a;
-    if (Math.abs(fb) < tol) return b;
+    if (Math.abs(fa) <= fTol) return a;
+    if (Math.abs(fb) <= fTol) return b;
+
+    // Clamp infinite endpoint values to large finites so interpolation arithmetic stays valid
+    if (!isFinite(fa)) fa = Math.sign(fa) * 1e308;
+    if (!isFinite(fb)) fb = Math.sign(fb) * 1e308;
 
     // Check that root is bracketed
     if (fa * fb > 0) {
@@ -52,10 +62,10 @@ function brent(f, a, b, tol = 1e-12, maxIter = 100) {
 
     for (let iter = 0; iter < maxIter; iter++) {
         // Relative bracket tolerance: scales with magnitude of root
-        const bracketTol = 2 * EPS * Math.abs(b) + tol;
+        const bracketTol = 2 * EPS * Math.abs(b) + fTol;
 
         // Check for convergence - must actually be near a root, not just bracket collapse
-        if (Math.abs(fb) < tol) {
+        if (Math.abs(fb) <= fTol) {
             return b;
         }
         // If bracket has collapsed to machine precision, return best estimate
@@ -131,24 +141,39 @@ function safeEval(f, x) {
  * Returns [a, b] where f(a) and f(b) have opposite signs, or null if not found
  */
 function gridSearch(f, low, high, numPoints = 20) {
+    const fTol = 128 * Number.EPSILON;
     const step = (high - low) / numPoints;
     let prevX = low;
     let prevF = safeEval(f, low);
 
-    if (isFinite(prevF) && prevF === 0) {
-        return [low, low]; // Exact root at lower bound
+    if (isFinite(prevF) && Math.abs(prevF) <= fTol) {
+        return [low, low]; // Root at lower bound
     }
 
     for (let i = 1; i <= numPoints; i++) {
         const x = low + i * step;
         const fx = safeEval(f, x);
 
-        if (isFinite(fx) && fx === 0) {
-            return [x, x]; // Exact root on grid point
+        if (isFinite(fx) && Math.abs(fx) <= fTol) {
+            return [x, x]; // Root on grid point
         }
 
-        if (isFinite(prevF) && isFinite(fx) && prevF * fx < 0) {
-            return [prevX, x];
+        // Check for sign change: allow ±Infinity as valid sign indicators
+        if (!isNaN(prevF) && !isNaN(fx) && isFinite(fx) && prevF * fx < 0) {
+            if (!isFinite(prevF)) {
+                // Binary-search near singularity to find a finite bracket
+                let lo = prevX, hi = x;
+                for (let j = 0; j < 60; j++) {
+                    const mid = (lo + hi) / 2;
+                    const mf = safeEval(f, mid);
+                    if (!isFinite(mf)) { lo = mid; }
+                    else if (mf * fx < 0) return [mid, hi];
+                    else hi = mid;
+                }
+                // Couldn't find bracket near singularity; continue grid search
+            } else {
+                return [prevX, x];
+            }
         }
 
         prevX = x;
@@ -211,7 +236,7 @@ function expandFromGuess(f, guess = 1) {
  * @param {number} guess - Optional initial guess (used when no limits)
  * @returns {number} Solution value
  */
-function solveEquation(f, limits = null, guess = 1) {
+function solveEquation(f, limits = null, knownScale = 0) {
     const hasLimits = limits && isFinite(limits.low) && isFinite(limits.high);
 
     // With explicit limits: user knows where to look, just grid search there
@@ -223,8 +248,15 @@ function solveEquation(f, limits = null, guess = 1) {
         throw new SolverError(`Could not find a root in range [${limits.low}:${limits.high}]`);
     }
 
-    // No limits: try logarithmic points first (covers wide range efficiently)
+    // No limits: try logarithmic points (covers wide range efficiently)
+    // Extend range based on known variable magnitudes so equations with
+    // very large or small values can find roots beyond the default range
     const logPoints = [0, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8];
+    if (knownScale > 1e8) {
+        for (let p = 1e9; p <= knownScale * 10; p *= 10) {
+            logPoints.push(p);
+        }
+    }
     const testPoints = [
         ...logPoints.slice(1).map(x => -x).reverse(),
         ...logPoints

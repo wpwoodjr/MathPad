@@ -139,9 +139,18 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
         }
     };
 
+    // Compute scale hint from known variable magnitudes for search range
+    let knownScale = 0;
+    for (const v of allVars) {
+        if (v !== unknown && context.hasVariable(v)) {
+            const val = Math.abs(context.getVariable(v));
+            if (isFinite(val)) knownScale = Math.max(knownScale, val);
+        }
+    }
+
     // Solve
     try {
-        const value = solveEquation(f, limits);
+        const value = solveEquation(f, limits, knownScale);
 
         return {
             solved: true,

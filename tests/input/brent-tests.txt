@@ -1,0 +1,73 @@
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
+"Test 1: Singularity at speedMadeGood=0 with wide range [0:1000]"
+"Tests binary search near singularity (speedMadeGood in denominator)"
+
+mod360CHOB = mod(currentHeadingOffBow; 360)
+normalizedCHOB = if(mod360CHOB == 0 || mod360CHOB == 180; mod360CHOB + 0.01; mod360CHOB)
+
+sin(180-normalizedCHOB)/boatSpeed = sin(correction)/max(currentSpeed; 1e-4)
+sin(180-normalizedCHOB)/boatSpeed = sin(normalizedCHOB - correction)/speedMadeGood
+
+speedMadeGood[0:1000]->
+correction[-90:90]->
+course = desiredHeading + correction
+
+desiredHeading: 11
+boatSpeed: 8
+currentSpeed: 1.5
+currentHeadingOffBow: 34
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
+"Test 2: Root at boundary with head-on current [0:10]"
+"Tests near-zero detection at grid endpoint (smg essentially 0)"
+
+mod360CHOB = mod(currentHeadingOffBow; 360)
+normalizedCHOB = if(mod360CHOB == 0 || mod360CHOB == 180; mod360CHOB + 0.01; mod360CHOB)
+
+sin(180-normalizedCHOB)/boatSpeed = sin(correction)/max(currentSpeed; 1e-4)
+speedMadeGood*sin(180-normalizedCHOB)/boatSpeed = sin(normalizedCHOB - correction)
+
+speedMadeGood[0:10]->
+correction[-90:90]->
+course = desiredHeading + correction
+
+desiredHeading: 11
+boatSpeed: 8
+currentSpeed: 8
+currentHeadingOffBow: 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
+"Test 3: Singularity at speedMadeGood=0 with narrow range [0:100]"
+"Tests that normal bracket detection still works near singularity"
+
+mod360CHOB = mod(currentHeadingOffBow; 360)
+normalizedCHOB = if(mod360CHOB == 0 || mod360CHOB == 180; mod360CHOB + 0.01; mod360CHOB)
+
+sin(180-normalizedCHOB)/boatSpeed = sin(correction)/max(currentSpeed; 1e-4)
+sin(180-normalizedCHOB)/boatSpeed = sin(normalizedCHOB - correction)/speedMadeGood
+
+speedMadeGood[0:100]->
+correction[-90:90]->
+course = desiredHeading + correction
+
+desiredHeading: 11
+boatSpeed: 8
+currentSpeed: 1.5
+currentHeadingOffBow: 34
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Test 4: Large known values extend search range beyond default 1e8"
+"Tests that solver finds root at ~3.7e34 using knownScale hint"
+
+w/hght = 9/16
+
+hght: 6.6261e34
+w->
