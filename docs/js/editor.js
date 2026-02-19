@@ -770,7 +770,7 @@ class SimpleEditor {
         return this.textarea.value;
     }
 
-    setValue(value, undoable = false) {
+    setValue(value, undoable = false, preMetadata = null) {
         // Save scroll and cursor position
         const scrollTop = this.textarea.scrollTop;
         const cursorStart = this.textarea.selectionStart;
@@ -782,6 +782,8 @@ class SimpleEditor {
         if (undoable && changed) {
             // Flush any pending debounced state first
             this.saveToHistoryNow();
+            // Merge pre-action metadata onto the entry being left behind
+            if (preMetadata) this.setTopMetadata(preMetadata);
             // Clear redo stack on new change
             this.redoStack = [];
         }
@@ -823,6 +825,8 @@ class SimpleEditor {
         if (changed) {
             this.notifyChange();
         }
+
+        return changed;
     }
 
     /**
@@ -1159,7 +1163,7 @@ class SimpleEditor {
     setTopMetadata(metadata) {
         const top = this.undoStack[this.undoStack.length - 1];
         if (top) {
-            top.metadata = metadata;
+            top.metadata = { ...top.metadata, ...metadata };
         }
     }
 

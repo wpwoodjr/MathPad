@@ -34,7 +34,10 @@ const UI = {
     tabBar: null,
     editorContainer: null,
     detailsPanel: null,
-    statusBar: null
+    statusBar: null,
+
+    // Last persistent status (for undo entry capture — ignores transient messages)
+    lastPersistentStatus: { message: '', isError: false }
 };
 
 /**
@@ -231,9 +234,11 @@ function openRecord(recordId) {
     if (record.status) {
         UI.statusBar.textContent = record.status;
         UI.statusBar.className = 'status-bar' + (record.statusIsError ? ' error' : '');
+        UI.lastPersistentStatus = { message: record.status, isError: !!record.statusIsError };
     } else {
         UI.statusBar.textContent = 'Ready';
         UI.statusBar.className = 'status-bar';
+        UI.lastPersistentStatus = { message: 'Ready', isError: false };
     }
 
     // Update UI
@@ -357,9 +362,16 @@ function createEditorForRecord(record) {
         if (!syncFromVariables) {
             if (undoRedo) variablesManager.enableFlash();
             variablesManager.updateFromText(value);
-            // Restore cached highlights on undo/redo, clear on normal edits
+            // Restore cached highlights and status on undo/redo, clear on normal edits
             if (metadata) {
-                variablesManager.setErrors(metadata.errors, metadata.equationVarStatus);
+                if (metadata.errors || metadata.equationVarStatus) {
+                    variablesManager.setErrors(metadata.errors, metadata.equationVarStatus);
+                } else {
+                    variablesManager.clearErrors();
+                }
+                if (metadata.statusMessage != null) {
+                    setStatus(metadata.statusMessage, metadata.statusIsError);
+                }
             } else {
                 variablesManager.clearErrors();
             }
@@ -857,6 +869,10 @@ function setStatus(message, isError = false, persist = true) {
     UI.statusBar.textContent = message;
     UI.statusBar.className = 'status-bar' + (isError ? ' error' : '');
 
+    if (persist) {
+        UI.lastPersistentStatus = { message, isError };
+    }
+
     // Save status to current record (unless persist is false)
     if (persist && UI.currentRecordId) {
         const record = findRecord(UI.data, UI.currentRecordId);
@@ -1267,7 +1283,10 @@ function handleSolve(undoable = true) {
     if (!editorInfo) return;
 
     try {
-        setStatus('Solving...');
+        // Capture pre-solve status before it changes
+        const preStatus = { ...UI.lastPersistentStatus };
+
+        setStatus('Solving...', false, false);
 
         // Get current text from editor
         let text = editorInfo.editor.getValue();
@@ -1291,13 +1310,30 @@ function handleSolve(undoable = true) {
         editorInfo.variablesManager.enableFlash();
 
         // Update editor with results (undoable so Ctrl+Z works)
-        editorInfo.editor.setValue(text, undoable);
+        // Pass pre-solve status so undo restores it on the entry being left behind
+        const textChanged = editorInfo.editor.setValue(text, undoable, {
+            statusMessage: preStatus.message,
+            statusIsError: preStatus.isError
+        });
+
+        // Set status (persistent only if text changed, transient otherwise)
+        if (result.errors.length > 0) {
+            setStatus('Solved with errors: ' + result.errors[0], true, textChanged);
+        } else if (result.solved > 0) {
+            setStatus(`Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}`, false, textChanged);
+        } else {
+            setStatus('Nothing to solve', false, false);
+        }
 
         // Cache solve results on undo entry so undo/redo can restore highlights
-        editorInfo.editor.setTopMetadata({
-            errors: result.errors,
-            equationVarStatus: result.equationVarStatus
-        });
+        if (textChanged) {
+            editorInfo.editor.setTopMetadata({
+                errors: result.errors,
+                equationVarStatus: result.equationVarStatus,
+                statusMessage: UI.lastPersistentStatus.message,
+                statusIsError: UI.lastPersistentStatus.isError
+            });
+        }
 
         // Restore cursor to end of same line (keeps scroll position)
         const newLines = text.split('\n');
@@ -1318,14 +1354,6 @@ function handleSolve(undoable = true) {
         editorInfo.variablesManager.setErrors(result.errors, result.equationVarStatus);
         editorInfo.variablesManager.clearLastEdited();
 
-        if (result.errors.length > 0) {
-            setStatus('Solved with errors: ' + result.errors[0], true);
-        } else if (result.solved > 0) {
-            setStatus(`Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}`);
-        } else {
-            setStatus('Nothing to solve');
-        }
-
     } catch (err) {
         setStatus('Error: ' + err.message, true);
         console.error('Solve error:', err);
@@ -1343,6 +1371,9 @@ function handleClearInput() {
 
     const editorInfo = UI.editors.get(UI.currentRecordId);
     if (!editorInfo) return;
+
+    // Capture pre-clear status before it changes
+    const preStatus = { ...UI.lastPersistentStatus };
 
     let text = editorInfo.editor.getValue();
 
@@ -1362,7 +1393,20 @@ function handleClearInput() {
     editorInfo.variablesManager.enableFlash();
 
     // Use undoable so Ctrl+Z works
-    editorInfo.editor.setValue(text, true);
+    // Pass pre-clear status so undo restores it on the entry being left behind
+    const textChanged = editorInfo.editor.setValue(text, true, {
+        statusMessage: preStatus.message,
+        statusIsError: preStatus.isError
+    });
+
+    // Only update persistent status and undo metadata if text actually changed
+    if (textChanged) {
+        setStatus('Cleared');
+        editorInfo.editor.setTopMetadata({
+            statusMessage: 'Cleared',
+            statusIsError: false
+        });
+    }
 
     // Restore cursor to end of same line (keeps scroll position)
     const newLines = text.split('\n');
@@ -1378,8 +1422,6 @@ function handleClearInput() {
     editorInfo.editor.textarea.blur();
     record.text = text;
     debouncedSave(UI.data);
-
-    setStatus('Cleared');
 }
 
 /**
