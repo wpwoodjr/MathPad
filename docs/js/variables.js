@@ -619,7 +619,7 @@ function clearVariables(text, clearType = 'input', allTokens) {
  * @param {string} text - The formula text
  * @returns {{ equations: Array, exprOutputs: Array }}
  */
-function findEquationsAndOutputs(text, allTokens) {
+function findEquationsAndOutputs(text, allTokens, functionDefLines) {
     const lineOffsets = computeLineOffsets(text);
     const maxLine = lineOffsets.length;
     const equations = [];
@@ -629,6 +629,7 @@ function findEquationsAndOutputs(text, allTokens) {
 
     // Process per-line token arrays
     for (let lineIdx = 0; lineIdx < allTokens.length && lineIdx < maxLine; lineIdx++) {
+        if (functionDefLines && functionDefLines.has(lineIdx + 1)) continue;
         const lineTokens = allTokens[lineIdx].filter(t => t.type !== TokenType.EOF);
         if (lineTokens.length > 0) processLine(lineIdx + 1, lineTokens);
     }
@@ -1082,7 +1083,10 @@ function createEvalContext(record, parsedConstants, parsedFunctions, localText =
         // This prevents function definitions in the references section from being treated as local
         const strippedText = localText.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
         const localFunctions = parseFunctionsRecord(strippedText, allTokens);
-        for (const [name, { params, bodyText, sourceText }] of localFunctions) {
+        // Store function definition line numbers so equation finder can skip them
+        const fnDefLines = new Set();
+        for (const [name, { params, bodyText, sourceText, startLine, endLine }] of localFunctions) {
+            for (let l = startLine; l <= endLine; l++) fnDefLines.add(l);
             try {
                 const bodyAST = parseExpression(bodyText);
                 // Pass null for sourceText to indicate local function (shouldn't be shown in references)
@@ -1091,6 +1095,7 @@ function createEvalContext(record, parsedConstants, parsedFunctions, localText =
                 console.warn(`Error parsing local function ${name}:`, e);
             }
         }
+        context.localFunctionLines = fnDefLines;
     }
 
     return context;

@@ -145,3 +145,20 @@ Status = "Input and output variables cleared"; StatusIsError = 0
 
 c+c->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"c shown as a reference constant... a: 1 has something to do with it"
+
+isclose2(a; b; c) = abs(a-b)/max(abs(a); abs(b))
+a: 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"multi-line braced fn def with param c should not show c in references"
+
+{ myfn(a; b; c) =
+  abs(a-b)/max(abs(a); abs(b)) }
+a: 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

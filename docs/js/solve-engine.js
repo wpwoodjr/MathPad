@@ -189,7 +189,7 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
     }
 
     // Compute equations and expression outputs ONCE (text doesn't change within this function)
-    const { equations, exprOutputs } = findEquationsAndOutputs(text, allTokens);
+    const { equations, exprOutputs } = findEquationsAndOutputs(text, allTokens, context.localFunctionLines);
 
     // Iterative solving
     const maxIterations = 50;

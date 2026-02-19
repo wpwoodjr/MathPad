@@ -173,3 +173,22 @@ c+c-> 599,584,916
 "--- Reference Constants and Functions ---"
 c: 299792458
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"c shown as a reference constant... a: 1 has something to do with it"
+
+isclose2(a; b; c) = abs(a-b)/max(abs(a); abs(b))
+a: 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"multi-line braced fn def with param c should not show c in references"
+
+{ myfn(a; b; c) =
+  abs(a-b)/max(abs(a); abs(b)) }
+a: 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
