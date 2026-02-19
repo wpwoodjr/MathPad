@@ -1456,6 +1456,23 @@ function runAllTests() {
                 ['x', 'variable-def'],
                 ['<<-', 'punctuation']
             ]
+        },
+        // Builtin function as expression output with value
+        {
+            name: 'isclose builtin expression output (isclose(1; 1.999; 1)-> 0)',
+            line: 'isclose(1; 1.999; 1)-> 0',
+            assertions: [
+                ['isclose', 'builtin'],
+                ['(', 'paren'],
+                ['1', 'number'],
+                [';', 'punctuation'],
+                ['1.999', 'number'],
+                [';', 'punctuation'],
+                ['1', 'number'],
+                [')', 'paren'],
+                ['->', 'punctuation'],
+                ['0', 'number']
+            ]
         }
     ];
 

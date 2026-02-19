@@ -3,15 +3,8 @@
  */
 
 // Built-in function names (case-insensitive) for syntax highlighting
-const editorBuiltinFunctions = new Set([
-    'abs', 'sign', 'int', 'frac', 'round', 'floor', 'ceil',
-    'sqrt', 'cbrt', 'root', 'exp', 'ln', 'log', 'fact', 'pi',
-    'sin', 'asin', 'sinh', 'asinh', 'cos', 'acos', 'cosh', 'acosh',
-    'tan', 'atan', 'tanh', 'atanh', 'radians', 'degrees',
-    'now', 'days', 'jdays', 'date', 'jdate', 'year', 'month', 'day',
-    'weekday', 'hour', 'minute', 'second', 'hours', 'hms',
-    'if', 'choose', 'min', 'max', 'avg', 'sum', 'rand', 'mod'
-]);
+// Derived from evaluator's builtinFunctions to avoid duplicate source of truth
+const editorBuiltinFunctions = new Set(Object.keys(builtinFunctions));
 
 /**
  * Convert parser tokens to editor highlight tokens
