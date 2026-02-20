@@ -274,10 +274,11 @@ function formatDate(year, month, day, hour = 0, minute = 0, second = 0) {
  * Check if two values are equal within tolerance.
  * Uses relative tolerance normally, absolute tolerance when comparing against zero.
  */
-function checkBalance(a, b, balanceTolerance) {
+function checkBalance(a, b, places) {
+    const balanceTolerance = 0.5 * Math.pow(10, -(places + 1));
     const diff = Math.abs(a - b);
     if (a === 0 || b === 0) {
-        const absTolerance = Math.min(balanceTolerance, 5e-13);
+        const absTolerance = Math.min(balanceTolerance, 5e-14);
         return diff < absTolerance;
     } else {
         const maxVal = Math.max(Math.abs(a), Math.abs(b));
@@ -430,7 +431,7 @@ const builtinFunctions = {
     mod: (args) => args[0] % args[1],
 
     // Balance check: isClose(a; b; places) returns 1 if equal within tolerance, 0 otherwise
-    isclose: (args) => checkBalance(args[0], args[1], 0.5 * Math.pow(10, -args[2])) ? 1 : 0
+    isclose: (args) => checkBalance(args[0], args[1], args[2]) ? 1 : 0
 };
 
 /**

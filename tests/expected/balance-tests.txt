@@ -2,22 +2,22 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Nothing to solve"; StatusIsError = 0
-"Test 1: Small diff, tight relative tolerance (places=6) - not equal"
+"Test 1: Small diff, tight relative tolerance (places=5) - not equal"
 
 a: 0.0605
 b: 0.060500167939065756
-places: 6
+places: 5
 isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Nothing to solve"; StatusIsError = 0
-"Test 2: Small diff, looser relative tolerance (places=5) - equal"
+"Test 2: Small diff, looser relative tolerance (places=4) - equal"
 
 a: 0.0605
 b: 0.060500167939065756
-places: 5
+places: 4
 isClose(a; b; places)-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -46,18 +46,18 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Nothing to solve"; StatusIsError = 0
-"Test 4b: Small values, 10% relative error, places=0 (within 50% tolerance) - equal"
+"Test 4b: Small values, 10% relative error, places=0 (exceeds 5% tolerance) - not equal"
 
 a: 5.5e-6
 b: 5e-6
 places: 0
-isClose(a; b; places)-> 1
+isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Nothing to solve"; StatusIsError = 0
-"Test 4c: Small values, 10% relative error, places=1 (exceeds 5% tolerance) - not equal"
+"Test 4c: Small values, 10% relative error, places=1 (exceeds 0.5% tolerance) - not equal"
 
 a: 5.5e-6
 b: 5e-6
@@ -101,9 +101,9 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Nothing to solve"; StatusIsError = 0
-"Test 8: Floating point noise vs literal zero (polynomial case) - equal"
+"Test 8: Floating point noise vs literal zero (within cap 5e-14) - equal"
 
-a: -1.4566126083082054e-13
+a: 4e-14
 b: 0
 places: 4
 isClose(a; b; places)-> 1
@@ -112,9 +112,9 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Nothing to solve"; StatusIsError = 0
-"Test 8b: Noise vs zero, places=12 (just within abs cap 5e-13) - equal"
+"Test 8b: Noise vs zero, places=12 (within cap 5e-14) - equal"
 
-a: -1.4566126083082054e-13
+a: 4e-14
 b: 0
 places: 12
 isClose(a; b; places)-> 1
@@ -123,18 +123,18 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Nothing to solve"; StatusIsError = 0
-"Test 8c: Noise vs zero, places=13 (exceeds abs cap 5e-14) - not equal"
+"Test 8c: Noise vs zero, places=13 (exceeds tolerance 5e-15) - not equal"
 
-a: -1.4566126083082054e-13
+a: 4e-14
 b: 0
 places: 13
 isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 14; StripZeros = 1
+Places = 13; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Solved 1 equation"; StatusIsError = 0
-"Test 9: Polynomial f(x)=0 at places=14 (noise just within tolerance) - balances"
+"Test 9: Polynomial f(x)=0 at places=13 (noise just within tolerance) - balances"
 
 c5: 1
 c4: -2
@@ -149,10 +149,10 @@ f(x; c5; c4; c3; c2; c1; c0) = 0
 x-> 0.78045519272
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 6; StripZeros = 1
+Places = 5; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Solved 1 equation"; StatusIsError = 0
-"Test 10: TVM at places=6 ($ rounding error within tolerance) - balances"
+"Test 10: TVM at places=5 ($ rounding error within tolerance) - balances"
 
 "Payment calculation"
 pmt = -pv * mint / (1 - (1 + mint)**-n)
@@ -167,10 +167,10 @@ n: 360 "number of payments (30 years)"
 mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 7; StripZeros = 1
+Places = 6; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Line 13: Equation doesn't balance: mint = yint / 12 (0.005104165849793147 ≠ 0.005104166666666667)"; StatusIsError = 1
-"Test 10b: TVM at places=7 ($ rounding error exceeds tolerance) - doesn't balance"
+"Test 10b: TVM at places=6 ($ rounding error exceeds tolerance) - doesn't balance"
 
 "Payment calculation"
 pmt = -pv * mint / (1 - (1 + mint)**-n)
@@ -185,10 +185,10 @@ n: 360 "number of payments (30 years)"
 mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 15; StripZeros = 1
+Places = 14; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) = 0 (3.552713678800501e-15 ≠ 0)"; StatusIsError = 1
-"Test 9b: Polynomial f(x)=0 at places=15 (noise exceeds tolerance) - doesn't balance"
+"Test 9b: Polynomial f(x)=0 at places=14 (noise exceeds tolerance) - doesn't balance"
 
 c5: 1
 c4: -2
@@ -200,5 +200,51 @@ c0: -14
 f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 
 f(x; c5; c4; c3; c2; c1; c0) = 0
-x-> 0.780455192719996
+x-> 0.78045519272
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Solved 3 equations"; StatusIsError = 0
+"Balance Test places = 0"
+
+relDiff(a; b) = (a-b)/a
+relDiff(1; 0.5000000001)*10**-(places+1) = relDiff(a; b)
+a = 100
+a = b
+maxDiff = 0.5*10**-(places+1)*a
+
+--Variables--
+"Test for a = b at various precisions"
+
+places: 0
+a->> 100
+b-> 95
+b->> 95.000000001000004
+maxDiff->> 5
+b+maxDiff->> 100.000000001000004
+isclose(a; b; places)-> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Line 6: Equation doesn't balance: a = b (100 ≠ 95.000000001)"; StatusIsError = 1
+"Balance Test places = 1"
+
+relDiff(a; b) = (a-b)/a
+relDiff(1; 0.5000000001)*10**-(places+1) = relDiff(a; b)
+a = 100
+a = b
+maxDiff = 0.5*10**-(places+1)*a
+
+--Variables--
+"Test for a = b at various precisions"
+
+places: 0
+a->> 100
+b-> 95
+b->> 95.000000001000004
+maxDiff->> 5
+b+maxDiff->> 100.000000001000004
+isclose(a; b; places)-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

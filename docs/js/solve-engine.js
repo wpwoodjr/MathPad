@@ -177,10 +177,7 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
  * @returns {{ computedValues: Map, solved: number, errors: Array, solveFailures: Map }}
  */
 function solveEquations(text, context, declarations, record = {}, allTokens, earlyExprOutputs = new Map()) {
-    // Derive balance tolerance from decimal places: 0.5 * 10^(-places)
-    // This matches rounding precision - if diff < tolerance, values display the same
     const places = record.places != null ? record.places : 4;
-    const balanceTolerance = 0.5 * Math.pow(10, -places);
     const errors = [];
     const computedValues = new Map();
     const solveFailures = new Map(); // Track last failure per variable
@@ -372,7 +369,7 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
             if (unknowns.length === 0) {
                 const leftVal = evaluate(leftAST, context);
                 const rightVal = evaluate(rightAST, context);
-                const balanced = checkBalance(leftVal, rightVal, balanceTolerance);
+                const balanced = checkBalance(leftVal, rightVal, places);
 
                 if (!balanced) {
                     errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eq.text} (${leftVal} ≠ ${rightVal})`);
