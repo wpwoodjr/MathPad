@@ -42,7 +42,7 @@ x-> 15
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 10: Variable 'c' has no value to output"; StatusIsError = 1
+Status = "Line 10: Variable 'c' has no value to output"; StatusIsError = 1
 "Screen Size with c-> output"
 
 h/w = 16/9
@@ -225,7 +225,7 @@ x4[2.5:3]-> 2.8979
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 13: Could not find a root in range [10:20] for 'x1'"; StatusIsError = 1
+Status = "Line 13: Could not find a root in range [10:20] for 'x1'"; StatusIsError = 1
 "Fifth degree polynomial (error when no root in range)"
 
 c5: 1
@@ -243,7 +243,7 @@ x1[10:20]->
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 10: Computed value 0.061249916560760606 is outside limits [0, 0.01] for 'yint'"; StatusIsError = 1
+Status = "Line 10: Computed value 0.061249916560760606 is outside limits [0, 0.01] for 'yint'"; StatusIsError = 1
 "Time Value of Money - Limits too narrow (error expected)"
 
 "Payment calculation"
@@ -262,7 +262,7 @@ yint = mint * 12
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 6: Variable \"y\" is already defined"; StatusIsError = 1
+Status = "Line 6: Variable \"y\" is already defined\nLine 7: Variable \"y\" is already defined\nLine 15: Variable \"y\" is already defined\nLine 16: Variable \"y\" is already defined"; StatusIsError = 1
 "Test text on line before equation output"
 
 Enter x<- 7
@@ -290,7 +290,7 @@ width w->> 3.235724181574889
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 6: Variable \"y\" is already defined"; StatusIsError = 1
+Status = "Line 6: Variable \"y\" is already defined\nLine 7: Variable \"y\" is already defined\nLine 15: Variable \"y\" is already defined\nLine 16: Variable \"y\" is already defined"; StatusIsError = 1
 "Test : and :: preserve value on expression output"
 
 Enter x: 7
@@ -388,7 +388,7 @@ equation c = a + b test
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 5: Unexpected token after expression: NUMBER '4'"; StatusIsError = 1
+Status = "Line 5: Unexpected token after expression: NUMBER '4'"; StatusIsError = 1
 "Numeric literal expression outputs"
 
 5%+1-> 1.05
@@ -419,7 +419,7 @@ xx#16-> FF#16
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 3: Undefined variable: a"; StatusIsError = 1
+Status = "Line 3: Undefined variable: a"; StatusIsError = 1
 "Test a*b with no values for a and b"
 
 a*b->
@@ -470,7 +470,7 @@ xx#16-> FF#16
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 3: Variable 'c' has no value to output"; StatusIsError = 1
+Status = "Line 3: Variable 'c' has no value to output"; StatusIsError = 1
 "Test for value of c when shadow constants is on"
 
 c->
@@ -478,7 +478,7 @@ c->
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 11: Cannot evaluate \"C\" - Undefined variable: C"; StatusIsError = 1
+Status = "Line 11: Cannot evaluate \"C\" - Undefined variable: C\nLine 14: Cannot evaluate \"H\" - Undefined variable: H\nLine 12: Variable 'd' has no value to output\nLine 15: Variable 'g' has no value to output"; StatusIsError = 1
 "Constants are case-sensitive (c and h are constants, C and H are not)"
 
 "c and h resolve to constant values"
@@ -502,7 +502,7 @@ h: 6.62607015e-34 "Planck constant"
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 4: Cannot evaluate \"pi\" - Variable 'pi' has no value"; StatusIsError = 1
+Status = "Line 4: Cannot evaluate \"pi\" - Variable 'pi' has no value\nLine 9: Cannot evaluate \"h\" - Variable 'h' has no value\nLine 5: Variable 'x' has no value to output\nLine 10: Variable 'y' has no value to output"; StatusIsError = 1
 "Test pi is declared (with shadow constants on) but has no value"
 
 pi:
@@ -517,7 +517,7 @@ y->>
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 3: Variable \"pi\" conflicts with a constant"; StatusIsError = 1
+Status = "Line 3: Variable \"pi\" conflicts with a constant\nLine 4: Cannot evaluate \"pi\" - Variable 'pi' has no value\nLine 5: Variable 'x' has no value to output"; StatusIsError = 1
 "Test pi is declared (with shadow constants off) - should error"
 
 pi:
@@ -527,7 +527,7 @@ x->>
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 4: Cannot evaluate \"y\" - Variable 'y' has no value"; StatusIsError = 1
+Status = "Line 4: Cannot evaluate \"y\" - Variable 'y' has no value\nLine 5: Variable 'x' has no value to output"; StatusIsError = 1
 "Test y has no value"
 
 y:
@@ -537,7 +537,7 @@ x->>
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 6: Variable \"c\" conflicts with a constant"; StatusIsError = 1
+Status = "Line 6: Variable \"c\" conflicts with a constant"; StatusIsError = 1
 "Money literal expressions"
 
 b: $.01+$.01
@@ -555,7 +555,7 @@ f#16+f#32-> 30
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 13: Variable 'f' has no value to output"; StatusIsError = 1
+Status = "Line 13: Variable 'f' has no value to output"; StatusIsError = 1
 "Base literal tests"
 
 "Variable with base format suffix"

@@ -27,7 +27,7 @@ for (const record of data.records) {
     const result = solveRecord(record.text, context, record, allTokens);
     record.text = result.text;
     if (result.errors && result.errors.length > 0) {
-        record.status = "Solved with errors: " + result.errors[0];
+        record.status = result.errors.join('\n');
         record.statusIsError = true;
     } else {
         record.status = result.solved > 0 ? "Solved " + result.solved + " equation" + (result.solved > 1 ? "s" : "") : "Nothing to solve";

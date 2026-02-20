@@ -79,7 +79,7 @@ w-> 3.7272e+34
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
-Status = "Solved with errors: Line 12: Equation doesn't balance: course = desiredHeading + correction (8.1 ≠ 18.098351890651706)"; StatusIsError = 1
+Status = "Line 12: Equation doesn't balance: course = desiredHeading + correction (8.1 ≠ 18.098351890651706)"; StatusIsError = 1
 "Test 5: Output and input declarations for same variable (course->> vs course:)"
 "Input declaration should win in variables map; balance error for conflicting value"
 

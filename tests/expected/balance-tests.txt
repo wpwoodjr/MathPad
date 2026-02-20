@@ -169,7 +169,7 @@ mint = yint / 12
 Category = "Unfiled"; Secret = 0
 Places = 7; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 13: Equation doesn't balance: mint = yint / 12 (0.005104165849793147 ≠ 0.005104166666666667)"; StatusIsError = 1
+Status = "Line 13: Equation doesn't balance: mint = yint / 12 (0.005104165849793147 ≠ 0.005104166666666667)"; StatusIsError = 1
 "Test 10b: TVM at places=7 ($ rounding error exceeds tolerance) - doesn't balance"
 
 "Payment calculation"
@@ -187,7 +187,7 @@ mint = yint / 12
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) = 0 (3.552713678800501e-15 ≠ 0)"; StatusIsError = 1
+Status = "Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) = 0 (3.552713678800501e-15 ≠ 0)"; StatusIsError = 1
 "Test 9b: Polynomial f(x)=0 at places=15 (noise exceeds tolerance) - doesn't balance"
 
 c5: 1

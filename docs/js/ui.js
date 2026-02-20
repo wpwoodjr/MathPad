@@ -1318,7 +1318,7 @@ function handleSolve(undoable = true) {
 
         // Set status (persistent only if text changed, transient otherwise)
         if (result.errors.length > 0) {
-            setStatus('Solved with errors: ' + result.errors[0], true, textChanged);
+            setStatus(result.errors.join('\n'), true, textChanged);
         } else if (result.solved > 0) {
             setStatus(`Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}`, false, textChanged);
         } else {
@@ -1399,6 +1399,9 @@ function handleClearInput() {
         statusIsError: preStatus.isError
     });
 
+    // Always clear error highlights (even if text unchanged, e.g. failed solve left no values)
+    editorInfo.variablesManager.clearErrors();
+
     // Only update persistent status and undo metadata if text actually changed
     if (textChanged) {
         setStatus('Cleared');
@@ -1406,6 +1409,9 @@ function handleClearInput() {
             statusMessage: 'Cleared',
             statusIsError: false
         });
+    } else {
+        // Text unchanged but still clear the error status
+        setStatus('Cleared', false, false);
     }
 
     // Restore cursor to end of same line (keeps scroll position)

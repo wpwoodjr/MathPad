@@ -465,8 +465,8 @@ function exportToText(data, options = {}) {
         lines.push(`Places = ${record.places != null ? record.places : 4}; StripZeros = ${record.stripZeros !== false ? 1 : 0}`);
         lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}; ShadowConstants = ${record.shadowConstants ? 1 : 0}`);
         if (record.status) {
-            // Escape quotes in status message
-            const escapedStatus = record.status.replace(/"/g, '\\"');
+            // Escape quotes and newlines in status message
+            const escapedStatus = record.status.replace(/"/g, '\\"').replace(/\n/g, '\\n');
             lines.push(`Status = "${escapedStatus}"; StatusIsError = ${record.statusIsError ? 1 : 0}`);
         }
 
@@ -564,8 +564,8 @@ function importFromText(text, existingData = null, options = {}) {
             // Status line (new in v3)
             const statusMatch = line.match(/Status\s*=\s*"(.*)"\s*;\s*StatusIsError\s*=\s*(\d+)/i);
             if (statusMatch) {
-                // Unescape quotes in status message
-                status = statusMatch[1].replace(/\\"/g, '"');
+                // Unescape quotes and newlines in status message
+                status = statusMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
                 statusIsError = statusMatch[2] === '1';
                 contentStart = i + 1;
                 continue;

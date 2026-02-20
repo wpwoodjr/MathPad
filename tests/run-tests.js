@@ -177,9 +177,9 @@ function solveAllRecords(data) {
         const result = solveRecord(record.text, context, record, allTokens);
         record.text = result.text;
 
-        // Store any errors in the record (match UI behavior: prefix + first error only)
+        // Store any errors in the record (match UI behavior: prefix + all errors)
         if (result.errors && result.errors.length > 0) {
-            record.status = 'Solved with errors: ' + result.errors[0];
+            record.status = result.errors.join('\n');
             record.statusIsError = true;
         } else {
             record.status = result.solved > 0

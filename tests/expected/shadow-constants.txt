@@ -32,7 +32,7 @@ h-> 5.4909
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 4: Equation doesn't balance: d = sqrt(w*w + h*h) (6.3 ≠ 7.602404918178797e-34)"; StatusIsError = 1
+Status = "Line 4: Equation doesn't balance: d = sqrt(w*w + h*h) (6.3 ≠ 7.602404918178797e-34)"; StatusIsError = 1
 "01 No shadow h - solve for height"
 
 w/h = 9/16
@@ -69,7 +69,7 @@ e->> 3
 Category = "Unfiled"; Secret = 0
 Places = 14; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 3: Variable \"e\" conflicts with a constant"; StatusIsError = 1
+Status = "Line 3: Variable \"e\" conflicts with a constant"; StatusIsError = 1
 "04 No shadow e - conflict error but output works"
 
 e: 3
@@ -78,7 +78,7 @@ e->> 3
 Category = "Unfiled"; Secret = 0; Selected = 1
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 10: Variable 'e' has no value to output"; StatusIsError = 1
+Status = "Line 10: Variable 'e' has no value to output"; StatusIsError = 1
 "Screen Size with e-> output"
 
 h/w = 16/9
@@ -112,7 +112,7 @@ hypot(a;b) = sqrt(a**2 + b**2)
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 3: Variable 'h' has no value to output"; StatusIsError = 1
+Status = "Line 3: Variable 'h' has no value to output"; StatusIsError = 1
 "test h-> with shadow constants on"
 
 h->
@@ -128,7 +128,7 @@ h:
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 5: Variable 'e' has no value to output"; StatusIsError = 1
+Status = "Line 5: Variable 'e' has no value to output"; StatusIsError = 1
 "test a: e before e-> shadows it"
 
 a: e
@@ -152,7 +152,7 @@ c: 299792458
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 5: Variable 'c' has no value"; StatusIsError = 1
+Status = "Line 5: Variable 'c' has no value\nLine 4: Variable 'c' has no value to output"; StatusIsError = 1
 "shadow c+c-> before and after c->"
 
 c+c-> 599,584,916

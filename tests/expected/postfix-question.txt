@@ -49,7 +49,7 @@ z-> 35
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 3: Cannot evaluate \"if(y2?; y2; 4)\" - Undefined variable: y2"; StatusIsError = 1
+Status = "Line 3: Cannot evaluate \"if(y2?; y2; 4)\" - Undefined variable: y2\nLine 4: Variable 'z' has no value to output"; StatusIsError = 1
 "Test 6: Undeclared variable errors"
 
 z: if(y2?; y2; 4)
@@ -76,7 +76,7 @@ solveCount=> 1 Use => to persist across clears
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 4: Cannot evaluate \"y~\" - Variable 'y' has no value"; StatusIsError = 1
+Status = "Line 4: Cannot evaluate \"y~\" - Variable 'y' has no value\nLine 5: Variable 'z' has no value to output"; StatusIsError = 1
 "Test 9: x~ on variable with no stale value errors"
 
 y:
@@ -86,7 +86,7 @@ z->
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 3: Cannot evaluate \"if(abc~?; 1; 2)\" - Undefined variable: abc"; StatusIsError = 1
+Status = "Line 3: Cannot evaluate \"if(abc~?; 1; 2)\" - Undefined variable: abc\nLine 4: Variable 'z' has no value to output"; StatusIsError = 1
 "Test 10: x~? on undefined variable errors"
 
 z: if(abc~?; 1; 2) "abc is undefined"
@@ -95,7 +95,7 @@ z->
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 3: Variable 'w' has no value to output"; StatusIsError = 1
+Status = "Line 3: Variable 'w' has no value to output"; StatusIsError = 1
 "Test 11: x? no longer sees stale values"
 
 w->

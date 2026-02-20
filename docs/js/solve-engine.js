@@ -318,6 +318,15 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
         }
     }
 
+    // Report solve failures before expression output evaluation
+    // so solver errors ("Could not find a root") appear before "has no value" errors
+    for (const [varName, failure] of solveFailures) {
+        const varInfo = variables.get(varName);
+        if (varInfo) {
+            errors.push(`Line ${varInfo.lineIndex + 1}: ${failure.error} for '${varName}'`);
+        }
+    }
+
     // Evaluate expression outputs (expr:, expr::, expr->, expr->>)
     // Skip outputs already evaluated during discovery (top-to-bottom) or with existing values
     for (const output of exprOutputs) {
@@ -415,10 +424,9 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                 value = context.constants.get(info.name);
                 context.usedConstants.add(info.name);
             } else {
-                // Check if there was a solve failure for this variable (e.g., limits violation)
-                const failure = solveFailures.get(info.name);
-                if (failure) {
-                    errors.push(`Line ${info.lineIndex + 1}: ${failure.error} for '${info.name}'`);
+                // Check if there was a solve failure for this variable (already reported in solveEquations)
+                if (solveFailures.has(info.name)) {
+                    // Skip — already reported before expression output evaluation
                 } else {
                     // Output declaration with no value is an error
                     const decl = info.declaration;

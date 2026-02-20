@@ -28,7 +28,7 @@ x2-> 2
 Category = "Math"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 10: Variable \"c\" conflicts with a constant"; StatusIsError = 1
+Status = "Line 10: Variable \"c\" conflicts with a constant"; StatusIsError = 1
 "Quadratic without shadow"
 "Should error because c conflicts with constant"
 

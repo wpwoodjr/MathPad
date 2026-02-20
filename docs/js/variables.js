@@ -725,6 +725,9 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
             return;
         }
 
+        // Skip lines with tokenizer errors (already reported by discoverVariables)
+        if (lineTokens.some(t => t.type === TokenType.ERROR)) return;
+
         // Check for equation using tokens (tokenizer distinguishes = from ==, !=, <=, >=, =>)
         const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && t.value === '=');
         if (eqTok) {

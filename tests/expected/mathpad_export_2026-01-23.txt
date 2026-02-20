@@ -283,7 +283,7 @@ z%->> 6.724999999999999%
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 4: Equation doesn't balance: y=x+1 (0 ≠ 2)"; StatusIsError = 1
+Status = "Line 4: Equation doesn't balance: y=x+1 (0 ≠ 2)"; StatusIsError = 1
 "01 Error: Solved with errors: Equation doesn't balance: y=x+1 (0 != 2)"
 
 x=y+1
@@ -336,7 +336,7 @@ Status = "Solved 2 equations"; StatusIsError = 0
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 32: Cannot evaluate \"y3\" - Undefined variable: y3"; StatusIsError = 1
+Status = "Line 32: Cannot evaluate \"y3\" - Undefined variable: y3\nLine 22: Variable 'x4' has no value to output"; StatusIsError = 1
 "01 Parsing: Check parsing phase for constant evals"
 
 a: 2*3
@@ -378,7 +378,7 @@ pi: 3.14159265358979
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved with errors: Line 6: Cannot evaluate \"xyzzy\" - Undefined variable: xyzzy"; StatusIsError = 1
+Status = "Line 6: Cannot evaluate \"xyzzy\" - Undefined variable: xyzzy"; StatusIsError = 1
 "03 Variables Pane: d not updating properly in Variables pane. updates on refresh of web page but not when typing the value in the formula pane"
 
 a: 2*3
@@ -414,7 +414,7 @@ d-> 455
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 3: Cannot evaluate \"dd/2\" - Undefined variable: dd"; StatusIsError = 1
+Status = "Line 3: Cannot evaluate \"dd/2\" - Undefined variable: dd"; StatusIsError = 1
 "02 Parsing: no error for x: dd if dd is defined after x"
 
 x: dd/2
@@ -436,7 +436,7 @@ y: 8
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 6: Variable \"x\" is already defined"; StatusIsError = 1
+Status = "Line 6: Variable \"x\" is already defined\nLine 7: Variable \"x\" is already defined"; StatusIsError = 1
 "03 Parsing: A variable can't be defined more than once, x:: 34 and x<- are errors (see arch.md)"
 
 x: 3/2*8.11111111
@@ -518,7 +518,7 @@ h: 6.62607015e-34 "Planck constant"
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 3: Variable 'a' has no value to output"; StatusIsError = 1
+Status = "Line 3: Variable 'a' has no value to output\nLine 6: Variable 'b' has no value to output"; StatusIsError = 1
 "11 Solver: a and b have no value to output - should be error?"
 
 a->
@@ -616,7 +616,7 @@ width-> 23.7171
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved with errors: Line 2: Variable \"e\" conflicts with a constant"; StatusIsError = 1
+Status = "Line 2: Variable \"e\" conflicts with a constant"; StatusIsError = 1
 "01 Shadowing: check no shadowing"
 e: 3
 e->> 3

@@ -768,6 +768,7 @@ button {
     color: white;
     font-size: 12px;
     flex-wrap: wrap;
+    white-space: pre-line;
 }
 
 .status-bar.error {
