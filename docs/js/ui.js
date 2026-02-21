@@ -83,7 +83,7 @@ function initUI(data) {
     }
 
     const count = data.records.length;
-    setStatus(`Loaded ${count} record${count !== 1 ? 's' : ''}`);
+    setStatus(`Loaded ${count} record${count !== 1 ? 's' : ''}`, false, false);
 }
 
 /**
@@ -142,6 +142,9 @@ function renderSidebar() {
                 <button onclick="handleExport()" class="btn-secondary">Export</button>
                 <button onclick="handleReset()" class="btn-secondary">Reset</button>
             </div>
+            <div class="sidebar-actions-row sidebar-help-row">
+                <button onclick="showHelp()" class="btn-secondary" title="Help">? Help</button>
+            </div>
             <div class="sidebar-actions-row sidebar-theme-row">
                 <button onclick="toggleTheme()" class="btn-secondary btn-theme-toggle" title="Toggle light/dark theme">${document.documentElement.getAttribute('data-theme') === 'light' ? '\u263D' : '\u2604'}</button>
             </div>
@@ -155,6 +158,7 @@ function renderSidebar() {
     if (newSidebarContent) {
         newSidebarContent.scrollTop = scrollTop;
     }
+
 }
 
 /**
@@ -217,10 +221,10 @@ function openRecord(recordId) {
     // Switch to this record
     UI.currentRecordId = recordId;
 
-    // Save last viewed record and open tabs
+    // Save last viewed record and open tabs (metadata only, don't mark Drive dirty)
     UI.data.settings.lastRecordId = recordId;
     UI.data.settings.openTabs = [...UI.openTabs];
-    debouncedSave(UI.data);
+    debouncedSave(UI.data, 500, false);
 
     // Create editor if not exists
     if (!UI.editors.has(recordId)) {
@@ -230,14 +234,12 @@ function openRecord(recordId) {
     // Show the editor
     showEditor(recordId);
 
-    // Restore status from record
+    // Restore status from record (don't re-save — it's already persisted)
     if (record.status) {
-        UI.statusBar.textContent = record.status;
-        UI.statusBar.className = 'status-bar' + (record.statusIsError ? ' error' : '');
+        setStatus(record.status, !!record.statusIsError, false);
         UI.lastPersistentStatus = { message: record.status, isError: !!record.statusIsError };
     } else {
-        UI.statusBar.textContent = 'Ready';
-        UI.statusBar.className = 'status-bar';
+        setStatus('Ready', false, false);
         UI.lastPersistentStatus = { message: 'Ready', isError: false };
     }
 
@@ -398,10 +400,10 @@ function createEditorForRecord(record) {
         handleSolve(undoable);
     });
 
-    // Save scroll position when user scrolls
+    // Save scroll position when user scrolls (metadata only, don't mark Drive dirty)
     editor.onScrollChange((scrollTop) => {
         record.scrollTop = scrollTop;
-        debouncedSave(UI.data);
+        debouncedSave(UI.data, 500, false);
     });
 
     // Set up divider drag
@@ -528,9 +530,9 @@ function closeTab(recordId) {
     // Remove from open tabs
     UI.openTabs.splice(index, 1);
 
-    // Save open tabs
+    // Save open tabs (metadata only, don't mark Drive dirty)
     UI.data.settings.openTabs = [...UI.openTabs];
-    debouncedSave(UI.data);
+    debouncedSave(UI.data, 500, false);
 
     // Remove editor
     if (UI.editors.has(recordId)) {
@@ -866,7 +868,12 @@ function deleteCurrentRecord() {
  * @param {boolean} persist - Whether to save to the record (default true)
  */
 function setStatus(message, isError = false, persist = true) {
-    UI.statusBar.textContent = message;
+    const statusText = document.getElementById('status-text');
+    if (statusText) {
+        statusText.textContent = message;
+    } else {
+        UI.statusBar.textContent = message;
+    }
     UI.statusBar.className = 'status-bar' + (isError ? ' error' : '');
 
     if (persist) {
@@ -1489,11 +1496,11 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
         divider.classList.remove('dragging');
         document.body.classList.remove('panel-resizing');
 
-        // Save divider position to current record
+        // Save divider position to current record (metadata only, don't mark Drive dirty)
         const record = findRecord(UI.data, UI.currentRecordId);
         if (record) {
             record.dividerHeight = topPanel.offsetHeight;
-            debouncedSave(UI.data);
+            debouncedSave(UI.data, 500, false);
         }
 
     }
@@ -1513,10 +1520,42 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
             const record = findRecord(UI.data, UI.currentRecordId);
             if (record) {
                 record.dividerHeight = clamped;
-                debouncedSave(UI.data);
+                debouncedSave(UI.data, 500, false);
             }
         }
     });
+}
+
+/**
+ * Reload the entire UI with new data (e.g. from Drive).
+ * Replaces localStorage, clears editors, re-renders everything.
+ */
+function reloadUIWithData(newData) {
+    // Clear all editors
+    for (const [id, { container }] of UI.editors) {
+        container.remove();
+    }
+    UI.editors.clear();
+    UI.openTabs = [];
+    UI.currentRecordId = null;
+
+    // Replace data
+    UI.data = newData;
+    saveData(UI.data);
+
+    // Re-render UI
+    renderSidebar();
+    renderTabBar();
+    renderDetailsPanel();
+
+    // Open the last viewed record or the first record
+    const lastRecordId = UI.data.settings && UI.data.settings.lastRecordId;
+    const recordToOpen = lastRecordId ? findRecord(UI.data, lastRecordId) : null;
+    if (recordToOpen) {
+        openRecord(recordToOpen.id);
+    } else if (UI.data.records.length > 0) {
+        openRecord(UI.data.records[0].id);
+    }
 }
 
 // Export functions to global scope for HTML onclick handlers
@@ -1536,11 +1575,12 @@ window.renderSettingsModal = renderSettingsModal;
 window.handleImport = handleImport;
 window.handleExport = handleExport;
 window.handleReset = handleReset;
+window.reloadUIWithData = reloadUIWithData;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         UI, initUI, renderSidebar, renderTabBar, renderDetailsPanel,
-        openRecord, closeTab, setStatus, handleSolve
+        openRecord, closeTab, setStatus, handleSolve, reloadUIWithData
     };
 }

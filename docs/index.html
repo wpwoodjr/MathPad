@@ -6,6 +6,7 @@
     <title>MathPad Web - Algebraic Equation Solver</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="js/theme.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -27,14 +28,27 @@
                 <button id="btn-redo" class="btn-icon" title="Redo (Ctrl+Y)">↷</button>
             </div>
             <div class="header-right">
+                <div class="drive-controls" id="drive-controls" style="display: none;">
+                    <button id="btn-drive-signin" class="btn-secondary btn-drive-signin">Sign in</button>
+                    <button id="btn-drive-menu" class="btn-icon btn-drive-avatar" style="display:none;"></button>
+                </div>
                 <button id="btn-theme" class="btn-icon btn-theme-toggle" title="Toggle light/dark theme">&#9732;</button>
-                <button onclick="showHelp()" class="btn-icon" title="Help">
+                <button id="btn-help" onclick="showHelp()" class="btn-icon" title="Help">
                     ?
                 </button>
                 <button class="settings-btn" id="settings-btn" title="Record Settings">&#9881;</button>
             </div>
             <input type="file" id="file-input" accept=".txt,.pdb" style="display: none">
         </header>
+
+        <!-- Drive Dropdown Menu -->
+        <div class="drive-dropdown" id="drive-dropdown">
+            <div class="drive-dropdown-file" id="drive-dropdown-file"></div>
+            <div class="drive-dropdown-item" id="btn-drive-open">Open from Drive...</div>
+            <div class="drive-dropdown-item" id="btn-drive-saveas">Save as new file</div>
+            <div class="drive-dropdown-divider"></div>
+            <div class="drive-dropdown-item" id="btn-drive-signout">Sign out</div>
+        </div>
 
         <!-- Sidebar Overlay (for mobile) -->
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -83,7 +97,8 @@
 
         <!-- Status Bar -->
         <footer class="status-bar" id="status-bar">
-            Ready
+            <span class="status-text" id="status-text">Ready</span>
+            <span class="status-drive" id="status-drive"></span>
         </footer>
     </div>
 
@@ -94,6 +109,7 @@
     <script src="js/solver.js"></script>
     <script src="js/variables.js"></script>
     <script src="js/storage.js"></script>
+    <script src="js/drive.js"></script>
     <script src="js/editor.js"></script>
     <script src="js/variables-panel.js"></script>
     <script src="js/solve-engine.js"></script>

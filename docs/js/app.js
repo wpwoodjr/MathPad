@@ -10,14 +10,29 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log('MathPad Web Application starting...');
 
-    // Load data from localStorage
+    // Phase 1: Load from localStorage, render UI (instant)
     const data = loadData();
     console.log(`Loaded ${data.records.length} records`);
-
-    // Initialize the UI
     initUI(data);
 
-    // Degrees toggle is now per-record, initialized by openRecord()
+    // Phase 2: Async Drive init (non-blocking)
+    if (typeof initDriveModule === 'function') {
+        initDriveModule().then(async (ready) => {
+            if (!ready) return;
+            showDriveControls();
+            setupDriveListeners();
+
+            // Show avatar immediately if user was previously signed in.
+            // Don't try to get a token here — browsers block popups
+            // not triggered by user clicks. Token is obtained on first
+            // user interaction (clicking avatar or Sign In button).
+            updateDriveUI();
+
+            if (isDriveSignedIn()) {
+                startDriveSync();
+            }
+        });
+    }
 
     // Global undo/redo handler - works unless focus is in a vars panel input
     document.addEventListener('keydown', (e) => {
@@ -45,8 +60,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Close Drive dropdown on outside click or Escape
+    document.addEventListener('click', (e) => {
+        if (typeof closeDriveDropdown === 'function') {
+            const dropdown = document.getElementById('drive-dropdown');
+            const avatarBtn = document.getElementById('btn-drive-menu');
+            if (dropdown && dropdown.classList.contains('visible') &&
+                !dropdown.contains(e.target) && e.target !== avatarBtn) {
+                closeDriveDropdown();
+            }
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && typeof closeDriveDropdown === 'function') {
+            closeDriveDropdown();
+        }
+    });
+
     console.log('MathPad ready');
 });
+
+/**
+ * Set up event listeners for Drive controls
+ */
+function setupDriveListeners() {
+    const signInBtn = document.getElementById('btn-drive-signin');
+    if (signInBtn) {
+        signInBtn.addEventListener('click', async () => {
+            const ok = await driveSignIn();
+            if (ok) {
+                updateDriveUI();
+                await runSyncCycle();
+                startDriveSync();
+                updateDriveStatus();
+            }
+        });
+    }
+
+    const avatarBtn = document.getElementById('btn-drive-menu');
+    if (avatarBtn) {
+        avatarBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!isDriveAuthenticated()) {
+                const ok = await driveSignIn();
+                if (ok) {
+                    updateDriveUI();
+                    await runSyncCycle();
+                    updateDriveStatus();
+                }
+            }
+            toggleDriveDropdown();
+        });
+    }
+
+    const openBtn = document.getElementById('btn-drive-open');
+    if (openBtn) {
+        openBtn.addEventListener('click', () => {
+            closeDriveDropdown();
+            handleDriveOpen();
+        });
+    }
+
+    const saveAsBtn = document.getElementById('btn-drive-saveas');
+    if (saveAsBtn) {
+        saveAsBtn.addEventListener('click', () => {
+            closeDriveDropdown();
+            handleDriveSaveAs();
+        });
+    }
+
+    const signOutBtn = document.getElementById('btn-drive-signout');
+    if (signOutBtn) {
+        signOutBtn.addEventListener('click', () => {
+            handleDriveSignOut();
+        });
+    }
+}
+
 
 /**
  * Global error handler
@@ -74,10 +164,13 @@ window.onunhandledrejection = function(event) {
  * (Not strictly necessary since we auto-save, but good UX)
  */
 window.addEventListener('beforeunload', (e) => {
-    // Auto-save is enabled, so we don't need to warn
-    // But we'll flush any pending saves
+    // Flush any pending saves
     if (typeof UI !== 'undefined' && UI.data) {
         saveData(UI.data);
+    }
+    // Flush Drive sync if dirty
+    if (typeof flushDriveSync === 'function') {
+        flushDriveSync();
     }
 });
 

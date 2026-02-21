@@ -425,6 +425,7 @@ function ensureDefaultSettingsRecord(data) {
  */
 let saveTimeout = null;
 let resched = true;
+let pendingMarkDirty = false;
 function doSave(data, delay) {
     if (resched) {
         resched = false;
@@ -435,16 +436,20 @@ function doSave(data, delay) {
         saveTimeout = null;
         resched = true;
         saveData(data);
+        if (pendingMarkDirty && typeof markDriveDirty === 'function' && typeof isDriveSignedIn === 'function' && isDriveSignedIn()) {
+            markDriveDirty();
+        }
+        pendingMarkDirty = false;
     }
 }
-function debouncedSave(data, delay = 500) {
+function debouncedSave(data, delay = 500, markDirty = true) {
+    if (markDirty) pendingMarkDirty = true;
     if (saveTimeout) {
         resched = true;
     } else {
         doSave(data, delay);
     }
 }
-
 /**
  * Export data to MpExport text format
  * Compatible with original MathPad export format

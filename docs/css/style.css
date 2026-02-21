@@ -113,8 +113,9 @@
     padding: 2px 8px;
 }
 
-/* Sidebar theme row - hidden by default, shown on small screens */
-.sidebar-actions-row.sidebar-theme-row {
+/* Sidebar theme/help rows - hidden by default, shown on small screens */
+.sidebar-actions-row.sidebar-theme-row,
+.sidebar-actions-row.sidebar-help-row {
     display: none;
 }
 
@@ -758,12 +759,91 @@ button {
     padding: 20px;
 }
 
+/* Drive Controls */
+.drive-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-drive-signin {
+    font-size: 12px;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+
+.btn-drive-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--accent-primary);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+}
+
+.btn-drive-avatar:hover {
+    background-color: var(--accent-hover);
+}
+
+/* Drive Dropdown Menu */
+.drive-dropdown {
+    display: none;
+    position: fixed;
+    top: var(--header-height);
+    right: 80px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 150;
+    min-width: 200px;
+    padding: 4px 0;
+}
+
+.drive-dropdown.visible {
+    display: block;
+}
+
+.drive-dropdown-file {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.drive-dropdown-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.drive-dropdown-item:hover {
+    background: var(--bg-hover);
+}
+
+.drive-dropdown-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 0;
+}
+
 /* Status Bar */
 .status-bar {
     min-height: var(--status-height);
     padding: 4px 16px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     background-color: var(--accent-primary);
     color: white;
     font-size: 12px;
@@ -773,6 +853,20 @@ button {
 
 .status-bar.error {
     background-color: var(--error-color);
+}
+
+.status-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.status-drive {
+    margin-left: auto;
+    opacity: 0.85;
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding-left: 16px;
 }
 
 /* Scrollbar styling */
@@ -1017,12 +1111,29 @@ button {
         gap: 2px;
     }
 
-    #btn-theme {
+    #btn-theme,
+    #btn-help {
         display: none;
     }
 
-    .sidebar-actions-row.sidebar-theme-row {
+    .sidebar-actions-row.sidebar-theme-row,
+    .sidebar-actions-row.sidebar-help-row {
         display: flex;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-drive-signin {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+
+    .status-drive {
+        display: none;
+    }
+
+    .drive-dropdown {
+        right: 8px;
     }
 }
 
