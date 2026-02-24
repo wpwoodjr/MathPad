@@ -5,7 +5,7 @@
  */
 (function() {
     var STORAGE_KEY = 'mathpad_theme';
-    var SUN_ICON = '\u2604'; // ☄ (comet - visible on e-ink)
+    var SUN_ICON = '\u263C'; // ☼ (white sun with rays)
     var MOON_ICON = '\u263D'; // ☽
 
     function getSavedTheme() {

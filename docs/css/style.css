@@ -1210,6 +1210,8 @@ button {
 body.panel-resizing,
 body.panel-resizing * {
     cursor: row-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
 }
 
 .variables-panel {
@@ -1219,6 +1221,7 @@ body.panel-resizing * {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .formulas-header {

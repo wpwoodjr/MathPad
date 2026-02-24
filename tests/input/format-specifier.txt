@@ -58,6 +58,19 @@ Midpoint rounding (0.075 rounds to 0.08 not 0.07)
 1.005$->
 2.675$->
 0.074$->
+Infinity and NaN not formatted with $ or %
+1/0$->
+(-1/0)$->
+(0/0)$->
+1/0%->
+(-1/0)%->
+(0/0)%->
+inf: 1/0
+inf$->
+inf%->
+nan: 0/0
+nan$->
+nan%->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1

@@ -349,13 +349,11 @@ class VariablesPanel {
 
         // Variable name label (includes format suffix, limits, and marker)
         const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : decl.base && decl.base !== 10 ? `#${decl.base}` : '';
-        // Always separate format suffix with a space for clarity
-        const formatSep = formatSuffix ? ' ' : '';
         const limitsStr = decl.limits ? `[${tokensToText(decl.limits.lowTokens).trim()}:${tokensToText(decl.limits.highTokens).trim()}]` : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
         const labelPrefix = decl.label ? decl.label + ' ' : '';
-        nameLabel.textContent = labelPrefix + info.name + limitsStr + formatSep + formatSuffix + (decl.marker || ':');
+        nameLabel.textContent = labelPrefix + info.name + limitsStr + ' ' + formatSuffix + (decl.marker || ':');
         // Add tooltip explaining variable type
         if (isInRefSection) {
             nameLabel.title = 'Reference (from Constants/Functions)';

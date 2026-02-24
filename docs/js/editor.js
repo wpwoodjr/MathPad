@@ -401,22 +401,28 @@ function findEquationLabelRegions(line, lineTokens) {
     // Use the existing function to extract the valid equation
     const result = extractEquationFromLine(line, lineTokens);
 
-    // If extraction returned the same line, no label text
-    if (result.text === line) return regions;
+    if (!result.leftText || !result.rightText) return regions;
 
-    // Find where the extracted equation appears in the original line
-    const eqStart = line.indexOf(result.text);
-    if (eqStart === -1) return regions;
+    // Find the = token position as anchor
+    const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && t.value === '=');
+    if (!eqTok) return regions;
+    const eqCol = eqTok.col - 1; // 0-based
 
-    // Everything before the equation is label text
-    if (eqStart > 0) {
-        regions.push({ start: 0, end: eqStart });
+    // Find where leftText and rightText appear in the original line
+    const leftStart = line.lastIndexOf(result.leftText, eqCol);
+    if (leftStart === -1) return regions;
+    const rightStart = line.indexOf(result.rightText, eqCol + 1);
+    if (rightStart === -1) return regions;
+
+    // Everything before the LHS is label text
+    if (leftStart > 0) {
+        regions.push({ start: 0, end: leftStart });
     }
 
-    // Everything after the equation is label text
-    const eqEnd = eqStart + result.text.length;
-    if (eqEnd < line.length) {
-        regions.push({ start: eqEnd, end: line.length });
+    // Everything after the RHS is label text
+    const rightEnd = rightStart + result.rightText.length;
+    if (rightEnd < line.length) {
+        regions.push({ start: rightEnd, end: line.length });
     }
 
     return regions;

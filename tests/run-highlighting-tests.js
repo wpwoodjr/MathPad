@@ -1117,6 +1117,75 @@ function runAllTests() {
                 ['$', 'error']
             ]
         },
+        // Equation extraction: whitespace around operators shouldn't affect highlighting
+        {
+            name: 'equation with label: space before operator (smg = speed * cos(CHOB - bearing to mark))',
+            line: 'smg = speed * cos(CHOB - bearing to mark)',
+            assertions: [
+                ['smg', 'variable'],
+                ['=', 'operator'],
+                ['speed', 'variable'],
+                ['*', 'operator'],
+                ['cos', 'builtin'],
+                ['(CHOB - bearing to mark)', 'comment']
+            ]
+        },
+        {
+            name: 'equation with label: no space before operator (smg = speed* cos(CHOB - bearing to mark))',
+            line: 'smg = speed* cos(CHOB - bearing to mark)',
+            assertions: [
+                ['smg', 'variable'],
+                ['=', 'operator'],
+                ['speed', 'variable'],
+                ['*', 'operator'],
+                ['cos', 'builtin'],
+                ['(CHOB - bearing to mark)', 'comment']
+            ]
+        },
+        {
+            name: 'equation with label: no space around = (smg=speed* abc xyz)',
+            line: 'smg=speed* abc xyz',
+            assertions: [
+                ['smg', 'variable'],
+                ['=', 'operator'],
+                ['speed', 'variable'],
+                ['*', 'operator'],
+                ['abc', 'variable'],
+                [' xyz', 'comment']
+            ]
+        },
+        {
+            name: 'equation with label: space around = (smg = speed* abc xyz)',
+            line: 'smg = speed* abc xyz',
+            assertions: [
+                ['smg', 'variable'],
+                ['=', 'operator'],
+                ['speed', 'variable'],
+                ['*', 'operator'],
+                ['abc', 'variable'],
+                [' xyz', 'comment']
+            ]
+        },
+        {
+            name: 'dangling operator not stripped as label (smg = speed*)',
+            line: 'smg = speed*',
+            assertions: [
+                ['smg', 'variable'],
+                ['=', 'operator'],
+                ['speed', 'variable'],
+                ['*', 'operator']
+            ]
+        },
+        {
+            name: 'dangling operator with space not stripped as label (smg = speed * )',
+            line: 'smg = speed * ',
+            assertions: [
+                ['smg', 'variable'],
+                ['=', 'operator'],
+                ['speed', 'variable'],
+                ['*', 'operator']
+            ]
+        },
         // Trailing dot on number is valid (1. = 1.0)
         {
             name: 'trailing dot on number is valid (a: 1.)',

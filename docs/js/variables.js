@@ -504,6 +504,12 @@ function getInlineEvalFormat(exprTokens, record, variables = null) {
  * @returns {string} Formatted value string
  */
 function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
+    // NaN and Infinity are never formatted with $ or %
+    if (!isFinite(value)) {
+        if (isNaN(value)) return 'NaN';
+        return value > 0 ? 'Infinity' : '-Infinity';
+    }
+
     const places = fullPrecision ? 15 : (format.places != null ? format.places : 4);
     const stripZeros = format.stripZeros !== false;
     const numberFormat = format.numberFormat || 'float';
@@ -827,14 +833,20 @@ function extractEquationFromLine(lineText, lineTokens) {
     }
 
     if (!rightOk) {
-        // Find end of RHS: try to parse incrementally and find where it breaks
-        // Simple approach: look for trailing word that's not part of expression
-        const tokens = rightText.split(/\s+/);
-        for (let i = tokens.length; i > 0; i--) {
-            const candidate = tokens.slice(0, i).join(' ');
+        // Find end of RHS: try progressively shorter token sequences
+        const eqIdx = lineTokens.indexOf(eqTok);
+        const rhsTokens = lineTokens.slice(eqIdx + 1).filter(t => t.type !== TokenType.EOF);
+        for (let i = rhsTokens.length; i > 0; i--) {
             try {
-                if (parseExpression(candidate)) {
-                    extractedRight = candidate;
+                if (parseTokens(rhsTokens.slice(0, i))) {
+                    // Only strip tokens that could start label text (words, numbers, strings, parens)
+                    // Anything else (operators, formatters, etc.) is a syntax error, not label text
+                    if (i < rhsTokens.length) {
+                        const nextType = rhsTokens[i].type;
+                        if (nextType !== TokenType.IDENTIFIER && nextType !== TokenType.NUMBER
+                            && nextType !== TokenType.STRING && nextType !== TokenType.LPAREN) continue;
+                    }
+                    extractedRight = tokensToText(rhsTokens.slice(0, i)).trim();
                     break;
                 }
             } catch (e) {

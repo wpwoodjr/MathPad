@@ -87,23 +87,23 @@ pmt$<-
             {
                 id: generateId(),
                 title: 'Example: TVM',
-                text: `"Time Value of Money"
+                text: `"Loan calculator"
 
-"Payment calculation"
-pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
+--Formulas--
+pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 
-"Monthly interest rate from annual"
-mint = yint / 12
+--Equations--
+pmt = pmt(pv; rate/12; years*12; fv)
 
 --Variables--
-"*Update value(s), then re-calculate any variable by clicking its solve icon \u27F2"
+"*Enter value(s), then calculate a variable by clicking its solve icon \u27F2"
 
 
-pmt$: "monthly payment"
-pv$: $100,000 "loan amount"
-fv$: 0 "future value (balloon payment)"
-yint%: 6.125% "annual interest rate %"
-n: 360 "number of payments (30 years)"
+   pv $<- $100,000     "present value (loan or annuity)"
+   fv $<- $0           "future value (balloon payment)"
+ rate %<- 6.125%       "annual interest rate %"
+years <- 30            "number of years"
+  pmt $<-              "monthly payment"
 `,
                 category: 'Finance',
                 places: 2,

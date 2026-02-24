@@ -146,7 +146,7 @@ function renderSidebar() {
                 <button onclick="showHelp()" class="btn-secondary" title="Help">? Help</button>
             </div>
             <div class="sidebar-actions-row sidebar-theme-row">
-                <button onclick="toggleTheme()" class="btn-secondary btn-theme-toggle" title="Toggle light/dark theme">${document.documentElement.getAttribute('data-theme') === 'light' ? '\u263D' : '\u2604'}</button>
+                <button onclick="toggleTheme()" class="btn-secondary btn-theme-toggle" title="Toggle light/dark theme">${document.documentElement.getAttribute('data-theme') === 'light' ? '\u263D' : '\u263C'}</button>
             </div>
         </div>
     `;
