@@ -146,7 +146,7 @@ function renderSidebar() {
                 <button onclick="showHelp()" class="btn-secondary" title="Help">? Help</button>
             </div>
             <div class="sidebar-actions-row sidebar-theme-row">
-                <button onclick="toggleTheme()" class="btn-secondary btn-theme-toggle" title="Toggle light/dark theme">${document.documentElement.getAttribute('data-theme') === 'light' ? '\u263D' : '\u263C'}</button>
+                <button onclick="toggleTheme()" class="btn-secondary btn-theme-toggle" title="Toggle light/dark theme">${document.documentElement.getAttribute('data-theme') === 'light' ? '\u263D' : '<span style="font-size:1.3em;line-height:1">\u263C</span>'}</button>
             </div>
         </div>
     `;
@@ -1109,38 +1109,88 @@ function setupEventListeners() {
         }
     });
 
-    // Mobile keyboard handling: shrink entire UIA to fit above keyboard
+    // Mobile keyboard handling: shrink entire app to fit above keyboard
     if (window.visualViewport) {
+        // Track the full viewport height (no keyboard). Updated when viewport grows
+        // (e.g. keyboard dismissed, URL bar retracts). More reliable than innerHeight
+        // which may not reflect the true available height on iOS Safari.
+        // Reset on orientation change (detected by width change).
+        let fullVpHeight = window.visualViewport.height;
+        let lastVpWidth = window.visualViewport.width;
+        let keyboardIsShowing = false;
+
+        // Prevent iOS Safari from scrolling the whole page when focusing inputs
+        window.addEventListener('scroll', () => {
+            if (keyboardIsShowing) {
+                window.scrollTo(0, 0);
+            }
+        });
+
+        // Expand the focused panel (vars or formulas) for the keyboard
+        // After keyboard resize, ensure the textarea scrolls to show the caret
+        // (iOS doesn't auto-scroll textareas to the cursor on focus)
+        function ensureActiveCaretVisible() {
+            const active = document.activeElement;
+            if (active && active.tagName === 'TEXTAREA') {
+                const info = UI.editors.get(UI.currentRecordId);
+                if (info && info.editor && info.editor.textarea === active) {
+                    info.editor.ensureCaretVisible();
+                }
+            }
+        }
+
+        function adjustPanelForFocus(active) {
+            const info = UI.editors.get(UI.currentRecordId);
+            if (!info || info.savedDividerHeight != null) return;
+
+            const variablesPanel = info.container.querySelector('.variables-panel');
+            const formulasPanel = info.container.querySelector('.formulas-panel');
+            if (!variablesPanel || !formulasPanel || !info.container.contains(active)) return;
+
+            info.savedDividerHeight = variablesPanel.style.height;
+            const varsHeader = variablesPanel.querySelector('.variables-header');
+            const varsHeaderH = varsHeader ? varsHeader.offsetHeight : 0;
+            const divider = info.container.querySelector('.panel-divider');
+            const dividerH = divider ? divider.offsetHeight : 0;
+            const fmtHeader = formulasPanel.querySelector('.formulas-header');
+            const fmtHeaderH = fmtHeader ? fmtHeader.offsetHeight : 0;
+
+            if (variablesPanel.contains(active)) {
+                const maxH = info.container.offsetHeight - dividerH - fmtHeaderH;
+                variablesPanel.style.height = Math.max(varsHeaderH, maxH) + 'px';
+            } else if (formulasPanel.contains(active)) {
+                variablesPanel.style.height = varsHeaderH + 'px';
+            }
+        }
+
         window.visualViewport.addEventListener('resize', () => {
             const vpHeight = window.visualViewport.height;
-            const keyboardShowing = vpHeight < window.innerHeight * 0.85;
+            const vpWidth = window.visualViewport.width;
+
+            // Orientation change: width changed, reset baseline height
+            if (vpWidth !== lastVpWidth) {
+                lastVpWidth = vpWidth;
+                fullVpHeight = vpHeight;
+            }
+
+            // Update baseline when viewport grows (keyboard dismissed, URL bar change)
+            if (vpHeight > fullVpHeight) {
+                fullVpHeight = vpHeight;
+            }
+
+            keyboardIsShowing = vpHeight < fullVpHeight * 0.85;
             const appContainer = document.querySelector('.app-container');
             if (!appContainer) return;
 
-            if (keyboardShowing) {
-                appContainer.style.height = vpHeight + 'px';
-                // Expand focused panel if not already expanded (handles re-focus in same field)
+            if (keyboardIsShowing) {
                 const info = UI.editors.get(UI.currentRecordId);
-                if (info && info.savedDividerHeight == null) {
-                    const active = document.activeElement;
-                    const variablesPanel = info.container.querySelector('.variables-panel');
-                    const formulasPanel = info.container.querySelector('.formulas-panel');
-                    if (variablesPanel && formulasPanel && info.container.contains(active)) {
-                        info.savedDividerHeight = variablesPanel.style.height;
-                        const varsHeader = variablesPanel.querySelector('.variables-header');
-                        const varsHeaderH = varsHeader ? varsHeader.offsetHeight : 0;
-                        const divider = info.container.querySelector('.panel-divider');
-                        const dividerH = divider ? divider.offsetHeight : 0;
-                        const fmtHeader = formulasPanel.querySelector('.formulas-header');
-                        const fmtHeaderH = fmtHeader ? fmtHeader.offsetHeight : 0;
-
-                        if (variablesPanel.contains(active)) {
-                            const maxH = info.container.offsetHeight - dividerH - fmtHeaderH;
-                            variablesPanel.style.height = Math.max(varsHeaderH, maxH) + 'px';
-                        } else if (formulasPanel.contains(active)) {
-                            variablesPanel.style.height = varsHeaderH + 'px';
-                        }
-                    }
+                const kbJustAppeared = info && info.savedDividerHeight == null;
+                appContainer.style.height = vpHeight + 'px';
+                adjustPanelForFocus(document.activeElement);
+                window.scrollTo(0, 0);
+                // Only scroll to caret when keyboard first appears, not on focus changes
+                if (kbJustAppeared) {
+                    requestAnimationFrame(ensureActiveCaretVisible);
                 }
             } else {
                 appContainer.style.removeProperty('height');
@@ -1154,6 +1204,27 @@ function setupEventListeners() {
                     info.savedDividerHeight = null;
                 }
             }
+        });
+
+        // Safety net: if visualViewport handler missed the panel adjustment
+        // (e.g. iOS textarea focus timing), retry after keyboard has appeared
+        let focusTimer = null;
+        document.addEventListener('focusin', (e) => {
+            clearTimeout(focusTimer);
+            const info = UI.editors.get(UI.currentRecordId);
+            const kbWasUp = info && info.savedDividerHeight != null;
+            focusTimer = setTimeout(() => {
+                const vpHeight = window.visualViewport.height;
+                if (vpHeight < fullVpHeight * 0.85) {
+                    const appContainer = document.querySelector('.app-container');
+                    if (appContainer) appContainer.style.height = vpHeight + 'px';
+                    adjustPanelForFocus(e.target);
+                    window.scrollTo(0, 0);
+                    if (!kbWasUp) {
+                        requestAnimationFrame(ensureActiveCaretVisible);
+                    }
+                }
+            }, 500);
         });
     }
 }
@@ -1457,14 +1528,14 @@ function escapeAttr(text) {
  * Setup panel resizer for the divider
  */
 function setupPanelResizer(divider, topPanel, bottomPanel) {
-    let startY, startHeight, maxHeight;
+    let startY, startHeight, maxHeight, dragging = false;
 
     // Prevent browser from taking over touch gestures
     divider.style.touchAction = 'none';
 
     divider.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        divider.setPointerCapture(e.pointerId);
+        dragging = true;
         startY = e.clientY;
         startHeight = topPanel.offsetHeight;
         // Cache container height to avoid layout thrashing during drag
@@ -1483,8 +1554,9 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
         return header ? header.offsetHeight : 0;
     }
 
-    divider.addEventListener('pointermove', (e) => {
-        if (!divider.hasPointerCapture(e.pointerId)) return;
+    // Listen on document so drag continues even if pointer leaves the divider
+    document.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
         const delta = e.clientY - startY;
         const minTop = getMinTop();
         const maxTop = maxHeight - divider.offsetHeight - getMinBottom();
@@ -1493,6 +1565,8 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
     });
 
     function endDrag() {
+        if (!dragging) return;
+        dragging = false;
         divider.classList.remove('dragging');
         document.body.classList.remove('panel-resizing');
 
@@ -1502,11 +1576,10 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
             record.dividerHeight = topPanel.offsetHeight;
             debouncedSave(UI.data, 500, false);
         }
-
     }
 
-    divider.addEventListener('pointerup', endDrag);
-    divider.addEventListener('pointercancel', endDrag);
+    document.addEventListener('pointerup', endDrag);
+    document.addEventListener('pointercancel', endDrag);
 
     // Clamp panel height on window resize so divider stays visible
     window.addEventListener('resize', () => {

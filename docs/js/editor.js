@@ -1140,6 +1140,24 @@ class SimpleEditor {
         return this.measureTextHeight(textBeforeCursor);
     }
 
+    /**
+     * Scroll the textarea to ensure the caret is visible.
+     * Used after mobile keyboard resize where iOS doesn't auto-scroll.
+     */
+    ensureCaretVisible() {
+        const cursorY = this.getCursorPixelPosition();
+        const lineHeight = this.getLineHeight();
+        const scrollTop = this.textarea.scrollTop;
+        const visibleHeight = this.textarea.clientHeight;
+        if (cursorY > scrollTop + visibleHeight - lineHeight) {
+            // Below visible area — scroll to center cursor
+            this.textarea.scrollTop = cursorY - visibleHeight / 2;
+        } else if (cursorY < scrollTop + lineHeight) {
+            // Above visible area — scroll to show near top
+            this.textarea.scrollTop = Math.max(0, cursorY - lineHeight);
+        }
+    }
+
     updateLineNumbers() {
         const lines = this.textarea.value.split('\n');
         let html = '';

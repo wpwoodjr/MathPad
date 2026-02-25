@@ -1183,26 +1183,31 @@ button {
     flex-shrink: 0;
 }
 
-.panel-divider:hover,
+@media (hover: hover) {
+    .panel-divider:hover {
+        background: var(--accent-primary);
+    }
+}
 .panel-divider.dragging {
     background: var(--accent-primary);
 }
 
 /* Larger touch target for panel divider on mobile */
-@media (max-width: 768px) {
+@media (pointer: coarse) {
     .panel-divider {
-        height: 16px;
+        height: 12px;
         position: relative;
     }
 
-    /* Extended touch area using pseudo-element */
+    /* Invisible extended touch area — expands hit region to ~44px */
     .panel-divider::before {
         content: '';
         position: absolute;
         left: 0;
         right: 0;
-        top: -15px;
-        bottom: -15px;
+        top: -16px;
+        bottom: -16px;
+        touch-action: none;
     }
 }
 
@@ -1385,21 +1390,35 @@ body.panel-resizing * {
     border: none;
     color: var(--success-color);
     cursor: pointer;
-    font-size: 18px;
+    font-size: 20px;
     padding: 2px 4px;
     margin-right: 2px;
     border-radius: 4px;
     opacity: 0.6;
     transition: opacity 0.15s, background 0.15s;
-    width: 22px;
+    width: 24px;
     flex-shrink: 0;
 }
 
 .variable-solve-btn-placeholder {
-    width: 22px;
+    width: 24px;
     flex-shrink: 0;
     padding: 2px 4px;
     margin-right: 2px;
+}
+
+@media (pointer: coarse) {
+    .variable-solve-btn {
+        position: relative;
+    }
+    .variable-solve-btn::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        bottom: -8px;
+        left: -6px;
+        right: -6px;
+    }
 }
 
 .variable-solve-btn:hover {

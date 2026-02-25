@@ -5,7 +5,7 @@
  */
 (function() {
     var STORAGE_KEY = 'mathpad_theme';
-    var SUN_ICON = '\u263C'; // ☼ (white sun with rays)
+    var SUN_ICON = '<span style="font-size:1.3em;line-height:1">☼</span>';
     var MOON_ICON = '\u263D'; // ☽
 
     function getSavedTheme() {
