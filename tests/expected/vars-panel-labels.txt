@@ -17,7 +17,6 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Solved 1 equation"; StatusIsError = 0
-"Selected = 1"
 Selected = 1
 "Labels  and comments in Variables section"
 

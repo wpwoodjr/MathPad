@@ -2,7 +2,6 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Line 30: Unexpected token after expression: FORMATTER '%'"; StatusIsError = 1
-"Money format on expression out..."
 Money format on expression output
 3+4$-> $7.00
 Expression with percent format
@@ -79,7 +78,6 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Solved 2 equations"; StatusIsError = 0
-"Full precision with places=2"
 Full precision with places=2
 a: -1.00000000025
 b = a*2

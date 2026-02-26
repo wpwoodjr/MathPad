@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS_RECORD = {
 
 "First line becomes the default title"
 
-"Settings are used as defaults for new records"`,
+"This record's settings are used as defaults for new records"`,
     category: 'Reference',
     places: 4,
     stripZeros: true,
@@ -270,7 +270,7 @@ w: 200      "watts"`,
 
 --Variables--
 "*Constants defined here are available in all records"
-" (unless 'Shadow constants' is set for the record)"
+" (if 'Shadow constants' is set for the record, you can redefine a constant)"
 
 pi: 3.141592653589793
 e: 2.71828182845905
@@ -297,17 +297,25 @@ golden: 1.61803398874989 "golden ratio"`,
 "*Functions defined here are available in all records"
 
 
+"Time Value of Money"
+pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+
+
 "Compound interest"
-compound(p;r;n;t) = p * (1 + r/n)**(n*t)
+compound(pv; rate; n) = pv * (1 + rate)**n
+
 
 "Celsius to Fahrenheit"
 ctof(c) = c * 9/5 + 32
 
+
 "Fahrenheit to Celsius"
 ftoc(f) = (f - 32) * 5/9
 
+
 "Hypotenuse"
 hypot(a;b) = sqrt(a**2 + b**2)
+
 
 "Quadratic discriminant"
 disc(a;b;c) = b**2 - 4*a*c`,
@@ -491,13 +499,9 @@ function exportToText(data, options = {}) {
             lines.push(`Status = "${escapedStatus}"; StatusIsError = ${record.statusIsError ? 1 : 0}`);
         }
 
-        // Record title as first line comment
-        if (record.title) {
-            // Check if title is already in the text as the first comment
-            const firstLine = record.text.split('\n')[0].trim();
-            if (!firstLine.startsWith('"') || !firstLine.includes(record.title)) {
-                lines.push(`"${record.title}"`);
-            }
+        // Reference records have their title stripped on import, so add it back
+        if (record.title && isReferenceTitle(record.title)) {
+            lines.push(`"${record.title}"`);
         }
 
         // Record content (strip trailing blank lines for consistency with import)
@@ -595,36 +599,28 @@ function importFromText(text, existingData = null, options = {}) {
 
         // Rest is content
         const contentLines = lines.slice(contentStart);
-        const content = contentLines.join('\n').trim();
+        const content = contentLines.join('\n').trimEnd();
 
         if (!content) continue;
 
         // Extract title from first comment line if present
         let title = '';
         let textContent = content;
-        const firstLine = (contentLines[0] && contentLines[0].trim()) || '';
-        const titleMatch = firstLine.match(/^"([^"]+)"$/);
-        if (titleMatch) {
-            title = titleMatch[1];
+        const firstLine = contentLines[0].trim();
+        if (firstLine.startsWith('"')) {
+            // Title from quoted comment (single-line or multi-line)
+            title = firstLine.slice(1).replace(/"$/, '');
             // For reference records, remove title line from content to avoid duplication
             // (export adds the title line, so we remove it on import)
             const isRefRecord = isReferenceTitle(title);
             if (isRefRecord) {
-                textContent = contentLines.slice(1).join('\n').trim();
+                textContent = contentLines.slice(1).join('\n').trimEnd();
             }
+        } else if (firstLine) {
+            title = firstLine.substring(0, 30);
+            if (firstLine.length > 30) title += '...';
         } else {
-            // Use first few words of first non-empty, non-comment line
-            for (const line of contentLines) {
-                const trimmedLine = line.trim();
-                if (trimmedLine && !trimmedLine.startsWith('"')) {
-                    title = trimmedLine.substring(0, 30);
-                    if (trimmedLine.length > 30) title += '...';
-                    break;
-                }
-            }
-            if (!title && contentLines.length > 0) {
-                title = 'Untitled';
-            }
+            title = 'Untitled';
         }
 
         const recordId = generateId();
