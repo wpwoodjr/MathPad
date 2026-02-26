@@ -1,0 +1,69 @@
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Constants"
+pi: 3.14159265358979
+e: 2.71828182845905
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Functions"
+ftoc(f) = (f - 32) * 5/9
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Selected = 1"
+Selected = 1
+"Labels  and comments in Variables section"
+
+--Variables--
+x: 1
+y: 2
+
+"*OK"
+enter dopamine: x + y "unquoted prefix before and quoted comments after"
+out dopamine-> 3       mg/100cc of fluid
+enter it x2<-   "quoted after"
+out   here x->> 1 "unquoted before and quoted after     with spaces"
+out   there x->> 1 unquoted before and after      with spaces
+
+"*Quoted prefix comments"
+"enter" x3: 3  "quoted prefix comments"
+"enter    with spaces" x3-> 3          quoted prefix comments with spaces
+
+"*Leading comments on expression outputs"
+out   hi x+0-> 1               unquoted
+"   test     " x3+0-> 3           quoted    with spaces
+"            " x3+0-> 3           quoted    with spaces
+
+"*Spaces in front"
+"                   " x3-> 3 quoted prefix comments with spaces
+"a  b  "       "      c  " x3-> 3 quoted prefix comments with spaces
+       "     test     " x3+0-> 3           quoted    with spaces
+    x3+0-> 3 leading spaces
+  test     test x3-> 3
+    test "    " x3-> 3
+    test    x    x3-> 3
+test       x3-> 3
+
+Unquoted omments             with spaces
+"Quoted comments            with spaces"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"No reference section in vars panel"
+
+pi-> 3.14
+ftoc(44)-> 6.67
+
+"--- Reference Constants and Functions ---"
+pi: 3.14159265358979
+ftoc(f) = (f - 32) * 5/9
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

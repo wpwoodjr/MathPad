@@ -1281,11 +1281,7 @@ body.panel-resizing * {
 }
 
 .variable-row[data-type="output"] .variable-name {
-    color: var(--accent-primary);
-}
-
-.variable-row[data-type="reference"] .variable-name {
-    color: var(--text-primary);
+    color: var(--syn-keyword);
 }
 
 .variable-row.has-unsolved .variable-name {
@@ -1310,15 +1306,6 @@ body.panel-resizing * {
 
 .variable-row.has-error .variable-value-input {
     border-color: var(--error-color);
-}
-
-.variable-section-separator {
-    padding: 8px 12px;
-    color: var(--text-primary);
-    font-style: italic;
-    font-size: 13px;
-    border-top: 1px solid var(--border-color);
-    margin-top: 4px;
 }
 
 .variable-value-input {

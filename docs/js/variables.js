@@ -712,6 +712,7 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
         if (markedResult && markedResult.kind === 'expression-output') {
             exprOutputs.push({
                 exprTokens: markedResult.exprTokens,
+                label: markedResult.label,
                 marker: markedResult.marker,
                 markerEndCol: markedResult.markerEndCol,
                 startLine: lineNum - 1,

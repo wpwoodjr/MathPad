@@ -157,6 +157,8 @@ class LineParser {
         parser.lineComment = lineComment;
         parser.trailingComment = trailingComment;
         parser.tokens = structuralTokens;
+        // Keep full token list (with COMMENT tokens) for label extraction
+        parser.allTokens = tokens;
 
         return parser;
     }
@@ -614,9 +616,16 @@ class LineParser {
             }
 
             // Capture label text from tokens before the variable name
-            const label = varInfo.varTokenStartIndex > 0
-                ? tokensToText(this.tokens.slice(0, varInfo.varTokenStartIndex)).trim()
-                : null;
+            // Use allTokens to include quoted comments (COMMENT tokens are
+            // excluded from structural this.tokens but should appear in labels)
+            const varToken = this.tokens[varInfo.varTokenStartIndex];
+            const varCol = varToken ? varToken.col : Infinity;
+            const leadingTokens = this.allTokens
+                ? this.allTokens.filter(t => !t.lineComment && t.col < varCol)
+                : this.tokens.slice(0, varInfo.varTokenStartIndex);
+            const label = leadingTokens.length > 0
+                ? (tokensToText(leadingTokens) + (varToken && varToken.ws || '')) || null
+                : (varToken && varToken.ws) || null;
 
             return {
                 kind: 'declaration',
@@ -649,9 +658,20 @@ class LineParser {
                 commentUnquoted = true;
             }
 
+            // Capture label text before the expression (quoted or unquoted)
+            const exprFirstToken = exprTokens.length > 0 ? exprTokens[0] : null;
+            const exprCol = exprFirstToken ? exprFirstToken.col : Infinity;
+            const leadingTokens = this.allTokens
+                ? this.allTokens.filter(t => !t.lineComment && t.col < exprCol)
+                : [];
+            const label = leadingTokens.length > 0
+                ? (tokensToText(leadingTokens) + (exprFirstToken && exprFirstToken.ws || '')) || null
+                : (exprFirstToken && exprFirstToken.ws) || null;
+
             return {
                 kind: 'expression-output',
                 exprTokens,
+                label,
                 marker,
                 markerEndCol,
                 valueTokens,

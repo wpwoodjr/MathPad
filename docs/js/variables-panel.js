@@ -87,19 +87,11 @@ class VariablesPanel {
      * Shows one row per declaration line and expression output
      */
     updateFromText(text) {
-        // Find where references section starts (if present)
+        // Find where references section starts (if present) — excluded from panel
         const refSectionStart = text.indexOf('"--- Reference Constants and Functions ---"');
         const refSectionLineIndex = refSectionStart >= 0
             ? text.substring(0, refSectionStart).split('\n').length - 1
             : Infinity;
-
-        // If reference section moved, remove separator so it gets recreated in the right place
-        const existingSeparator = this.container.querySelector('.variable-section-separator');
-        if (existingSeparator && this.refSectionLineIndex !== refSectionLineIndex) {
-            existingSeparator.remove();
-        }
-
-        this.refSectionLineIndex = refSectionLineIndex;
 
         // Detect --Variables-- section marker
         const varsSectionStart = text.indexOf('--Variables--');
@@ -126,6 +118,7 @@ class VariablesPanel {
                 newDeclMap.set(output.startLine, {
                     name: tokensToText(output.exprTokens).trim(),
                     declaration: {
+                        label: output.label || null,
                         marker: output.marker,
                         type: output.recalculates ? VarType.OUTPUT : VarType.INPUT,
                         clearBehavior: output.recalculates ? ClearBehavior.ON_SOLVE : ClearBehavior.NONE,
@@ -144,19 +137,18 @@ class VariablesPanel {
             }
         }
 
+        // Remove reference section items from panel (shown in formulas only)
+        for (const lineIndex of [...newDeclMap.keys()]) {
+            if (lineIndex >= refSectionLineIndex) {
+                newDeclMap.delete(lineIndex);
+            }
+        }
+
         // If --Variables-- marker present, filter to only items below it
         if (varsSectionLineIndex >= 0) {
             for (const lineIndex of [...newDeclMap.keys()]) {
                 if (lineIndex <= varsSectionLineIndex) {
                     newDeclMap.delete(lineIndex);
-                }
-            }
-
-            // Strip // line comments from declarations below the marker
-            for (const [lineIndex, info] of newDeclMap) {
-                if (info.declaration && info.declaration.comment && info.declaration.commentUnquoted) {
-                    info.declaration.comment = null;
-                    info.declaration.commentUnquoted = false;
                 }
             }
 
@@ -266,13 +258,6 @@ class VariablesPanel {
         toAdd.forEach(info => this.addVariableRow(info));
         toUpdate.forEach(info => this.updateVariableRow(info));
 
-        // Remove separator if no reference items remain
-        const hasRefItems = [...newDeclMap.values()].some(info => info.lineIndex > refSectionLineIndex);
-        if (!hasRefItems) {
-            const separator = this.container.querySelector('.variable-section-separator');
-            if (separator) separator.remove();
-        }
-
         this.declarations = newDeclMap;
         this.flashChanges = false;
         this._oldDisplayValues = null;
@@ -299,9 +284,7 @@ class VariablesPanel {
                     label.style.color = 'var(--star-label-color)';
                     row.style.background = 'var(--bg-hover)';
                 }
-                if (info.isQuoted) {
-                    label.style.whiteSpace = 'pre-wrap';
-                }
+                label.style.whiteSpace = 'pre-wrap';
                 if (!info.isQuoted) {
                     // Syntax-highlight non-quoted labels (equations, expressions)
                     label.innerHTML = highlightLabelText(labelText);
@@ -325,23 +308,8 @@ class VariablesPanel {
         const decl = info.declaration;
         const clearBehavior = decl.clearBehavior;
 
-        // Check if this is in the references section
-        const isInRefSection = info.lineIndex > this.refSectionLineIndex;
-
-        // Add separator before first reference section item
-        if (isInRefSection && !this.container.querySelector('.variable-section-separator')) {
-            const separator = document.createElement('div');
-            separator.className = 'variable-section-separator';
-            separator.textContent = 'Reference Constants';
-            // Give separator a line index so insertRowInOrder works correctly
-            separator.dataset.lineIndex = this.refSectionLineIndex;
-            this.container.appendChild(separator);
-        }
-
         // Set data-type for CSS styling based on clear behavior
-        if (isInRefSection) {
-            row.dataset.type = 'reference';
-        } else if (decl.type === VarType.OUTPUT) {
+        if (decl.type === VarType.OUTPUT) {
             row.dataset.type = 'output';
         } else {
             row.dataset.type = 'input';
@@ -352,12 +320,11 @@ class VariablesPanel {
         const limitsStr = decl.limits ? `[${tokensToText(decl.limits.lowTokens).trim()}:${tokensToText(decl.limits.highTokens).trim()}]` : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
-        const labelPrefix = decl.label ? decl.label + ' ' : '';
+        const labelPrefix = decl.label || '';
+        if (labelPrefix) nameLabel.style.whiteSpace = 'pre-wrap';
         nameLabel.textContent = labelPrefix + info.name + limitsStr + ' ' + formatSuffix + (decl.marker || ':');
         // Add tooltip explaining variable type
-        if (isInRefSection) {
-            nameLabel.title = 'Reference (from Constants/Functions)';
-        } else if (clearBehavior === ClearBehavior.ON_CLEAR) {
+        if (clearBehavior === ClearBehavior.ON_CLEAR) {
             nameLabel.title = 'Input variable (cleared on Clear)';
         } else if (decl.type === VarType.OUTPUT) {
             nameLabel.title = clearBehavior === ClearBehavior.ON_SOLVE_ONLY
@@ -369,11 +336,10 @@ class VariablesPanel {
 
         // Value input or display
         // Output types (-> and ->>) are read-only
-        // References section values are also read-only (auto-generated)
         // Expression outputs are always read-only
         const isOutput = decl.type === VarType.OUTPUT;
         const isExpressionOutput = info.isExpressionOutput || false;
-        const isEditable = !isOutput && !isInRefSection && !isExpressionOutput;
+        const isEditable = !isOutput && !isExpressionOutput;
         let valueElement;
 
         if (isEditable) {
@@ -453,6 +419,7 @@ class VariablesPanel {
         if (decl.comment) {
             const commentElement = document.createElement('span');
             commentElement.className = 'variable-comment';
+            commentElement.style.whiteSpace = 'pre-wrap';
             commentElement.textContent = decl.comment;
             commentElement.title = decl.comment;
             row.appendChild(commentElement);

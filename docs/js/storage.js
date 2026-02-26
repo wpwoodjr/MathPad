@@ -97,8 +97,7 @@ pmt = pmt(pv; rate/12; years*12; fv)
 
 --Variables--
 "*Enter value(s), then calculate a variable by clicking its solve icon \u27F2"
-
-
+ 
    pv $<- $100,000     "present value (loan or annuity)"
    fv $<- $0           "future value (balloon payment)"
  rate %<- 6.125%       "annual interest rate %"
@@ -146,55 +145,21 @@ x2 = (-b - sqrt(disc)) / (2*a)
             },
             {
                 id: generateId(),
-                title: 'Example: Basel Series',
-                text: `"Basel Series"
-  "Recursive and non-recursive solutions"
-
---Variables--
-"*The Basel series is the sum of 1/n**2 where n goes from 1 to infinity"
-
-"It is equal to pi**2/6"
-  pi**2/6-> "(to 10 places)"
-
-
-"Here we develop a recursive solution"
-"We are limited to how high n can go by the recursion limit"
-"First define the function:"
-  basel(low; high) = if(low > high; 0; 1/low**2 + basel(low+1; high))
-  basel(1; 750)->
-
-
-"Here we develop a solution using the built-in sum function"
-"Since sum is not subject to recursion limits we can sum to much higher n"
-  sum(1/n**2; n; 1; 10000000)->
-
-"--- Reference Constants and Functions ---"
-pi: 3.141592653589793`,
-                category: 'Math',
-                places: 10,
-                stripZeros: true,
-                groupDigits: false,
-                format: 'float',
-                degreesMode: false,
-                shadowConstants: true
-            },
-            {
-                id: generateId(),
                 title: 'Example: Factorial',
                 text: `"Factorial"
   "Recursive and non-recursive solutions"
 
 --Variables--
-"*Factorial of n is the product of all integers from 1 to n"
-"n! = 1 * 2 * 3 * ... * n"
-"Note: 170! is the largest factorial that fits in a floating point number"
+"*Factorial of n is the product of all integers from 1 to n:"
+"  n! = 1 * 2 * 3 * ... * n
+  Note: 170! is the largest factorial that fits in a floating point number"
 
 
-"Here we develop a recursive solution"
-  fac(n) = if(n <= 1; 1; n * fac(n - 1))
+"Here we develop a recursive function fac(n)"
+      fac(n) = if(n <= 1; 1; n * fac(n - 1))
   fac(170)->
 
-"Here we develop a solution using the built-in prod function"
+"Here we provide a solution using the built-in prod function"
   prod(k; k; 1; 170)->
 
 "There is also a built-in fact function"
@@ -246,6 +211,57 @@ x5[-4:-2]->>`,
                 format: 'float',
                 degreesMode: false,
                 shadowConstants: true
+            },
+            {
+                id: generateId(),
+                title: "Example: Ohm's Law",
+                text: `"Ohm's Law"
+
+v = i*r
+w = v*i
+
+v: 40       "volts"
+i: 5        "amps"
+r: 8        "ohms"
+w: 200      "watts"`,
+                category: 'Science',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: false
+            },
+            {
+                id: generateId(),
+                title: 'Example: Basel Series',
+                text: `"Basel Series"
+  "Recursive and non-recursive solutions"
+
+--Variables--
+"*The Basel series is the sum of 1/n**2 where n goes from 1 to infinity"
+
+"It is equal to pi**2/6"
+  pi**2/6->               "(to 8 places)"
+
+
+"Here we develop a recursive basel function"
+      basel(low; high) = if(low > high; 0; 1/low**2 + basel(low+1; high))
+
+"We are limited to how high n can go by the recursion limit"
+  basel(1; 750)->
+
+
+"Here we develop a solution using the built-in sum function"
+"Since sum is not subject to recursion limits we can sum to much higher n"
+  sum(1/n**2; n; 1; 10000000)->`,
+                category: 'Math',
+                places: 8,
+                stripZeros: true,
+                groupDigits: false,
+                format: 'float',
+                degreesMode: false,
+                shadowConstants: false
             },
             {
                 id: generateId(),
