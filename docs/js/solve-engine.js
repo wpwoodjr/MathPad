@@ -289,7 +289,11 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
                                 solved++;
                             }
                         } catch (e) {
-                            // Skip
+                            // EvalErrors (e.g., "has no value") are expected during iteration — skip
+                            // Other errors (e.g., stack overflow) should be reported
+                            if (!(e instanceof EvalError)) {
+                                errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
+                            }
                         }
                         continue;
                     }

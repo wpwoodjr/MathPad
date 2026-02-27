@@ -546,8 +546,8 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
             const formatted = formatNumber(percent, places, stripZeros, numberFormat, 10, false, null);
             return formatted + '%';
         } else {
-            // Use 2 decimal places for percent, strip trailing zeros
-            const formatted = toFixed(percent, 2).replace(/\.?0+$/, '');
+            // Use record's places setting for percent, strip trailing zeros
+            const formatted = toFixed(percent, places).replace(/\.?0+$/, '');
             return formatted + '%';
         }
     }

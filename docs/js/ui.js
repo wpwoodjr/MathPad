@@ -1400,7 +1400,7 @@ function handleSolve(undoable = true) {
         } else if (result.solved > 0) {
             setStatus(`Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}`, false, textChanged);
         } else {
-            setStatus('Nothing to solve', false, false);
+            setStatus('Nothing to solve', false, textChanged);
         }
 
         // Cache solve results on undo entry so undo/redo can restore highlights

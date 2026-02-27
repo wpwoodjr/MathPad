@@ -667,7 +667,7 @@ function toFixed(value, places) {
 /**
  * Format a number for display
  * If varName ends with '$', format as money (up to 2 decimals, comma grouping, $ prefix)
- * If varName ends with '%', format as percentage (up to 2 decimals, % suffix)
+ * If varName ends with '%', format as percentage (using record's places, % suffix)
  */
 function formatNumber(value, places = 14, stripZeros = true, format = 'float', base = 10, groupDigits = false, varName = null) {
     if (!isFinite(value)) {
@@ -687,9 +687,9 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
             return value < 0 ? '-$' + result : '$' + result;
         }
         if (varName.endsWith('%')) {
-            // Percentage format: 0.075 displays as 7.5% (multiply by 100, up to 2 decimal places)
+            // Percentage format: 0.075 displays as 7.5% (multiply by 100, using record's places)
             const percent = value * 100;
-            const formatted = toFixed(percent, 2).replace(/\.?0+$/, '');
+            const formatted = toFixed(percent, places).replace(/\.?0+$/, '');
             return formatted + '%';
         }
     }

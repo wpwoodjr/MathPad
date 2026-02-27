@@ -39,43 +39,92 @@ function createDefaultData() {
                 title: 'Example: Retirement Calculator',
                 text: `"Retirement Calculator"
 
---Formulas--
-pmt(pv; rate; n; fv) = -(-pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+--Functions--
+"Time Value of Money"
+pmt(pv; rate; n; fv) = (pv - fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+
+"Total accumulation of a rate applied to a balance which increases by gain% every period"
+{
+  tot(pv; gain; rate; periods) =
+    if(gain == 0; pv * rate * periods; pv * rate * ((1 + gain)**periods - 1) / gain)
+//     if(periods == 0; 0; pv * rate + tot(pv * (1 + gain); gain; rate; periods - 1))
+}
+
+"Total fees paid given total payment"
+fees(pv; fv; totPmt; return; fees) = fees * (totPmt + fv - pv) / (return - fees)
 
 --Equations--
 "Future value of account(s)"
 fv = pv * (1 + gain)**years
-"TVM calculation"
-pmt = pmt(pv; (return - fees)/12; years*12; fv)
+
+"Variable payments"
+pmtRate = return - fees - gain
+totVPmt = tot(pv; gain; pmtRate; years)
+totVFees = fees(pv; fv; totVPmt; return; fees)
+year1 = pv * pmtRate / 12
+yearN = pv * (1 + gain)**(years - 1) * pmtRate / 12
+
+"Fixed payments"
+fixedPmt = pmt(pv; return - fees; years; fv) / 12
+totFPmt = fixedPmt * years * 12
+totFFees = fees(pv; fv; totFPmt; return; fees)
 
 --Variables--
-"*Calculates monthly retirement withdrawals using Time Value of Money."
-"Enter values, then click \u27F2 on any variable to solve for it."
+"*Calculates fixed or variable monthly retirement withdrawals"
+"Enter present value, years, gain (or future value), fees, and return; then click the Solve button.  Correct orange results by pressing \u27F2 next to one of the orange values."
 
 
-"Value of retirement account(s):"
-pv$<- $1,000,000
+
+"Present value of retirement account(s):"
+      pv $<- $1,000,000
 
 "Life expectancy:"
-years<- 20
+   years <- 20
 
 "Enter net annual account(s) gain or future value:"
-gain%<- 1.7%
-fv$<- $1,400,000
+    gain %<- 2%
+      fv $<-
 
 
-"Management fees (percentage):"
-fees%<- 0.65%
+"Annual management fees (percentage):"
+    fees %<- 0.5%
 
-"Total annual return:"
-return%<- 6.5%
+"Total expected annual return:"
+  return %<- 6%
 
-"Monthly withdrawal amount:"
-pmt$<-
+
+"*Variable payments (grows with balance each year)"
+
+"Payment rate:"
+ pmtRate %<-
+
+"First year monthly payments:"
+   year1 $->
+
+"Last year monthly payments:"
+   yearN $->
+
+"Total of variable payments:"
+ totVPmt $->
+
+"Total fees paid:"
+totVFees $->
+
+
+"*Fixed payments (same every year)"
+
+"Monthly payments"
+fixedPmt $->
+
+"Total of fixed payments"
+ totFPmt $->
+
+"Total fees paid"
+totFFees $->
 
 
 "*Notes:"
-"Gain and fv are interdependent \u2014 if you change one, solve for the other by clicking its \u27F2.  Or enter both and solve for present value or years."`,
+"Values that are interdependent may appear orange after solving.  This indicates that one of them must be adjusted to balance with the others.  Click \u27F2 next to an orange value to adjust it.  All green means all values are balanced."`,
                 category: 'Finance',
                 places: 2,
                 stripZeros: true,
