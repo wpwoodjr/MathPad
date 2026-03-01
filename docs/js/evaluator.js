@@ -696,6 +696,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
 
     // Non-decimal base output: round to integer, use value#base suffix notation (e.g., FF#16, 77#8)
     if (base !== 10) {
+        if (base < 2 || base > 36) throw new Error(`Base must be between 2 and 36, got ${base}`);
         const intVal = Math.round(value);
         const str = intVal.toString(base).toUpperCase();
         return str + '#' + base;

@@ -440,13 +440,19 @@ function formatOutput(text, declarations, context, computedValues, record, solve
             }
             // Use pre-parsed declaration to insert value directly (no re-tokenization)
             const decl = info.declaration;
-            const formatted = formatVariableValue(value, decl.format, decl.fullPrecision, {
-                places: format.places,
-                stripZeros: format.stripZeros,
-                numberFormat: format.format,
-                base: decl.base,
-                groupDigits: format.groupDigits
-            });
+            let formatted;
+            try {
+                formatted = formatVariableValue(value, decl.format, decl.fullPrecision, {
+                    places: format.places,
+                    stripZeros: format.stripZeros,
+                    numberFormat: format.format,
+                    base: decl.base,
+                    groupDigits: format.groupDigits
+                });
+            } catch (e) {
+                errors.push(`Line ${info.lineIndex + 1}: ${e.message}`);
+                continue;
+            }
             const commentInfo = { comment: decl.comment, commentUnquoted: decl.commentUnquoted };
             const markerEndIndex = info.markerEndCol - 1;
             lines[info.lineIndex] = buildOutputLine(lines[info.lineIndex], markerEndIndex, formatted, commentInfo);
@@ -472,9 +478,15 @@ function formatOutput(text, declarations, context, computedValues, record, solve
         if (computedValues.has(key)) {
             const { value, fullPrecision, marker, format: varFormat, base: exprBase } = computedValues.get(key);
             const places = fullPrecision ? 15 : format.places;
-            const formatted = varFormat
-                ? formatVariableValue(value, varFormat, fullPrecision, format)
-                : formatNumber(value, places, format.stripZeros, format.format, exprBase || 10, format.groupDigits);
+            let formatted;
+            try {
+                formatted = varFormat
+                    ? formatVariableValue(value, varFormat, fullPrecision, format)
+                    : formatNumber(value, places, format.stripZeros, format.format, exprBase || 10, format.groupDigits);
+            } catch (e) {
+                errors.push(`Line ${output.startLine + 1}: ${e.message}`);
+                continue;
+            }
 
             // Insert the value after the marker
             const line = exprLines[output.startLine];

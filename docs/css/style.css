@@ -113,10 +113,11 @@
     padding: 2px 8px;
 }
 
-/* Sidebar theme/help rows - hidden by default, shown on small screens */
-.sidebar-actions-row.sidebar-theme-row,
-.sidebar-actions-row.sidebar-help-row {
+/* Sidebar theme/help row - hidden by default, shown on small screens */
+.sidebar-actions-row.sidebar-theme-help-row {
     display: none;
+    margin-top: 0;
+    margin-bottom: 8px;
 }
 
 /* Reset */
@@ -1094,6 +1095,17 @@ button {
     }
 }
 
+@media (max-width: 560px) {
+    #btn-theme,
+    #btn-help {
+        display: none;
+    }
+
+    .sidebar-actions-row.sidebar-theme-help-row {
+        display: flex;
+    }
+}
+
 @media (max-width: 480px) {
     /* Smaller line numbers */
     .line-numbers {
@@ -1119,16 +1131,6 @@ button {
 
     .header-right {
         gap: 2px;
-    }
-
-    #btn-theme,
-    #btn-help {
-        display: none;
-    }
-
-    .sidebar-actions-row.sidebar-theme-row,
-    .sidebar-actions-row.sidebar-help-row {
-        display: flex;
     }
 }
 

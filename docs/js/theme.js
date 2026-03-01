@@ -48,7 +48,8 @@
         var title = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
         var buttons = document.querySelectorAll('.btn-theme-toggle');
         for (var i = 0; i < buttons.length; i++) {
-            buttons[i].innerHTML = icon;
+            var label = buttons[i].classList.contains('btn-secondary') ? ' Theme' : '';
+            buttons[i].innerHTML = icon + label;
             buttons[i].title = title;
         }
     }

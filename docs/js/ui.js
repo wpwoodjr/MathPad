@@ -148,17 +148,15 @@ function renderSidebar() {
 
     html += `
         <div class="sidebar-actions">
+            <div class="sidebar-actions-row sidebar-theme-help-row">
+                <button onclick="showHelp()" class="btn-secondary" title="Help">? Help</button>
+                <button onclick="toggleTheme()" class="btn-secondary btn-theme-toggle" title="Toggle light/dark theme">${document.documentElement.getAttribute('data-theme') === 'light' ? '\u263D' : '<span style="font-size:1.3em;line-height:1">\u263C</span>'} Theme</button>
+            </div>
             <button onclick="createNewRecord()" class="btn-new-record">+ New Record</button>
             <div class="sidebar-actions-row">
                 <button onclick="handleImport()" class="btn-secondary">Import</button>
                 <button onclick="handleExport()" class="btn-secondary">Export</button>
                 <button onclick="handleReset()" class="btn-secondary">Reset</button>
-            </div>
-            <div class="sidebar-actions-row sidebar-help-row">
-                <button onclick="showHelp()" class="btn-secondary" title="Help">? Help</button>
-            </div>
-            <div class="sidebar-actions-row sidebar-theme-row">
-                <button onclick="toggleTheme()" class="btn-secondary btn-theme-toggle" title="Toggle light/dark theme">${document.documentElement.getAttribute('data-theme') === 'light' ? '\u263D' : '<span style="font-size:1.3em;line-height:1">\u263C</span>'}</button>
             </div>
         </div>
     `;
