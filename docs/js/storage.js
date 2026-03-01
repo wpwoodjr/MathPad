@@ -436,10 +436,11 @@ function loadData() {
 /**
  * Save data to localStorage
  */
-function saveData(data) {
+function saveData(data, localOnly = false) {
     try {
         data.version = STORAGE_VERSION;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        if (!localOnly) markDriveDirty();
         return true;
     } catch (e) {
         console.error('Error saving data to localStorage:', e);
@@ -498,7 +499,6 @@ function ensureDefaultSettingsRecord(data) {
  */
 let saveTimeout = null;
 let resched = true;
-let pendingMarkDirty = false;
 function doSave(data, delay) {
     if (resched) {
         resched = false;
@@ -508,15 +508,12 @@ function doSave(data, delay) {
     } else {
         saveTimeout = null;
         resched = true;
-        saveData(data);
-        if (pendingMarkDirty && typeof markDriveDirty === 'function' && typeof isDriveSignedIn === 'function' && isDriveSignedIn()) {
-            markDriveDirty();
-        }
-        pendingMarkDirty = false;
+        saveData(data, true);
     }
 }
-function debouncedSave(data, delay = 500, markDirty = true) {
-    if (markDirty) pendingMarkDirty = true;
+function debouncedSave(data, delay = 500, localOnly = false) {
+    if (!UI.initComplete) return;
+    if (!localOnly) markDriveDirty();
     if (saveTimeout) {
         resched = true;
     } else {

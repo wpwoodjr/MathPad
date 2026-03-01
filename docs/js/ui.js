@@ -45,6 +45,7 @@ const UI = {
  */
 function initUI(data) {
     UI.data = data;
+    UI.initComplete = false;
 
     // Get DOM elements
     UI.sidebar = document.getElementById('sidebar');
@@ -84,6 +85,17 @@ function initUI(data) {
 
     const count = data.records.length;
     setStatus(`Loaded ${count} record${count !== 1 ? 's' : ''}`, false, false);
+    restoreStatusAfterDelay();
+    // Set after scroll restoration RAFs have fired
+    setTimeout(() => { UI.initComplete = true; }, 50);
+}
+
+function restoreStatusAfterDelay() {
+    setTimeout(() => {
+        if (UI.lastPersistentStatus) {
+            setStatus(UI.lastPersistentStatus.message, UI.lastPersistentStatus.isError, false);
+        }
+    }, 4000);
 }
 
 /**
@@ -221,10 +233,10 @@ function openRecord(recordId) {
     // Switch to this record
     UI.currentRecordId = recordId;
 
-    // Save last viewed record and open tabs (metadata only, don't mark Drive dirty)
+    // Save last viewed record and open tabs
     UI.data.settings.lastRecordId = recordId;
     UI.data.settings.openTabs = [...UI.openTabs];
-    debouncedSave(UI.data, 500, false);
+    debouncedSave(UI.data);
 
     // Create editor if not exists
     if (!UI.editors.has(recordId)) {
@@ -400,10 +412,10 @@ function createEditorForRecord(record) {
         handleSolve(undoable);
     });
 
-    // Save scroll position when user scrolls (metadata only, don't mark Drive dirty)
+    // Save scroll position when user scrolls
     editor.onScrollChange((scrollTop) => {
         record.scrollTop = scrollTop;
-        debouncedSave(UI.data, 500, false);
+        debouncedSave(UI.data, 500, true);
     });
 
     // Set up divider drag
@@ -530,9 +542,9 @@ function closeTab(recordId) {
     // Remove from open tabs
     UI.openTabs.splice(index, 1);
 
-    // Save open tabs (metadata only, don't mark Drive dirty)
+    // Save open tabs
     UI.data.settings.openTabs = [...UI.openTabs];
-    debouncedSave(UI.data, 500, false);
+    debouncedSave(UI.data);
 
     // Remove editor
     if (UI.editors.has(recordId)) {
@@ -868,6 +880,7 @@ function deleteCurrentRecord() {
  * @param {boolean} persist - Whether to save to the record (default true)
  */
 function setStatus(message, isError = false, persist = true) {
+    clearDriveStatusFlash();
     const statusText = document.getElementById('status-text');
     if (statusText) {
         statusText.textContent = message;
@@ -1570,11 +1583,11 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
         divider.classList.remove('dragging');
         document.body.classList.remove('panel-resizing');
 
-        // Save divider position to current record (metadata only, don't mark Drive dirty)
+        // Save divider position to current record
         const record = findRecord(UI.data, UI.currentRecordId);
         if (record) {
             record.dividerHeight = topPanel.offsetHeight;
-            debouncedSave(UI.data, 500, false);
+            debouncedSave(UI.data);
         }
     }
 
@@ -1593,7 +1606,7 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
             const record = findRecord(UI.data, UI.currentRecordId);
             if (record) {
                 record.dividerHeight = clamped;
-                debouncedSave(UI.data, 500, false);
+                debouncedSave(UI.data);
             }
         }
     });
@@ -1604,6 +1617,9 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
  * Replaces localStorage, clears editors, re-renders everything.
  */
 function reloadUIWithData(newData) {
+    // Suppress dirty marking — we're loading from Drive, not making local changes
+    UI.initComplete = false;
+
     // Clear all editors
     for (const [id, { container }] of UI.editors) {
         container.remove();
@@ -1614,7 +1630,7 @@ function reloadUIWithData(newData) {
 
     // Replace data
     UI.data = newData;
-    saveData(UI.data);
+    saveData(UI.data, true);
 
     // Re-render UI
     renderSidebar();
@@ -1629,6 +1645,8 @@ function reloadUIWithData(newData) {
     } else if (UI.data.records.length > 0) {
         openRecord(UI.data.records[0].id);
     }
+
+    setTimeout(() => { UI.initComplete = true; }, 50);
 }
 
 // Export functions to global scope for HTML onclick handlers
@@ -1649,6 +1667,7 @@ window.handleImport = handleImport;
 window.handleExport = handleExport;
 window.handleReset = handleReset;
 window.reloadUIWithData = reloadUIWithData;
+window.restoreStatusAfterDelay = restoreStatusAfterDelay;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

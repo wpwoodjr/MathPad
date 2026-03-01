@@ -164,13 +164,9 @@ window.onunhandledrejection = function(event) {
  * (Not strictly necessary since we auto-save, but good UX)
  */
 window.addEventListener('beforeunload', (e) => {
-    // Flush any pending saves
-    if (typeof UI !== 'undefined' && UI.data) {
-        saveData(UI.data);
-    }
-    // Flush Drive sync if dirty
-    if (typeof flushDriveSync === 'function') {
-        flushDriveSync();
+    // Flush any pending debounced save (debouncedSave sets driveDirty immediately)
+    if (typeof UI !== 'undefined' && UI.data && DriveState.driveDirty) {
+        saveData(UI.data, true);
     }
 });
 

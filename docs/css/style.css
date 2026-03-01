@@ -790,6 +790,12 @@ button {
 .btn-drive-avatar:hover {
     background-color: var(--accent-hover);
 }
+.btn-drive-avatar.inactive {
+    opacity: 0.4;
+}
+.btn-drive-avatar.inactive:hover {
+    opacity: 0.7;
+}
 
 /* Drive Dropdown Menu */
 .drive-dropdown {
@@ -1082,6 +1088,10 @@ button {
     .app-container {
         padding-top: var(--header-height);
     }
+
+    .status-drive {
+        display: none;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1128,9 +1138,6 @@ button {
         padding: 3px 8px;
     }
 
-    .status-drive {
-        display: none;
-    }
 
     .drive-dropdown {
         right: 8px;
