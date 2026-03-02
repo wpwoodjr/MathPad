@@ -106,6 +106,7 @@ function setupDriveListeners() {
                 if (ok) {
                     updateDriveUI();
                     await runSyncCycle();
+                    startDriveSync();
                     updateDriveStatus();
                 }
             }

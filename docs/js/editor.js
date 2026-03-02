@@ -634,11 +634,11 @@ class SimpleEditor {
             clearTimeout(this.undoDebounceTimer);
         }
 
-        // Debounce: wait for 300ms of no typing before saving a history entry
+        // Debounce: wait for 500ms of no typing before saving a history entry
         // This groups rapid keystrokes into a single undo step
         this.undoDebounceTimer = setTimeout(() => {
             this.saveToHistoryNow();
-        }, 300);
+        }, 500);
     }
 
     /**

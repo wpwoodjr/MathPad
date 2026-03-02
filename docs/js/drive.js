@@ -131,10 +131,10 @@ let _tokenPromise = null;
 /**
  * Request an access token (one popup at most).
  * Uses stored email as hint to auto-select account when possible.
- * @param {string} [prompt] - GIS prompt value: '' (auto), 'consent', 'select_account'
+ * @param {string} [promptMode] - GIS prompt value: '' (auto), 'consent', 'select_account'
  * @returns {Promise<boolean>}
  */
-function driveSignIn(prompt) {
+function driveSignIn(promptMode) {
     if (_tokenPromise) return _tokenPromise;
 
     _tokenPromise = new Promise((resolve) => {
@@ -144,7 +144,7 @@ function driveSignIn(prompt) {
             return;
         }
         // Timeout: if GIS blocks the popup, the callback never fires.
-        // Detect this and resolve false after 5 seconds.
+        // 120 seconds allows time for account picker / consent screens.
         let settled = false;
         const timeout = setTimeout(() => {
             if (!settled) {
@@ -152,7 +152,7 @@ function driveSignIn(prompt) {
                 _tokenPromise = null;
                 resolve(false);
             }
-        }, 5000);
+        }, 120000);
 
         DriveState.tokenClient.callback = (resp) => {
             if (settled) return;
@@ -177,7 +177,7 @@ function driveSignIn(prompt) {
             });
         };
         DriveState.tokenClient.requestAccessToken({
-            prompt: prompt || '',
+            prompt: promptMode || '',
             hint: DriveState.userEmail || ''
         });
     });
@@ -192,6 +192,13 @@ async function driveSignOut() {
     stopDriveSync();
     if (DriveState.driveDirty) {
         await flushDriveSync();
+        if (DriveState.driveDirty) {
+            // Flush failed — warn user
+            if (!confirm('Failed to save changes to Drive. Sign out anyway?')) {
+                startDriveSync();
+                return;
+            }
+        }
     }
     if (DriveState.accessToken) {
         google.accounts.oauth2.revoke(DriveState.accessToken);
@@ -291,8 +298,15 @@ async function ensureMathPadFolder() {
             if (resp.ok) {
                 const meta = await resp.json();
                 if (!meta.trashed) return DriveState.folderId;
+                // Folder trashed — clear and recreate
+            } else if (resp.status !== 404) {
+                // Transient error (403, 500, etc.) — keep cached ID, try again later
+                return DriveState.folderId;
             }
-        } catch (e) { /* fall through to search/create */ }
+        } catch (e) {
+            // Network error — keep cached ID, try again later
+            return DriveState.folderId;
+        }
         DriveState.folderId = null;
         localStorage.removeItem(DRIVE_KEYS.folderId);
     }
@@ -626,6 +640,8 @@ async function runSyncCycle() {
                 const data = await driveLoadFile(DriveState.fileId);
                 if (data) {
                     applyDriveData(data);
+                } else {
+                    updateDriveStatus('Load failed');
                 }
             } else {
                 // User declined — keep local, it will overwrite Drive on next sync.
@@ -656,8 +672,9 @@ async function runSyncCycle() {
 async function flushDriveSync() {
     if (!isDriveAuthenticated() || !DriveState.driveDirty || DriveState.syncInProgress) return;
     if (UI.data) {
-        await driveSaveFile(UI.data);
-        clearDriveDirty();
+        if (await driveSaveFile(UI.data)) {
+            clearDriveDirty();
+        }
     }
 }
 
