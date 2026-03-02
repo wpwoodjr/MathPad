@@ -33,3 +33,23 @@ currentHeadingOffBow: 1    "degrees"
 course: 12                 "degrees"
 
 speedMadeGood->            "knots"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"Course to Steer"
+
+--Equations--
+salt<- rand(0.0001)
+(smg + salt) * sin(cmg + salt) = (speed + salt) * sin(cts + salt) + (drift + salt) * sin(set + salt)
+(smg + salt) * cos(cmg + salt) = (speed + salt) * cos(cts + salt) + (drift + salt) * cos(set + salt)
+// smg * sin(cmg) = speed * sin(cts) + drift * sin(set)
+// smg * cos(cmg) = speed * cos(cts) + drift * cos(set)
+
+--Variables--
+  cmg <- 0         "course made good °"
+speed <- 5         "boat speed (kts)"
+  set <- 10        "current set °"
+drift <- 3         "current drift (kts)"
+ cts[0:360] -> 186      "course to steer °"
+ smg -> -2        "speed made good (kts)"

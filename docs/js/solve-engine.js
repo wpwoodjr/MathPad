@@ -109,7 +109,7 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
 
     if (unknowns.length > 1) {
         // Still too many unknowns after substitution
-        return { solved: false };
+        return { solved: false, tooManyUnknowns: unknowns };
     }
 
     // Exactly one unknown - solve for it
@@ -206,6 +206,7 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
     const maxIterations = 50;
     let iterations = 0;
     let changed = true;
+    const unsolvedEquations = new Map(); // line → [unknown names]
 
     while (changed && iterations++ < maxIterations) {
         changed = false;
@@ -307,11 +308,14 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
                     context.setVariable(result.variable, result.value);
                     computedValues.set(result.variable, result.value);
                     solveFailures.delete(result.variable); // Clear any previous failure
+                    unsolvedEquations.delete(eq.startLine); // Clear any previous "too many unknowns"
                     solved++;
                     changed = true;
                 } else if (result.error && result.variable) {
                     // Track the failure for this variable (line number for error reporting)
                     solveFailures.set(result.variable, { error: result.error, line: eq.startLine });
+                } else if (result.tooManyUnknowns) {
+                    unsolvedEquations.set(eq.startLine, result.tooManyUnknowns);
                 }
             } catch (e) {
                 errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
@@ -325,6 +329,14 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
         const varInfo = variables.get(varName);
         if (varInfo) {
             errors.push(`Line ${varInfo.lineIndex + 1}: ${failure.error} for '${varName}'`);
+        }
+    }
+
+    // Report equations that couldn't be solved due to too many unknowns
+    // Skip if any unknown already has a solve failure (avoids redundant errors)
+    for (const [line, unknowns] of unsolvedEquations) {
+        if (!unknowns.some(v => solveFailures.has(v))) {
+            errors.push(`Line ${line + 1}: Too many unknowns (${unknowns.join(', ')})`);
         }
     }
 
