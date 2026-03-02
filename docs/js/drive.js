@@ -24,8 +24,8 @@ const DriveState = {
     lastChecksum: null,
     folderId: null,             // ID of "MathPad" folder on Drive
     declinedRemoteTime: null,   // Remote modifiedTime we already prompted about (prevents re-prompt)
+    silentRenewalFailed: false,
     driveDirty: false,
-    saveInProgress: false,
     syncInProgress: false,
     syncTimer: null,
     statusInterval: null,
@@ -41,6 +41,7 @@ const DRIVE_KEYS = {
     fileName: 'mathpad_drive_fileName',
     modifiedTime: 'mathpad_drive_modifiedTime',
     checksum: 'mathpad_drive_checksum',
+    lastModifiedBy: 'mathpad_drive_lastModifiedBy',
     folderId: 'mathpad_drive_folderId',
     dirty: 'mathpad_drive_dirty',
     accessToken: 'mathpad_drive_token',
@@ -96,6 +97,7 @@ function restoreDriveState() {
     DriveState.fileName = localStorage.getItem(DRIVE_KEYS.fileName);
     DriveState.lastModifiedTime = localStorage.getItem(DRIVE_KEYS.modifiedTime);
     DriveState.lastChecksum = localStorage.getItem(DRIVE_KEYS.checksum);
+    DriveState.lastModifiedBy = localStorage.getItem(DRIVE_KEYS.lastModifiedBy);
     DriveState.folderId = localStorage.getItem(DRIVE_KEYS.folderId);
     DriveState.driveDirty = localStorage.getItem(DRIVE_KEYS.dirty) === '1';
     DriveState.accessToken = localStorage.getItem(DRIVE_KEYS.accessToken);
@@ -114,6 +116,7 @@ function saveDriveState() {
     if (DriveState.fileName) localStorage.setItem(DRIVE_KEYS.fileName, DriveState.fileName);
     if (DriveState.folderId) localStorage.setItem(DRIVE_KEYS.folderId, DriveState.folderId);
     set(DRIVE_KEYS.checksum, DriveState.lastChecksum);
+    set(DRIVE_KEYS.lastModifiedBy, DriveState.lastModifiedBy);
     set(DRIVE_KEYS.modifiedTime, DriveState.lastModifiedTime);
     set(DRIVE_KEYS.dirty, DriveState.driveDirty ? '1' : null);
     set(DRIVE_KEYS.accessToken, DriveState.accessToken);
@@ -185,9 +188,10 @@ function driveSignIn(prompt) {
 /**
  * Sign out and clear Drive state.
  */
-function driveSignOut() {
+async function driveSignOut() {
+    stopDriveSync();
     if (DriveState.driveDirty) {
-        flushDriveSync();
+        await flushDriveSync();
     }
     if (DriveState.accessToken) {
         google.accounts.oauth2.revoke(DriveState.accessToken);
@@ -200,8 +204,9 @@ function driveSignOut() {
     DriveState.lastModifiedTime = null;
     DriveState.lastModifiedBy = null;
     DriveState.declinedRemoteTime = null;
+    DriveState.silentRenewalFailed = false;
     clearDriveDirty();
-    stopDriveSync();
+    clearDriveStatusFlash();
     // Clear localStorage
     Object.values(DRIVE_KEYS).forEach(k => localStorage.removeItem(k));
 }
@@ -241,13 +246,10 @@ async function ensureToken() {
     DriveState.accessToken = null;
     DriveState.tokenExpiry = 0;
     saveDriveState();
-    updateDriveUI();
     // Try silent renewal once — if it fails, user must click avatar
     if (DriveState.silentRenewalFailed || !DriveState.userEmail) return false;
     const ok = await driveSignIn('');
-    if (ok) {
-        updateDriveUI();
-    } else {
+    if (!ok) {
         console.log('Silent token renewal failed at', new Date().toLocaleTimeString());
         DriveState.silentRenewalFailed = true;
     }
@@ -360,54 +362,55 @@ async function driveSaveFile(data, overrideName, forceNew) {
     const content = JSON.stringify(data);
 
     try {
-        let resp;
-        if (DriveState.fileId && !forceNew) {
-            // Update existing file — content only, don't overwrite name
-            resp = await driveMultipartRequest(
-                `https://www.googleapis.com/upload/drive/v3/files/${DriveState.fileId}?uploadType=multipart&fields=id,name,modifiedTime,lastModifyingUser,md5Checksum`,
-                'PATCH', { mimeType: 'application/json' }, content
-            );
-        } else {
-            // Create new file in MathPad folder
-            const folderId = await ensureMathPadFolder();
-            const metadata = { name: fileName, mimeType: 'application/json' };
-            if (folderId) metadata.parents = [folderId];
-            resp = await driveMultipartRequest(
-                'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,modifiedTime,lastModifyingUser,md5Checksum',
-                'POST', metadata, content
-            );
-        }
-
-        if (resp.status === 401) {
-            // Token expired, retry once
-            DriveState.accessToken = null;
-            if (await ensureToken()) {
-                return await driveSaveFile(data);
+        for (let attempt = 0; attempt < 2; attempt++) {
+            let resp;
+            if (DriveState.fileId && !forceNew) {
+                // Update existing file — content only, don't overwrite name
+                resp = await driveMultipartRequest(
+                    `https://www.googleapis.com/upload/drive/v3/files/${DriveState.fileId}?uploadType=multipart&fields=id,name,modifiedTime,lastModifyingUser,md5Checksum`,
+                    'PATCH', { mimeType: 'application/json' }, content
+                );
+            } else {
+                // Create new file in MathPad folder
+                const folderId = await ensureMathPadFolder();
+                const metadata = { name: fileName, mimeType: 'application/json' };
+                if (folderId) metadata.parents = [folderId];
+                resp = await driveMultipartRequest(
+                    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,modifiedTime,lastModifyingUser,md5Checksum',
+                    'POST', metadata, content
+                );
             }
-            return false;
-        }
 
-        if (resp.status === 404 && DriveState.fileId) {
-            // File deleted externally — clear fileId but keep fileName
-            DriveState.fileId = null;
-            localStorage.removeItem(DRIVE_KEYS.fileId);
-            return await driveSaveFile(data);
-        }
+            if (resp.status === 401 && attempt === 0) {
+                // Token expired — refresh and retry once
+                DriveState.accessToken = null;
+                if (!(await ensureToken())) return false;
+                continue;
+            }
 
-        if (!resp.ok) {
-            console.error('Drive save failed:', resp.status, await resp.text());
-            return false;
-        }
+            if (resp.status === 404 && DriveState.fileId && attempt === 0) {
+                // File deleted externally — clear fileId, retry will create new
+                DriveState.fileId = null;
+                localStorage.removeItem(DRIVE_KEYS.fileId);
+                continue;
+            }
 
-        const result = await resp.json();
-        DriveState.fileId = result.id;
-        DriveState.fileName = result.name;
-        DriveState.lastModifiedTime = result.modifiedTime;
-        DriveState.lastModifiedBy = result.lastModifyingUser?.emailAddress || DriveState.userEmail;
-        DriveState.lastChecksum = result.md5Checksum || null;
-        DriveState.declinedRemoteTime = null;
-        saveDriveState();
-        return true;
+            if (!resp.ok) {
+                console.error('Drive save failed:', resp.status, await resp.text());
+                return false;
+            }
+
+            const result = await resp.json();
+            DriveState.fileId = result.id;
+            DriveState.fileName = result.name;
+            DriveState.lastModifiedTime = result.modifiedTime;
+            DriveState.lastModifiedBy = result.lastModifyingUser?.emailAddress || DriveState.userEmail;
+            DriveState.lastChecksum = result.md5Checksum || null;
+            DriveState.declinedRemoteTime = null;
+            saveDriveState();
+            return true;
+        }
+        return false;
     } catch (e) {
         console.error('Drive save error:', e);
         return false;
@@ -450,11 +453,18 @@ async function driveLoadFile(fileId) {
     if (!(await ensureToken())) return null;
 
     try {
-        // Fetch content
-        const resp = await fetch(
+        let resp = await fetch(
             `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
             { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
         );
+        if (resp.status === 401) {
+            DriveState.accessToken = null;
+            if (!(await ensureToken())) return null;
+            resp = await fetch(
+                `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+                { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
+            );
+        }
         if (!resp.ok) {
             console.error('Drive load failed:', resp.status);
             return null;
@@ -486,10 +496,18 @@ async function driveGetMetadata(fileId) {
     if (!(await ensureToken())) return null;
 
     try {
-        const resp = await fetch(
+        let resp = await fetch(
             `https://www.googleapis.com/drive/v3/files/${fileId}?fields=name,modifiedTime,lastModifyingUser,md5Checksum`,
             { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
         );
+        if (resp.status === 401) {
+            DriveState.accessToken = null;
+            if (!(await ensureToken())) return null;
+            resp = await fetch(
+                `https://www.googleapis.com/drive/v3/files/${fileId}?fields=name,modifiedTime,lastModifyingUser,md5Checksum`,
+                { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
+            );
+        }
         if (!resp.ok) return null;
         const meta = await resp.json();
         return {
@@ -552,7 +570,10 @@ function stopDriveSync() {
 async function runSyncCycle() {
     if (!isDriveAuthenticated()) {
         // Token expired or not yet obtained — prompt user to reconnect
-        if (isDriveSignedIn()) updateDriveStatus();
+        if (isDriveSignedIn()) {
+            updateDriveUI();
+            updateDriveStatus();
+        }
         return;
     }
     if (DriveState.syncInProgress) return;
@@ -604,12 +625,7 @@ async function runSyncCycle() {
                 updateDriveStatus('Loading...');
                 const data = await driveLoadFile(DriveState.fileId);
                 if (data) {
-                    reloadUIWithData(data);
-                    clearDriveDirty();
-                    updateDriveStatus();
-                    const count = data.records ? data.records.length : 0;
-                    setStatus(`Loaded ${count} record${count !== 1 ? 's' : ''} from Drive`, false, false);
-                    restoreStatusAfterDelay();
+                    applyDriveData(data);
                 }
             } else {
                 // User declined — keep local, it will overwrite Drive on next sync.
@@ -638,11 +654,9 @@ async function runSyncCycle() {
  * Immediate save if dirty (for beforeunload/solve). Skips conflict check.
  */
 async function flushDriveSync() {
-    if (!isDriveAuthenticated() || !DriveState.driveDirty) return;
+    if (!isDriveAuthenticated() || !DriveState.driveDirty || DriveState.syncInProgress) return;
     if (UI.data) {
-        DriveState.saveInProgress = true;
         await driveSaveFile(UI.data);
-        DriveState.saveInProgress = false;
         clearDriveDirty();
     }
 }
@@ -783,6 +797,7 @@ function updateDriveStatus(override) {
     }
 
     let text;
+    let flash = !!override;
     if (override) {
         text = override;
     } else {
@@ -790,7 +805,7 @@ function updateDriveStatus(override) {
         if (isDriveSignedIn() && !isDriveAuthenticated()) {
             const initial = (DriveState.userEmail || '?')[0].toUpperCase();
             text = `Click ${initial} to sync${dirty} | ${DriveState.userEmail}`;
-            override = text;
+            flash = true;
         } else {
             const info = getDriveLastSaveInfo();
             if (info) {
@@ -803,8 +818,8 @@ function updateDriveStatus(override) {
 
     el.textContent = text;
 
-    // On small screens where status-drive is hidden, flash override messages
-    if (override && text && getComputedStyle(el).display === 'none') {
+    // On small screens where status-drive is hidden, flash important messages
+    if (flash && text && getComputedStyle(el).display === 'none') {
         const statusText = document.getElementById('status-text');
         if (statusText) {
             clearDriveStatusFlash();
@@ -828,6 +843,15 @@ function savedDriveStatus() {
     return null;
 }
 
+function applyDriveData(data) {
+    reloadUIWithData(data);
+    clearDriveDirty();
+    updateDriveStatus();
+    const count = data.records ? data.records.length : 0;
+    setStatus(`Loaded ${count} record${count !== 1 ? 's' : ''} from Drive`, false, false);
+    restoreStatusAfterDelay();
+}
+
 function clearDriveStatusFlash() {
     if (_driveStatusTimer) {
         clearTimeout(_driveStatusTimer);
@@ -842,8 +866,13 @@ async function handleDriveOpen() {
     // Flush any pending changes to current file before switching
     if (DriveState.driveDirty && DriveState.fileId && UI.data) {
         updateDriveStatus('Saving...');
-        await driveSaveFile(UI.data);
-        clearDriveDirty();
+        const saved = await driveSaveFile(UI.data);
+        if (saved) {
+            clearDriveDirty();
+        } else if (!confirm('Failed to save current file to Drive. Open new file anyway?')) {
+            updateDriveStatus();
+            return;
+        }
     }
 
     const picked = await openDriveFileChooser();
@@ -855,12 +884,7 @@ async function handleDriveOpen() {
         DriveState.fileId = picked.id;
         DriveState.fileName = picked.name;
         saveDriveState();
-        reloadUIWithData(data);
-        clearDriveDirty();
-        updateDriveStatus();
-        const count = data.records ? data.records.length : 0;
-        setStatus(`Loaded ${count} record${count !== 1 ? 's' : ''} from Drive`, false, false);
-        restoreStatusAfterDelay();
+        applyDriveData(data);
     } else {
         updateDriveStatus();
         setStatus('Failed to load from Drive', true, false);
@@ -891,10 +915,10 @@ async function handleDriveSaveAs() {
 /**
  * Handle sign out from Drive.
  */
-function handleDriveSignOut() {
-    driveSignOut();
-    updateDriveUI();
+async function handleDriveSignOut() {
     closeDriveDropdown();
+    await driveSignOut();
+    updateDriveUI();
 }
 
 /**

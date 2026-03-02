@@ -1615,6 +1615,7 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
  * Replaces localStorage, clears editors, re-renders everything.
  */
 function reloadUIWithData(newData) {
+    cancelPendingSave();
     // Suppress dirty marking — we're loading from Drive, not making local changes
     UI.initComplete = false;
 

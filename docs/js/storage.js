@@ -511,6 +511,13 @@ function doSave(data, delay) {
         saveData(data, true);
     }
 }
+function cancelPendingSave() {
+    if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        saveTimeout = null;
+        resched = true;
+    }
+}
 function debouncedSave(data, delay = 500, localOnly = false) {
     if (!UI.initComplete) return;
     if (!localOnly) markDriveDirty();
