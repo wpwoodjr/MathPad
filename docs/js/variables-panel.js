@@ -542,10 +542,7 @@ class VariablesPanel {
             const negative = num.startsWith('-');
             if (negative) num = num.substring(1).trim();
             // Add commas to integer part
-            const parts = num.split('.');
-            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            const result = parts.join('.');
-            return (negative ? '-$' : '$') + result;
+            return (negative ? '-$' : '$') + addCommaGrouping(num);
         }
 
         // Handle percentage variables

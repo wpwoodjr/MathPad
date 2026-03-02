@@ -518,8 +518,8 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
 
     // Handle money format
     if (varFormat === 'money') {
-        const absValue = Math.abs(value);
         if (fullPrecision) {
+            const absValue = Math.abs(value);
             let formatted = formatNumber(absValue, places, stripZeros, numberFormat, 10, groupDigits, null);
             // Ensure at least 2 decimal places for money
             const dot = formatted.indexOf('.');
@@ -529,27 +529,18 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
                 formatted += '0'.repeat(2 - (formatted.length - dot - 1));
             }
             return value < 0 ? '-$' + formatted : '$' + formatted;
-        } else {
-            // Use 2 decimal places for money by default
-            const formatted = toFixed(absValue, 2);
-            const parts = formatted.split('.');
-            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            const result = parts.join('.');
-            return value < 0 ? '-$' + result : '$' + result;
         }
+        return formatMoney(value);
     }
 
     // Handle percent format
     if (varFormat === 'percent') {
-        const percent = value * 100;
         if (fullPrecision) {
+            const percent = value * 100;
             const formatted = formatNumber(percent, places, stripZeros, numberFormat, 10, false, null);
             return formatted + '%';
-        } else {
-            // Use record's places setting for percent, strip trailing zeros
-            const formatted = toFixed(percent, places).replace(/\.?0+$/, '');
-            return formatted + '%';
         }
+        return formatPercent(value, places);
     }
 
     // Regular number formatting

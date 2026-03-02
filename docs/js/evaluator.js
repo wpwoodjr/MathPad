@@ -665,9 +665,36 @@ function toFixed(value, places) {
 }
 
 /**
+ * Add comma grouping to integer part of a numeric string: 1234567.89 -> 1,234,567.89
+ */
+function addCommaGrouping(numStr) {
+    const parts = numStr.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+}
+
+/**
+ * Format value as money: $1,234.56 with exactly 2 decimal places, comma grouping
+ */
+function formatMoney(value) {
+    const absValue = Math.abs(value);
+    const result = addCommaGrouping(toFixed(absValue, 2));
+    return value < 0 ? '-$' + result : '$' + result;
+}
+
+/**
+ * Format value as percentage: multiply by 100, strip trailing zeros, append %
+ */
+function formatPercent(value, places) {
+    const percent = value * 100;
+    const formatted = toFixed(percent, places).replace(/\.?0+$/, '');
+    return formatted + '%';
+}
+
+/**
  * Format a number for display
- * If varName ends with '$', format as money (up to 2 decimals, comma grouping, $ prefix)
- * If varName ends with '%', format as percentage (using record's places, % suffix)
+ * If varName ends with '$', format as money
+ * If varName ends with '%', format as percentage
  */
 function formatNumber(value, places = 14, stripZeros = true, format = 'float', base = 10, groupDigits = false, varName = null) {
     if (!isFinite(value)) {
@@ -677,21 +704,8 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
 
     // Check for special variable name suffixes
     if (varName) {
-        if (varName.endsWith('$')) {
-            // Money format: $1,234.56 with exactly 2 decimal places
-            const absValue = Math.abs(value);
-            const formatted = toFixed(absValue, 2);
-            const parts = formatted.split('.');
-            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            const result = parts.join('.');
-            return value < 0 ? '-$' + result : '$' + result;
-        }
-        if (varName.endsWith('%')) {
-            // Percentage format: 0.075 displays as 7.5% (multiply by 100, using record's places)
-            const percent = value * 100;
-            const formatted = toFixed(percent, places).replace(/\.?0+$/, '');
-            return formatted + '%';
-        }
+        if (varName.endsWith('$')) return formatMoney(value);
+        else if (varName.endsWith('%')) return formatPercent(value, places);
     }
 
     // Non-decimal base output: round to integer, use value#base suffix notation (e.g., FF#16, 77#8)
@@ -742,9 +756,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
 
     // Add comma grouping to integer part if requested
     if (groupDigits && !str.includes('e')) {
-        const parts = str.split('.');
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        str = parts.join('.');
+        str = addCommaGrouping(str);
     }
 
     return str;
@@ -753,7 +765,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        EvalContext, EvalError, evaluate, formatNumber, toFixed, checkBalance,
+        EvalContext, EvalError, evaluate, formatNumber, addCommaGrouping, formatMoney, formatPercent, toFixed, checkBalance,
         builtinFunctions, factorial, gamma,
         dateToJulian, julianToDate, parseDate, formatDate
     };
