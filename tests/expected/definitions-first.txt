@@ -1,0 +1,164 @@
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Constants"
+pi: 3.14159265358979
+e: 2.71828182845905
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Functions"
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 3 equations"; StatusIsError = 0
+"Definition chain"
+
+b = 2 * a
+c = b + 3
+c + d = 20
+
+--Variables--
+a: 4
+b -> 8
+c -> 11
+d -> 9
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 3 equations"; StatusIsError = 0
+"Reverse definition order"
+
+c = b + 3
+b = 2 * a
+c + d = 20
+
+--Variables--
+a: 4
+b -> 8
+c -> 11
+d -> 9
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Equation before definition"
+
+x + y = total
+total = x + 10
+
+--Variables--
+x: 5
+y -> 10
+total -> 15
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Definition with unknown RHS"
+
+x + y = 10
+z = x * y
+
+--Variables--
+x: 3
+y -> 7
+z -> 21
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Definition selects root (x=4)"
+
+// Equation has two roots: x=1 and x=4
+// Brent's would find x=1 (closer to 0)
+// Definition selects x=4
+x**2 - 5*x + 4 = 0
+x = a + 3
+
+--Variables--
+a: 1
+x -> 4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Definition selects root (x=1)"
+
+// Same equation, definition selects x=1
+x**2 - 5*x + 4 = 0
+x = a + 3
+
+--Variables--
+a: -2
+x -> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Extracted equation selects root (x=4)"
+
+// Same as above but equation form instead of definition
+// x - a = 3 extracts to x = a + 3 in Pass 1b
+x**2 - 5*x + 4 = 0
+x - a = 3
+
+--Variables--
+a: 1
+x -> 4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 4 equations"; StatusIsError = 0
+"Navigation bidirectional: reverse (find set, drift)"
+
+smg * sin(cmg) = speed * sin(cts) + drift * sin(set)
+smg * cos(cmg) = speed * cos(cts) + drift * cos(set)
+
+Nx = smg * sin(cmg) - speed * sin(cts)
+Ny = smg * cos(cmg) - speed * cos(cts)
+drift = sqrt(Nx**2 + Ny**2)
+set = mod(atan(Nx; Ny); 360)
+
+--Variables--
+cmg: 166
+speed: 10
+set: 210.0017
+drift: 0.9
+cts: 162.4156
+smg: 10.6278
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 4 equations"; StatusIsError = 0
+"Navigation bidirectional: forward (find cts, smg)"
+
+smg * sin(cmg) = speed * sin(cts) + drift * sin(set)
+smg * cos(cmg) = speed * cos(cts) + drift * cos(set)
+
+Nx = smg * sin(cmg) - speed * sin(cts)
+Ny = smg * cos(cmg) - speed * cos(cts)
+drift = sqrt(Nx**2 + Ny**2)
+set = mod(atan(Nx; Ny); 360)
+
+--Variables--
+cmg: 166
+speed: 10
+set: 210
+drift: 0.9
+cts[0:360]: 162.4156
+smg: 10.6278
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

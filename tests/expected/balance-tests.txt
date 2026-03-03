@@ -169,7 +169,7 @@ mint = yint / 12
 Category = "Unfiled"; Secret = 0
 Places = 6; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Line 13: Equation doesn't balance: mint = yint / 12 (0.005104165849793147 ≠ 0.005104166666666667)"; StatusIsError = 1
+Status = "Line 4: Equation doesn't balance: pmt = -pv * mint / (1 - (1 + mint)**-n) (-6379.91 ≠ -6379.910665597255)"; StatusIsError = 1
 "Test 10b: TVM at places=6 ($ rounding error exceeds tolerance) - doesn't balance"
 
 "Payment calculation"

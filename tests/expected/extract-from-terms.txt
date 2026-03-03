@@ -97,20 +97,3 @@ q -> 3
 u -> 2
 v -> 3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Solved 2 equations"; StatusIsError = 0
-"Navigation reverse: solve set+drift from cts+smg"
-
-smg * sin(cmg) = speed * sin(cts) + drift * sin(set)
-smg * cos(cmg) = speed * cos(cts) + drift * cos(set)
-
---Variables--
-cmg: 166
-speed: 10
-set[181:346] -> 210.0017
-drift -> 0.9
-cts: 162.4156
-smg: 10.6278
-~~~~~~~~~~~~~~~~~~~~~~~~~~~

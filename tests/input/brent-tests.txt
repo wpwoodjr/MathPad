@@ -75,8 +75,8 @@ w->
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
-"Test 5: Output and input declarations for same variable (course->> vs course:)"
-"Input declaration should win in variables map; balance error for conflicting value"
+"Test 5: Course heading with inconsistent inputs"
+"Input course: 8.1 constrains correction via extracted definition; sin equations don't balance"
 
 mod360CHOB = mod(currentHeadingOffBow; 360)
 normalizedCHOB = if(mod360CHOB == 0 || mod360CHOB == 180; mod360CHOB + 0.01; mod360CHOB)

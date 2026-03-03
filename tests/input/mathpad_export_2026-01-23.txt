@@ -293,7 +293,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"01 Error: Solved with errors: Equation doesn't balance: y=x+1 (0 != 2)"
+"01 Error: Solved with errors: Equation doesn't balance: x=y+1 (1 != 3)"
 
 x=y+1
 y=x+1
