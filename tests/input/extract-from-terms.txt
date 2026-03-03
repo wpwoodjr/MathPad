@@ -1,0 +1,107 @@
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Constants"
+pi: 3.14159265358979
+e: 2.71828182845905
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"Functions"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Linear system: 3x + 2y = 13, x + 4y = 11"
+
+3 * x + 2 * y = 13
+1 * x + 4 * y = 11
+
+--Variables--
+x ->
+y ->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Division numerator extraction"
+
+x / 3 + y / 2 = 7
+x / 2 - y / 5 = 1
+
+--Variables--
+x ->
+y ->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Division denominator extraction"
+
+6 / x + 12 / y = 7
+4 / x + 6 / y = 4
+
+--Variables--
+x ->
+y ->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"RHS extraction"
+
+13 = 3 * x + 2 * y
+11 = 1 * x + 4 * y
+
+--Variables--
+x ->
+y ->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"All extraction forms"
+
+// Multiplication + subtraction
+5 * a - 3 * b = 1
+2 * a + 7 * b = 25
+
+// Numerator division + subtraction
+r / 2 - s / 3 = -1
+r / 3 + s / 4 = 5
+
+// Denominator division + subtraction
+6 / p - 12 / q = -1
+4 / p + 6 / q = 4
+
+// RHS swap
+19 = 5 * u + 3 * v
+25 = 2 * u + 7 * v
+
+--Variables--
+a ->
+b ->
+r ->
+s ->
+p ->
+q ->
+u ->
+v ->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"Navigation reverse: solve set+drift from cts+smg"
+
+smg * sin(cmg) = speed * sin(cts) + drift * sin(set)
+smg * cos(cmg) = speed * cos(cts) + drift * cos(set)
+
+--Variables--
+cmg: 166
+speed: 10
+set[181:346] ->
+drift ->
+cts: 162.4156
+smg: 10.6278
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

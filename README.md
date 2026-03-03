@@ -58,6 +58,30 @@ Or open `docs/index.html` locally in a browser. No build step required.
 | `x~` | Use pre-solve (stale) value if current unavailable |
 | `x?` | 1 if variable has a value, 0 otherwise |
 
+### Algebraic Substitution
+
+When a system has multiple unknowns, the solver derives algebraic substitutions to reduce equations to a single unknown for Brent's root-finding. The following forms are recognized (where `B`, `C`, `D` are arbitrary expressions not containing the target variable):
+
+**Direct extraction** — variable is a top-level operand:
+
+| Form | Substitution |
+|------|-------------|
+| `var + B = D` | `var = D - B` |
+| `var * B = D` | `var = D / B` |
+| `var / B = D` | `var = D * B` |
+| `B / var = D` | `var = B / D` |
+| `var ** B = D` | `var = D ** (1/B)` |
+
+**Extraction from sum/difference** — variable is inside a product or quotient within a sum:
+
+| Form | Substitution |
+|------|-------------|
+| `var * B + C = D` | `var = (D - C) / B` |
+| `var / B + C = D` | `var = (D - C) * B` |
+| `B / var + C = D` | `var = B / (D - C)` |
+
+Subtraction (`-`), commuted forms (`C + var * B`), and swapped sides (`D = var * B + C`) all work. Substitutions chain across equations in the system.
+
 ### Keyboard Shortcuts
 
 - `Ctrl+Enter` — Solve current record

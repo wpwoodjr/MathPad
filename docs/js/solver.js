@@ -581,10 +581,113 @@ function deriveSubstitution(eqText, context, leftText, rightText) {
             }
         }
 
+        // Case 3: Additive pattern with multiplicative term
+        // e.g., A + var * B = C → var = (C - A) / B
+        // Handles equations like: speed * sin(cts) + drift * sin(set) = smg * sin(cmg)
+        // where drift is unknown and can be isolated by moving the other term across
+        const leftExtract = tryExtractFromSum(leftAST, rightAST, context);
+        if (leftExtract) return leftExtract;
+
+        const rightExtract = tryExtractFromSum(rightAST, leftAST, context);
+        if (rightExtract) return rightExtract;
+
         return null;
     } catch (e) {
         return null;
     }
+}
+
+/**
+ * Try to extract a variable from an additive pattern.
+ * Given a sum/difference like `expr1 ± var * expr2`, derive var = (otherSide ∓ expr1) / expr2
+ * where otherSide is the other side of the equation.
+ * Returns { variable, expressionAST } or null
+ */
+function tryExtractFromSum(sumAST, otherSideAST, context) {
+    if (sumAST.type !== 'BINARY_OP' || (sumAST.op !== '+' && sumAST.op !== '-')) return null;
+
+    // Try both terms of the sum/difference
+    const terms = [
+        [sumAST.left, sumAST.right, true],   // extract from left term
+        [sumAST.right, sumAST.left, false]    // extract from right term
+    ];
+
+    for (const [term, otherTerm, termIsLeft] of terms) {
+        // Check if term is var * expr, expr * var, var / expr, or expr / var
+        if (term.type !== 'BINARY_OP' || (term.op !== '*' && term.op !== '/')) continue;
+
+        const candidates = term.op === '*'
+            ? [ [term.left, term.right, 'mul'], [term.right, term.left, 'mul'] ]
+            : [ [term.left, term.right, 'num'], [term.right, term.left, 'den'] ];
+
+        for (const [candidate, other, position] of candidates) {
+            if (candidate.type !== 'VARIABLE' || context.hasVariable(candidate.name)) continue;
+
+            const varName = candidate.name;
+
+            // Ensure variable doesn't appear in the other part or the other sum term
+            if (findVariablesInAST(other).has(varName)) continue;
+            if (findVariablesInAST(otherTerm).has(varName)) continue;
+
+            // Build isolated term: move otherTerm to the other side
+            let isolated;
+            if (termIsLeft) {
+                // term + C = D → term = D - C
+                // term - C = D → term = D + C
+                isolated = {
+                    type: 'BINARY_OP',
+                    op: sumAST.op === '+' ? '-' : '+',
+                    left: deepCopyAST(otherSideAST),
+                    right: deepCopyAST(otherTerm)
+                };
+            } else {
+                // C + term = D → term = D - C
+                // C - term = D → term = C - D (negate)
+                if (sumAST.op === '+') {
+                    isolated = {
+                        type: 'BINARY_OP', op: '-',
+                        left: deepCopyAST(otherSideAST),
+                        right: deepCopyAST(otherTerm)
+                    };
+                } else {
+                    isolated = {
+                        type: 'BINARY_OP', op: '-',
+                        left: deepCopyAST(otherTerm),
+                        right: deepCopyAST(otherSideAST)
+                    };
+                }
+            }
+
+            // Solve for var based on its position in the term
+            let expressionAST;
+            if (position === 'mul') {
+                // var * B = isolated → var = isolated / B
+                expressionAST = {
+                    type: 'BINARY_OP', op: '/',
+                    left: isolated,
+                    right: deepCopyAST(other)
+                };
+            } else if (position === 'num') {
+                // var / B = isolated → var = isolated * B
+                expressionAST = {
+                    type: 'BINARY_OP', op: '*',
+                    left: isolated,
+                    right: deepCopyAST(other)
+                };
+            } else {
+                // B / var = isolated → var = B / isolated
+                expressionAST = {
+                    type: 'BINARY_OP', op: '/',
+                    left: deepCopyAST(other),
+                    right: isolated
+                };
+            }
+
+            return { variable: varName, expressionAST };
+        }
+    }
+
+    return null;
 }
 
 /**
