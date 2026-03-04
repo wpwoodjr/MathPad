@@ -131,7 +131,7 @@ Each variable has a ⟲ icon that clears it and solves, making it easy to comput
 
 - Pure client-side JavaScript — no build system, no frameworks, no server
 - ~11,000 lines of JS across 14 modules
-- Brent's root-finding algorithm with adaptive bracketing and known-scale heuristics
+- Brent's root-finding algorithm with adaptive bracketing, known-scale heuristics, and two-sweep solving that prefers natural unknowns over substitution-reduced equations
 - Token-based parser with AST generation for expression evaluation
 - Auto-saves to localStorage with 500ms debounce; Google Drive sync every 15 seconds
 - Mobile responsive with touch-friendly controls

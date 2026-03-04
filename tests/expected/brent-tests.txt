@@ -89,7 +89,7 @@ normalizedCHOB = if(mod360CHOB == 0 || mod360CHOB == 180; mod360CHOB + 0.01; mod
 sin(180-normalizedCHOB)/boatSpeed = sin(correction)/max(currentSpeed; 1e-4)
 sin(180-normalizedCHOB)/boatSpeed = sin(normalizedCHOB - correction)/speedMadeGood
 
-speedMadeGood->> 9.634965529020104
+speedMadeGood->> 9.634965529020125
 correction[-90:90]->> -1.9
 course = desiredHeading + correction
 course->> 8.1

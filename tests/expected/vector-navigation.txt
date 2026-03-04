@@ -1,0 +1,531 @@
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Constants"
+pi: 3.14159265358979
+e: 2.71828182845905
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Functions"
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"1. Find current (drift, set)"
+// Solved - same-vector pair
+
+// Ground track = Boat velocity + Current
+// Provide any 2 complete vectors, solve for the 3rd
+// Also solves cross-vector pairs
+
+// Course to steer: quadratic for smg (must be first - evaluates when cmg known but cts unknown)
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+// Law of sines: for when all 3 directions known, find magnitudes
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg: 10.6278
+cmg: 166
+
+Boat through water
+speed: 10
+cts: 162.4156
+
+Current
+drift-> 0.9
+set[0:360]-> 210.0017
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"2. Find ground track (smg, cmg)"
+// Solved - same-vector pair
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg-> 10.6278
+cmg[0:360]-> 166
+
+Boat through water
+speed: 10
+cts: 162.4156
+
+Current
+drift: 0.9
+set: 210
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"3. Find boat velocity (speed, cts)"
+// Solved - same-vector pair
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg: 10.6278
+cmg: 166
+
+Boat through water
+speed-> 10
+cts[0:360]-> 162.4156
+
+Current
+drift: 0.9
+set: 210
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"4. Course to steer (find smg, cts)"
+// Solved - quadratic + definition
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg-> 10.6278
+cmg: 166
+
+Boat through water
+speed: 10
+cts[0:360]-> 162.4156
+
+Current
+drift: 0.9
+set: 210
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"5. Find smg, speed"
+// Solved - Brent's for magnitude
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg-> 10.6279
+cmg: 166
+
+Boat through water
+speed-> 10.0001
+cts: 162.4156
+
+Current
+drift: 0.9
+set: 210
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"6. Find smg, drift"
+// Solved - Brent's for magnitude
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg-> 10.6278
+cmg: 166
+
+Boat through water
+speed: 10
+cts: 162.4156
+
+Current
+drift-> 0.9
+set: 210
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"7. Find smg, set"
+// Solved - Brent's for magnitude
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg-> 10.6278
+cmg: 166
+
+Boat through water
+speed: 10
+cts: 162.4156
+
+Current
+drift: 0.9
+set[0:360]-> 209.9996
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"8. Find cmg, cts"
+// Solved - Brent's finds intended root
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg: 10.6278
+cmg[0:360]-> 165.9963
+
+Boat through water
+speed: 10
+cts[0:360]-> 162.4116
+
+Current
+drift: 0.9
+set: 210
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"9. Find cmg, speed"
+// Solved - Brent's for magnitude
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg: 10.6278
+cmg[0:360]-> 166
+
+Boat through water
+speed-> 10
+cts: 162.4156
+
+Current
+drift: 0.9
+set: 210
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"10. Find cmg, drift"
+// Solved - Brent's for magnitude
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg: 10.6278
+cmg[0:360]-> 165.9998
+
+Boat through water
+speed: 10
+cts: 162.4156
+
+Current
+drift-> 0.8999
+set: 210
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"11. Find cmg, set"
+// Solved - alternate valid triangle
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg: 10.6278
+cmg[0:360]-> 158.8309
+
+Boat through water
+speed: 10
+cts: 162.4156
+
+Current
+drift: 0.9
+set[0:360]-> 114.8272
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"12. Find cts, drift"
+// Solved - Brent's for magnitude
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg: 10.6278
+cmg: 166
+
+Boat through water
+speed: 10
+cts[0:360]-> 162.4158
+
+Current
+drift-> 0.8999
+set: 210
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"13. Find speed, drift"
+// Solved - law of sines
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg: 10.6278
+cmg: 166
+
+Boat through water
+speed-> 10
+cts: 162.4156
+
+Current
+drift-> 0.9
+set: 210
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"14. Find cts, set"
+// Solved - alternate valid triangle (Brent's finds set, definition evaluates cts)
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg: 10.6278
+cmg: 166
+
+Boat through water
+speed: 10
+cts[0:360]-> 169.5847
+
+Current
+drift: 0.9
+set[0:360]-> 121.9963
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"15. Find speed, set"
+// Solved - Brent's finds set (natural 1-unknown), definition evaluates speed
+
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
+
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+Ground track
+smg: 10.6278
+cmg: 166
+
+Boat through water
+speed-> 9.9999
+cts: 162.4156
+
+Current
+drift: 0.9
+set[0:360]-> 209.9993
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

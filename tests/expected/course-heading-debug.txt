@@ -1,7 +1,7 @@
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
-Status = "Line 24: Could not find a root for 'boatSpeed'\nLine 10: Could not find a root for 'speedMadeGood'"; StatusIsError = 1
+Status = "Solved 5 equations"; StatusIsError = 0
 "Course Heading (copy) (copy)"
 
 mod360CHOB = mod(currentHeadingOffBow; 360)
