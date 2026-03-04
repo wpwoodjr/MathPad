@@ -56,6 +56,7 @@ function loadModules() {
     global.addCommaGrouping = evaluator.addCommaGrouping;
     global.formatMoney = evaluator.formatMoney;
     global.formatPercent = evaluator.formatPercent;
+    global.formatDegrees = evaluator.formatDegrees;
     global.toFixed = evaluator.toFixed;
     global.builtinFunctions = evaluator.builtinFunctions;
     global.checkBalance = evaluator.checkBalance;

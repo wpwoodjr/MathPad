@@ -244,10 +244,10 @@ class LineParser {
         let hasLimits = false;
         let idx = markerIndex - 1;
 
-        // Skip standalone $ or % FORMATTER tokens (normally merged into marker,
+        // Skip standalone $, %, or ° FORMATTER tokens (normally merged into marker,
         // but appear separately when there's whitespace: "x$ :")
         while (idx >= 0 && this.tokens[idx].type === TokenType.FORMATTER &&
-               (this.tokens[idx].value === '$' || this.tokens[idx].value === '%')) {
+               (this.tokens[idx].value === '$' || this.tokens[idx].value === '%' || this.tokens[idx].value === '°')) {
             idx--;
         }
 

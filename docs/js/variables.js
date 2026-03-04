@@ -308,7 +308,7 @@ function discoverVariables(text, context, record, allTokens) {
                 let exprTokens = evalInfo.innerTokens;
                 const lastTok = exprTokens.length > 0 ? exprTokens[exprTokens.length - 1] : null;
                 if (lastTok && lastTok.type === TokenType.FORMATTER &&
-                    (lastTok.value === '$' || lastTok.value === '%')) {
+                    (lastTok.value === '$' || lastTok.value === '%' || lastTok.value === '°')) {
                     exprTokens = exprTokens.slice(0, -1);
                 } else if (exprTokens.length >= 2 && lastTok && lastTok.type === TokenType.NUMBER &&
                            exprTokens[exprTokens.length - 2].type === TokenType.FORMATTER &&
@@ -458,12 +458,11 @@ function getInlineEvalFormat(exprTokens, record, variables = null) {
     let base = 10;
     let baseName = null;
 
-    // Detect trailing format suffix from tokens: FORMATTER($), FORMATTER(%), or FORMATTER(#)+NUMBER
+    // Detect trailing format suffix from tokens: FORMATTER($/%/°) or FORMATTER(#)+NUMBER
     const lastTok = exprTokens.length > 0 ? exprTokens[exprTokens.length - 1] : null;
-    if (lastTok && lastTok.type === TokenType.FORMATTER && lastTok.value === '$') {
-        varFormat = 'money';
-    } else if (lastTok && lastTok.type === TokenType.FORMATTER && lastTok.value === '%') {
-        varFormat = 'percent';
+    const formatMap = { '$': 'money', '%': 'percent', '°': 'degrees' };
+    if (lastTok && lastTok.type === TokenType.FORMATTER && formatMap[lastTok.value]) {
+        varFormat = formatMap[lastTok.value];
     } else if (exprTokens.length >= 2 && lastTok && lastTok.type === TokenType.NUMBER &&
                exprTokens[exprTokens.length - 2].type === TokenType.FORMATTER &&
                exprTokens[exprTokens.length - 2].value === '#') {
@@ -541,6 +540,16 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
             return formatted + '%';
         }
         return formatPercent(value, places);
+    }
+
+    // Handle degrees format
+    if (varFormat === 'degrees') {
+        const degrees = value - 360 * Math.floor(value / 360);
+        if (fullPrecision) {
+            const formatted = formatNumber(degrees, places, stripZeros, numberFormat, 10, false, null);
+            return formatted + '°';
+        }
+        return formatDegrees(degrees, places);
     }
 
     // Regular number formatting

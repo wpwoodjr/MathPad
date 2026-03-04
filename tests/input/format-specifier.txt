@@ -61,6 +61,61 @@ Midpoint rounding (0.075 rounds to 0.08 not 0.07)
 Percent uses record places (4), not hardcoded 2
 (0.06725)%->
 (0.123456)%->
+Degrees format
+angle°: 45°
+heading°: 400°
+neg°: -30°
+big°: 750°
+(180 + 270)°->
+Degrees full precision
+angle2°->>
+angle2 = 400.123456789
+Degrees persistent output
+(720 + 45)°=>
+(720 + 45)°=>>
+Degrees variable with negative value
+set°: -90°
+set->
+Degrees variable with plain number (no ° literal, no normalization)
+set2°: 540
+set2->
+Degrees on input marker
+bearing°<- 720°
+(bearing + 45)°->
+Degrees full precision input
+course°<<- 400.123456789°
+course°->
+Degrees literal and format combinations
+-370-> -370
+-370 -> -370
+-370°-> 350
+-370° -> 350
+-370 °-> 350°
+-370° °-> 350°
+370-> 370
+370 -> 370
+370°-> 10
+370° -> 10
+370 °-> 10°
+370° °-> 10°
+a = -370°
+a-> 350
+b = a + 370°
+b °-> 0°
+Binary minus with degrees literal
+d = 10 -370°
+d->
+10-380-> -370
+10-380°->
+10 - (380°)->
+10-380°°->
+10-380 °->
+10 - (-380°)->
+10 - (-380°)°->
+Infinity and NaN not formatted with ° $ or %
+1/0°->
+(-1/0)°->
+(0/0)°->
 Infinity and NaN not formatted with $ or %
 1/0$->
 (-1/0)$->

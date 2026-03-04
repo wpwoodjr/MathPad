@@ -316,7 +316,7 @@ class VariablesPanel {
         }
 
         // Variable name label (includes format suffix, limits, and marker)
-        const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : decl.base && decl.base !== 10 ? `#${decl.base}` : '';
+        const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : decl.format === 'degrees' ? '°' : decl.base && decl.base !== 10 ? `#${decl.base}` : '';
         const limitsStr = decl.limits ? `[${tokensToText(decl.limits.lowTokens).trim()}:${tokensToText(decl.limits.highTokens).trim()}]` : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
@@ -555,6 +555,14 @@ class VariablesPanel {
             return text + '%';
         }
 
+        // Handle degrees variables
+        if (varFormat === 'degrees' || text.endsWith('°')) {
+            if (text.endsWith('°')) {
+                return text;
+            }
+            return text + '°';
+        }
+
         // For regular numbers, preserve the input exactly as typed
         return text;
     }
@@ -596,11 +604,20 @@ class VariablesPanel {
             multiplier = 0.01;
         }
 
+        // Handle degrees format: strip ° suffix
+        if (text.endsWith('°')) {
+            text = text.slice(0, -1);
+        }
+
         // Remove any remaining commas
         text = text.replace(/,/g, '');
 
         const value = Number(text);
-        return isNaN(value) ? null : value * multiplier;
+        let result = isNaN(value) ? null : value * multiplier;
+        if (result !== null && varFormat === 'degrees') {
+            result = result - 360 * Math.floor(result / 360);
+        }
+        return result;
     }
 
     /**

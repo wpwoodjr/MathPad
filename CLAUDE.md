@@ -68,6 +68,7 @@ node tests/gen-expected.js TESTNAME
 - Decimal places, strip trailing zeros, comma grouping, scientific/engineering notation
 - `$` suffix → money format ($1,234.56, always 2 decimals)
 - `%` suffix → percent format (×100, follows record's places setting)
+- `°` suffix → degrees format (mod 360, follows record's places setting)
 - Base notation: `#16` for hex, `#2` for binary, etc. (bases 2-36)
 - Custom `toFixed()` avoids IEEE 754 midpoint rounding errors
 
@@ -194,6 +195,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 | `var[lo:hi]:` | With limits | Constrain Brent's search range |
 | `price$:` | Money format | `$` before marker = money format |
 | `rate%: 7.5%` | Percentage | `%` before marker = percent (stored as 0.075) |
+| `angle°: 400°` | Degrees | `°` before marker = degrees format (mod 360, `400°` literal → 40) |
 | `expr$->` | Expression output | Format expression result as money |
 | `x~` | Stale access | Use pre-solve value if current unavailable |
 | `x?` | Existence check | 1 if x has value, 0 otherwise |

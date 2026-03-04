@@ -282,6 +282,38 @@ class Tokenizer {
             return this.makeToken(TokenType.NUMBER, { value: parseFloat(value) / 100, base: 10, raw }, startLine, startCol);
         }
 
+        // Degrees literal: 400° -> 40 (mod 360 to normalize)
+        // Absorbs preceding unary minus so -370° -> 350 (not -(370 mod 360) = -10)
+        if (this.peek() === '°') {
+            this.advance(); // consume °
+            raw += '°';
+            let deg = parseFloat(value);
+            // Check for preceding unary minus: '-' is binary only after
+            // value-producing tokens (number, identifier, close paren)
+            const lastIdx = this.tokens.length - 1;
+            if (lastIdx >= 0 && this.tokens[lastIdx].type === TokenType.OPERATOR &&
+                this.tokens[lastIdx].value === '-') {
+                const minusTok = this.tokens[lastIdx];
+                const prevIdx = lastIdx - 1;
+                const prevTok = prevIdx >= 0 ? this.tokens[prevIdx] : null;
+                const isBinary = prevTok && prevTok.line === minusTok.line &&
+                    (prevTok.type === TokenType.NUMBER ||
+                     prevTok.type === TokenType.IDENTIFIER ||
+                     prevTok.type === TokenType.RPAREN);
+                const isUnary = !isBinary;
+                if (isUnary) {
+                    deg = -deg;
+                    raw = '-' + raw;
+                    // Flag: caller must pop the unary minus from both token arrays
+                    this._popPrecedingToken = true;
+                    const normalized = deg - 360 * Math.floor(deg / 360);
+                    return this.makeToken(TokenType.NUMBER, { value: normalized, base: 10, raw }, minusTok.line, minusTok.col);
+                }
+            }
+            const normalized = deg - 360 * Math.floor(deg / 360);
+            return this.makeToken(TokenType.NUMBER, { value: normalized, base: 10, raw }, startLine, startCol);
+        }
+
         return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw }, startLine, startCol);
     }
 
@@ -550,7 +582,14 @@ class Tokenizer {
 
             // Number
             if (this.isDigit(ch) || (ch === '.' && this.isDigit(this.peek(1)))) {
-                pushToken(this.tokenizeNumber());
+                const numToken = this.tokenizeNumber();
+                if (this._popPrecedingToken) {
+                    // Degrees literal absorbed preceding unary minus — remove it
+                    this.tokens.pop();
+                    lines[lines.length - 1].pop();
+                    this._popPrecedingToken = false;
+                }
+                pushToken(numToken);
                 continue;
             }
 
@@ -627,11 +666,11 @@ class Tokenizer {
                 continue;
             }
 
-            // Format suffixes: $ (money), % (percent), # (base)
-            if (ch === '$' || ch === '%' || ch === '#') {
-                // For $ and %, check if followed by a declaration marker — merge into one token
-                if (ch === '$' || ch === '%') {
-                    const format = ch === '$' ? 'money' : 'percent';
+            // Format suffixes: $ (money), % (percent), ° (degrees), # (base)
+            if (ch === '$' || ch === '%' || ch === '°' || ch === '#') {
+                // For $, %, and °, check if followed by a declaration marker — merge into one token
+                if (ch === '$' || ch === '%' || ch === '°') {
+                    const format = ch === '$' ? 'money' : ch === '%' ? 'percent' : 'degrees';
                     const next = this.peek(1);
                     if (next === '-' && this.peek(2) === '>') {
                         const type = this.peek(3) === '>' ? TokenType.ARROW_FULL : TokenType.ARROW_RIGHT;
