@@ -1,11 +1,11 @@
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"Test 1: Small diff, tight relative tolerance (places=5) - not equal"
+"Test 1: Small diff, tight relative tolerance (places=6) - not equal"
 
 a: 0.0605
 b: 0.060500167939065756
-places: 5
+places: 6
 isClose(a; b; places)->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -111,11 +111,11 @@ isClose(a; b; places)->
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"Test 8c: Noise vs zero, places=13 (exceeds tolerance 5e-15) - not equal"
+"Test 8c: Noise vs zero, places=14 (exceeds tolerance 5e-16) - not equal"
 
 a: 4e-14
 b: 0
-places: 13
+places: 14
 isClose(a; b; places)->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -153,9 +153,9 @@ n: 360 "number of payments (30 years)"
 mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 6; StripZeros = 1
+Places = 7; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"Test 10b: TVM at places=6 ($ rounding error exceeds tolerance) - doesn't balance"
+"Test 10b: TVM at places=7 ($ rounding error exceeds tolerance) - doesn't balance"
 
 "Payment calculation"
 pmt = -pv * mint / (1 - (1 + mint)**-n)
@@ -170,9 +170,9 @@ n: 360 "number of payments (30 years)"
 mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 14; StripZeros = 1
+Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"Test 9b: Polynomial f(x)=0 at places=14 (noise exceeds tolerance) - doesn't balance"
+"Test 9b: Polynomial f(x)=0 at places=15 (noise exceeds tolerance) - doesn't balance"
 
 c5: 1
 c4: -2
@@ -209,9 +209,9 @@ b+maxDiff->> 100.000000001000004
 isclose(a; b; places)-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 1; StripZeros = 1
+Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"Balance Test places = 1"
+"Balance Test places = 2"
 
 relDiff(a; b) = (a-b)/a
 relDiff(1; 0.5000000001)*10**-(places+1) = relDiff(a; b)

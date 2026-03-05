@@ -1072,6 +1072,7 @@ function parseFunctionsRecord(text, allTokens) {
 function createEvalContext(record, parsedConstants, parsedFunctions, localText = null, allTokens = null) {
     const context = new EvalContext();
     context.degreesMode = (record && record.degreesMode) || false;
+    context.places = (record && record.places != null) ? record.places : 4;
 
     // Load constants (callers provide pre-parsed results from getReferenceInfo)
     if (parsedConstants) {

@@ -17,6 +17,7 @@ class EvalContext {
         this.usedConstants = new Set();
         this.usedFunctions = new Set();
         this.preSolveValues = null; // Map of variable name → value before solve started
+        this.places = 4; // Decimal places for tolerance calculations
     }
 
     setVariable(name, value) {
@@ -275,7 +276,7 @@ function formatDate(year, month, day, hour = 0, minute = 0, second = 0) {
  * Uses relative tolerance normally, absolute tolerance when comparing against zero.
  */
 function checkBalance(a, b, places) {
-    const balanceTolerance = 0.5 * Math.pow(10, -(places + 1));
+    const balanceTolerance = Math.min(0.05, 0.5 * Math.pow(10, -places));
     const diff = Math.abs(a - b);
     if (a === 0 || b === 0) {
         const absTolerance = Math.min(balanceTolerance, 5e-14);
@@ -435,7 +436,21 @@ const builtinFunctions = {
     },
 
     // Balance check: isClose(a; b; places) returns 1 if equal within tolerance, 0 otherwise
-    isclose: (args) => checkBalance(args[0], args[1], args[2]) ? 1 : 0
+    isclose: (args) => checkBalance(args[0], args[1], args[2]) ? 1 : 0,
+
+    // Tolerant mod: modClose(a; n) — like mod(a; n) but snaps to 0 near the
+    // mod boundary to prevent balance errors on re-solve with rounded values.
+    // E.g., mod(atan(...); 360) may give 359.989 instead of 0 after rounding inputs;
+    // modClose snaps that to 0 so the equation still balances.
+    // Snap tolerance = min(0.5, |n| * 0.5 * 10^-(places+1)), using the record's
+    // decimal places setting. Capped at 0.5 so the snap zone never exceeds
+    // half a unit regardless of n. Only snaps near n, not near 0.
+    modclose: (args, context) => {
+        const a = args[0], n = args[1];
+        const result = a - n * Math.floor(a / n);
+        const snapTol = Math.min(0.5, Math.abs(n) * 0.5 * Math.pow(10, -(context.places + 1)));
+        return (Math.abs(result - n) < snapTol) ? 0 : result;
+    }
 };
 
 /**

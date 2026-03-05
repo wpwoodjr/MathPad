@@ -15,3 +15,156 @@ mod(c; 360)->>
 d = 359.5
 mod(d; 360)->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"modClose - positive a, positive n"
+
+// Near n boundary (should snap to 0) - snapTol = min(0.5, 360*0.5*10^-4) = 0.018
+mod(359.989; 360)->>
+modClose(359.989; 360)->>
+
+// Near n boundary but outside tolerance (should keep)
+mod(359.9; 360)->>
+modClose(359.9; 360)->>
+
+// Not near boundary (should keep)
+mod(359; 360)->>
+modClose(359; 360)->>
+mod(45; 360)->>
+modClose(45; 360)->>
+mod(0.5; 360)->>
+modClose(0.5; 360)->>
+
+// Exact boundary
+mod(360; 360)->>
+modClose(360; 360)->>
+mod(0; 360)->>
+modClose(0; 360)->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"modClose - negative a, positive n"
+
+// Wraps to near-n value (should snap to 0)
+mod(-0.011; 360)->>
+modClose(-0.011; 360)->>
+
+// Wraps to near-n but outside tolerance (should keep)
+mod(-0.1; 360)->>
+modClose(-0.1; 360)->>
+
+// Not near boundary (should keep)
+mod(-1; 360)->>
+modClose(-1; 360)->>
+mod(-180; 360)->>
+modClose(-180; 360)->>
+
+// Exact multiple
+mod(-360; 360)->>
+modClose(-360; 360)->>
+mod(-720; 360)->>
+modClose(-720; 360)->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"modClose - positive a, negative n"
+// mod(a; n) for negative n gives results in (n, 0]
+
+// Near 0 boundary (does not snap)
+mod(2.999; -3)->>
+modClose(2.999; -3)->>
+mod(-0.001; -3)->>
+modClose(-0.001; -3)->>
+
+// Near n boundary (should snap to 0) - snapTol = min(0.5, 3*0.5*10^-4) = 0.00015
+mod(0.00005; -3)->>
+modClose(0.00005; -3)->>
+mod(0.0001; -3)->>
+modClose(0.0001; -3)->>
+
+// Near n boundary but outside tolerance (should keep)
+mod(0.001; -3)->>
+modClose(0.001; -3)->>
+
+// Not near boundary (should keep)
+mod(2; -3)->>
+modClose(2; -3)->>
+mod(1; -3)->>
+modClose(1; -3)->>
+
+// Exact boundary
+mod(3; -3)->>
+modClose(3; -3)->>
+mod(0; -3)->>
+modClose(0; -3)->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"modClose - negative a, negative n"
+
+// Near n boundary (should snap to 0) - snapTol = 0.00015
+mod(-2.99995; -3)->>
+modClose(-2.99995; -3)->>
+mod(-2.9999; -3)->>
+modClose(-2.9999; -3)->>
+
+// Near n boundary but outside tolerance (should keep)
+mod(-2.999; -3)->>
+modClose(-2.999; -3)->>
+
+// Not near boundary (should keep)
+mod(-1; -3)->>
+modClose(-1; -3)->>
+mod(-2; -3)->>
+modClose(-2; -3)->>
+
+// Exact multiple
+mod(-3; -3)->>
+modClose(-3; -3)->>
+mod(-6; -3)->>
+modClose(-6; -3)->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"modClose - large multiples and wrap"
+
+// Large positive, near boundary
+mod(719.989; 360)->>
+modClose(719.989; 360)->>
+mod(1079.95; 360)->>
+modClose(1079.95; 360)->>
+
+// Large positive, not near boundary
+mod(721; 360)->>
+modClose(721; 360)->>
+
+// Large negative, near boundary
+mod(-720.011; 360)->>
+modClose(-720.011; 360)->>
+
+// Large negative, not near boundary
+mod(-719; 360)->>
+modClose(-719; 360)->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"modClose - places=0 (snap zone capped at 0.5)"
+
+// Within 0.5 of 360 (should snap)
+mod(359.6; 360)->>
+modClose(359.6; 360)->>
+
+// Outside 0.5 (should keep)
+mod(359; 360)->>
+modClose(359; 360)->>
+mod(350; 360)->>
+modClose(350; 360)->>
+mod(180; 360)->>
+modClose(180; 360)->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
