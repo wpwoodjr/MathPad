@@ -293,6 +293,38 @@ function solveEquation(f, limits = null, knownScale = 0) {
         }
     }
 
+    // Near-tangent root detection: when logarithmic scan misses a narrow
+    // sign change (e.g., function barely touches zero between widely-spaced
+    // log points), find the test point closest to zero and do a fine grid
+    // search in each adjacent interval separately
+    if (roots.length === 0 && values.length >= 2) {
+        let bestI = 0;
+        for (let i = 1; i < values.length; i++) {
+            if (Math.abs(values[i].fx) < Math.abs(values[bestI].fx)) bestI = i;
+        }
+        // Search each adjacent interval with 100 points for fine resolution
+        const intervals = [];
+        if (bestI > 0) intervals.push([values[bestI - 1].x, values[bestI].x]);
+        if (bestI < values.length - 1) intervals.push([values[bestI].x, values[bestI + 1].x]);
+        for (const [lo, hi] of intervals) {
+            const localBracket = gridSearch(f, lo, hi, 100);
+            if (localBracket) {
+                try {
+                    const root = brent(f, localBracket[0], localBracket[1]);
+                    if (isFinite(root)) {
+                        const fRoot = safeEval(f, root);
+                        if (isFinite(fRoot)) {
+                            roots.push(root);
+                        }
+                    }
+                } catch (e) {
+                    // Fine search bracket didn't work
+                }
+                break;
+            }
+        }
+    }
+
     // Return best root: prefer smallest positive
     if (roots.length > 0) {
         const positiveRoots = roots.filter(r => r > 0);
