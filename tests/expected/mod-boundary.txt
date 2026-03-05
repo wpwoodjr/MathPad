@@ -1,0 +1,18 @@
+Category = "Unfiled"; Secret = 0
+Places = 14; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 4 equations"; StatusIsError = 0
+"Mod boundary snap - result near divisor should snap to 0"
+
+a = 359.99999999999994
+mod(a; 360)->> 0
+
+b = -0.00000000000001
+mod(b; 360)->> 0
+
+c = 0.3
+mod(c; 360)->> 0.3
+
+d = 359.5
+mod(d; 360)->> 359.5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

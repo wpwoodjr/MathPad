@@ -428,7 +428,11 @@ const builtinFunctions = {
     },
 
     // Modulo (true modulo, always non-negative for positive divisor)
-    mod: (args) => args[0] - args[1] * Math.floor(args[0] / args[1]),
+    // Snap to 0 when result is within FP noise of the divisor (e.g., mod(359.9999999999999, 360) → 0)
+    mod: (args) => {
+        const result = args[0] - args[1] * Math.floor(args[0] / args[1]);
+        return (Math.abs(result - Math.abs(args[1])) < 256 * Number.EPSILON * Math.abs(args[1])) ? 0 : result;
+    },
 
     // Balance check: isClose(a; b; places) returns 1 if equal within tolerance, 0 otherwise
     isclose: (args) => checkBalance(args[0], args[1], args[2]) ? 1 : 0
