@@ -302,6 +302,12 @@ function solveEquation(f, limits = null, knownScale = 0) {
         for (let i = 1; i < values.length; i++) {
             if (Math.abs(values[i].fx) < Math.abs(values[bestI].fx)) bestI = i;
         }
+        // Skip if best point is already at/near zero — function is likely
+        // flat (identically zero) rather than having a narrow sign change
+        const TOL = 128 * Number.EPSILON;
+        if (Math.abs(values[bestI].fx) < TOL) {
+            // Not a real near-tangent; fall through to "no root found"
+        } else {
         // Search each adjacent interval with 100 points for fine resolution
         const intervals = [];
         if (bestI > 0) intervals.push([values[bestI - 1].x, values[bestI].x]);
@@ -322,6 +328,7 @@ function solveEquation(f, limits = null, knownScale = 0) {
                 }
                 break;
             }
+        }
         }
     }
 

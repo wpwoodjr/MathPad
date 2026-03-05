@@ -102,3 +102,69 @@ currentHeadingOffBow: 25
 course: 8.1
 speedMadeGood-> 9.635
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Line 7: Could not find a root for 'x'"; StatusIsError = 1
+"Test 6: Tautology rejection - f(x)=0 for all x should not find a root"
+"Near-tangent detection must skip when best test point is already at zero"
+
+2*x = x + x
+
+--Variables--
+x<-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Test 7: Near-tangent root detection finds root in narrow band"
+"Near-double-root quadratic: barely dips below zero between log points 1 and 10"
+
+x**2 - 10*x + 24.99 = 0
+
+--Variables--
+x-> 4.9
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 4 equations"; StatusIsError = 0
+"Test 8: Near-tangent in navigation - solve smg via quadratic with substituted set"
+"Quadratic smg equation has narrow sign change after set substitution"
+
+// Leeway correction
+ws = speed*cos(leeway)
+
+// Solve smg given drift, set (quadratic form)
+smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2)
+
+// Solve cts given smg, drift, set (vector subtraction of current)
+cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+// Solve drift and set given smg, cts (vector subtraction of boat)
+drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2)
+set = mod(atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts)); 360)
+
+// Law of sines (solve for drift given smg, cts, set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+// Heading from water track
+hdg = cts - leeway
+
+--Variables--
+Ground track
+smg : 9.6888
+cmg[0:360] °: 309°
+
+Course to steer
+speed: 9.8
+cts[0:360] °: 316.03°
+
+Current
+drift: 1.2
+set[0:360] °: 217.2069°
+
+leeway: 0
+hdg °-> 316.03°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
