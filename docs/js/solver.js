@@ -558,77 +558,14 @@ function deriveSubstitution(eqText, context, leftText, rightText) {
         const leftAST = parseExpression(leftText);
         const rightAST = parseExpression(rightText);
 
-        // Case 1: Binary operation on the left side (e.g., height/width = ratio)
-        if (leftAST.type === 'BINARY_OP') {
-            const op = leftAST.op;
-            const leftOperand = leftAST.left;
-            const rightOperand = leftAST.right;
+        // Recursively isolate unknown variable from binary operations on either side.
+        // Handles nested chains (a*b/D = C → a = C*D/b), additive patterns
+        // (var*B + C = D → var = (D-C)/B), and any combination thereof.
+        const leftIsolate = tryIsolateVariable(leftAST, rightAST, context);
+        if (leftIsolate && !findVariablesInAST(rightAST).has(leftIsolate.variable)) return leftIsolate;
 
-            // Check if left operand is a single variable without a value
-            // Also ensure the other operand doesn't contain this variable (avoid circular refs)
-            if (leftOperand.type === 'VARIABLE' && !context.hasVariable(leftOperand.name)) {
-                const otherVars = findVariablesInAST(rightOperand);
-                if (!otherVars.has(leftOperand.name)) {
-                    const exprAST = invertOperation(op, rightAST, rightOperand, true);
-                    if (exprAST) {
-                        return { variable: leftOperand.name, expressionAST: exprAST };
-                    }
-                }
-            }
-
-            // Check if right operand is a single variable without a value
-            // Also ensure the other operand doesn't contain this variable (avoid circular refs)
-            if (rightOperand.type === 'VARIABLE' && !context.hasVariable(rightOperand.name)) {
-                const otherVars = findVariablesInAST(leftOperand);
-                if (!otherVars.has(rightOperand.name)) {
-                    const exprAST = invertOperation(op, rightAST, leftOperand, false);
-                    if (exprAST) {
-                        return { variable: rightOperand.name, expressionAST: exprAST };
-                    }
-                }
-            }
-        }
-
-        // Case 2: Binary operation on the right side (e.g., ratio = height/width)
-        if (rightAST.type === 'BINARY_OP') {
-            const op = rightAST.op;
-            const leftOperand = rightAST.left;
-            const rightOperand = rightAST.right;
-
-            // Check if left operand is a single variable without a value
-            // Also ensure the other operand doesn't contain this variable (avoid circular refs)
-            if (leftOperand.type === 'VARIABLE' && !context.hasVariable(leftOperand.name)) {
-                const otherVars = findVariablesInAST(rightOperand);
-                if (!otherVars.has(leftOperand.name)) {
-                    const exprAST = invertOperation(op, leftAST, rightOperand, true);
-                    if (exprAST) {
-                        return { variable: leftOperand.name, expressionAST: exprAST };
-                    }
-                }
-            }
-
-            // Check if right operand is a single variable without a value
-            // Also ensure the other operand doesn't contain this variable (avoid circular refs)
-            if (rightOperand.type === 'VARIABLE' && !context.hasVariable(rightOperand.name)) {
-                const otherVars = findVariablesInAST(leftOperand);
-                if (!otherVars.has(rightOperand.name)) {
-                    const exprAST = invertOperation(op, leftAST, leftOperand, false);
-                    if (exprAST) {
-                        return { variable: rightOperand.name, expressionAST: exprAST };
-                    }
-                }
-            }
-        }
-
-        // Case 3: Additive pattern with multiplicative term
-        // e.g., A + var * B = C → var = (C - A) / B
-        // Handles equations like: speed * sin(cts) + drift * sin(set) = smg * sin(cmg)
-        // where drift is unknown and can be isolated by moving the other term across
-        const leftExtract = tryExtractFromSum(leftAST, rightAST, context);
-        if (leftExtract) return leftExtract;
-
-        const rightExtract = tryExtractFromSum(rightAST, leftAST, context);
-        if (rightExtract) return rightExtract;
+        const rightIsolate = tryIsolateVariable(rightAST, leftAST, context);
+        if (rightIsolate && !findVariablesInAST(leftAST).has(rightIsolate.variable)) return rightIsolate;
 
         return null;
     } catch (e) {
@@ -637,92 +574,38 @@ function deriveSubstitution(eqText, context, leftText, rightText) {
 }
 
 /**
- * Try to extract a variable from an additive pattern.
- * Given a sum/difference like `expr1 ± var * expr2`, derive var = (otherSide ∓ expr1) / expr2
- * where otherSide is the other side of the equation.
- * Returns { variable, expressionAST } or null
+ * Recursively isolate an unknown variable from a binary expression tree.
+ * Given that ast equals resultAST, peels off binary operations one level at a time
+ * until reaching a bare unknown variable.
+ * E.g., ast=(a*b)/D with result=C → invert / → a*b=C*D → invert * → a=C*D/b
+ * Also handles additive patterns: ast=a*B+C with result=D → invert + → a*B=D-C → invert * → a=(D-C)/B
  */
-function tryExtractFromSum(sumAST, otherSideAST, context) {
-    if (sumAST.type !== 'BINARY_OP' || (sumAST.op !== '+' && sumAST.op !== '-')) return null;
+function tryIsolateVariable(ast, resultAST, context) {
+    // Base case: bare unknown variable
+    if (ast.type === 'VARIABLE' && !context.hasVariable(ast.name)) {
+        return { variable: ast.name, expressionAST: resultAST };
+    }
 
-    // Try both terms of the sum/difference
-    const terms = [
-        [sumAST.left, sumAST.right, true],   // extract from left term
-        [sumAST.right, sumAST.left, false]    // extract from right term
-    ];
+    // Recursive case: binary operation — try both subtrees
+    if (ast.type !== 'BINARY_OP') return null;
 
-    for (const [term, otherTerm, termIsLeft] of terms) {
-        // Check if term is var * expr, expr * var, var / expr, or expr / var
-        if (term.type !== 'BINARY_OP' || (term.op !== '*' && term.op !== '/')) continue;
+    const op = ast.op;
 
-        const candidates = term.op === '*'
-            ? [ [term.left, term.right, 'mul'], [term.right, term.left, 'mul'] ]
-            : [ [term.left, term.right, 'num'], [term.right, term.left, 'den'] ];
+    // Try left subtree (invert to isolate left, then recurse)
+    const leftResult = invertOperation(op, resultAST, ast.right, true);
+    if (leftResult) {
+        const result = tryIsolateVariable(ast.left, leftResult, context);
+        if (result && !findVariablesInAST(ast.right).has(result.variable)) {
+            return result;
+        }
+    }
 
-        for (const [candidate, other, position] of candidates) {
-            if (candidate.type !== 'VARIABLE' || context.hasVariable(candidate.name)) continue;
-
-            const varName = candidate.name;
-
-            // Ensure variable doesn't appear in the other part or the other sum term
-            if (findVariablesInAST(other).has(varName)) continue;
-            if (findVariablesInAST(otherTerm).has(varName)) continue;
-
-            // Build isolated term: move otherTerm to the other side
-            let isolated;
-            if (termIsLeft) {
-                // term + C = D → term = D - C
-                // term - C = D → term = D + C
-                isolated = {
-                    type: 'BINARY_OP',
-                    op: sumAST.op === '+' ? '-' : '+',
-                    left: deepCopyAST(otherSideAST),
-                    right: deepCopyAST(otherTerm)
-                };
-            } else {
-                // C + term = D → term = D - C
-                // C - term = D → term = C - D (negate)
-                if (sumAST.op === '+') {
-                    isolated = {
-                        type: 'BINARY_OP', op: '-',
-                        left: deepCopyAST(otherSideAST),
-                        right: deepCopyAST(otherTerm)
-                    };
-                } else {
-                    isolated = {
-                        type: 'BINARY_OP', op: '-',
-                        left: deepCopyAST(otherTerm),
-                        right: deepCopyAST(otherSideAST)
-                    };
-                }
-            }
-
-            // Solve for var based on its position in the term
-            let expressionAST;
-            if (position === 'mul') {
-                // var * B = isolated → var = isolated / B
-                expressionAST = {
-                    type: 'BINARY_OP', op: '/',
-                    left: isolated,
-                    right: deepCopyAST(other)
-                };
-            } else if (position === 'num') {
-                // var / B = isolated → var = isolated * B
-                expressionAST = {
-                    type: 'BINARY_OP', op: '*',
-                    left: isolated,
-                    right: deepCopyAST(other)
-                };
-            } else {
-                // B / var = isolated → var = B / isolated
-                expressionAST = {
-                    type: 'BINARY_OP', op: '/',
-                    left: deepCopyAST(other),
-                    right: isolated
-                };
-            }
-
-            return { variable: varName, expressionAST };
+    // Try right subtree (invert to isolate right, then recurse)
+    const rightResult = invertOperation(op, resultAST, ast.left, false);
+    if (rightResult) {
+        const result = tryIsolateVariable(ast.right, rightResult, context);
+        if (result && !findVariablesInAST(ast.left).has(result.variable)) {
+            return result;
         }
     }
 

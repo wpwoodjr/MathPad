@@ -38,7 +38,7 @@ speedMadeGood-> Infinity   "knots"
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Line 5: Too many unknowns (smg, cts)\nLine 6: Too many unknowns (smg, cts)\nLine 15: Variable 'cts' has no value to output\nLine 16: Variable 'smg' has no value to output"; StatusIsError = 1
+Status = "Solved 2 equations"; StatusIsError = 0
 "Course to Steer"
 
 --Equations--
@@ -53,6 +53,6 @@ salt<- rand(0.0001)
 speed <- 5         "boat speed (kts)"
   set <- 10        "current set °"
 drift <- 3         "current drift (kts)"
- cts[0:360] ->          "course to steer °"
- smg ->           "speed made good (kts)"
+ cts[0:360] -> 185.98   "course to steer °"
+ smg -> -2.02     "speed made good (kts)"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

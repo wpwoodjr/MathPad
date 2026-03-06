@@ -248,7 +248,7 @@ pv$<- $1,000,000
 years<- 20
 
 "Enter net annual account(s) gain, or future value:"
-gain%<<- 1.696592574647276%
+gain%<<- 1.696592574647271%
 fv$<- $1,400,000
 
 
