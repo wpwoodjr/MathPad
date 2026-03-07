@@ -544,7 +544,7 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
 
     // Handle degrees format
     if (varFormat === 'degrees') {
-        const degrees = modClose(value, 360);
+        const degrees = value - 360 * Math.floor(value / 360);
         if (fullPrecision) {
             const formatted = formatNumber(degrees, places, stripZeros, numberFormat, 10, false, null);
             return formatted + '°';
@@ -657,22 +657,24 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
                     tokenOffset(lineOffsets, lbraceTok) + 1,
                     tokenOffset(lineOffsets, rbraceTok)
                 ).trim();
-                // Find = token within braces to split sides
+                // Find = or °= token within braces to split sides
                 const eqTokInBrace = lineTokens.find(t =>
-                    t.type === TokenType.OPERATOR && t.value === '=' &&
+                    t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '=°') &&
                     t.col > lbraceTok.col && t.col < rbraceTok.col
                 );
                 const braceStart = tokenOffset(lineOffsets, lbraceTok) + 1;
                 const braceEnd = tokenOffset(lineOffsets, rbraceTok);
+                const eqW = eqTokInBrace ? eqTokInBrace.value.length : 1;
                 equations.push({
                     text: content,
                     leftText: eqTokInBrace ? text.substring(braceStart, tokenOffset(lineOffsets, eqTokInBrace)).trim() : null,
-                    rightText: eqTokInBrace ? text.substring(tokenOffset(lineOffsets, eqTokInBrace) + 1, braceEnd).trim() : null,
+                    rightText: eqTokInBrace ? text.substring(tokenOffset(lineOffsets, eqTokInBrace) + eqW, braceEnd).trim() : null,
                     startLine: lineNum - 1,   // 0-based for solve-engine.js
                     endLine: lineNum - 1,
                     isBraced: true,
                     startCol: lbraceTok.col - 1,
-                    endCol: rbraceTok.col
+                    endCol: rbraceTok.col,
+                    modN: eqTokInBrace ? (eqTokInBrace.modN || null) : null
                 });
                 inBrace = false;
             }
@@ -688,17 +690,18 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
                     tokenOffset(lineOffsets, rbraceTok)
                 );
                 const normalizedContent = rawContent.replace(/\s+/g, ' ').trim();
-                // Split on = for pre-parsed sides (regex fallback for multi-line)
-                const eqMatch = normalizedContent.match(/^(.+?)=(.+)$/);
+                // Split on =° or = for pre-parsed sides (regex fallback for multi-line)
+                const eqMatch = normalizedContent.match(/^(.+?)(=°?)(.+)$/);
                 equations.push({
                     text: normalizedContent,
                     leftText: eqMatch ? eqMatch[1].trim() : null,
-                    rightText: eqMatch ? eqMatch[2].trim() : null,
+                    rightText: eqMatch ? eqMatch[3].trim() : null,
                     startLine: braceStartTok.line - 1,
                     endLine: lineNum - 1,
                     isBraced: true,
                     startCol: braceStartTok.col - 1,
-                    endCol: rbraceTok.col
+                    endCol: rbraceTok.col,
+                    modN: eqMatch && eqMatch[2] === '=°' ? true : null
                 });
                 inBrace = false;
             }
@@ -736,7 +739,7 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
         if (lineTokens.some(t => t.type === TokenType.ERROR)) return;
 
         // Check for equation using tokens (tokenizer distinguishes = from ==, !=, <=, >=, =>)
-        const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && t.value === '=');
+        const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '=°'));
         if (eqTok) {
             const eqInfo = extractEquationFromLine(lineText, lineTokens, eqTok);
             equations.push({
@@ -747,7 +750,8 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
                 endLine: lineNum - 1,
                 isBraced: false,
                 startCol: 0,
-                endCol: lineText.length
+                endCol: lineText.length,
+                modN: eqTok.modN || null
             });
         }
     }
@@ -791,10 +795,11 @@ function clearExpressionOutputs(text, clearType, allTokens) {
 function extractEquationFromLine(lineText, lineTokens) {
     let leftText, rightText;
 
-    const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && t.value === '=');
+    const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '=°'));
     if (!eqTok) return { text: lineText, leftText: null, rightText: null };
+    const eqWidth = eqTok.value.length; // 1 for '=', 2 for '°='
     leftText = lineText.substring(0, eqTok.col - 1).trim();
-    rightText = lineText.substring(eqTok.col).trim();
+    rightText = lineText.substring(eqTok.col - 1 + eqWidth).trim();
 
     // Try parsing both sides (parseExpression handles comments)
     // parseExpression returns null for empty input, so check for truthy result
@@ -813,9 +818,9 @@ function extractEquationFromLine(lineText, lineTokens) {
 
     // If both sides parse, return equation (preserves original spacing around =)
     if (leftOk && rightOk) {
-        const afterEq = lineText.substring(eqTok.col);
+        const afterEq = lineText.substring(eqTok.col - 1 + eqWidth);
         const leadingSpace = afterEq.substring(0, afterEq.length - afterEq.trimStart().length);
-        return { text: lineText.substring(0, eqTok.col) + leadingSpace + rightText, leftText, rightText };
+        return { text: lineText.substring(0, eqTok.col - 1 + eqWidth) + leadingSpace + rightText, leftText, rightText };
     }
 
     // Try to extract the actual equation
@@ -861,7 +866,7 @@ function extractEquationFromLine(lineText, lineTokens) {
         const lhs = parseExpression(extractedLeft);
         const rhs = parseExpression(extractedRight);
         if (lhs && rhs) {
-            return { text: extractedLeft + ' = ' + extractedRight, leftText: extractedLeft, rightText: extractedRight };
+            return { text: extractedLeft + ' ' + eqTok.value + ' ' + extractedRight, leftText: extractedLeft, rightText: extractedRight };
         }
     } catch (e) {}
 

@@ -511,7 +511,9 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
             if (unknowns.length === 0) {
                 const leftVal = evaluate(leftAST, context);
                 const rightVal = evaluate(rightAST, context);
-                const balanced = checkBalance(leftVal, rightVal, places);
+                const balanced = eq.modN
+                    ? modCheckBalance(leftVal, rightVal, record.degreesMode ? 360 : 2 * Math.PI, places)
+                    : checkBalance(leftVal, rightVal, places);
 
                 if (!balanced) {
                     errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eq.text} (${leftVal} ≠ ${rightVal})`);

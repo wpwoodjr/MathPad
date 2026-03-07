@@ -18,174 +18,140 @@ mod(d; 360)->>
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"modClose - positive a, positive n"
+"mod() builtin - positive a, positive n"
 
-// Near n boundary (should snap to 0) - snapTol = min(0.5, 360*0.5*10^-4) = 0.018
-mod(359.989; 360)->>
-modClose(359.989; 360)->>
+// Near n boundary (snaps to 0 via FP noise check)
+mod(359.9999999999999; 360)->>
 
-// Near n boundary but outside tolerance (should keep)
-mod(359.9; 360)->>
-modClose(359.9; 360)->>
-
-// Not near boundary (should keep)
+// Not near boundary
 mod(359; 360)->>
-modClose(359; 360)->>
 mod(45; 360)->>
-modClose(45; 360)->>
 mod(0.5; 360)->>
-modClose(0.5; 360)->>
 
 // Exact boundary
 mod(360; 360)->>
-modClose(360; 360)->>
 mod(0; 360)->>
-modClose(0; 360)->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"modClose - negative a, positive n"
+"mod() builtin - negative a, positive n"
 
-// Wraps to near-n value (should snap to 0)
-mod(-0.011; 360)->>
-modClose(-0.011; 360)->>
-
-// Wraps to near-n but outside tolerance (should keep)
+// Wraps to positive
 mod(-0.1; 360)->>
-modClose(-0.1; 360)->>
-
-// Not near boundary (should keep)
 mod(-1; 360)->>
-modClose(-1; 360)->>
 mod(-180; 360)->>
-modClose(-180; 360)->>
 
 // Exact multiple
 mod(-360; 360)->>
-modClose(-360; 360)->>
 mod(-720; 360)->>
-modClose(-720; 360)->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"modClose - positive a, negative n"
-// mod(a; n) for negative n gives results in (n, 0]
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"Degree equality operator (=°) — mod-aware balance check"
 
-// Near 0 boundary (does not snap)
-mod(2.999; -3)->>
-modClose(2.999; -3)->>
-mod(-0.001; -3)->>
-modClose(-0.001; -3)->>
+// Same angle, same representation — should balance
+a: 45
+b: 45
+a =° b
 
-// Near n boundary (should snap to 0) - snapTol = min(0.5, 3*0.5*10^-4) = 0.00015
-mod(0.00005; -3)->>
-modClose(0.00005; -3)->>
-mod(0.0001; -3)->>
-modClose(0.0001; -3)->>
+// Opposite sides of 0/360 boundary — should balance (mod 360)
+c: 359.99
+d: 0.01
+c =° d
 
-// Near n boundary but outside tolerance (should keep)
-mod(0.001; -3)->>
-modClose(0.001; -3)->>
+// Wrap-around: 720.5 mod 360 = 0.5, and 0.5 — should balance
+e: 720.5
+f: 0.5
+e =° f
 
-// Not near boundary (should keep)
-mod(2; -3)->>
-modClose(2; -3)->>
-mod(1; -3)->>
-modClose(1; -3)->>
+// Large negative wrap: -0.01 mod 360 = 359.99 vs 359.99 — should balance
+g: -0.01
+h: 359.99
+g =° h
 
-// Exact boundary
-mod(3; -3)->>
-modClose(3; -3)->>
-mod(0; -3)->>
-modClose(0; -3)->>
+// Should NOT balance (different angles even mod 360)
+i: 10
+j: 20
+i =° j
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"modClose - negative a, negative n"
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"=° with Brent's solver — solve for unknown"
 
-// Near n boundary (should snap to 0) - snapTol = 0.00015
-mod(-2.99995; -3)->>
-modClose(-2.99995; -3)->>
-mod(-2.9999; -3)->>
-modClose(-2.9999; -3)->>
+// Solve for x where x =° 350 (Brent should find x near 350)
+x[340:360]->
+x =° 350
 
-// Near n boundary but outside tolerance (should keep)
-mod(-2.999; -3)->>
-modClose(-2.999; -3)->>
-
-// Not near boundary (should keep)
-mod(-1; -3)->>
-modClose(-1; -3)->>
-mod(-2; -3)->>
-modClose(-2; -3)->>
-
-// Exact multiple
-mod(-3; -3)->>
-modClose(-3; -3)->>
-mod(-6; -3)->>
-modClose(-6; -3)->>
+// Solve for y where y =° 0.01 (Brent should find y near 0.01)
+y[-10:10]->
+y =° 0.01
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"modClose - large multiples and wrap"
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"=° in braced equations"
 
-// Large positive, near boundary
-mod(719.989; 360)->>
-modClose(719.989; 360)->>
-mod(1079.95; 360)->>
-modClose(1079.95; 360)->>
-
-// Large positive, not near boundary
-mod(721; 360)->>
-modClose(721; 360)->>
-
-// Large negative, near boundary
-mod(-720.011; 360)->>
-modClose(-720.011; 360)->>
-
-// Large negative, not near boundary
-mod(-719; 360)->>
-modClose(-719; 360)->>
+a: 359.99
+b: 0.01
+{a =° b}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"modClose - places=0 (snap zone capped at 0.5)"
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"=° as logical operator in expressions"
 
-// Within 0.5 of 360 (should snap)
-mod(359.6; 360)->>
-modClose(359.6; 360)->>
+// Boundary wrap — should be 1
+(359.99 =° 0.01)->
 
-// Outside 0.5 (should keep)
-mod(359; 360)->>
-modClose(359; 360)->>
-mod(350; 360)->>
-modClose(350; 360)->>
-mod(180; 360)->>
-modClose(180; 360)->>
+// Same value — should be 1
+(45 =° 45)->
+
+// Large wrap — should be 1
+(720.5 =° 0.5)->
+
+// Negative wrap — should be 1
+(-0.01 =° 359.99)->
+
+// Different angles — should be 0
+(10 =° 20)->
+
+// Use in if()
+if(359.99 =° 0.01; 100; 200)->
+if(10 =° 20; 100; 200)->
+
+// Combine with other logic
+(359.99 =° 0.01) && (45 =° 405)->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Check modClose on literals"
+"=° in radians mode (mod 2*pi)"
 
-x = 359.82°
-x->>
+// Near 2*pi boundary — should balance
+a: 6.28
+b: 0.0031853071795864
+a =° b
 
-y = 359.83°
-y->>
+// Same value — should balance
+c: 1.5
+d: 1.5
+c =° d
 
-z °: 359.83°
-z->>
+// Should NOT balance
+e: 1
+f: 2
+e =° f
 
-w : 359.83° + 1
-w ->>
+// Straddle pair at places=2
+(2*pi() =° 2*pi()*(1 - 0.0051))->
+(2*pi() =° 2*pi()*(1 - 0.005))->
 
-v : 359.83
-v ->>
-v °->>
+// Expression: boundary wrap
+(6.28 =° 0.0031853071795864)->
+
+// Expression: different angles
+(1 =° 2)->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

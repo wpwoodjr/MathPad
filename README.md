@@ -19,7 +19,7 @@ Or open `docs/index.html` locally in a browser. No build step required.
 
 - **Automatic Equation Solving** — detects unknown variables and solves using Brent's root-finding method. Solve forward or backward: give it any combination of knowns and unknowns
 - **50+ Built-in Functions** — math, trig (degrees/radians), date/time, financial, and control flow
-- **User-defined Functions** — create custom functions like `f(x;y) = expr` in a special "Functions" record
+- **User-defined Functions** — define functions like `f(x;y) = expr` in any record, or in the "Functions" record to make them available globally
 - **Global Constants** — define constants in a "Constants" record, available to all other records
 - **Google Drive Sync** — sign in with Google to sync records across devices with automatic conflict detection
 - **Import/Export** — compatible with original PalmOS MathPad export format
@@ -58,6 +58,21 @@ Or open `docs/index.html` locally in a browser. No build step required.
 | `var[lo:hi]:` | Constrain search range for root-finding |
 | `x~` | Use pre-solve (stale) value if current unavailable |
 | `x?` | 1 if variable has a value, 0 otherwise |
+
+### Equations
+
+An equation is any line with `=` between two expressions. If all variables have values, MathPad checks that both sides balance. If there's an unknown, it solves using Brent's root-finding method.
+
+| Syntax | Behavior |
+|--------|----------|
+| `a = b` | Standard equation — balance check or solve for unknown |
+| `a =° b` | Degree equality — compares mod 360 (or mod 2π in radians mode), so `359.99 =° 0.01` balances |
+
+The `=°` operator also works as a logical comparison in expressions, returning 1 (true) or 0 (false):
+
+```
+if(heading =° targetHeading; "on course"; "off course")
+```
 
 ### Algebraic Substitution
 

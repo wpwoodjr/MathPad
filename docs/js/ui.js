@@ -41,16 +41,6 @@ const UI = {
 };
 
 /**
- * Get decimal places for the current record.
- * Called by modClose() in parser.js to avoid threading places through every call site.
- */
-function getCurrentPlaces() {
-    if (!UI.currentRecordId || !UI.data) return 4;
-    const record = findRecord(UI.data, UI.currentRecordId);
-    return record ? record.places : 4;
-}
-
-/**
  * Initialize the UI
  */
 function initUI(data) {
@@ -473,6 +463,11 @@ function showEditor(recordId) {
     if (noEditorMsg) {
         noEditorMsg.style.display = recordId ? 'none' : 'block';
     }
+
+    // Re-align variable name widths now that the container is visible
+    // (offsetWidth returns 0 when container has display:none during initial creation)
+    const shown = UI.editors.get(recordId);
+    if (shown) shown.variablesManager.alignNameWidths();
 
     // Restore scroll and divider positions after showing
     const editorInfo = UI.editors.get(recordId);

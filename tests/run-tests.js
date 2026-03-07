@@ -38,9 +38,6 @@ function loadModules() {
     global.parseExpression = parser.parseExpression;
     global.parseTokens = parser.parseTokens;
     global.findLineCommentStart = parser.findLineCommentStart;
-    global.modClose = parser.modClose;
-    global._currentTestRecord = null;
-    global.getCurrentPlaces = () => global._currentTestRecord ? global._currentTestRecord.places : 4;
 
     // Line Parser (depends on parser)
     const lineParser = require(path.join(jsPath, 'line-parser.js'));
@@ -63,6 +60,7 @@ function loadModules() {
     global.toFixed = evaluator.toFixed;
     global.builtinFunctions = evaluator.builtinFunctions;
     global.checkBalance = evaluator.checkBalance;
+    global.modCheckBalance = evaluator.modCheckBalance;
 
     // Solver (depends on parser, evaluator)
     const solver = require(path.join(jsPath, 'solver.js'));
@@ -174,9 +172,6 @@ function solveAllRecords(data) {
     const parsedFunctions = functionsRecord ? parseFunctionsRecord(functionsRecord.text, functionsTokens) : null;
 
     for (const record of records) {
-        // Set current record places for modClose() lookups
-        global._currentTestRecord = record;
-
         // Tokenize record text once, pass through to all consumers
         const allTokens = new Tokenizer(record.text).tokenize();
 

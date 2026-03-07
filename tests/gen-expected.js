@@ -3,8 +3,6 @@ const path = require("path");
 const fs = require("fs");
 const jsPath = path.join(__dirname, "..", "docs", "js");
 Object.assign(global, require(path.join(jsPath, "parser.js")));
-global._currentTestRecord = null;
-global.getCurrentPlaces = () => global._currentTestRecord ? global._currentTestRecord.places : 4;
 Object.assign(global, require(path.join(jsPath, "line-parser.js")));
 Object.assign(global, require(path.join(jsPath, "evaluator.js")));
 Object.assign(global, require(path.join(jsPath, "solver.js")));
@@ -24,7 +22,6 @@ const functionsTokens = functionsRecord ? new Tokenizer(functionsRecord.text).to
 const parsedConstants = constantsRecord ? parseConstantsRecord(constantsRecord.text, constantsTokens) : null;
 const parsedFunctions = functionsRecord ? parseFunctionsRecord(functionsRecord.text, functionsTokens) : null;
 for (const record of data.records) {
-    global._currentTestRecord = record;
     const allTokens = new Tokenizer(record.text).tokenize();
     const context = createEvalContext(record, parsedConstants, parsedFunctions, record.text, allTokens);
     const result = solveRecord(record.text, context, record, allTokens);

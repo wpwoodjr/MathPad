@@ -77,7 +77,7 @@ Degrees persistent output
 (720 + 45)°=>> 45°
 Degrees variable with negative value
 set°: -90°
-set-> 270
+set-> -90
 Degrees variable with plain number (no ° literal, no normalization)
 set2°: 540
 set2-> 540
@@ -90,29 +90,29 @@ course°-> 40.1235°
 Degrees literal and format combinations
 -370-> -370
 -370 -> -370
--370°-> 350
--370° -> 350
+-370°-> -370
+-370° -> -370
 -370 °-> 350°
 -370° °-> 350°
 370-> 370
 370 -> 370
-370°-> 10
-370° -> 10
+370°-> 370
+370° -> 370
 370 °-> 10°
 370° °-> 10°
 a = -370°
-a-> 350
+a-> -370
 b = a + 370°
 b °-> 0°
 Binary minus with degrees literal
 d = 10 -370°
-d-> 0
+d-> -360
 10-380-> -370
-10-380°-> -10
-10 - (380°)-> -10
+10-380°-> -370
+10 - (380°)-> -370
 10-380°°-> 350°
 10-380 °-> 350°
-10 - (-380°)-> -330
+10 - (-380°)-> 390
 10 - (-380°)°-> 30°
 Infinity and NaN not formatted with ° $ or %
 1/0°-> Infinity

@@ -3,18 +3,6 @@
  * Handles all MathPad syntax including operators, functions, variables, and equations
  */
 
-/**
- * Tolerant mod: like mod(a, n) but snaps to 0 near the mod boundary.
- * Snap tolerance = min(0.5, |n| * 0.5 * 10^-(places+1)).
- * Uses getCurrentPlaces() to find the record's decimal places setting.
- */
-function modClose(a, n) {
-    const places = getCurrentPlaces();
-    const result = a - n * Math.floor(a / n);
-    const snapTol = Math.min(0.5, Math.abs(n) * 0.5 * Math.pow(10, -(places + 1)));
-    return (Math.abs(result - n) < snapTol) ? 0 : result;
-}
-
 // Variable type enum - determines variable behavior
 const VarType = {
     INPUT: 'input',            // varname: or varname:: or varname<-
@@ -294,34 +282,11 @@ class Tokenizer {
             return this.makeToken(TokenType.NUMBER, { value: parseFloat(value) / 100, base: 10, raw }, startLine, startCol);
         }
 
-        // Degrees literal: 400° -> 40 (mod 360 to normalize)
-        // Absorbs preceding unary minus so -370° -> 350 (not -(370 mod 360) = -10)
+        // Degrees literal: 400° is just a unit marker, value stays as-is
         if (this.peek() === '°') {
             this.advance(); // consume °
             raw += '°';
-            let deg = parseFloat(value);
-            // Check for preceding unary minus: '-' is binary only after
-            // value-producing tokens (number, identifier, close paren)
-            const lastIdx = this.tokens.length - 1;
-            if (lastIdx >= 0 && this.tokens[lastIdx].type === TokenType.OPERATOR &&
-                this.tokens[lastIdx].value === '-') {
-                const minusTok = this.tokens[lastIdx];
-                const prevIdx = lastIdx - 1;
-                const prevTok = prevIdx >= 0 ? this.tokens[prevIdx] : null;
-                const isBinary = prevTok && prevTok.line === minusTok.line &&
-                    (prevTok.type === TokenType.NUMBER ||
-                     prevTok.type === TokenType.IDENTIFIER ||
-                     prevTok.type === TokenType.RPAREN);
-                const isUnary = !isBinary;
-                if (isUnary) {
-                    deg = -deg;
-                    raw = '-' + raw;
-                    // Flag: caller must pop the unary minus from both token arrays
-                    this._popPrecedingToken = true;
-                    return this.makeToken(TokenType.NUMBER, { value: modClose(deg, 360), base: 10, raw }, minusTok.line, minusTok.col);
-                }
-            }
-            return this.makeToken(TokenType.NUMBER, { value: modClose(deg, 360), base: 10, raw }, startLine, startCol);
+            return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw }, startLine, startCol);
         }
 
         return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw }, startLine, startCol);
@@ -539,6 +504,14 @@ class Tokenizer {
             return this.makeToken(TokenType.OPERATOR, twoChar, startLine, startCol);
         }
 
+        // =° (degree equality — mod-aware balance check)
+        if (ch === '=' && ch2 === '°') {
+            this.advance(2);
+            const token = this.makeToken(TokenType.OPERATOR, '=°', startLine, startCol);
+            token.modN = true;
+            return token;
+        }
+
         // Single-character operators (% is not an operator - use mod() function)
         const singleCharOps = ['+', '-', '*', '/', '&', '|', '^', '~', '!', '<', '>', '=', '?', '\\'];
         if (singleCharOps.includes(ch)) {
@@ -592,14 +565,7 @@ class Tokenizer {
 
             // Number
             if (this.isDigit(ch) || (ch === '.' && this.isDigit(this.peek(1)))) {
-                const numToken = this.tokenizeNumber();
-                if (this._popPrecedingToken) {
-                    // Degrees literal absorbed preceding unary minus — remove it
-                    this.tokens.pop();
-                    lines[lines.length - 1].pop();
-                    this._popPrecedingToken = false;
-                }
-                pushToken(numToken);
+                pushToken(this.tokenizeNumber());
                 continue;
             }
 
@@ -859,7 +825,7 @@ class Parser {
     // Level 3: == != < <= > >=
     parseComparison() {
         let left = this.parseBitwiseOr();
-        const compOps = ['==', '!=', '<', '<=', '>', '>='];
+        const compOps = ['==', '!=', '<', '<=', '>', '>=', '=°'];
         while (this.peek().type === TokenType.OPERATOR && compOps.includes(this.peek().value)) {
             const op = this.advance().value;
             const right = this.parseBitwiseOr();
@@ -1071,6 +1037,6 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         VarType, ClearBehavior,
         TokenType, NodeType, Tokenizer, Parser, ParseError,
-        tokenize, parseExpression, parseTokens, findLineCommentStart, modClose
+        tokenize, parseExpression, parseTokens, findLineCommentStart
     };
 }

@@ -28,8 +28,6 @@ function loadModules() {
     global.parseExpression = parser.parseExpression;
     global.parseTokens = parser.parseTokens;
     global.findLineCommentStart = parser.findLineCommentStart;
-    global.modClose = parser.modClose;
-    global.getCurrentPlaces = () => 4;
 
     // Line Parser (depends on parser)
     const lineParser = require(path.join(jsPath, 'line-parser.js'));
@@ -1543,6 +1541,24 @@ function runAllTests() {
                 [')', 'paren'],
                 ['->', 'punctuation'],
                 ['0', 'number']
+            ]
+        },
+        // Degree equality operator (=°)
+        {
+            name: 'degree equality operator (a =° b)',
+            line: 'a =° b',
+            assertions: [
+                ['a', 'variable'],
+                ['=°', 'operator'],
+                ['b', 'variable']
+            ]
+        },
+        {
+            name: 'degree equality not confused with °=> marker',
+            line: 'x°=>',
+            assertions: [
+                ['x', 'variable-def'],
+                ['°=>', 'punctuation']
             ]
         }
     ];

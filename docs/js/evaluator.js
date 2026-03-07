@@ -287,6 +287,19 @@ function checkBalance(a, b, places) {
     }
 }
 
+/**
+ * Mod-aware balance check: compares a and b modulo n.
+ * Handles wrap-around at the mod boundary (e.g., 359.99 vs 0.01 mod 360).
+ * Normalizes both values to [n/2, 3n/2) so boundary values cluster near n.
+ */
+function modCheckBalance(a, b, n, places) {
+    const aMod = a - n * Math.floor(a / n);
+    const bMod = b - n * Math.floor(b / n);
+    const aNorm = aMod - n < -aMod ? aMod + n : aMod;
+    const bNorm = bMod - n < -bMod ? bMod + n : bMod;
+    return checkBalance(aNorm, bNorm, places);
+}
+
 const builtinFunctions = {
     // Math functions
     abs: (args) => Math.abs(args[0]),
@@ -436,11 +449,7 @@ const builtinFunctions = {
     },
 
     // Balance check: isClose(a; b; places) returns 1 if equal within tolerance, 0 otherwise
-    isclose: (args) => checkBalance(args[0], args[1], args[2]) ? 1 : 0,
-
-    // Tolerant mod: modClose(a; n) — snaps to 0 near the mod boundary.
-    // Delegates to shared modClose() helper in parser.js.
-    modclose: (args) => modClose(args[0], args[1])
+    isclose: (args) => checkBalance(args[0], args[1], args[2]) ? 1 : 0
 };
 
 /**
@@ -547,6 +556,10 @@ function evaluate(node, context) {
                 case '<=': return left <= right ? 1 : 0;
                 case '>': return left > right ? 1 : 0;
                 case '>=': return left >= right ? 1 : 0;
+                case '=°': {
+                    const modN = context.degreesMode ? 360 : 2 * Math.PI;
+                    return modCheckBalance(left, right, modN, context.places) ? 1 : 0;
+                }
                 case '^^': return (left ? 1 : 0) !== (right ? 1 : 0) ? 1 : 0; // XOR
                 default:
                     throw new EvalError(`Unknown binary operator: ${node.op}`);
@@ -704,7 +717,7 @@ function formatPercent(value, places) {
  * Format value as degrees: mod 360, strip trailing zeros, append °
  */
 function formatDegrees(value, places) {
-    const degrees = modClose(value, 360);
+    const degrees = value - 360 * Math.floor(value / 360);
     const formatted = toFixed(degrees, places).replace(/\.?0+$/, '');
     return formatted + '°';
 }
@@ -785,7 +798,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        EvalContext, EvalError, evaluate, formatNumber, addCommaGrouping, formatMoney, formatPercent, formatDegrees, toFixed, checkBalance,
+        EvalContext, EvalError, evaluate, formatNumber, addCommaGrouping, formatMoney, formatPercent, formatDegrees, toFixed, checkBalance, modCheckBalance,
         builtinFunctions, factorial, gamma,
         dateToJulian, julianToDate, parseDate, formatDate
     };
