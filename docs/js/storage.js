@@ -10,11 +10,12 @@ const DEFAULT_SETTINGS_RECORD = {
     text: `"New Record"
 
 --Variables--
-"*Template for new records"
 
-"First line becomes the default title"
+"*This is the template for new records"
 
-"This record's settings are used as defaults for new records"`,
+"The first line is the default title for new records. This record's settings (for example Decimal Places) are also used as defaults for new records."
+
+"Generally, put functions and equations above the --Variables-- section.  Variable definitions can go here in the --Variables-- section or above it.  When in the Variables section, they'll be visible in the variables panel."`,
     category: 'Reference',
     places: 4,
     stripZeros: true,
@@ -782,7 +783,7 @@ function createRecord(data) {
     return {
         id: generateId(),
         title,
-        text: `"${title}"\n\n`,
+        text: ds.text.split('\n').slice(0, 3).join('\n') + '\n',
         category: 'Unfiled',
         places: ds.places,
         stripZeros: ds.stripZeros,
