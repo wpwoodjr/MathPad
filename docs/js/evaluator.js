@@ -709,7 +709,7 @@ function formatMoney(value) {
  */
 function formatPercent(value, places) {
     const percent = value * 100;
-    const formatted = toFixed(percent, places).replace(/\.?0+$/, '');
+    const formatted = toFixed(percent, places).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
     return formatted + '%';
 }
 
@@ -718,7 +718,7 @@ function formatPercent(value, places) {
  */
 function formatDegrees(value, places) {
     const degrees = value - 360 * Math.floor(value / 360);
-    const formatted = toFixed(degrees, places).replace(/\.?0+$/, '');
+    const formatted = toFixed(degrees, places).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
     return formatted + '°';
 }
 

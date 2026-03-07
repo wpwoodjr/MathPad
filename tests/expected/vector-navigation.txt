@@ -571,19 +571,18 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
 Status = "Solved 2 equations"; StatusIsError = 0
-"17. Re-solve fixed with modClose - no balance error"
-// Same as test 16 but uses modClose instead of mod to handle 0°/360° wraparound
+"17. Re-solve with =° degree equality"
 
 // Leeway correction
 ws = speed*cos(leeway)
 
 // Solve smg and cts given drift, set (case 1)
 smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2)
-cts = modClose(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+cts =° atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
 
 // Solve drift and set given smg, cts (case 2)
 drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2)
-set = modClose(atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts)); 360)
+set =° atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts))
 
 // Heading from water track
 hdg = cts - leeway
@@ -601,6 +600,63 @@ Current
       drift <- 2
 set[0:360] °<- 0°
 
+      leeway: 0
+       hdg °-> 135°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Line 6: Unknown function: modClose\nLine 9: Unknown function: modClose"; StatusIsError = 1
+"18. Removed modClose should error in balance check"
+
+ws = speed*cos(leeway)
+
+smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2)
+cts = modClose(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+
+drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2)
+set = modClose(atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts)); 360)
+
+hdg = cts - leeway
+
+--Variables--
+Ground track
+        smg <- 3.394
+ cmg[0:360] °: 110.378°
+
+Course to steer
+       speed: 4.5
+cts[0:360] °<- 135°
+
+Current
+      drift <- 2
+set[0:360] °<- 0°
+
+      leeway: 0
+       hdg °-> 135°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 4 equations"; StatusIsError = 0
+"19. =° balance check at places=0 (regular = fails on set equation)"
+
+ws = speed*cos(leeway)
+
+smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2)
+cts =° atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+
+drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2)
+set =° atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts))
+
+hdg = cts - leeway
+
+        smg <- 3
+ cmg[0:360] °: 110°
+       speed: 4.5
+cts[0:360] °<- 135°
+      drift <- 2
+set[0:360] °<- 0°
       leeway: 0
        hdg °-> 135°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

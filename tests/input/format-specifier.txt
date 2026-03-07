@@ -131,6 +131,15 @@ nan$->
 nan%->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Trailing zero stripping at places=0
+x: 10%
+x %->
+y: 110
+y °->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Full precision with places=2
 a: -1.00000000025

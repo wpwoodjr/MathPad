@@ -502,8 +502,13 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
         try {
             if (!eq.leftText || !eq.rightText) continue;
 
-            const leftAST = parseExpression(eq.leftText);
-            const rightAST = parseExpression(eq.rightText);
+            let leftAST, rightAST;
+            try {
+                leftAST = parseExpression(eq.leftText);
+                rightAST = parseExpression(eq.rightText);
+            } catch (e) {
+                continue; // Parse errors already reported during solving
+            }
 
             const allVars = new Set([...findVariablesInAST(leftAST), ...findVariablesInAST(rightAST)]);
             const unknowns = [...allVars].filter(v => !context.hasVariable(v));
@@ -528,7 +533,7 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
                 }
             }
         } catch (e) {
-            // Ignore consistency check errors
+            errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
         }
     }
 
