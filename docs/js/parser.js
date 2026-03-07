@@ -3,6 +3,18 @@
  * Handles all MathPad syntax including operators, functions, variables, and equations
  */
 
+/**
+ * Tolerant mod: like mod(a, n) but snaps to 0 near the mod boundary.
+ * Snap tolerance = min(0.5, |n| * 0.5 * 10^-(places+1)).
+ * Uses getCurrentPlaces() to find the record's decimal places setting.
+ */
+function modClose(a, n) {
+    const places = getCurrentPlaces();
+    const result = a - n * Math.floor(a / n);
+    const snapTol = Math.min(0.5, Math.abs(n) * 0.5 * Math.pow(10, -(places + 1)));
+    return (Math.abs(result - n) < snapTol) ? 0 : result;
+}
+
 // Variable type enum - determines variable behavior
 const VarType = {
     INPUT: 'input',            // varname: or varname:: or varname<-
@@ -306,12 +318,10 @@ class Tokenizer {
                     raw = '-' + raw;
                     // Flag: caller must pop the unary minus from both token arrays
                     this._popPrecedingToken = true;
-                    const normalized = deg - 360 * Math.floor(deg / 360);
-                    return this.makeToken(TokenType.NUMBER, { value: normalized, base: 10, raw }, minusTok.line, minusTok.col);
+                    return this.makeToken(TokenType.NUMBER, { value: modClose(deg, 360), base: 10, raw }, minusTok.line, minusTok.col);
                 }
             }
-            const normalized = deg - 360 * Math.floor(deg / 360);
-            return this.makeToken(TokenType.NUMBER, { value: normalized, base: 10, raw }, startLine, startCol);
+            return this.makeToken(TokenType.NUMBER, { value: modClose(deg, 360), base: 10, raw }, startLine, startCol);
         }
 
         return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw }, startLine, startCol);
@@ -1061,6 +1071,6 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         VarType, ClearBehavior,
         TokenType, NodeType, Tokenizer, Parser, ParseError,
-        tokenize, parseExpression, parseTokens, findLineCommentStart
+        tokenize, parseExpression, parseTokens, findLineCommentStart, modClose
     };
 }

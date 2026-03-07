@@ -175,3 +175,25 @@ modClose(350; 360)->> 350
 mod(180; 360)->> 180
 modClose(180; 360)->> 180
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Check modClose on literals"
+
+x = 359.82°
+x->> 359.819999999999993
+
+y = 359.83°
+y->> 0
+
+z °: 359.83°
+z->> 0
+
+w : 359.83° + 1
+w ->> 1
+
+v : 359.83
+v ->> 359.829999999999984
+v °->> 0°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

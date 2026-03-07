@@ -187,19 +187,19 @@ f(x; c5; c4; c3; c2; c1; c0) = 0
 x->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 1; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Balance Test places = 1"
-
-a = 100
-b = 95.000000001
-a = b
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Balance Test places = 2"
 
 a = 100
-b = 95.000000001
+b = 99.5000001
+a = b
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Balance Test places = 3"
+
+a = 100
+b = 99.5000001
 a = b

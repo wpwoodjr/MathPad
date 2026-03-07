@@ -41,6 +41,16 @@ const UI = {
 };
 
 /**
+ * Get decimal places for the current record.
+ * Called by modClose() in parser.js to avoid threading places through every call site.
+ */
+function getCurrentPlaces() {
+    if (!UI.currentRecordId || !UI.data) return 4;
+    const record = findRecord(UI.data, UI.currentRecordId);
+    return record ? record.places : 4;
+}
+
+/**
  * Initialize the UI
  */
 function initUI(data) {
@@ -700,6 +710,14 @@ function updateRecordDetail(field, value) {
         if (editorInfo) {
             const { constants, functions, parsedConstants, parsedFunctions } = getReferenceInfo();
             editorInfo.editor.setReferenceInfo(constants, functions, value, parsedConstants, parsedFunctions);
+        }
+    }
+
+    // Re-tokenize when places changes (affects ° literal snapping via modClose)
+    if (field === 'places') {
+        const editorInfo = UI.editors.get(record.id);
+        if (editorInfo) {
+            editorInfo.editor.updateHighlighting();
         }
     }
 }

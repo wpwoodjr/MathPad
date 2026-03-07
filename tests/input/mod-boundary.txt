@@ -168,3 +168,24 @@ modClose(350; 360)->>
 mod(180; 360)->>
 modClose(180; 360)->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Check modClose on literals"
+
+x = 359.82°
+x->>
+
+y = 359.83°
+y->>
+
+z °: 359.83°
+z->>
+
+w : 359.83° + 1
+w ->>
+
+v : 359.83
+v ->>
+v °->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

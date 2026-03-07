@@ -203,22 +203,22 @@ f(x; c5; c4; c3; c2; c1; c0) = 0
 x-> 0.780455192719996
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 1; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved 2 equations"; StatusIsError = 0
-"Balance Test places = 1"
-
-a = 100
-b = 95.000000001
-a = b
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 5: Equation doesn't balance: a = b (100 ≠ 95.000000001)"; StatusIsError = 1
+Status = "Solved 2 equations"; StatusIsError = 0
 "Balance Test places = 2"
 
 a = 100
-b = 95.000000001
+b = 99.5000001
+a = b
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Line 5: Equation doesn't balance: a = b (100 ≠ 99.5000001)"; StatusIsError = 1
+"Balance Test places = 3"
+
+a = 100
+b = 99.5000001
 a = b
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

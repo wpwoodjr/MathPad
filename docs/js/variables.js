@@ -544,7 +544,7 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
 
     // Handle degrees format
     if (varFormat === 'degrees') {
-        const degrees = value - 360 * Math.floor(value / 360);
+        const degrees = modClose(value, 360);
         if (fullPrecision) {
             const formatted = formatNumber(degrees, places, stripZeros, numberFormat, 10, false, null);
             return formatted + '°';

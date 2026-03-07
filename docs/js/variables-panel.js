@@ -261,6 +261,28 @@ class VariablesPanel {
         this.declarations = newDeclMap;
         this.flashChanges = false;
         this._oldDisplayValues = null;
+
+        // Align all value inputs/outputs by setting name elements to the same width
+        this.alignNameWidths();
+    }
+
+    /**
+     * Set all .variable-name elements to the same width so value columns align
+     */
+    alignNameWidths() {
+        const names = this.container.querySelectorAll('.variable-name');
+        // Reset to natural width first
+        for (const el of names) el.style.minWidth = '';
+        // Find max natural width
+        let maxWidth = 0;
+        for (const el of names) {
+            maxWidth = Math.max(maxWidth, el.offsetWidth);
+        }
+        // Apply uniform width
+        if (maxWidth > 0) {
+            const px = maxWidth + 'px';
+            for (const el of names) el.style.minWidth = px;
+        }
     }
 
     /**

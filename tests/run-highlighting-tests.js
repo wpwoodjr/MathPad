@@ -28,6 +28,8 @@ function loadModules() {
     global.parseExpression = parser.parseExpression;
     global.parseTokens = parser.parseTokens;
     global.findLineCommentStart = parser.findLineCommentStart;
+    global.modClose = parser.modClose;
+    global.getCurrentPlaces = () => 4;
 
     // Line Parser (depends on parser)
     const lineParser = require(path.join(jsPath, 'line-parser.js'));

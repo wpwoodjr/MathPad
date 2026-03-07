@@ -1282,7 +1282,7 @@ body.panel-resizing * {
 }
 
 .variable-name {
-    min-width: 100px;
+    min-width: 80px;
     font-family: var(--font-mono);
     font-size: 15px;
     color: var(--success-color);

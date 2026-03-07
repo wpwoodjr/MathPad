@@ -121,7 +121,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 |------|---------|
 | `ui.js` | UI state, event handling, record management, sidebar/tabs/details rendering |
 | `solve-engine.js` | `solveRecord()` main entry, equation solving orchestration, output formatting |
-| `solver.js` | Brent's root-finding algorithm, equation detection, substitution derivation (`deriveSubstitution`, `tryExtractFromSum`) |
+| `solver.js` | Brent's root-finding algorithm, equation detection, substitution derivation (`deriveSubstitution`, `tryIsolateVariable`) |
 | `evaluator.js` | Expression evaluation, 50+ built-in functions, `formatNumber()`, `checkBalance()` |
 | `variables.js` | Variable declaration parsing, `parseAllVariables()`, `setVariableValue()`, `buildOutputLine()` |
 | `parser.js` | Tokenizer (tokens have `.ws` whitespace, `.raw` error text), AST generation, `VarType`/`ClearBehavior` enums |
@@ -262,9 +262,7 @@ App loads → localStorage (instant) → check Drive metadata
 
 **Modifying solving behavior**: Edit `solveRecord()` in `solve-engine.js`
 
-**Algebraic substitution** (`deriveSubstitution` in `solver.js`): Derives substitutions to reduce multi-unknown equations to single-unknown for Brent's. Three cases:
-- Cases 1/2: Variable is a direct top-level operand (`var OP expr = D`)
-- Case 3 (`tryExtractFromSum`): Variable is inside a product/quotient within a sum/difference (`var * B + C = D`, `var / B + C = D`, `B / var + C = D`). Handles subtraction, commuted, and RHS-swapped forms.
+**Algebraic substitution** (`deriveSubstitution` in `solver.js`): Derives substitutions to reduce multi-unknown equations to single-unknown for Brent's. Uses recursive `tryIsolateVariable` to peel off binary operations one level at a time via `invertOperation`, handling arbitrary-depth nesting (e.g., `a*b/D = C` → `a = C*D/b`). Subsumes additive patterns (`var*B + C = D`), nested products/quotients, and `**` (power) inversion.
 
 **Debugging equations**: The solver logs substitutions and solving steps to console
 
