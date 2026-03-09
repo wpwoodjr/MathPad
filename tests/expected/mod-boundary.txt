@@ -163,3 +163,124 @@ e =° f
 // Expression: different angles
 (1 =° 2)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"=° with mod-aware Brent's — wrapping past 360°"
+
+// x + 20 = 370, which is 10° mod 360
+// Without mod-aware error, Brent's sees no sign change in [0:360]
+// With mod-aware error, Brent's correctly finds y = 10
+x: 350
+y[0:360]-> 10
+x + 20 =° y
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"=° with mod-aware Brent's — atan discontinuity"
+
+// atan(b; -1) has a discontinuity at b=0: jumps from ~180° to ~-180°
+// Without mod-aware error, Brent's finds false root at discontinuity
+// With mod-aware error, Brent's correctly finds b = tan(10°) ≈ 0.18
+a: 170
+b[-10:10]-> 0.18
+a =° atan(b; -1)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"=° definition bypass — with limits"
+
+// y =° 365 + a is a definition equation, but =° skips the shortcut
+// Definition would give y = 365 (outside limits), Brent's finds y = 5
+a: 0
+y[-10:10]-> 5
+y =° 365 + a
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"=° definition bypass — without limits"
+
+// Without limits, Brent's finds smallest positive representative
+a: 0
+y-> 5
+y =° 365 + a
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"=° definition bypass — non-standard limits"
+
+// Limits [360:480], Brent's finds y = 365 (the representative in range)
+a: 0
+y[360:480]-> 365
+y =° 5 + a
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"=° substitution system — two =° equations"
+
+// Two unknowns, two =° equations — needs substitutions to reduce
+// smg + salt =° cmg derives smg = cmg - salt, plugged into eq 1
+salt-> 0
+smg-> 7
+drift =° smg - salt
+smg + salt =° cmg
+cmg: 7
+drift: 7
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"=° substitution system — wrap-around values"
+
+// Same structure but values cross 360° boundary
+// cmg=350, drift=20: smg+salt =° 350, smg-salt =° 20
+// smg = (350+20)/2 mod 360 = 185, salt = 185-350 mod 360 = -165 or 195
+salt-> -15
+smg-> 5
+drift =° smg - salt
+smg + salt =° cmg
+cmg: 350
+drift: 20
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 7 equations"; StatusIsError = 0
+"=° mod-aware Brent's — combined cases"
+
+a: 1
+
+z[-10:10]-> 4
+z + a =° 365
+
+y[-10:10]-> 6
+y =° 365 + a
+
+x-> 5
+x =° 365
+
+w[360:480]-> 366
+w =° 5 + a
+
+u[-10:10]-> 9
+u =° 365*2 - 1
+
+drift =° smg - salt
+smg + salt =° cmg
+salt<- -4
+smg<- 16
+cmg: 12
+drift: 20
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

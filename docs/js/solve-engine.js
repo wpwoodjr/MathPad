@@ -53,7 +53,7 @@ function findVariablesInAST(node) {
 /**
  * Solve a single equation in context
  */
-function solveEquationInContext(eqText, eqLine, context, variables, substitutions = new Map(), leftText, rightText) {
+function solveEquationInContext(eqText, eqLine, context, variables, substitutions = new Map(), leftText, rightText, modN = null) {
     if (!leftText || !rightText) {
         return { solved: false };
     }
@@ -138,7 +138,9 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
         try {
             const leftVal = evaluate(leftAST, ctx);
             const rightVal = evaluate(rightAST, ctx);
-            return leftVal - rightVal;
+            let diff = leftVal - rightVal;
+            if (modN) diff -= modN * Math.round(diff / modN);
+            return diff;
         } catch (e) {
             return NaN;
         }
@@ -220,7 +222,8 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
             try {
                 if (eq.text.includes('\\')) continue;
 
-                const def = isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
+                // =° equations skip definition shortcut — Brent's handles mod-aware solving
+                const def = !eq.modN && isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
                 if (!def) continue;
 
                 const varInfo = variables.get(def.variable);
@@ -290,6 +293,8 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
         // e.g., "x - a = 3" extracts to "x = a + 3" — if RHS is fully known, evaluate
         for (const [varName, sub] of substitutions) {
             if (context.hasVariable(varName)) continue;
+            // =° substitutions skip direct evaluation — Brent's handles mod-aware solving
+            if (sub.modN) continue;
             const subVars = findVariablesInAST(sub.ast);
             const subUnknowns = [...subVars].filter(v => !context.hasVariable(v));
             if (subUnknowns.length === 0) {
@@ -357,7 +362,8 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
                     }
 
                     // Handle definition equations not fully resolved in Pass 1
-                    const def = isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
+                    // =° equations skip definition shortcut — Brent's handles mod-aware solving
+                    const def = !eq.modN && isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
                     if (def) {
                         const varInfo = variables.get(def.variable);
                         const rhsVars = findVariablesInAST(def.expressionAST);
@@ -422,8 +428,9 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
                     // Try to solve the equation numerically
                     // Sweep 0: no substitutions (natural 1-unknown only)
                     // Sweep 1: with substitutions to reduce multi-unknown equations
+                    const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
                     const result = solveEquationInContext(eq.text, eq.startLine, context, variables,
-                        sweep === 0 ? new Map() : substitutions, eq.leftText, eq.rightText);
+                        sweep === 0 ? new Map() : substitutions, eq.leftText, eq.rightText, modValue);
                     if (result.solved) {
                         context.setVariable(result.variable, result.value);
                         computedValues.set(result.variable, result.value);

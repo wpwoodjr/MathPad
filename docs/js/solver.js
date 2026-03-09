@@ -709,7 +709,7 @@ function buildSubstitutionMap(equations, context, errors = []) {
             if (!hasSubstitutedVar) {
                 // Store both the AST and the source equation's line number
                 // so we don't apply a substitution back to its own source equation
-                substitutions.set(def.variable, { ast: def.expressionAST, sourceLine: eq.startLine });
+                substitutions.set(def.variable, { ast: def.expressionAST, sourceLine: eq.startLine, modN: !!eq.modN });
                 dependencies.set(def.variable, exprVars);
             }
         } catch (e) {
