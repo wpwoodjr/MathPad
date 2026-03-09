@@ -137,6 +137,48 @@ function safeEval(f, x) {
 }
 
 /**
+ * Find all valid roots within [low, high] using grid search + Brent's
+ * Rejects wrapping discontinuities where |f(root)| > modN/4
+ */
+function findAllBracketRoots(f, low, high, modN, numPoints = 50) {
+    const fTol = 128 * Number.EPSILON;
+    const step = (high - low) / numPoints;
+    const roots = [];
+
+    let prevX = low;
+    let prevF = safeEval(f, low);
+
+    if (isFinite(prevF) && Math.abs(prevF) <= fTol) {
+        roots.push(low);
+    }
+
+    for (let i = 1; i <= numPoints; i++) {
+        const x = low + i * step;
+        const fx = safeEval(f, x);
+
+        if (isFinite(fx) && Math.abs(fx) <= fTol) {
+            roots.push(x);
+        }
+
+        if (!isNaN(prevF) && !isNaN(fx) && isFinite(fx) && isFinite(prevF) && prevF * fx < 0) {
+            try {
+                const root = brent(f, prevX, x);
+                if (isFinite(root) && Math.abs(f(root)) < modN / 4) {
+                    roots.push(root);
+                }
+            } catch (e) {
+                // Bracket didn't work, continue
+            }
+        }
+
+        prevX = x;
+        prevF = fx;
+    }
+
+    return roots;
+}
+
+/**
  * Find a bracket using uniform grid search within [low, high]
  * Returns [a, b] where f(a) and f(b) have opposite signs, or null if not found
  */
@@ -236,14 +278,30 @@ function expandFromGuess(f, guess = 1) {
  * @param {number} knownScale - Max magnitude of known variables (extends search range)
  * @returns {number} Solution value
  */
-function solveEquation(f, limits = null, knownScale = 0) {
+function solveEquation(f, limits = null, knownScale = 0, modN = null) {
     const hasLimits = limits && isFinite(limits.low) && isFinite(limits.high);
 
     // With explicit limits: user knows where to look, just grid search there
     if (hasLimits) {
-        const bracket = gridSearch(f, limits.low, limits.high);
-        if (bracket) {
-            return brent(f, bracket[0], bracket[1]);
+        if (!modN) {
+            // Fast path: first bracket wins
+            const bracket = gridSearch(f, limits.low, limits.high);
+            if (bracket) {
+                return brent(f, bracket[0], bracket[1]);
+            }
+        } else {
+            // Mod-aware path: find all brackets, reject wrapping discontinuities
+            const roots = findAllBracketRoots(f, limits.low, limits.high, modN);
+            if (roots.length > 0) {
+                // Prefer smallest positive, then smallest absolute
+                const positiveRoots = roots.filter(r => r > 0);
+                if (positiveRoots.length > 0) {
+                    positiveRoots.sort((a, b) => a - b);
+                    return positiveRoots[0];
+                }
+                roots.sort((a, b) => Math.abs(a) - Math.abs(b));
+                return roots[0];
+            }
         }
         throw new SolverError(`Could not find a root in range [${limits.low}:${limits.high}]`);
     }
@@ -283,6 +341,8 @@ function solveEquation(f, limits = null, knownScale = 0) {
                 if (isFinite(root)) {
                     const fRoot = safeEval(f, root);
                     const maxEndpoint = Math.max(Math.abs(values[i].fx), Math.abs(values[i + 1].fx));
+                    // Reject wrapping discontinuities for mod-aware equations
+                    if (modN && Math.abs(fRoot) > modN / 4) continue;
                     if (isFinite(fRoot) && Math.abs(fRoot) <= maxEndpoint) {
                         roots.push(root);
                     }

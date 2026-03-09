@@ -284,3 +284,48 @@ smg<- 16
 cmg: 12
 drift: 20
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"=° residual check — wide limits reject wrapping discontinuity"
+
+// Limits [-600:600] span >> 360, wrapping discontinuity at v = -539
+// Residual check rejects false root, finds real root at v = 1
+v[-600:600]-> 1
+v =° 360 + 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 6 equations"; StatusIsError = 0
+"=° mod-aware Brent's — radians mode"
+
+// Wrapping past 2*pi: x + 0.1 = 2*pi + 0.1 ≈ 6.3832
+// Brent's finds y ≈ 0.1 (the representative in [-1:1])
+x: 2*pi()
+y[-1:1]-> 0.1
+x + 0.1 =° y
+
+// Definition bypass in radians: z =° 2*pi + 1 → z = 1
+z[-4:4]-> 1
+z =° 2*pi() + 1
+
+// Without limits: smallest positive representative
+w-> 0.5
+w =° 4*pi() + 0.5
+
+// atan discontinuity in radians
+// atan(b; -1) ≈ pi - atan(b) for b > 0; need result ≡ 2.967 (≈ pi - 0.175)
+a: 2.967
+b[-10:10]-> 0.1764
+a =° atan(b; -1)
+
+// Substitution system in radians
+drift =° smg - salt
+smg + salt =° cmg
+salt<- 96.3894
+smg<- 93.1062
+cmg: 1
+drift: 3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

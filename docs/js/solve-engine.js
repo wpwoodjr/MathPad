@@ -155,9 +155,9 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
         }
     }
 
-    // Solve
+    // Solve — pass modN so solver can reject wrapping discontinuities
     try {
-        const value = solveEquation(f, limits, knownScale);
+        const value = solveEquation(f, limits, knownScale, modN);
 
         return {
             solved: true,
