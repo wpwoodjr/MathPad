@@ -137,95 +137,6 @@ function safeEval(f, x) {
 }
 
 /**
- * Find all valid roots within [low, high] using grid search + Brent's
- * Rejects wrapping discontinuities where |f(root)| > modN/4
- */
-function findAllBracketRoots(f, low, high, modN, numPoints = 50) {
-    const fTol = 128 * Number.EPSILON;
-    const step = (high - low) / numPoints;
-    const roots = [];
-
-    let prevX = low;
-    let prevF = safeEval(f, low);
-
-    if (isFinite(prevF) && Math.abs(prevF) <= fTol) {
-        roots.push(low);
-    }
-
-    for (let i = 1; i <= numPoints; i++) {
-        const x = low + i * step;
-        const fx = safeEval(f, x);
-
-        if (isFinite(fx) && Math.abs(fx) <= fTol) {
-            roots.push(x);
-        }
-
-        if (!isNaN(prevF) && !isNaN(fx) && isFinite(fx) && isFinite(prevF) && prevF * fx < 0) {
-            try {
-                const root = brent(f, prevX, x);
-                if (isFinite(root) && Math.abs(f(root)) < modN / 4) {
-                    roots.push(root);
-                }
-            } catch (e) {
-                // Bracket didn't work, continue
-            }
-        }
-
-        prevX = x;
-        prevF = fx;
-    }
-
-    return roots;
-}
-
-/**
- * Find a bracket using uniform grid search within [low, high]
- * Returns [a, b] where f(a) and f(b) have opposite signs, or null if not found
- */
-function gridSearch(f, low, high, numPoints = 20) {
-    const fTol = 128 * Number.EPSILON;
-    const step = (high - low) / numPoints;
-    let prevX = low;
-    let prevF = safeEval(f, low);
-
-    if (isFinite(prevF) && Math.abs(prevF) <= fTol) {
-        return [low, low]; // Root at lower bound
-    }
-
-    for (let i = 1; i <= numPoints; i++) {
-        const x = low + i * step;
-        const fx = safeEval(f, x);
-
-        if (isFinite(fx) && Math.abs(fx) <= fTol) {
-            return [x, x]; // Root on grid point
-        }
-
-        // Check for sign change: allow ±Infinity as valid sign indicators
-        if (!isNaN(prevF) && !isNaN(fx) && isFinite(fx) && prevF * fx < 0) {
-            if (!isFinite(prevF)) {
-                // Binary-search near singularity to find a finite bracket
-                let lo = prevX, hi = x;
-                for (let j = 0; j < 60; j++) {
-                    const mid = (lo + hi) / 2;
-                    const mf = safeEval(f, mid);
-                    if (!isFinite(mf)) { lo = mid; }
-                    else if (mf * fx < 0) return [mid, hi];
-                    else hi = mid;
-                }
-                // Couldn't find bracket near singularity; continue grid search
-            } else {
-                return [prevX, x];
-            }
-        }
-
-        prevX = x;
-        prevF = fx;
-    }
-
-    return null;
-}
-
-/**
  * Find a bracket by expanding outward from a guess
  * Used when no explicit limits are provided
  * Returns [a, b] or null if not found
@@ -280,72 +191,57 @@ function expandFromGuess(f, guess = 1) {
  */
 function solveEquation(f, limits = null, knownScale = 0, modN = null) {
     const hasLimits = limits && isFinite(limits.low) && isFinite(limits.high);
+    const fTol = 128 * Number.EPSILON;
 
-    // With explicit limits: user knows where to look, just grid search there
+    // Generate evaluation points: uniform grid for limits, logarithmic for no limits
+    let testPoints;
     if (hasLimits) {
-        if (!modN) {
-            // Fast path: first bracket wins
-            const bracket = gridSearch(f, limits.low, limits.high);
-            if (bracket) {
-                return brent(f, bracket[0], bracket[1]);
-            }
-        } else {
-            // Mod-aware path: find all brackets, reject wrapping discontinuities
-            const roots = findAllBracketRoots(f, limits.low, limits.high, modN);
-            if (roots.length > 0) {
-                // Prefer smallest positive, then smallest absolute
-                const positiveRoots = roots.filter(r => r > 0);
-                if (positiveRoots.length > 0) {
-                    positiveRoots.sort((a, b) => a - b);
-                    return positiveRoots[0];
-                }
-                roots.sort((a, b) => Math.abs(a) - Math.abs(b));
-                return roots[0];
+        const numPoints = 50;
+        const step = (limits.high - limits.low) / numPoints;
+        testPoints = [];
+        for (let i = 0; i <= numPoints; i++) {
+            testPoints.push(limits.low + i * step);
+        }
+    } else {
+        // Logarithmic points covering wide range efficiently
+        // Extend range based on known variable magnitudes
+        const logPoints = [0, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8];
+        if (knownScale > 1e8) {
+            for (let p = 1e9; p <= knownScale * 10; p *= 10) {
+                logPoints.push(p);
             }
         }
-        throw new SolverError(`Could not find a root in range [${limits.low}:${limits.high}]`);
+        testPoints = [
+            ...logPoints.slice(1).map(x => -x).reverse(),
+            ...logPoints
+        ];
     }
 
-    // No limits: try logarithmic points (covers wide range efficiently)
-    // Extend range based on known variable magnitudes so equations with
-    // very large or small values can find roots beyond the default range
-    const logPoints = [0, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 1e4, 1e5, 1e6, 1e7, 1e8];
-    if (knownScale > 1e8) {
-        for (let p = 1e9; p <= knownScale * 10; p *= 10) {
-            logPoints.push(p);
-        }
-    }
-    const testPoints = [
-        ...logPoints.slice(1).map(x => -x).reverse(),
-        ...logPoints
-    ];
-
-    // Evaluate and find sign changes
+    // Evaluate all points (filter NaN, keep ±Infinity for sign detection)
     const values = testPoints
         .map(x => ({ x, fx: safeEval(f, x) }))
-        .filter(v => isFinite(v.fx));
+        .filter(v => !isNaN(v.fx));
 
-    // Find all brackets (and exact zeros) and solve each
+    // Find all brackets (and near-zeros) and solve each
     const roots = [];
     const hasNonZero = values.some(v => v.fx !== 0);
     for (let i = 0; i < values.length; i++) {
-        // Exact zero at a test point (skip if function is identically zero)
-        if (values[i].fx === 0 && hasNonZero) {
+        // Near-zero at a finite test point (skip if function is identically zero)
+        if (isFinite(values[i].fx) && Math.abs(values[i].fx) <= fTol && hasNonZero) {
             roots.push(values[i].x);
         }
         if (i < values.length - 1 && values[i].fx * values[i + 1].fx < 0) {
             try {
                 const root = brent(f, values[i].x, values[i + 1].x);
-                // Validate root: f(root) must be smaller than bracket endpoints,
-                // not a singularity where the bracket collapsed around a pole
                 if (isFinite(root)) {
                     const fRoot = safeEval(f, root);
-                    const maxEndpoint = Math.max(Math.abs(values[i].fx), Math.abs(values[i + 1].fx));
+                    if (!isFinite(fRoot)) continue;
                     // Reject wrapping discontinuities for mod-aware equations
                     if (modN && Math.abs(fRoot) > modN / 4) continue;
-                    if (isFinite(fRoot) && Math.abs(fRoot) <= maxEndpoint) {
-                        roots.push(root);
-                    }
+                    // Reject singularities (f(root) shouldn't exceed finite bracket endpoints)
+                    const maxEndpoint = Math.max(Math.abs(values[i].fx), Math.abs(values[i + 1].fx));
+                    if (isFinite(maxEndpoint) && Math.abs(fRoot) > maxEndpoint) continue;
+                    roots.push(root);
                 }
             } catch (e) {
                 // This bracket didn't work, try next
@@ -353,46 +249,46 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null) {
         }
     }
 
-    // Near-tangent root detection: when logarithmic scan misses a narrow
-    // sign change (e.g., function barely touches zero between widely-spaced
-    // log points), find the test point closest to zero and do a fine grid
-    // search in each adjacent interval separately
+    // Near-tangent root detection: when the scan misses a narrow sign change,
+    // do fine grid search near the closest-to-zero point
     if (roots.length === 0 && values.length >= 2) {
         let bestI = 0;
         for (let i = 1; i < values.length; i++) {
             if (Math.abs(values[i].fx) < Math.abs(values[bestI].fx)) bestI = i;
         }
-        // Skip if best point is already at/near zero — function is likely
-        // flat (identically zero) rather than having a narrow sign change
-        const TOL = 128 * Number.EPSILON;
-        if (Math.abs(values[bestI].fx) < TOL) {
-            // Not a real near-tangent; fall through to "no root found"
-        } else {
-        // Search each adjacent interval with 100 points for fine resolution
-        const intervals = [];
-        if (bestI > 0) intervals.push([values[bestI - 1].x, values[bestI].x]);
-        if (bestI < values.length - 1) intervals.push([values[bestI].x, values[bestI + 1].x]);
-        for (const [lo, hi] of intervals) {
-            const localBracket = gridSearch(f, lo, hi, 100);
-            if (localBracket) {
-                try {
-                    const root = brent(f, localBracket[0], localBracket[1]);
-                    if (isFinite(root)) {
-                        const fRoot = safeEval(f, root);
-                        if (isFinite(fRoot)) {
-                            roots.push(root);
-                        }
+        // Skip if best point is already near zero — function is likely flat
+        if (Math.abs(values[bestI].fx) >= fTol) {
+            const intervals = [];
+            if (bestI > 0) intervals.push([values[bestI - 1].x, values[bestI].x]);
+            if (bestI < values.length - 1) intervals.push([values[bestI].x, values[bestI + 1].x]);
+            for (const [lo, hi] of intervals) {
+                const step = (hi - lo) / 100;
+                let prevX = lo, prevFx = safeEval(f, lo);
+                let found = false;
+                for (let j = 1; j <= 100 && !found; j++) {
+                    const x = lo + j * step;
+                    const fx = safeEval(f, x);
+                    if (isFinite(prevFx) && isFinite(fx) && prevFx * fx < 0) {
+                        try {
+                            const root = brent(f, prevX, x);
+                            if (isFinite(root)) {
+                                const fRoot = safeEval(f, root);
+                                if (isFinite(fRoot)) {
+                                    roots.push(root);
+                                    found = true;
+                                }
+                            }
+                        } catch (e) {}
                     }
-                } catch (e) {
-                    // Fine search bracket didn't work
+                    prevX = x;
+                    prevFx = fx;
                 }
-                break;
+                if (found) break;
             }
-        }
         }
     }
 
-    // Return best root: prefer smallest positive
+    // Return best root: prefer smallest positive, then smallest absolute
     if (roots.length > 0) {
         const positiveRoots = roots.filter(r => r > 0);
         if (positiveRoots.length > 0) {
@@ -403,13 +299,15 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null) {
         return roots[0];
     }
 
-    // Fallback: expand outward from default guess
-    const bracket = expandFromGuess(f);
-    if (bracket) {
-        return brent(f, bracket[0], bracket[1]);
+    // Fallback for no-limits: expand outward from default guess
+    if (!hasLimits) {
+        const bracket = expandFromGuess(f);
+        if (bracket) return brent(f, bracket[0], bracket[1]);
     }
 
-    throw new SolverError('Could not find a root');
+    throw new SolverError(hasLimits
+        ? `Could not find a root in range [${limits.low}:${limits.high}]`
+        : 'Could not find a root');
 }
 
 /**
@@ -879,7 +777,7 @@ function createEquationFunction(leftAST, rightAST, unknownVar, context) {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        SolverError, brent, gridSearch, expandFromGuess, solveEquation,
+        SolverError, brent, expandFromGuess, solveEquation,
         parseEquation, findVariables, findVariablesInAST, createEquationFunction,
         substituteInAST, deepCopyAST, isDefinitionEquation,
         deriveSubstitution, invertOperation, buildSubstitutionMap, detectCycle

@@ -159,3 +159,14 @@ set[0:360] °:
 
 leeway: 0
 hdg °->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 9: Pole at lower limit - root between singularity and first grid point"
+"1/y = 1000 has root at y=0.001, pole at y=0 (the lower limit)"
+
+1/y = 1000
+
+--Variables--
+y[0:1]->

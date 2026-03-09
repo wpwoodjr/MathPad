@@ -757,13 +757,7 @@ function renameRecord(recordId) {
 /**
  * Extract title from the first line of record text, using tokens if available
  */
-function getTitleFromContent(text, tokens) {
-    if (tokens) {
-        const firstLine = tokens[0] || [];
-        const firstComment = firstLine.find(t => t.type === TokenType.COMMENT && !t.lineComment);
-        if (firstComment) return firstComment.value || 'Untitled';
-    }
-    // Fallback: parse first line
+function getTitleFromContent(text) {
     const firstLine = (text || '').split('\n')[0].trim();
     const completeQuote = firstLine.match(/^"([^"]+)"$/);
     const startQuote = firstLine.match(/^"(.+)$/);
@@ -780,7 +774,7 @@ function updateVariablesHeader(record) {
     if (!editorInfo) return;
     const header = editorInfo.container.querySelector('.variables-header');
     if (header) {
-        header.textContent = getTitleFromContent(record.text, editorInfo.editor.parserTokens);
+        header.textContent = getTitleFromContent(record.text);
     }
 }
 
@@ -792,9 +786,7 @@ function updateRecordTitleFromContent(record) {
     if (isReferenceRecord(record)) {
         return;
     }
-    const editorInfo = UI.editors.get(record.id);
-    const tokens = editorInfo ? editorInfo.editor.parserTokens : null;
-    let newTitle = getTitleFromContent(record.text, tokens);
+    let newTitle = getTitleFromContent(record.text);
 
     // Truncate long titles
     if (newTitle.length > 30) {
