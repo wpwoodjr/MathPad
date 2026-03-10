@@ -638,3 +638,28 @@ set[0:360] °<- 0°
       leeway: 0
        hdg °->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"20. =° re-solve with rounded <- values (neighborhood normalization)"
+"Pre-baked rounded values from test 19"
+
+ws = speed*cos(leeway)
+
+smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2)
+cts =° atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+
+drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2)
+set =° atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts))
+
+hdg = cts - leeway
+
+        smg <- 3
+ cmg[0:360] °: 110°
+       speed: 4.5
+cts[0:360] °<- 135°
+      drift <- 2
+set[0:360] °<- 0°
+      leeway: 0
+       hdg °-> 135°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -182,13 +182,25 @@ function solveAllRecords(data) {
         const result = solveRecord(record.text, context, record, allTokens);
         record.text = result.text;
 
-        // Store any errors in the record (match UI behavior: prefix + all errors)
+        // Precision verification: re-solve formatted output to detect rounding errors
+        let precisionNote = '';
+        if (result.solved > 0 && (!result.errors || result.errors.length === 0)) {
+            const verifyTokens = new Tokenizer(record.text).tokenize();
+            const verifyContext = createEvalContext(record, parsedConstants, parsedFunctions, record.text, verifyTokens);
+            const verifyResult = solveRecord(record.text, verifyContext, record, verifyTokens);
+
+            if (verifyResult.errors.length > 0) {
+                precisionNote = `\nNote: results may lose too much accuracy at ${record.places} decimal places`;
+            }
+        }
+
+        // Store any errors in the record (match UI behavior)
         if (result.errors && result.errors.length > 0) {
             record.status = result.errors.join('\n');
             record.statusIsError = true;
         } else {
             record.status = result.solved > 0
-                ? `Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}`
+                ? `Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}${precisionNote}`
                 : 'Nothing to solve';
             record.statusIsError = false;
         }

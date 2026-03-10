@@ -638,8 +638,34 @@ set[0:360] °<- 0°
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Solved 4 equations"; StatusIsError = 0
+Status = "Solved 4 equations\nNote: results may lose too much accuracy at 0 decimal places"; StatusIsError = 0
 "19. =° balance check at places=0 (regular = fails on set equation)"
+
+ws = speed*cos(leeway)
+
+smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2)
+cts =° atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+
+drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2)
+set =° atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts))
+
+hdg = cts - leeway
+
+        smg <- 3
+ cmg[0:360] °: 110°
+       speed: 4.5
+cts[0:360] °<- 135°
+      drift <- 2
+set[0:360] °<- 0°
+      leeway: 0
+       hdg °-> 135°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Line 6: Equation doesn't balance: smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2) (3 ≠ 3.4047139385084537)\nLine 9: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2) (2 ≠ 2.1862501572350888)\nLine 10: Equation doesn't balance: set =° atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts)) (0 =° 350.445063848726 → 360 ≠ 350.445063848726)"; StatusIsError = 1
+"20. =° re-solve with rounded <- values (neighborhood normalization)"
+"Pre-baked rounded values from test 19"
 
 ws = speed*cos(leeway)
 

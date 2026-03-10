@@ -1400,6 +1400,20 @@ function handleSolve(undoable = true) {
         const result = solveRecord(text, context, record, parserTokens);
         text = result.text;
 
+        // Precision verification: re-solve formatted output to detect rounding errors
+        let precisionNote = '';
+        if (result.solved > 0 && result.errors.length === 0) {
+            const verifyTokens = new Tokenizer(text).tokenize();
+            const verifyContext = createEvalContext(record,
+                editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
+                text, verifyTokens);
+            const verifyResult = solveRecord(text, verifyContext, record, verifyTokens);
+
+            if (verifyResult.errors.length > 0) {
+                precisionNote = `\nNote: results may lose too much accuracy at ${record.places} decimal places`;
+            }
+        }
+
         // Enable flash before setValue so onChange's updateFromText highlights changed values
         editorInfo.variablesManager.enableFlash();
 
@@ -1414,7 +1428,7 @@ function handleSolve(undoable = true) {
         if (result.errors.length > 0) {
             setStatus(result.errors.join('\n'), true, textChanged);
         } else if (result.solved > 0) {
-            setStatus(`Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}`, false, textChanged);
+            setStatus(`Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}${precisionNote}`, false, textChanged);
         } else {
             setStatus('Nothing to solve', false, textChanged);
         }

@@ -528,7 +528,22 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
                     : checkBalance(leftVal, rightVal, places);
 
                 if (!balanced) {
-                    errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eq.text} (${leftVal} ≠ ${rightVal})`);
+                    let displayPair;
+                    if (eq.modN) {
+                        const modN = record.degreesMode ? 360 : 2 * Math.PI;
+                        // Reduce to [0, modN)
+                        const lMod = leftVal - modN * Math.floor(leftVal / modN);
+                        const rMod = rightVal - modN * Math.floor(rightVal / modN);
+                        // Normalize same as modCheckBalance — both in [modN/2, 3*modN/2)
+                        const lNorm = lMod - modN < -lMod ? lMod + modN : lMod;
+                        const rNorm = rMod - modN < -rMod ? rMod + modN : rMod;
+                        displayPair = lNorm !== lMod || rNorm !== rMod
+                            ? `${lMod} =° ${rMod} → ${lNorm} ≠ ${rNorm}`
+                            : `${lMod} ≠ ${rMod}`;
+                    } else {
+                        displayPair = `${leftVal} ≠ ${rightVal}`;
+                    }
+                    errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eq.text} (${displayPair})`);
                 }
 
                 // Only track status for equations where all variables are declared (user-visible)

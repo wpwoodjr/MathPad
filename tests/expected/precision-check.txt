@@ -1,0 +1,34 @@
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation\nNote: results may lose too much accuracy at 0 decimal places"; StatusIsError = 0
+"Test 1: Rounded <- value causes balance error at places=0"
+"a*a=2 solves a=1.414, rounds to 1, re-solve 1*1≠2"
+a * a = 2
+a<- 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Test 2: Same equation at places=4 — no precision warning"
+a * a = 2
+a<- 1.4142
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Test 3: Output marker (->) re-solves fine — no false warning"
+a * a = 2
+a-> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Line 4: Equation doesn't balance: a =° b (200 ≠ 210)"; StatusIsError = 1
+"Test 4: =° balance error with no normalization shift (both in [180,360))"
+a: 200
+b: 210
+a =° b
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

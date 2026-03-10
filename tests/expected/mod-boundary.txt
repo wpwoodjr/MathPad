@@ -52,7 +52,7 @@ mod(-720; 360)->> 0
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Line 26: Equation doesn't balance: i =° j (10 ≠ 20)"; StatusIsError = 1
+Status = "Line 26: Equation doesn't balance: i =° j (10 =° 20 → 370 ≠ 380)"; StatusIsError = 1
 "Degree equality operator (=°) — mod-aware balance check"
 
 // Same angle, same representation — should balance
@@ -135,7 +135,7 @@ if(10 =° 20; 100; 200)-> 200
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 16: Equation doesn't balance: e =° f (1 ≠ 2)"; StatusIsError = 1
+Status = "Line 16: Equation doesn't balance: e =° f (1 =° 2 → 7.283185307179586 ≠ 8.283185307179586)"; StatusIsError = 1
 "=° in radians mode (mod 2*pi)"
 
 // Near 2*pi boundary — should balance
