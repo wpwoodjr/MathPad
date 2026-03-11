@@ -52,7 +52,7 @@ mod(-720; 360)->> 0
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Line 26: Equation doesn't balance: i =° j (10 =° 20 → 370 ≠ 380)"; StatusIsError = 1
+Status = "Line 26: Equation doesn't balance: i =° j (difference at 360 is 10)\nLine 31: Equation doesn't balance: k =° l (difference at 360 is 10)\nLine 36: Equation doesn't balance: m =° n (difference at 360 is 10)\nLine 41: Equation doesn't balance: o =° p (difference at 360 is 4)"; StatusIsError = 1
 "Degree equality operator (=°) — mod-aware balance check"
 
 // Same angle, same representation — should balance
@@ -79,6 +79,21 @@ g =° h
 i: 10
 j: 20
 i =° j
+
+// Should NOT balance — both in (180,360), no normalization shift
+k: 200
+l: 210
+k =° l
+
+// Should NOT balance — wrapping, 0 shifts to 360
+m: 0
+n: 350
+m =° n
+
+// Should NOT balance — straddle n/2, both shift +modN
+o: 178
+p: 182
+o =° p
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -108,34 +123,34 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
 Status = "Nothing to solve"; StatusIsError = 0
-"=° as logical operator in expressions"
+"modIsClose as logical operator in expressions"
 
 // Boundary wrap — should be 1
-(359.99 =° 0.01)-> 1
+modIsClose(359.99; 0.01; perigon(); places())-> 1
 
 // Same value — should be 1
-(45 =° 45)-> 1
+modIsClose(45; 45; perigon(); places())-> 1
 
 // Large wrap — should be 1
-(720.5 =° 0.5)-> 1
+modIsClose(720.5; 0.5; perigon(); places())-> 1
 
 // Negative wrap — should be 1
-(-0.01 =° 359.99)-> 1
+modIsClose(-0.01; 359.99; perigon(); places())-> 1
 
 // Different angles — should be 0
-(10 =° 20)-> 0
+modIsClose(10; 20; perigon(); places())-> 0
 
 // Use in if()
-if(359.99 =° 0.01; 100; 200)-> 100
-if(10 =° 20; 100; 200)-> 200
+if(modIsClose(359.99; 0.01; perigon(); places()); 100; 200)-> 100
+if(modIsClose(10; 20; perigon(); places()); 100; 200)-> 200
 
 // Combine with other logic
-(359.99 =° 0.01) && (45 =° 405)-> 1
+modIsClose(359.99; 0.01; perigon(); places()) && modIsClose(45; 405; perigon(); places())-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 16: Equation doesn't balance: e =° f (1 =° 2 → 7.283185307179586 ≠ 8.283185307179586)"; StatusIsError = 1
+Status = "Line 16: Equation doesn't balance: e =° f (difference at 2π is 1)"; StatusIsError = 1
 "=° in radians mode (mod 2*pi)"
 
 // Near 2*pi boundary — should balance
@@ -154,14 +169,14 @@ f: 2
 e =° f
 
 // Straddle pair at places=2
-(2*pi() =° 2*pi()*(1 - 0.0051))-> 0
-(2*pi() =° 2*pi()*(1 - 0.005))-> 1
+modIsClose(2*pi(); 2*pi()*(1 - 0.0051); perigon(); places())-> 0
+modIsClose(2*pi(); 2*pi()*(1 - 0.005); perigon(); places())-> 1
 
 // Expression: boundary wrap
-(6.28 =° 0.0031853071795864)-> 1
+modIsClose(6.28; 0.0031853071795864; perigon(); places())-> 1
 
 // Expression: different angles
-(1 =° 2)-> 0
+modIsClose(1; 2; perigon(); places())-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1

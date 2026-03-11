@@ -531,15 +531,10 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
                     let displayPair;
                     if (eq.modN) {
                         const modN = record.degreesMode ? 360 : 2 * Math.PI;
-                        // Reduce to [0, modN)
-                        const lMod = leftVal - modN * Math.floor(leftVal / modN);
-                        const rMod = rightVal - modN * Math.floor(rightVal / modN);
-                        // Normalize same as modCheckBalance — both in [modN/2, 3*modN/2)
-                        const lNorm = lMod - modN < -lMod ? lMod + modN : lMod;
-                        const rNorm = rMod - modN < -rMod ? rMod + modN : rMod;
-                        displayPair = lNorm !== lMod || rNorm !== rMod
-                            ? `${lMod} =° ${rMod} → ${lNorm} ≠ ${rNorm}`
-                            : `${lMod} ≠ ${rMod}`;
+                        const [lMod, rMod] = modNormalize(leftVal, rightVal, modN);
+                        const diff = parseFloat(toFixed(Math.abs(lMod - rMod), places + 3));
+                        const modLabel = record.degreesMode ? '360' : '2π';
+                        displayPair = `difference at ${modLabel} is ${diff}`;
                     } else {
                         displayPair = `${leftVal} ≠ ${rightVal}`;
                     }

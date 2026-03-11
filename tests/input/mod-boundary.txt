@@ -75,6 +75,21 @@ g =° h
 i: 10
 j: 20
 i =° j
+
+// Should NOT balance — both in (180,360), no normalization shift
+k: 200
+l: 210
+k =° l
+
+// Should NOT balance — wrapping, 0 shifts to 360
+m: 0
+n: 350
+m =° n
+
+// Should NOT balance — straddle n/2, both shift +modN
+o: 178
+p: 182
+o =° p
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -101,29 +116,29 @@ b: 0.01
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° as logical operator in expressions"
+"modIsClose as logical operator in expressions"
 
 // Boundary wrap — should be 1
-(359.99 =° 0.01)->
+modIsClose(359.99; 0.01; perigon(); places())->
 
 // Same value — should be 1
-(45 =° 45)->
+modIsClose(45; 45; perigon(); places())->
 
 // Large wrap — should be 1
-(720.5 =° 0.5)->
+modIsClose(720.5; 0.5; perigon(); places())->
 
 // Negative wrap — should be 1
-(-0.01 =° 359.99)->
+modIsClose(-0.01; 359.99; perigon(); places())->
 
 // Different angles — should be 0
-(10 =° 20)->
+modIsClose(10; 20; perigon(); places())->
 
 // Use in if()
-if(359.99 =° 0.01; 100; 200)->
-if(10 =° 20; 100; 200)->
+if(modIsClose(359.99; 0.01; perigon(); places()); 100; 200)->
+if(modIsClose(10; 20; perigon(); places()); 100; 200)->
 
 // Combine with other logic
-(359.99 =° 0.01) && (45 =° 405)->
+modIsClose(359.99; 0.01; perigon(); places()) && modIsClose(45; 405; perigon(); places())->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -146,14 +161,14 @@ f: 2
 e =° f
 
 // Straddle pair at places=2
-(2*pi() =° 2*pi()*(1 - 0.0051))->
-(2*pi() =° 2*pi()*(1 - 0.005))->
+modIsClose(2*pi(); 2*pi()*(1 - 0.0051); perigon(); places())->
+modIsClose(2*pi(); 2*pi()*(1 - 0.005); perigon(); places())->
 
 // Expression: boundary wrap
-(6.28 =° 0.0031853071795864)->
+modIsClose(6.28; 0.0031853071795864; perigon(); places())->
 
 // Expression: different angles
-(1 =° 2)->
+modIsClose(1; 2; perigon(); places())->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1

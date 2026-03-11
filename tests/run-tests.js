@@ -60,6 +60,7 @@ function loadModules() {
     global.toFixed = evaluator.toFixed;
     global.builtinFunctions = evaluator.builtinFunctions;
     global.checkBalance = evaluator.checkBalance;
+    global.modNormalize = evaluator.modNormalize;
     global.modCheckBalance = evaluator.modCheckBalance;
 
     // Solver (depends on parser, evaluator)

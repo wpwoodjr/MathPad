@@ -663,7 +663,7 @@ set[0:360] °<- 0°
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Line 6: Equation doesn't balance: smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2) (3 ≠ 3.4047139385084537)\nLine 9: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2) (2 ≠ 2.1862501572350888)\nLine 10: Equation doesn't balance: set =° atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts)) (0 =° 350.445063848726 → 360 ≠ 350.445063848726)"; StatusIsError = 1
+Status = "Line 6: Equation doesn't balance: smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2) (3 ≠ 3.4047139385084537)\nLine 7: Equation doesn't balance: cts =° atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)) (difference at 360 is 2.028)\nLine 9: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2) (2 ≠ 2.1862501572350888)\nLine 10: Equation doesn't balance: set =° atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts)) (difference at 360 is 9.555)"; StatusIsError = 1
 "20. =° re-solve with rounded <- values (neighborhood normalization)"
 "Pre-baked rounded values from test 19"
 

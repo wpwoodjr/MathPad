@@ -504,7 +504,7 @@ class Tokenizer {
             return this.makeToken(TokenType.OPERATOR, twoChar, startLine, startCol);
         }
 
-        // =° (degree equality — mod-aware balance check)
+        // =° (degree equality — mod-aware equation operator)
         if (ch === '=' && ch2 === '°') {
             this.advance(2);
             const token = this.makeToken(TokenType.OPERATOR, '=°', startLine, startCol);
@@ -825,7 +825,7 @@ class Parser {
     // Level 3: == != < <= > >=
     parseComparison() {
         let left = this.parseBitwiseOr();
-        const compOps = ['==', '!=', '<', '<=', '>', '>=', '=°'];
+        const compOps = ['==', '!=', '<', '<=', '>', '>='];
         while (this.peek().type === TokenType.OPERATOR && compOps.includes(this.peek().value)) {
             const op = this.advance().value;
             const right = this.parseBitwiseOr();
