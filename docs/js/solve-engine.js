@@ -523,22 +523,16 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
             if (unknowns.length === 0) {
                 const leftVal = evaluate(leftAST, context);
                 const rightVal = evaluate(rightAST, context);
-                const balanced = eq.modN
+                const result = eq.modN
                     ? modCheckBalance(leftVal, rightVal, record.degreesMode ? 360 : 2 * Math.PI, places)
                     : checkBalance(leftVal, rightVal, places);
+                const balanced = result.balanced;
 
                 if (!balanced) {
-                    let displayPair;
-                    if (eq.modN) {
-                        const modN = record.degreesMode ? 360 : 2 * Math.PI;
-                        const [lMod, rMod] = modNormalize(leftVal, rightVal, modN);
-                        const diff = parseFloat(toFixed(Math.abs(lMod - rMod), places + 3));
-                        const modLabel = record.degreesMode ? '360' : '2π';
-                        displayPair = `difference at ${modLabel} is ${diff}`;
-                    } else {
-                        displayPair = `${leftVal} ≠ ${rightVal}`;
-                    }
-                    errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eq.text} (${displayPair})`);
+                    const diff = parseFloat(toFixed(result.difference, result.tolPlaces));
+                    const label = result.relative ? 'relative difference' : 'absolute difference';
+                    const eqText = eq.text.length > 30 ? eq.text.substring(0, 30) + '...' : eq.text;
+                    errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (${label} ${diff} >= ${result.tolerance})`);
                 }
 
                 // Only track status for equations where all variables are declared (user-visible)

@@ -42,7 +42,7 @@ rate%-> 606%
 Category = "Finance"; Secret = 0
 Places = 6; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 4: Equation doesn't balance: pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n) (-602.75 ≠ -602.7489176884397)"; StatusIsError = 1
+Status = "Line 4: Equation doesn't balance: pmt = -(pv + fv / (1 + mint)**... (relative difference 0.0000018 >= 5e-7)"; StatusIsError = 1
 "Solve with 6 decimal places - should fail balance check"
 
 "Payment calculation"
@@ -80,7 +80,7 @@ yint = mint * 12
 Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 4: Equation doesn't balance: pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n) (-500 ≠ -607.6105395806909)"; StatusIsError = 1
+Status = "Line 4: Equation doesn't balance: pmt = -(pv + fv / (1 + mint)**... (relative difference 0.177 >= 0.005)"; StatusIsError = 1
 "TVM with wrong pmt - should fail balance check"
 
 "Payment calculation"
@@ -99,7 +99,7 @@ mint = yint / 12
 Category = "Finance"; Secret = 0
 Places = 8; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 4: Equation doesn't balance: pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n) (-602.75 ≠ -602.7499952802343)"; StatusIsError = 1
+Status = "Line 4: Equation doesn't balance: pmt = -(pv + fv / (1 + mint)**... (relative difference 8e-9 >= 5e-9)"; StatusIsError = 1
 "High precision (8 places) - exposes rounding error in $ values"
 
 "Payment calculation"

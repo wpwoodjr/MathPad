@@ -276,14 +276,16 @@ function formatDate(year, month, day, hour = 0, minute = 0, second = 0) {
  * Uses relative tolerance normally, absolute tolerance when comparing against zero.
  */
 function checkBalance(a, b, places) {
-    const balanceTolerance = Math.min(0.005, 0.5 * Math.pow(10, -places));
+    const tolPlaces = Math.max(3, places + 1);
+    const balanceTolerance = 5 * Math.pow(10, -tolPlaces);
     const diff = Math.abs(a - b);
     if (a === 0 || b === 0) {
-        const absTolerance = Math.min(balanceTolerance, 5e-14);
-        return diff < absTolerance;
+        const tolerance = Math.min(balanceTolerance, 5e-14);
+        return { balanced: diff < tolerance, relative: false, difference: diff, tolerance, tolPlaces };
     } else {
         const maxVal = Math.max(Math.abs(a), Math.abs(b));
-        return diff < maxVal * balanceTolerance;
+        const relDiff = diff / maxVal;
+        return { balanced: relDiff < balanceTolerance, relative: true, difference: relDiff, tolerance: balanceTolerance, tolPlaces };
     }
 }
 
@@ -461,10 +463,10 @@ const builtinFunctions = {
     },
 
     // Balance check: isClose(a; b; places) returns 1 if equal within tolerance, 0 otherwise
-    isclose: (args) => checkBalance(args[0], args[1], args[2]) ? 1 : 0,
+    isclose: (args) => checkBalance(args[0], args[1], args[2]).balanced ? 1 : 0,
 
     // Mod-aware balance check: modIsClose(a; b; n; places) returns 1 if equal mod n within tolerance
-    modisclose: (args) => modCheckBalance(args[0], args[1], args[2], args[3]) ? 1 : 0,
+    modisclose: (args) => modCheckBalance(args[0], args[1], args[2], args[3]).balanced ? 1 : 0,
 
     // Current decimal places setting
     places: (args, context) => context.places,

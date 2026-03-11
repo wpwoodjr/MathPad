@@ -169,8 +169,26 @@ mint = yint / 12
 Category = "Unfiled"; Secret = 0
 Places = 7; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Line 4: Equation doesn't balance: pmt = -pv * mint / (1 - (1 + mint)**-n) (-6379.91 ≠ -6379.910665597255)"; StatusIsError = 1
+Status = "Line 4: Equation doesn't balance: pmt = -pv * mint / (1 - (1 + m... (relative difference 1e-7 >= 5e-8)"; StatusIsError = 1
 "Test 10b: TVM at places=7 ($ rounding error exceeds tolerance) - doesn't balance"
+
+"Payment calculation"
+pmt = -pv * mint / (1 - (1 + mint)**-n)
+
+"Variables"
+pmt$: -$6,379.91 "monthly payment"
+pv$: $1,050,000 "loan amount"
+yint%: 6.125% "annual interest rate %"
+n: 360 "number of payments (30 years)"
+
+"Monthly interest rate from annual"
+mint = yint / 12
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 7; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations\nNote: results may lose too much accuracy at 7 decimal places"; StatusIsError = 0
+"Test 10c: TVM at places=7 (balanced with warning)"
 
 "Payment calculation"
 pmt = -pv * mint / (1 - (1 + mint)**-n)
@@ -187,7 +205,7 @@ mint = yint / 12
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) = 0 (3.552713678800501e-15 ≠ 0)"; StatusIsError = 1
+Status = "Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) =... (absolute difference 3.6e-15 >= 5e-16)"; StatusIsError = 1
 "Test 9b: Polynomial f(x)=0 at places=15 (noise exceeds tolerance) - doesn't balance"
 
 c5: 1
@@ -215,7 +233,7 @@ a = b
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 5: Equation doesn't balance: a = b (100 ≠ 99.5000001)"; StatusIsError = 1
+Status = "Line 5: Equation doesn't balance: a = b (relative difference 0.005 >= 0.0005)"; StatusIsError = 1
 "Balance Test places = 3"
 
 a = 100

@@ -52,7 +52,7 @@ mod(-720; 360)->> 0
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Line 26: Equation doesn't balance: i =° j (difference at 360 is 10)\nLine 31: Equation doesn't balance: k =° l (difference at 360 is 10)\nLine 36: Equation doesn't balance: m =° n (difference at 360 is 10)\nLine 41: Equation doesn't balance: o =° p (difference at 360 is 4)"; StatusIsError = 1
+Status = "Line 26: Equation doesn't balance: i =° j (relative difference 0.028 >= 0.005)\nLine 31: Equation doesn't balance: k =° l (relative difference 0.028 >= 0.005)\nLine 36: Equation doesn't balance: m =° n (relative difference 0.028 >= 0.005)\nLine 41: Equation doesn't balance: o =° p (relative difference 0.011 >= 0.005)"; StatusIsError = 1
 "Degree equality operator (=°) — mod-aware balance check"
 
 // Same angle, same representation — should balance
@@ -150,7 +150,7 @@ modIsClose(359.99; 0.01; perigon(); places()) && modIsClose(45; 405; perigon(); 
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 16: Equation doesn't balance: e =° f (difference at 2π is 1)"; StatusIsError = 1
+Status = "Line 16: Equation doesn't balance: e =° f (relative difference 0.159 >= 0.005)"; StatusIsError = 1
 "=° in radians mode (mod 2*pi)"
 
 // Near 2*pi boundary — should balance
