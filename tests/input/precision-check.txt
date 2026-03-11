@@ -16,7 +16,40 @@ a<-
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Test 3: Output marker (->) re-solves fine — no false warning"
+"Test 3: Cascade — b re-solves with rounded a"
+"a=1.414→1, b=sqrt(1.414*100)≈12; re-solve: a=1, b=sqrt(100)=10"
+a * a = 2
+a<-
+b[0:100]->
+b * b = a * 100
+
+relDiff(x; y) = abs(x - y)/max(x; y)
+relDiff(a*a;2)->>
+relDiff(b*b; a*100)->>
+b*b->>
+11.892*11.892->>
+a*a->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 3b: Cascade at places=3 — b shifts by last digit on re-solve"
+a * a = 2
+a<-
+b[0:100]->
+b * b = a * 100
+
+relDiff(x; y) = abs(x - y)/max(x; y)
+relDiff(a*a;2)->>
+relDiff(b*b; a*100)->>
+b*b->>
+11.892*11.892->>
+a*a->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 4: Output marker (->) re-solves fine — no false warning"
 a * a = 2
 a->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

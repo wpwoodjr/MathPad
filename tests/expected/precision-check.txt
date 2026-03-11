@@ -1,7 +1,7 @@
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved 1 equation\nNote: results may lose too much accuracy at 0 decimal places"; StatusIsError = 0
+Status = "Line 3: Equation doesn't balance: a * a = 2 (relative difference 0.5 >= 0.005)"; StatusIsError = 1
 "Test 1: Rounded <- value causes balance error at places=0"
 "a*a=2 solves a=1.414, rounds to 1, re-solve 1*1≠2"
 a * a = 2
@@ -18,8 +18,43 @@ a<- 1.4142
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Line 3: Equation doesn't balance: a * a = 2 (relative difference 0.5 >= 0.005)"; StatusIsError = 1
+"Test 3: Cascade — b re-solves with rounded a"
+"a=1.414→1, b=sqrt(1.414*100)≈12; re-solve: a=1, b=sqrt(100)=10"
+a * a = 2
+a<- 1
+b[0:100]-> 10
+b * b = a * 100
+
+relDiff(x; y) = abs(x - y)/max(x; y)
+relDiff(a*a;2)->> 0.5
+relDiff(b*b; a*100)->> 0
+b*b->> 100
+11.892*11.892->> 141.419663999999983
+a*a->> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test 3b: Cascade at places=3 — b shifts by last digit on re-solve"
+a * a = 2
+a<- 1.414
+b[0:100]-> 11.891
+b * b = a * 100
+
+relDiff(x; y) = abs(x - y)/max(x; y)
+relDiff(a*a;2)->> 0.000302
+relDiff(b*b; a*100)->> 0
+b*b->> 141.400000000000006
+11.892*11.892->> 141.419663999999983
+a*a->> 1.999396
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Solved 1 equation"; StatusIsError = 0
-"Test 3: Output marker (->) re-solves fine — no false warning"
+"Test 4: Output marker (->) re-solves fine — no false warning"
 a * a = 2
 a-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

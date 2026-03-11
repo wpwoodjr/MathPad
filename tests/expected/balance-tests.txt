@@ -187,8 +187,8 @@ mint = yint / 12
 Category = "Unfiled"; Secret = 0
 Places = 7; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved 2 equations\nNote: results may lose too much accuracy at 7 decimal places"; StatusIsError = 0
-"Test 10c: TVM at places=7 (balanced with warning)"
+Status = "Line 4: Equation doesn't balance: pmt = -pv * mint / (1 - (1 + m... (relative difference 1e-7 >= 5e-8)"; StatusIsError = 1
+"Test 10c: TVM at places=7 (re-solve detects $ rounding error)"
 
 "Payment calculation"
 pmt = -pv * mint / (1 - (1 + mint)**-n)

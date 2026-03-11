@@ -1400,18 +1400,18 @@ function handleSolve(undoable = true) {
         const result = solveRecord(text, context, record, parserTokens);
         text = result.text;
 
-        // Precision verification: re-solve formatted output to detect rounding errors
-        let precisionNote = '';
-        if (result.solved > 0 && result.errors.length === 0) {
+        // Re-solve formatted output for idempotent results and rounding error detection
+        let errors = result.errors;
+        let equationVarStatus = result.equationVarStatus;
+        if (result.solved > 0 && errors.length === 0) {
             const verifyTokens = new Tokenizer(text).tokenize();
             const verifyContext = createEvalContext(record,
                 editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
                 text, verifyTokens);
             const verifyResult = solveRecord(text, verifyContext, record, verifyTokens);
-
-            if (verifyResult.errors.length > 0) {
-                precisionNote = `\nNote: results may lose too much accuracy at ${record.places} decimal places`;
-            }
+            text = verifyResult.text;
+            errors = verifyResult.errors;
+            equationVarStatus = verifyResult.equationVarStatus;
         }
 
         // Enable flash before setValue so onChange's updateFromText highlights changed values
@@ -1425,10 +1425,10 @@ function handleSolve(undoable = true) {
         });
 
         // Set status (persistent only if text changed, transient otherwise)
-        if (result.errors.length > 0) {
-            setStatus(result.errors.join('\n'), true, textChanged);
+        if (errors.length > 0) {
+            setStatus(errors.join('\n'), true, textChanged);
         } else if (result.solved > 0) {
-            setStatus(`Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}${precisionNote}`, false, textChanged);
+            setStatus(`Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}`, false, textChanged);
         } else {
             setStatus('Nothing to solve', false, textChanged);
         }
@@ -1436,8 +1436,8 @@ function handleSolve(undoable = true) {
         // Cache solve results on undo entry so undo/redo can restore highlights
         if (textChanged) {
             editorInfo.editor.setTopMetadata({
-                errors: result.errors,
-                equationVarStatus: result.equationVarStatus,
+                errors: errors,
+                equationVarStatus: equationVarStatus,
                 statusMessage: UI.lastPersistentStatus.message,
                 statusIsError: UI.lastPersistentStatus.isError
             });
@@ -1459,7 +1459,7 @@ function handleSolve(undoable = true) {
         debouncedSave(UI.data);
 
         // Set error/equation highlights and clear edit tracking
-        editorInfo.variablesManager.setErrors(result.errors, result.equationVarStatus);
+        editorInfo.variablesManager.setErrors(errors, equationVarStatus);
         editorInfo.variablesManager.clearLastEdited();
 
     } catch (err) {

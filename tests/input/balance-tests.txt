@@ -172,7 +172,7 @@ mint = yint / 12
 Category = "Unfiled"; Secret = 0
 Places = 7; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Test 10c: TVM at places=7 (balanced with warning)"
+"Test 10c: TVM at places=7 (re-solve detects $ rounding error)"
 
 "Payment calculation"
 pmt = -pv * mint / (1 - (1 + mint)**-n)

@@ -638,7 +638,7 @@ set[0:360] °<- 0°
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Solved 4 equations\nNote: results may lose too much accuracy at 0 decimal places"; StatusIsError = 0
+Status = "Line 5: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative difference 0.119 >= 0.005)\nLine 6: Equation doesn't balance: cts =° atan(smg*sin(cmg) - dri... (relative difference 0.006 >= 0.005)\nLine 8: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - w... (relative difference 0.085 >= 0.005)\nLine 9: Equation doesn't balance: set =° atan(smg*sin(cmg) - ws*... (relative difference 0.027 >= 0.005)"; StatusIsError = 1
 "19. =° balance check at places=0 (regular = fails on set equation)"
 
 ws = speed*cos(leeway)
