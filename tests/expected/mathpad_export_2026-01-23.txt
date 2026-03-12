@@ -336,7 +336,7 @@ Status = "Solved 2 equations"; StatusIsError = 0
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 32: Cannot evaluate \"y3\" - Undefined variable: y3\nLine 22: Variable 'x4' has no value to output"; StatusIsError = 1
+Status = "Line 22: Variable 'x4' has no value to output"; StatusIsError = 1
 "01 Parsing: Check parsing phase for constant evals"
 
 a: 2*3
@@ -414,7 +414,7 @@ d-> 455
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 3: Cannot evaluate \"dd/2\" - Undefined variable: dd"; StatusIsError = 1
+Status = "Nothing to solve"; StatusIsError = 0
 "02 Parsing: no error for x: dd if dd is defined after x"
 
 x: dd/2

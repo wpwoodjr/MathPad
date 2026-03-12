@@ -1,0 +1,50 @@
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"Test 1: Amortization step-through — stale values advance one payment, out of order definitions"
+
+pmt = pv * yint / (1 - (1 + yint)**-n)
+
+paymentNum: if(paymentNum~?; paymentNum~ + 1; 0)
+interest: if(paymentNum > 0; balance~ * yint; 0)
+principal: if(paymentNum > 0; pmt - interest; 0)
+balance: if(paymentNum > 0; balance~ - principal; if(pv?; pv; pmt/yint*(1 - (1 + yint)**-n)))
+
+--Variables--
+pv$: $950,000     "loan amount"
+yint%: 6.125%     "annual rate"
+n: 30             "number of payments"
+pmt$: $69,942.09
+
+paymentNum-> 0
+balance$-> $950,000.00
+interest$-> $0.00
+principal$-> $0.00
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 2: Out-of-order definitions — simple"
+interest: balance * rate
+rate: 0.06
+balance: 1000
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 3: Out-of-order definitions — chained"
+c: a + b
+b: a * 2
+a: 5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Line 2: Cannot evaluate \"b\" - Variable 'b' has no value\nLine 3: Cannot evaluate \"a\" - Variable 'a' has no value"; StatusIsError = 1
+"Test 4: Circular dependency — errors without infinite loop"
+a: b
+b: a
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
