@@ -188,6 +188,7 @@ function solveAllRecords(data) {
         if (result.solved > 0 && (!errors || errors.length === 0)) {
             const verifyTokens = new Tokenizer(record.text).tokenize();
             const verifyContext = createEvalContext(record, parsedConstants, parsedFunctions, record.text, verifyTokens);
+            verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
             const verifyResult = solveRecord(record.text, verifyContext, record, verifyTokens);
             record.text = verifyResult.text;
             errors = verifyResult.errors;

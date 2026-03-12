@@ -230,6 +230,9 @@ function parseAllVariables(text, allTokens) {
                     const ast = parseTokens(decl.valueTokens);
                     if (ast && ast.type === NodeType.NUMBER) {
                         value = ast.value;
+                    } else if (ast && ast.type === NodeType.UNARY_OP && ast.op === '-' &&
+                               ast.operand && ast.operand.type === NodeType.NUMBER) {
+                        value = -ast.operand.value;
                     }
                 } catch (e) {
                     // Not a simple literal - leave for solve phase

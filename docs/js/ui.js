@@ -1408,6 +1408,7 @@ function handleSolve(undoable = true) {
             const verifyContext = createEvalContext(record,
                 editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
                 text, verifyTokens);
+            verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
             const verifyResult = solveRecord(text, verifyContext, record, verifyTokens);
             text = verifyResult.text;
             errors = verifyResult.errors;

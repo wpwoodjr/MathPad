@@ -722,7 +722,7 @@ function solveRecord(text, context, record, parserTokens) {
 
     // Capture pre-solve values for output variables (before they are cleared)
     // These are available via the ? operator and as fallback in getVariable()
-    context.preSolveValues = capturePreSolveValues(text, allTokens);
+    context.preSolveValues = context.preSolveValues || capturePreSolveValues(text, allTokens);
 
     // Clear output variables and expression outputs so they become unknowns for solving
     // Uses 'solve' mode to also clear persistent outputs (=> =>>)

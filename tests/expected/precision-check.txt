@@ -54,6 +54,45 @@ Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+"Test 5: Stale values preserved across re-solve — counter increments once"
+"d=sqrt(a) triggers Brent's so re-solve runs; solveCount~ should not double-increment"
+d = sqrt(a)
+a: 4
+d-> 2
+solveCount: solveCount~ + 1
+solveCount=> 6
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 6: Amortization step-through — stale values advance one payment"
+"pmt equation triggers Brent's so re-solve runs; balance~ should not double-step"
+
+pmt = pv * yint / (1 - (1 + yint)**-n)
+
+paymentNum: paymentNum~ + 1
+
+
+--Variables--
+pv$: $250,000     "loan amount"
+yint%: 6%         "annual rate"
+n: 30             "number of payments"
+pmt$: $18,162.23
+
+interest: if(paymentNum > 0; balance~ * yint; 0)
+principal: if(paymentNum > 0; pmt - interest; 0)
+balance: if(paymentNum > 0; balance~ - principal; pv)
+
+paymentNum=> 0
+balance$=> $250,000.00
+interest$=> $0.00
+principal$=> $0.00
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 1 equation"; StatusIsError = 0
 "Test 4: Output marker (->) re-solves fine — no false warning"
 a * a = 2
 a-> 1
