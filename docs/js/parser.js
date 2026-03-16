@@ -916,10 +916,9 @@ class Parser {
         return this.parsePostfix();
     }
 
-    // Level 11: Postfix ~ ?  (x~ = stale access, x? = has-value, x~? = has-stale-value)
+    // Level 11: Postfix ~ ?  (x~ = pre-solve value, x~? = has pre-solve value)
     parsePostfix() {
         let expr = this.parsePrimary();
-        // Allow ~ then optional ? chaining: x~?
         if (this.peek().type === TokenType.OPERATOR && this.peek().value === '~') {
             this.advance();
             expr = { type: NodeType.POSTFIX_OP, op: '~', operand: expr };

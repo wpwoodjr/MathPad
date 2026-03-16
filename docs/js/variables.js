@@ -592,30 +592,29 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
 }
 
 /**
- * Clear variable values based on type
- * Clears ALL matching declarations, not just one per variable
- * clearType: 'input' clears input variables (<-) and output variables (-> and ->>)
- *            'output' clears output variables only (-> and ->>)
- *            'all' clears all variables
- */
 /**
- * Capture pre-solve values for output variables (before they are cleared).
- * These are available via the ? operator and as fallback in getVariable().
+ * Capture pre-solve values for all variables (before outputs are cleared).
+ * Used by the ~? operator and returned by ~ access.
  */
 function capturePreSolveValues(text, allTokens) {
     const declarations = parseAllVariables(text, allTokens);
     const preSolveValues = new Map();
     for (const decl of declarations) {
         if (decl.value !== null) {
-            const cb = decl.declaration.clearBehavior;
-            if (cb === ClearBehavior.ON_SOLVE || cb === ClearBehavior.ON_SOLVE_ONLY) {
-                preSolveValues.set(decl.name, decl.value);
-            }
+            preSolveValues.set(decl.name, decl.value);
         }
     }
     return preSolveValues;
 }
 
+/**
+ * Clear variable values based on type
+ * Clears ALL matching declarations, not just one per variable
+ * clearType: 'input' clears input variables (<-) and output variables (-> and ->>)
+ *            'output' clears output variables only (-> and ->>)
+ *            'solve' clears output variables (-> ->>) and persistent outputs (=> =>>)
+ *            'all' clears all variables
+ */
 function clearVariables(text, clearType = 'input', allTokens) {
     const lines = text.split('\n');
 

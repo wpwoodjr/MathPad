@@ -49,8 +49,11 @@ node tests/gen-expected.js TESTNAME
 
 ### Variables Panel
 - Displays parsed variable declarations with editable value inputs
+- Output values use readonly `<input>` elements (selectable/copyable)
 - Row types: declaration (name + input), expression output (label + readonly value), label (plain text), spacer
 - `--Variables--` marker: only lines below it appear in the panel
+- Variable name labels split into text + marker spans; names truncate with ellipsis on narrow panels while markers (`:`, `->`, etc.) stay visible
+- Name widths re-aligned on window resize via `alignNameWidths()`
 - Equation variable highlighting: green (balanced), orange (unbalanced), red (error)
 - Tab cycles through inputs; Escape reverts; flash animation on value changes
 - Column-preserved comment spacing

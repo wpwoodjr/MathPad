@@ -47,6 +47,25 @@ b*b->>
 a*a->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 3c: Cascade at places=3 — b shifts by last digit on re-solve"
+"test fails at d-> so we can see first solve value of b"
+a * a = 2
+a<-
+b[0:100]->
+b * b = a * 100
+
+relDiff(x; y) = abs(x - y)/max(x; y)
+relDiff(a*a;2)->>
+relDiff(b*b; a*100)->>
+b*b->>
+11.892*11.892->>
+a*a->>
+
+d->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Test 5: Stale values preserved across re-solve — counter increments once"
@@ -89,4 +108,48 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Test 4: Output marker (->) re-solves fine — no false warning"
 a * a = 2
 a->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 7: b~? returns 0 on re-solve even though b<- gets filled by Brent's"
+a * a + b * b = 25
+a: 3
+b<-
+b~?->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Loan calculator"
+
+--Formulas--
+pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+pv(pmt; rate; n; fv) = pmt/rate*(1 - (1 + rate)**-n)
+
+--Equations--
+pmt = pmt(pv; rate/12; years*12; fv)
+
+--Formula Variables--
+paymentNum: if(paymentNum~? && pv~? && fv~? && rate~? && years~? && pmt~?; paymentNum~ + 1; 0)
+interest: if(paymentNum > 0; balance~ * rate / 12; 0)
+principal: if(paymentNum > 0; -pmt - interest; 0)
+balance: if(paymentNum > 0; balance~ - principal; if(pv~?; pv; pv(-pmt; rate/12; years*12; fv)))
+
+--Variables--
+"*Enter value(s), then calculate a variable by clicking its solve icon ⟲"
+
+pv $:              "present value (loan or annuity)"
+fv $: $0           "future value (balloon payment)"
+rate %: 6.125%     "annual interest rate %"
+years : 1          "number of years"
+pmt $: -$8,612.39  "monthly payment"
+
+
+"Amortization schedule - press solve to see next payment, clear to start over"
+"some kind of clear paymentNum on var solve??????????????"
+paymentNum->
+balance$->
+interest$->
+principal$->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

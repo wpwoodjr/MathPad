@@ -9,7 +9,7 @@ pmt = pv * yint / (1 - (1 + yint)**-n)
 paymentNum: if(paymentNum~?; paymentNum~ + 1; 0)
 interest: if(paymentNum > 0; balance~ * yint; 0)
 principal: if(paymentNum > 0; pmt - interest; 0)
-balance: if(paymentNum > 0; balance~ - principal; if(pv?; pv; pmt/yint*(1 - (1 + yint)**-n)))
+balance: if(paymentNum > 0; balance~ - principal; if(pv~?; pv; pmt/yint*(1 - (1 + yint)**-n)))
 
 --Variables--
 pv$: $950,000     "loan amount"

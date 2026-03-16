@@ -895,6 +895,10 @@ button {
     background: var(--border-light);
 }
 
+::-webkit-scrollbar-corner {
+    background: var(--bg-primary);
+}
+
 /* Mobile: Hamburger button (hidden by default) */
 .hamburger-btn {
     display: none;
@@ -1286,7 +1290,19 @@ body.panel-resizing * {
     font-family: var(--font-mono);
     font-size: 15px;
     color: var(--success-color);
+    flex-shrink: 1;
+    overflow: hidden;
+    display: flex;
+}
+
+.variable-name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.variable-name-marker {
     flex-shrink: 0;
+    margin-left: 0.5ch;
 }
 
 .variable-row[data-type="output"] .variable-name {
@@ -1319,7 +1335,7 @@ body.panel-resizing * {
 
 .variable-value-input {
     flex: 1;
-    max-width: 200px;
+    max-width: 170px;
     padding: 4px 8px;
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
@@ -1328,7 +1344,6 @@ body.panel-resizing * {
     font-family: var(--font-mono);
     font-size: 15px;
     line-height: 1.4;
-    min-height: 27px;
     box-sizing: border-box;
 }
 
@@ -1339,12 +1354,18 @@ body.panel-resizing * {
 
 .variable-value-readonly {
     flex: 1;
-    max-width: 200px;
-    padding: 0 8px;
+    max-width: 170px;
+    padding: 4px 8px;
     color: var(--text-primary);
     font-family: var(--font-mono);
     font-size: 15px;
-    line-height: 27px;
+    line-height: 1.4;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    box-sizing: border-box;
+    cursor: default;
+    outline: none;
 }
 
 .variable-comment {

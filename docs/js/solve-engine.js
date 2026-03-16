@@ -679,12 +679,8 @@ function appendReferencesSection(text, context) {
 
     const lines = ['"--- Reference Constants and Functions ---"'];
 
-    // Add constants (skip those shadowed by local variables)
+    // Add used constants (including those shadowed by local declarations)
     for (const name of [...usedConstants].sort()) {
-        // Skip if local variable shadows this constant
-        if (context.variables.has(name)) {
-            continue;
-        }
         const value = context.constants.get(name);
         const comment = context.constantComments.get(name);
         if (value !== undefined) {
@@ -720,8 +716,8 @@ function solveRecord(text, context, record, parserTokens) {
 
     let allTokens = parserTokens;
 
-    // Capture pre-solve values for output variables (before they are cleared)
-    // These are available via the ? operator and as fallback in getVariable()
+    // Capture pre-solve values (before they are cleared)
+    // These are available via the ? operator and as stale fallback for ~
     context.preSolveValues = context.preSolveValues || capturePreSolveValues(text, allTokens);
 
     // Clear output variables and expression outputs so they become unknowns for solving

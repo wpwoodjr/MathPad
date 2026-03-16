@@ -16,7 +16,7 @@ class EvalContext {
         this.degreesMode = false; // false = radians, true = degrees
         this.usedConstants = new Set();
         this.usedFunctions = new Set();
-        this.preSolveValues = null; // Map of variable name → value before solve started
+        this.preSolveValues = null; // Map of variable name → {value, isOutput} before solve started
         this.places = 4; // Decimal places for tolerance calculations
     }
 
@@ -45,14 +45,9 @@ class EvalContext {
         return undefined;
     }
 
-    /** Like getVariable but falls back to pre-solve (stale) value if no real value */
-    getVariableWithStale(name) {
-        const value = this.getVariable(name);
-        if (value !== undefined) return value;
-        if (this.preSolveValues && this.preSolveValues.has(name)) {
-            return this.preSolveValues.get(name);
-        }
-        return undefined;
+    /** Return the pre-solve value of a variable (value before this solve started) */
+    getPreSolveValue(name) {
+        return this.preSolveValues.get(name);
     }
 
     hasVariable(name) {
@@ -514,35 +509,42 @@ function evaluate(node, context) {
 
         case 'POSTFIX_OP': {
             if (node.op === '~') {
-                // x~ — get variable with stale (pre-solve) fallback
+                // x~ — get pre-solve value (value before this solve started)
                 if (node.operand.type !== 'VARIABLE') {
                     throw new EvalError('~ operator can only be applied to variables');
                 }
-                const value = context.getVariableWithStale(node.operand.name);
+                const name = node.operand.name;
+                // Unshadowed constants always have a pre-solve value
+                if (context.constants.has(name) && !context.shadowedConstants.has(name)) {
+                    return context.constants.get(name);
+                }
+                if (!context.isDeclared(name)) {
+                    throw new EvalError(`Undefined variable: ${name}`);
+                }
+                const value = context.getPreSolveValue(name);
                 if (value !== undefined) {
                     return value;
                 }
-                if (context.isDeclared(node.operand.name)) {
-                    throw new EvalError(`Variable '${node.operand.name}' has no value`);
-                }
-                throw new EvalError(`Undefined variable: ${node.operand.name}`);
+                throw new EvalError(`Variable '${name}' has no pre-solve value`);
             }
             if (node.op === '?') {
-                // x? — has real value? (no stale fallback)
-                // x~? — has real or stale value? (~ applied first, then ? wraps)
-                if (node.operand.type !== 'VARIABLE' &&
-                    !(node.operand.type === 'POSTFIX_OP' && node.operand.op === '~')) {
-                    throw new EvalError('? operator can only be applied to variables');
+                // x~? — does variable have a pre-solve value?
+                if (node.operand.type !== 'POSTFIX_OP' || node.operand.op !== '~') {
+                    throw new EvalError('? operator requires ~ (use x~? to check for pre-solve value)');
                 }
-                try {
-                    evaluate(node.operand, context);
+                const varNode = node.operand.operand;
+                if (varNode.type !== 'VARIABLE') {
+                    throw new EvalError('~? operator can only be applied to variables');
+                }
+                const varName = varNode.name;
+                // Unshadowed constants always have a pre-solve value
+                if (context.constants.has(varName) && !context.shadowedConstants.has(varName)) {
                     return 1;
-                } catch (e) {
-                    if (e.message && e.message.includes('has no value')) {
-                        return 0;
-                    }
-                    throw e;
                 }
+                if (!context.isDeclared(varName)) {
+                    throw new EvalError(`Undefined variable: ${varName}`);
+                }
+                return context.preSolveValues.has(varName) ? 1 : 0;
             }
             throw new EvalError(`Unknown postfix operator: ${node.op}`);
         }

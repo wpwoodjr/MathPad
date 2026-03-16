@@ -1,49 +1,58 @@
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Constants"
+pi: 3.14159265358979
+e: 2.71828182845905
+c: 299792458 "speed of light m/s"
+h: 6.62607015e-34
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"Test 1: ? on variable with value returns 1"
+"Test 1: ~? on variable with value returns 1"
 
 y: 5
-y?->
+y~?->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"Test 2: ? on declared but empty variable returns 0"
+"Test 2: ~? on declared but empty variable returns 0"
 
 y:
-y?->
+y~?->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"Test 3: if(y?; y; default) with empty y uses default"
+"Test 3: if(y~?; y; default) with empty y uses default"
 
 y:
-z: if(y?; y; 4)
+z: if(y~?; y; 4)
 z->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"Test 4: if(y?; y; default) with y=5 uses y"
+"Test 4: if(y~?; y; default) with y=5 uses y"
 
 y: 5
-z: if(y?; y; 4)
+z: if(y~?; y; 4)
 z->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"Test 5: Pre-solve fallback - z~ keeps its previous output value"
+"Test 5: z~ keeps its previous output value"
 
 y:
-z: if(y?; y; z~)
+z: if(y~?; y; z~)
 z-> 35
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -52,7 +61,7 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
 "Test 6: Undeclared variable errors"
 
-z: if(y2?; y2; 4)
+z: if(y2~?; y2; 4)
 z->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -96,9 +105,108 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"Test 11: x? no longer sees stale values"
+"Test 11: x~? sees pre-solve values including outputs"
 
 w-> 42
-r: w?
+r: w~?
 r->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 12: x~ in equation is idempotent — x = x~ + 1 increments once"
+
+x = x~ + 1
+x-> 17
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"~? tests"
+a = 2*b
+a: 3
+b<-
+
+// a?->
+a~?->
+a~->
+// b?->
+b~?->
+b~->
+
+d<- 4
+d->
+d~?->
+d~->
+
+d2<- a
+d2->
+d2~?->
+d2~->
+
+y = a
+y=> 3
+// y?->
+y~?->
+
+z = y
+// z?->
+z~?->
+
+out1 = in1+1
+in1: 2
+out1=> 3
+out2->
+
+// in1?->
+in1~?->
+// out1?->
+out1~?->
+// out2?->
+out2~?->
+
+out3~?->
+out3~->
+
+out4:
+out4~->
+
+pi~->
+pi~?->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"~? tests for constants, shadow constants off"
+
+pi->
+pi~->
+pi~?->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+"~? tests for constants, shadow constants on"
+
+pi+0->
+pi~->
+pi~?->
+
+e+0->
+e~->
+e~?->
+e:
+e~->
+e~?->
+
+h+0->
+h~->
+h~?->
+h: 3
+h~->
+h~?->
+
+c: 5
+c~->
+c~?->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

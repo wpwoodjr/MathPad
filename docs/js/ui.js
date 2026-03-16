@@ -1243,6 +1243,12 @@ function setupEventListeners() {
             }, 500);
         });
     }
+
+    // Re-align variable name widths on window resize
+    window.addEventListener('resize', () => {
+        const editorInfo = UI.editors.get(UI.currentRecordId);
+        if (editorInfo) editorInfo.variablesManager.alignNameWidths();
+    });
 }
 
 /**

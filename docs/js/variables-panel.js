@@ -344,7 +344,14 @@ class VariablesPanel {
         nameLabel.className = 'variable-name';
         const labelPrefix = decl.label || '';
         if (labelPrefix) nameLabel.style.whiteSpace = 'pre-wrap';
-        nameLabel.textContent = labelPrefix + info.name + limitsStr + ' ' + formatSuffix + (decl.marker || ':');
+        const nameText = document.createElement('span');
+        nameText.className = 'variable-name-text';
+        nameText.textContent = labelPrefix + info.name + limitsStr;
+        const markerText = document.createElement('span');
+        markerText.className = 'variable-name-marker';
+        markerText.textContent = formatSuffix + (decl.marker || ':');
+        nameLabel.appendChild(nameText);
+        nameLabel.appendChild(markerText);
         // Add tooltip explaining variable type
         if (clearBehavior === ClearBehavior.ON_CLEAR) {
             nameLabel.title = 'Input variable (cleared on Clear)';
@@ -395,9 +402,11 @@ class VariablesPanel {
             });
             this.inputElements.set(info.lineIndex, valueElement);
         } else {
-            valueElement = document.createElement('span');
+            valueElement = document.createElement('input');
+            valueElement.type = 'text';
             valueElement.className = 'variable-value-readonly';
-            valueElement.textContent = this.formatValueForDisplay(info);
+            valueElement.readOnly = true;
+            valueElement.value = this.formatValueForDisplay(info);
         }
 
         // Add solve button for editable variables (before name)
