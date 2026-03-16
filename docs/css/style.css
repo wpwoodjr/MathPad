@@ -1335,7 +1335,7 @@ body.panel-resizing * {
 
 .variable-value-input {
     flex: 1;
-    max-width: 170px;
+    max-width: 180px;
     padding: 4px 8px;
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
@@ -1354,7 +1354,7 @@ body.panel-resizing * {
 
 .variable-value-readonly {
     flex: 1;
-    max-width: 170px;
+    max-width: 180px;
     padding: 4px 8px;
     color: var(--text-primary);
     font-family: var(--font-mono);
