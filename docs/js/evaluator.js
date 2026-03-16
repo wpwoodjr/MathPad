@@ -309,6 +309,45 @@ function modCheckBalance(a, b, n, places) {
     return checkBalance(...modNormalize(a, b, n), places);
 }
 
+// Argument count constraints for built-in functions: [min, max]
+// [min, max] or [min] for variable-arg functions; sum/prod validated separately
+const builtinArgCounts = {
+    abs: [1, 1], sign: [1, 1], int: [1, 1], frac: [1, 1],
+    round: [1, 2], floor: [1, 1], ceil: [1, 1],
+    sqrt: [1, 1], cbrt: [1, 1], root: [2, 2],
+    exp: [1, 1], ln: [1, 1], log: [1, 2], fact: [1, 1],
+    pi: [0, 0], tau: [0, 0], perigon: [0, 0],
+    sin: [1, 1], asin: [1, 1], sinh: [1, 1], asinh: [1, 1],
+    cos: [1, 1], acos: [1, 1], cosh: [1, 1], acosh: [1, 1],
+    tan: [1, 1], atan: [1, 2], tanh: [1, 1], atanh: [1, 1],
+    radians: [1, 1], degrees: [1, 1],
+    now: [0, 0], days: [2, 2], jdays: [1, 1], date: [1, 1], jdate: [1, 1],
+    year: [1, 1], month: [1, 1], day: [1, 1], weekday: [1, 1],
+    hour: [1, 1], minute: [1, 1], second: [1, 1],
+    hours: [1, 1], hms: [1, 1],
+    if: [2, 3], rand: [0, 2], mod: [2, 2],
+    isclose: [3, 3], modisclose: [4, 4], places: [0, 0],
+    min: [1], max: [1], avg: [1], choose: [2],
+};
+
+function validateArgCount(funcName, argCount) {
+    const counts = builtinArgCounts[funcName];
+    if (!counts) return;
+    const [min, max] = counts;
+    if (argCount < min) {
+        if (max !== undefined && min === max) {
+            throw new EvalError(`${funcName}() requires ${min} argument${min !== 1 ? 's' : ''}, got ${argCount}`);
+        }
+        throw new EvalError(`${funcName}() requires at least ${min} argument${min !== 1 ? 's' : ''}, got ${argCount}`);
+    }
+    if (max !== undefined && argCount > max) {
+        if (min === max) {
+            throw new EvalError(`${funcName}() requires ${min} argument${min !== 1 ? 's' : ''}, got ${argCount}`);
+        }
+        throw new EvalError(`${funcName}() requires at most ${max} argument${max !== 1 ? 's' : ''}, got ${argCount}`);
+    }
+}
+
 const builtinFunctions = {
     // Math functions
     abs: (args) => Math.abs(args[0]),
@@ -596,6 +635,13 @@ function evaluate(node, context) {
             // Check for user-defined function first
             const userFunc = context.getUserFunction(funcName);
             if (userFunc) {
+                const expected = userFunc.params.length;
+                if (node.args.length < expected) {
+                    throw new EvalError(`${node.name}() requires ${expected} argument${expected !== 1 ? 's' : ''}, got ${node.args.length}`);
+                }
+                if (node.args.length > expected) {
+                    throw new EvalError(`${node.name}() requires ${expected} argument${expected !== 1 ? 's' : ''}, got ${node.args.length}`);
+                }
                 // Evaluate arguments in the calling context
                 const argValues = node.args.map(arg => evaluate(arg, context));
 
@@ -611,9 +657,7 @@ function evaluate(node, context) {
 
             // Special handling for 'if' - lazy evaluation to support recursion
             if (funcName === 'if') {
-                if (node.args.length < 2) {
-                    throw new EvalError('if() requires at least 2 arguments');
-                }
+                validateArgCount(funcName, node.args.length);
                 const condition = evaluate(node.args[0], context);
                 if (condition) {
                     return evaluate(node.args[1], context);
@@ -687,6 +731,7 @@ function evaluate(node, context) {
             // Check built-in functions
             const builtin = builtinFunctions[funcName];
             if (builtin) {
+                validateArgCount(funcName, node.args.length);
                 const argValues = node.args.map(arg => evaluate(arg, context));
                 return builtin(argValues, context);
             }

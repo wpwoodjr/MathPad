@@ -1,0 +1,53 @@
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Constants"
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Reference"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Functions"
+"Reference Constants and Functions"
+compound(pv; rate; n) = pv * (1 + rate)**n
+pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Line 4: compound() requires 3 arguments, got 0\nLine 5: pmt() requires 4 arguments, got 0\nLine 10: f() requires 1 argument, got 0\nLine 11: f() requires 1 argument, got 2\nLine 14: sqrt() requires 1 argument, got 0\nLine 15: sqrt() requires 1 argument, got 2\nLine 17: rand() requires at most 2 arguments, got 3\nLine 21: if() requires at least 2 arguments, got 0\nLine 22: if() requires at most 3 arguments, got 4\nLine 23: sum() requires 4 arguments: sum(expr; var; start; end)\nLine 24: prod() requires 4 arguments: prod(expr; var; start; end)\nLine 25: min() requires at least 1 argument, got 0\nLine 26: max() requires at least 1 argument, got 0\nLine 27: avg() requires at least 1 argument, got 0"; StatusIsError = 1
+"Test fn args too many or too few"
+
+// fns record
+compound()->
+pmt()->
+
+// user defined fn
+f(x) = sqrt(x)
+f(3)-> 1.7321
+f()->
+f(3;5)->
+
+// builtin fn
+sqrt()->
+sqrt(3;5)->
+
+rand(1;2;3)->
+
+if(1;pi())-> 3.1416
+if(0;pi())-> 0
+if()->
+if(1;2;3;4)->
+sum()->
+prod()->
+min()->
+max()->
+avg()->
+avg(3)-> 3
+
+"--- Reference Constants and Functions ---"
+compound(pv; rate; n) = pv * (1 + rate)**n
+pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
