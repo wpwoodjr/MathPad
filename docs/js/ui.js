@@ -101,26 +101,36 @@ function restoreStatusAfterDelay() {
 /**
  * Render the sidebar with categories and records
  */
-function renderSidebar() {
-    // Preserve scroll position
+function renderSidebar(useSavedScroll = false) {
+    // Capture current scroll position before DOM is rebuilt
     const sidebarContent = UI.sidebar.querySelector('.sidebar-content');
-    const scrollTop = sidebarContent ? sidebarContent.scrollTop : 0;
+    const scrollTop = sidebarContent ? sidebarContent.scrollTop : null;
 
     const groups = getRecordsByCategory(UI.data);
     let html = '<div class="sidebar-header">Records</div>';
     html += '<div class="sidebar-content">';
 
+    const sortPrefs = (UI.data.settings && UI.data.settings.categorySortOrder) || {};
+
     for (const [category, records] of groups) {
         const isCollapsed = UI.collapsedCategories.has(category);
         const hasRecords = records.length > 0;
+        const isAlpha = sortPrefs[category] === 'alpha';
+        const canDelete = !hasRecords && category !== 'Unfiled' && category !== 'Reference';
+        const escapedCat = escapeAttr(category);
 
         html += `
-            <div class="category-group" data-category="${escapeAttr(category)}">
+            <div class="category-group" data-category="${escapedCat}">
                 <div class="category-header ${isCollapsed ? 'collapsed' : ''}"
-                     onclick="toggleCategory('${escapeAttr(category)}')">
+                     onclick="toggleCategory('${escapedCat}')">
                     <span class="category-arrow">${isCollapsed ? '▶' : '▼'}</span>
                     <span class="category-name">${escapeHtmlText(category)}</span>
                     <span class="category-count">(${records.length})</span>
+                    <span class="category-sort ${isAlpha ? 'active' : ''}"
+                          onclick="event.stopPropagation(); toggleCategorySort('${escapedCat}')"
+                          title="${isAlpha ? 'Sorted alphabetically (click for insertion order)' : 'Insertion order (click for alphabetical)'}">A↓</span>${canDelete ? `<span class="category-delete"
+                          onclick="event.stopPropagation(); deleteSidebarCategory('${escapedCat}')"
+                          title="Delete empty category">✕</span>` : ''}
                 </div>
                 <div class="category-records ${isCollapsed ? 'hidden' : ''}">
         `;
@@ -166,7 +176,7 @@ function renderSidebar() {
     // Restore scroll position
     const newSidebarContent = UI.sidebar.querySelector('.sidebar-content');
     if (newSidebarContent) {
-        newSidebarContent.scrollTop = scrollTop;
+        newSidebarContent.scrollTop = (scrollTop !== null && !useSavedScroll) ? scrollTop : (UI.data.settings && UI.data.settings.sidebarScrollTop) || 0;
     }
 
 }
@@ -181,6 +191,36 @@ function toggleCategory(category) {
         UI.collapsedCategories.add(category);
     }
     renderSidebar();
+}
+
+/**
+ * Toggle category sort between alphabetical and insertion order
+ */
+function toggleCategorySort(category) {
+    if (!UI.data.settings) UI.data.settings = {};
+    if (!UI.data.settings.categorySortOrder) UI.data.settings.categorySortOrder = {};
+
+    const current = UI.data.settings.categorySortOrder[category];
+    if (current === 'alpha') {
+        delete UI.data.settings.categorySortOrder[category];
+    } else {
+        UI.data.settings.categorySortOrder[category] = 'alpha';
+    }
+
+    debouncedSave(UI.data);
+    renderSidebar();
+}
+
+/**
+ * Delete an empty category from the sidebar
+ */
+function deleteSidebarCategory(category) {
+    if (!confirm(`Delete category "${category}"?`)) return;
+
+    deleteCategory(UI.data, category);
+    debouncedSave(UI.data);
+    renderSidebar();
+    renderDetailsPanel();
 }
 
 /**
@@ -1653,8 +1693,8 @@ function reloadUIWithData(newData) {
     UI.data = newData;
     saveData(UI.data, true);
 
-    // Re-render UI
-    renderSidebar();
+    // Re-render UI (useSavedScroll so renderSidebar uses Drive's scroll position)
+    renderSidebar(true);
     renderTabBar();
     renderDetailsPanel();
 

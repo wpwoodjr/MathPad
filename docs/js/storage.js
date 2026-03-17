@@ -439,6 +439,13 @@ function loadData() {
  */
 function saveData(data, localOnly = false) {
     try {
+        // Save sidebar scroll position (skip during data reload to preserve Drive value)
+        if (typeof UI !== 'undefined' && UI.initComplete) {
+            const sidebarContent = document.querySelector('.sidebar-content');
+            if (sidebarContent && data.settings) {
+                data.settings.sidebarScrollTop = sidebarContent.scrollTop;
+            }
+        }
         data.version = STORAGE_VERSION;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         if (!localOnly) markDriveDirty();
@@ -877,6 +884,7 @@ function renameCategory(data, oldName, newName) {
  */
 function getRecordsByCategory(data) {
     const groups = new Map();
+    const sortPrefs = (data.settings && data.settings.categorySortOrder) || {};
 
     // Initialize all categories
     for (const cat of data.categories) {
@@ -890,6 +898,13 @@ function getRecordsByCategory(data) {
             groups.set(cat, []);
         }
         groups.get(cat).push(record);
+    }
+
+    // Apply per-category sort
+    for (const [cat, records] of groups) {
+        if (sortPrefs[cat] === 'alpha') {
+            records.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        }
     }
 
     return groups;

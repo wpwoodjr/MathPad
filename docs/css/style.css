@@ -341,6 +341,49 @@ button {
     color: var(--text-muted);
 }
 
+.category-sort {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 0 4px;
+    margin-left: 4px;
+    cursor: pointer;
+    border-radius: 3px;
+    opacity: 0;
+}
+
+.category-header:hover .category-sort,
+.category-sort.active {
+    opacity: 1;
+}
+
+.category-sort:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.category-sort.active {
+    color: var(--accent-color);
+}
+
+.category-delete {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 0 4px;
+    margin-left: 2px;
+    cursor: pointer;
+    border-radius: 3px;
+    opacity: 0;
+}
+
+.category-header:hover .category-delete {
+    opacity: 1;
+}
+
+.category-delete:hover {
+    background-color: var(--error-color);
+    color: white;
+}
+
 .category-records {
     padding-left: 8px;
 }
