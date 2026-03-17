@@ -169,7 +169,7 @@ mint = yint / 12
 Category = "Unfiled"; Secret = 0
 Places = 7; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Line 4: Equation doesn't balance: pmt = -pv * mint / (1 - (1 + m... (relative difference 1e-7 >= 5e-8)"; StatusIsError = 1
+Status = "Line 4: Equation doesn't balance: pmt = -pv * mint / (1 - (1 + m... (relative diff 0.00001% >= 0.000005%)"; StatusIsError = 1
 "Test 10b: TVM at places=7 ($ rounding error exceeds tolerance) - doesn't balance"
 
 "Payment calculation"
@@ -187,7 +187,7 @@ mint = yint / 12
 Category = "Unfiled"; Secret = 0
 Places = 7; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 4: Equation doesn't balance: pmt = -pv * mint / (1 - (1 + m... (relative difference 1e-7 >= 5e-8)"; StatusIsError = 1
+Status = "Line 4: Equation doesn't balance: pmt = -pv * mint / (1 - (1 + m... (relative diff 0.00001% >= 0.000005%)"; StatusIsError = 1
 "Test 10c: TVM at places=7 (re-solve detects $ rounding error)"
 
 "Payment calculation"
@@ -205,7 +205,7 @@ mint = yint / 12
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) =... (absolute difference 3.6e-15 >= 5e-16)"; StatusIsError = 1
+Status = "Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) =... (absolute diff 3.6e-15 >= 5e-16)"; StatusIsError = 1
 "Test 9b: Polynomial f(x)=0 at places=15 (noise exceeds tolerance) - doesn't balance"
 
 c5: 1
@@ -233,7 +233,7 @@ a = b
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 5: Equation doesn't balance: a = b (relative difference 0.005 >= 0.0005)"; StatusIsError = 1
+Status = "Line 5: Equation doesn't balance: a = b (relative diff 0.5% >= 0.05%)"; StatusIsError = 1
 "Balance Test places = 3"
 
 a = 100

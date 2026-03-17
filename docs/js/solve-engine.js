@@ -529,10 +529,16 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
                 const balanced = result.balanced;
 
                 if (!balanced) {
-                    const diff = parseFloat(toFixed(result.difference, result.tolPlaces));
-                    const label = result.relative ? 'relative difference' : 'absolute difference';
                     const eqText = eq.text.length > 30 ? eq.text.substring(0, 30) + '...' : eq.text;
-                    errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (${label} ${diff} >= ${result.tolerance})`);
+                    if (result.relative) {
+                        const pctPlaces = Math.max(0, result.tolPlaces - 2);
+                        const diffPct = parseFloat(toFixed(result.difference * 100, pctPlaces));
+                        const tolPct = parseFloat(toFixed(result.tolerance * 100, pctPlaces));
+                        errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (relative diff ${diffPct}% >= ${tolPct}%)`);
+                    } else {
+                        const diff = parseFloat(toFixed(result.difference, result.tolPlaces));
+                        errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (absolute diff ${diff} >= ${result.tolerance})`);
+                    }
                 }
 
                 // Only track status for equations where all variables are declared (user-visible)

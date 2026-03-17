@@ -532,7 +532,7 @@ set[0:360]-> 209.9993
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Line 14: Equation doesn't balance: set = mod(atan(smg*sin(cmg) - ... (absolute difference 359.9888 >= 5e-14)"; StatusIsError = 1
+Status = "Line 14: Equation doesn't balance: set = mod(atan(smg*sin(cmg) - ... (absolute diff 359.9888 >= 5e-14)"; StatusIsError = 1
 "16. Re-solve with rounded values (places=3) - mod 360 balance error"
 // Re-solve test: first solve produced these rounded values
 // mod(atan(...); 360) gives 359.989° instead of 0° on re-solve → balance error
@@ -638,7 +638,7 @@ set[0:360] °<- 0°
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Line 5: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative difference 0.119 >= 0.005)\nLine 6: Equation doesn't balance: cts =° atan(smg*sin(cmg) - dri... (relative difference 0.006 >= 0.005)\nLine 8: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - w... (relative difference 0.085 >= 0.005)\nLine 9: Equation doesn't balance: set =° atan(smg*sin(cmg) - ws*... (relative difference 0.027 >= 0.005)"; StatusIsError = 1
+Status = "Line 5: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative diff 11.9% >= 0.5%)\nLine 6: Equation doesn't balance: cts =° atan(smg*sin(cmg) - dri... (relative diff 0.6% >= 0.5%)\nLine 8: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - w... (relative diff 8.5% >= 0.5%)\nLine 9: Equation doesn't balance: set =° atan(smg*sin(cmg) - ws*... (relative diff 2.7% >= 0.5%)"; StatusIsError = 1
 "19. =° balance check at places=0 (regular = fails on set equation)"
 
 ws = speed*cos(leeway)
@@ -663,7 +663,7 @@ set[0:360] °<- 0°
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-Status = "Line 6: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative difference 0.119 >= 0.005)\nLine 7: Equation doesn't balance: cts =° atan(smg*sin(cmg) - dri... (relative difference 0.006 >= 0.005)\nLine 9: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - w... (relative difference 0.085 >= 0.005)\nLine 10: Equation doesn't balance: set =° atan(smg*sin(cmg) - ws*... (relative difference 0.027 >= 0.005)"; StatusIsError = 1
+Status = "Line 6: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative diff 11.9% >= 0.5%)\nLine 7: Equation doesn't balance: cts =° atan(smg*sin(cmg) - dri... (relative diff 0.6% >= 0.5%)\nLine 9: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - w... (relative diff 8.5% >= 0.5%)\nLine 10: Equation doesn't balance: set =° atan(smg*sin(cmg) - ws*... (relative diff 2.7% >= 0.5%)"; StatusIsError = 1
 "20. =° re-solve with rounded <- values (neighborhood normalization)"
 "Pre-baked rounded values from test 19"
 

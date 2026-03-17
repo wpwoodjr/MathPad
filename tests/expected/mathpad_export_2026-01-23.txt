@@ -283,7 +283,7 @@ z%->> 6.724999999999999%
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 3: Equation doesn't balance: x=y+1 (relative difference 0.66667 >= 0.00005)"; StatusIsError = 1
+Status = "Line 3: Equation doesn't balance: x=y+1 (relative diff 66.667% >= 0.005%)"; StatusIsError = 1
 "01 Error: Solved with errors: Equation doesn't balance: x=y+1 (1 != 3)"
 
 x=y+1
