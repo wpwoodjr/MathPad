@@ -586,7 +586,9 @@ async function runSyncCycle() {
         // Token expired or not yet obtained — prompt user to reconnect
         if (isDriveSignedIn()) {
             updateDriveUI();
-            updateDriveStatus();
+            const initial = (DriveState.userEmail || '?')[0].toUpperCase();
+            const dirty = DriveState.driveDirty ? ' \u2022' : '';
+            updateDriveStatus(`Click ${initial} to sync${dirty} | ${DriveState.userEmail}`);
         }
         return;
     }
@@ -814,7 +816,6 @@ function updateDriveStatus(override) {
     }
 
     let text;
-    let flash = !!override;
     if (override) {
         text = override;
     } else {
@@ -822,7 +823,6 @@ function updateDriveStatus(override) {
         if (isDriveSignedIn() && !isDriveAuthenticated()) {
             const initial = (DriveState.userEmail || '?')[0].toUpperCase();
             text = `Click ${initial} to sync${dirty} | ${DriveState.userEmail}`;
-            flash = true;
         } else {
             const info = getDriveLastSaveInfo();
             if (info) {
@@ -835,8 +835,8 @@ function updateDriveStatus(override) {
 
     el.textContent = text;
 
-    // On small screens where status-drive is hidden, flash important messages
-    if (flash && text && getComputedStyle(el).display === 'none') {
+    // On small screens where status-drive is hidden, flash override messages
+    if (override && getComputedStyle(el).display === 'none') {
         const statusText = document.getElementById('status-text');
         if (statusText) {
             clearDriveStatusFlash();

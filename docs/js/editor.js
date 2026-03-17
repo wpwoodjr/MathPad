@@ -1168,6 +1168,7 @@ class SimpleEditor {
             html += `<div class="line-number" style="height:${height}px">${i + 1}</div>`;
         }
         this.lineNumbers.innerHTML = html;
+        this.lineNumbers.scrollTop = this.textarea.scrollTop;
     }
 
     onChange(callback) {
