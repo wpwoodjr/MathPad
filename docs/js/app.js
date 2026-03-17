@@ -8,11 +8,8 @@
  * Application initialization
  */
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('MathPad Web Application starting...');
-
     // Phase 1: Load from localStorage, render UI (instant)
     const data = loadData();
-    console.log(`Loaded ${data.records.length} records`);
     initUI(data);
 
     // Phase 2: Async Drive init (non-blocking)
@@ -77,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    console.log('MathPad ready');
 });
 
 /**

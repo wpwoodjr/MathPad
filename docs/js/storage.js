@@ -429,6 +429,7 @@ function loadData() {
         }
     } catch (e) {
         console.error('Error loading data from localStorage:', e);
+        alert('Error loading saved data. Starting with defaults.\n\n' + e.message);
     }
 
     return createDefaultData();
@@ -454,6 +455,8 @@ function saveData(data, localOnly = false) {
         console.error('Error saving data to localStorage:', e);
         if (e.name === 'QuotaExceededError') {
             alert('Storage quota exceeded. Please export and delete some records.');
+        } else {
+            alert('Error saving data: ' + e.message);
         }
         return false;
     }

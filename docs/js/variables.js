@@ -1121,13 +1121,14 @@ function createEvalContext(record, parsedConstants, parsedFunctions, localText =
     }
 
     // Load user functions (callers provide pre-parsed results from getReferenceInfo)
+    const functionErrors = [];
     if (parsedFunctions) {
         for (const [name, { params, bodyText, sourceText }] of parsedFunctions) {
             try {
                 const bodyAST = parseExpression(bodyText);
                 context.setUserFunction(name, params, bodyAST, sourceText);
             } catch (e) {
-                console.warn(`Error parsing function ${name}:`, e);
+                functionErrors.push(`Error in Functions record: ${name}() — ${e.message}`);
             }
         }
     }
@@ -1148,11 +1149,12 @@ function createEvalContext(record, parsedConstants, parsedFunctions, localText =
                 // Pass null for sourceText to indicate local function (shouldn't be shown in references)
                 context.setUserFunction(name, params, bodyAST, null);
             } catch (e) {
-                console.warn(`Error parsing local function ${name}:`, e);
+                functionErrors.push(`Error in local function: ${name}() — ${e.message}`);
             }
         }
         context.localFunctionLines = fnDefLines;
     }
+    context.functionErrors = functionErrors;
 
     return context;
 }

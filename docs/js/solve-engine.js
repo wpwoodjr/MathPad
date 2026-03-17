@@ -740,7 +740,7 @@ function solveRecord(text, context, record, parserTokens) {
     text = discovery.text;
     allTokens = discovery.allTokens;
     const declarations = discovery.declarations;
-    const errors = [...discovery.errors];
+    const errors = [...(context.functionErrors || []), ...discovery.errors];
 
     // Pass 2: Equation Solving (computes values, no text modification)
     const solveResult = solveEquations(text, context, declarations, record, allTokens, discovery.earlyExprOutputs);

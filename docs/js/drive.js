@@ -76,7 +76,7 @@ function initDriveModule() {
                 resolve(true);
             } else if (elapsed >= 10000) {
                 clearInterval(interval);
-                console.log('Google Identity Services not available');
+                console.warn('Google Identity Services not available');
                 resolve(false);
             }
         }, 200);
@@ -257,7 +257,7 @@ async function ensureToken() {
     if (DriveState.silentRenewalFailed || !DriveState.userEmail) return false;
     const ok = await driveSignIn('');
     if (!ok) {
-        console.log('Silent token renewal failed at', new Date().toLocaleTimeString());
+        console.warn('Silent token renewal failed at', new Date().toLocaleTimeString());
         DriveState.silentRenewalFailed = true;
     }
     return ok;
