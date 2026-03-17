@@ -1,7 +1,7 @@
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Error in Functions record: bad() — Unexpected token: EOF 'null'\nError in local function: bad() — Unexpected token: EOF 'null'"; StatusIsError = 1
+Status = "Error in Functions record: bad() — Unexpected end of expression\nError in local function: bad() — Unexpected end of expression"; StatusIsError = 1
 "Functions"
 good(x) = x + 1
 bad(x) = x +
@@ -9,7 +9,7 @@ bad(x) = x +
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Error in Functions record: bad() — Unexpected token: EOF 'null'"; StatusIsError = 1
+Status = "Error in Functions record: bad() — Unexpected end of expression"; StatusIsError = 1
 "Test 1: Reference function parse error shows in status"
 
 a: good(2)
@@ -21,7 +21,7 @@ good(x) = x + 1
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Error in Functions record: bad() — Unexpected token: EOF 'null'\nError in local function: badfn() — Unexpected token: EOF 'null'"; StatusIsError = 1
+Status = "Error in Functions record: bad() — Unexpected end of expression\nError in local function: badfn() — Unexpected end of expression"; StatusIsError = 1
 "Test 2: Local function parse error shows in status"
 
 badfn(x) = x *
@@ -31,7 +31,7 @@ a-> 3
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Error in Functions record: bad() — Unexpected token: EOF 'null'"; StatusIsError = 1
+Status = "Error in Functions record: bad() — Unexpected end of expression"; StatusIsError = 1
 "Test 3: Good reference function still works despite bad one"
 
 a: good(5)

@@ -781,7 +781,8 @@ class Parser {
     expect(type, value = null) {
         const token = this.peek();
         if (token.type !== type || (value !== null && token.value !== value)) {
-            throw new ParseError(`Expected ${type}${value ? ` '${value}'` : ''}, got ${token.type} '${this.formatTokenValue(token)}'`, token.line, token.col);
+            const got = token.type === TokenType.EOF ? 'end of expression' : `${token.type} '${this.formatTokenValue(token)}'`;
+            throw new ParseError(`Expected ${type}${value ? ` '${value}'` : ''}, got ${got}`, token.line, token.col);
         }
         return this.advance();
     }
@@ -975,6 +976,9 @@ class Parser {
 
         if (token.type === TokenType.ERROR) {
             throw new ParseError(token.value, token.line, token.col);
+        }
+        if (token.type === TokenType.EOF) {
+            throw new ParseError('Unexpected end of expression', token.line, token.col);
         }
         throw new ParseError(`Unexpected token: ${token.type} '${this.formatTokenValue(token)}'`, token.line, token.col);
     }
