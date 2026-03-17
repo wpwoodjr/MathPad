@@ -137,14 +137,14 @@ let _tokenPromise = null;
 function driveSignIn(promptMode) {
     if (_tokenPromise) return _tokenPromise;
 
+    if (!DriveState.tokenClient) {
+        return Promise.resolve(false);
+    }
+
     _tokenPromise = new Promise((resolve) => {
-        if (!DriveState.tokenClient) {
-            _tokenPromise = null;
-            resolve(false);
-            return;
-        }
         // Timeout: if GIS blocks the popup, the callback never fires.
-        // 120 seconds allows time for account picker / consent screens.
+        // 5s for silent renewal (iframe), 120s for interactive (account picker / consent).
+        const timeoutMs = (promptMode === '') ? 5000 : 120000;
         let settled = false;
         const timeout = setTimeout(() => {
             if (!settled) {
@@ -152,7 +152,7 @@ function driveSignIn(promptMode) {
                 _tokenPromise = null;
                 resolve(false);
             }
-        }, 120000);
+        }, timeoutMs);
 
         DriveState.tokenClient.callback = (resp) => {
             if (settled) return;
