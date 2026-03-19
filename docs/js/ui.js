@@ -2,6 +2,18 @@
  * MathPad UI - User interface components and event handling
  */
 
+// On-screen debug log for mobile — remove when done
+function _debugLog(msg) {
+    let el = document.getElementById('_debugLog');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = '_debugLog';
+        el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:150px;overflow:auto;background:rgba(0,0,0,0.9);color:#0f0;font:14px monospace;padding:6px;z-index:99999;pointer-events:none';
+        document.body.appendChild(el);
+    }
+    el.textContent = msg + '\n' + el.textContent.split('\n').slice(0, 10).join('\n');
+}
+
 /**
  * Application state (separate from DOM references)
  */
@@ -492,6 +504,45 @@ function updateUndoButtons(canUndo, canRedo) {
 /**
  * Show a specific editor
  */
+/**
+ * Restore divider height for a record, clamped to current container bounds.
+ * Only applies record.dividerHeight (set by user drag); auto-fits if not set.
+ */
+function restoreDividerHeight(recordId) {
+    const editorInfo = UI.editors.get(recordId);
+    const record = findRecord(UI.data, recordId);
+    if (!editorInfo || !record) return;
+
+    const variablesPanel = editorInfo.container.querySelector('.variables-panel');
+    if (!variablesPanel) return;
+
+    if (record.dividerHeight) {
+        const containerHeight = editorInfo.container.offsetHeight;
+        const divider = editorInfo.container.querySelector('.panel-divider');
+        const formulasPanel = editorInfo.container.querySelector('.formulas-panel');
+        const varHeader = variablesPanel.querySelector('.variables-header');
+        const fmtHeader = formulasPanel ? formulasPanel.querySelector('.formulas-header') : null;
+        const minTop = varHeader ? varHeader.offsetHeight : 0;
+        const maxTop = containerHeight - (divider ? divider.offsetHeight : 0) - (fmtHeader ? fmtHeader.offsetHeight : 0);
+        variablesPanel.style.height = Math.max(minTop, Math.min(maxTop, record.dividerHeight)) + 'px';
+    } else {
+        // Auto-fit: size to content, clamped between 1/4 and 3/4 of container
+        requestAnimationFrame(() => {
+            const containerHeight = editorInfo.container.offsetHeight;
+            const table = variablesPanel.querySelector('.variables-table');
+            const header = variablesPanel.querySelector('.variables-header');
+            const headerHeight = header ? header.offsetHeight : 0;
+            const contentHeight = (table ? table.scrollHeight : 0) + headerHeight;
+            const minHeight = containerHeight * 0.25;
+            const maxHeight = containerHeight * 0.75;
+            const fitHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight));
+            variablesPanel.style.height = fitHeight + 'px';
+            record.dividerHeight = fitHeight;
+            debouncedSave(UI.data);
+        });
+    }
+}
+
 function showEditor(recordId) {
     // Hide all editors
     for (const [id, { container }] of UI.editors) {
@@ -510,38 +561,10 @@ function showEditor(recordId) {
     if (shown) shown.variablesManager.alignNameWidths();
 
     // Restore scroll and divider positions after showing
+    restoreDividerHeight(recordId);
     const editorInfo = UI.editors.get(recordId);
     const record = findRecord(UI.data, recordId);
     if (editorInfo && record) {
-        // Restore or auto-fit divider position
-        const variablesPanel = editorInfo.container.querySelector('.variables-panel');
-        if (record.dividerHeight) {
-            if (variablesPanel) {
-                // Clamp saved height to current container bounds
-                const containerHeight = editorInfo.container.offsetHeight;
-                const divider = editorInfo.container.querySelector('.panel-divider');
-                const formulasPanel = editorInfo.container.querySelector('.formulas-panel');
-                const varHeader = variablesPanel.querySelector('.variables-header');
-                const fmtHeader = formulasPanel ? formulasPanel.querySelector('.formulas-header') : null;
-                const minTop = varHeader ? varHeader.offsetHeight : 0;
-                const maxTop = containerHeight - (divider ? divider.offsetHeight : 0) - (fmtHeader ? fmtHeader.offsetHeight : 0);
-                const clamped = Math.max(minTop, Math.min(maxTop, record.dividerHeight));
-                variablesPanel.style.height = clamped + 'px';
-            }
-        } else if (variablesPanel) {
-            // Auto-fit: size to content, clamped between 1/4 and 3/4 of container
-            requestAnimationFrame(() => {
-                const containerHeight = editorInfo.container.offsetHeight;
-                const table = variablesPanel.querySelector('.variables-table');
-                const header = variablesPanel.querySelector('.variables-header');
-                const headerHeight = header ? header.offsetHeight : 0;
-                const contentHeight = (table ? table.scrollHeight : 0) + headerHeight;
-                const minHeight = containerHeight * 0.25;
-                const maxHeight = containerHeight * 0.75;
-                const fitHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight));
-                variablesPanel.style.height = fitHeight + 'px';
-            });
-        }
         // Restore scroll position and set cursor to end of first visible line
         requestAnimationFrame(() => {
             if (record.scrollTop) {
@@ -1166,14 +1189,11 @@ function setupEventListeners() {
     });
 
     // Mobile keyboard handling: shrink entire app to fit above keyboard
+    let kbDividerAdjusted = false; // true when divider temporarily adjusted for keyboard
     if (window.visualViewport) {
-        // Track the full viewport height (no keyboard). Updated when viewport grows
-        // (e.g. keyboard dismissed, URL bar retracts). More reliable than innerHeight
-        // which may not reflect the true available height on iOS Safari.
-        // Reset on orientation change (detected by width change).
-        let fullVpHeight = window.visualViewport.height;
-        let lastVpWidth = window.visualViewport.width;
         let keyboardIsShowing = false;
+        let lastFocusInTime = 0;
+        let vpHeightAtFocus = 0;
 
         // Prevent iOS Safari from scrolling the whole page when focusing inputs
         window.addEventListener('scroll', () => {
@@ -1197,13 +1217,13 @@ function setupEventListeners() {
 
         function adjustPanelForFocus(active) {
             const info = UI.editors.get(UI.currentRecordId);
-            if (!info || info.savedDividerHeight != null) return;
+            if (!info) return;
 
             const variablesPanel = info.container.querySelector('.variables-panel');
             const formulasPanel = info.container.querySelector('.formulas-panel');
             if (!variablesPanel || !formulasPanel || !info.container.contains(active)) return;
 
-            info.savedDividerHeight = variablesPanel.style.height;
+            kbDividerAdjusted = true;
             const varsHeader = variablesPanel.querySelector('.variables-header');
             const varsHeaderH = varsHeader ? varsHeader.offsetHeight : 0;
             const divider = info.container.querySelector('.panel-divider');
@@ -1221,26 +1241,13 @@ function setupEventListeners() {
 
         window.visualViewport.addEventListener('resize', () => {
             const vpHeight = window.visualViewport.height;
-            const vpWidth = window.visualViewport.width;
-
-            // Orientation change: width changed, reset baseline height
-            if (vpWidth !== lastVpWidth) {
-                lastVpWidth = vpWidth;
-                fullVpHeight = vpHeight;
-            }
-
-            // Update baseline when viewport grows (keyboard dismissed, URL bar change)
-            if (vpHeight > fullVpHeight) {
-                fullVpHeight = vpHeight;
-            }
-
-            keyboardIsShowing = vpHeight < fullVpHeight * 0.85;
+            const recentFocus = (Date.now() - lastFocusInTime) < 1000;
+            keyboardIsShowing = (recentFocus || keyboardIsShowing) && vpHeight < vpHeightAtFocus * 0.85;
             const appContainer = document.querySelector('.app-container');
             if (!appContainer) return;
 
             if (keyboardIsShowing) {
-                const info = UI.editors.get(UI.currentRecordId);
-                const kbJustAppeared = info && info.savedDividerHeight == null;
+                const kbJustAppeared = !kbDividerAdjusted;
                 appContainer.style.height = vpHeight + 'px';
                 adjustPanelForFocus(document.activeElement);
                 window.scrollTo(0, 0);
@@ -1248,17 +1255,12 @@ function setupEventListeners() {
                 if (kbJustAppeared) {
                     requestAnimationFrame(ensureActiveCaretVisible);
                 }
-            } else {
+            } else if (kbDividerAdjusted) {
                 appContainer.style.removeProperty('height');
-                // Restore divider position when keyboard dismisses
-                const info = UI.editors.get(UI.currentRecordId);
-                if (info && info.savedDividerHeight != null) {
-                    const variablesPanel = info.container.querySelector('.variables-panel');
-                    if (variablesPanel) {
-                        variablesPanel.style.height = info.savedDividerHeight;
-                    }
-                    info.savedDividerHeight = null;
-                }
+                kbDividerAdjusted = false;
+                restoreDividerHeight(UI.currentRecordId);
+                // Blur so next tap triggers focusin for keyboard detection
+                if (document.activeElement) document.activeElement.blur();
             }
         });
 
@@ -1266,26 +1268,25 @@ function setupEventListeners() {
         // (e.g. iOS textarea focus timing), retry after keyboard has appeared
         let focusTimer = null;
         document.addEventListener('focusin', (e) => {
+            lastFocusInTime = Date.now();
             clearTimeout(focusTimer);
-            const info = UI.editors.get(UI.currentRecordId);
-            const kbWasUp = info && info.savedDividerHeight != null;
+            if (!kbDividerAdjusted) vpHeightAtFocus = window.visualViewport.height;
             focusTimer = setTimeout(() => {
                 const vpHeight = window.visualViewport.height;
-                if (vpHeight < fullVpHeight * 0.85) {
+                if (!kbDividerAdjusted && vpHeight < vpHeightAtFocus * 0.85) {
                     const appContainer = document.querySelector('.app-container');
                     if (appContainer) appContainer.style.height = vpHeight + 'px';
                     adjustPanelForFocus(e.target);
                     window.scrollTo(0, 0);
-                    if (!kbWasUp) {
-                        requestAnimationFrame(ensureActiveCaretVisible);
-                    }
+                    requestAnimationFrame(ensureActiveCaretVisible);
                 }
             }, 500);
         });
     }
 
-    // Re-align variable name widths on window resize
+    // Clamp divider and re-align variable name widths on window resize
     window.addEventListener('resize', () => {
+        if (!kbDividerAdjusted) restoreDividerHeight(UI.currentRecordId);
         const editorInfo = UI.editors.get(UI.currentRecordId);
         if (editorInfo) editorInfo.variablesManager.alignNameWidths();
     });
@@ -1654,22 +1655,7 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
     document.addEventListener('pointerup', endDrag);
     document.addEventListener('pointercancel', endDrag);
 
-    // Clamp panel height on window resize so divider stays visible
-    window.addEventListener('resize', () => {
-        const containerHeight = topPanel.parentElement.offsetHeight;
-        const minTop = getMinTop();
-        const maxTop = containerHeight - divider.offsetHeight - getMinBottom();
-        const current = topPanel.offsetHeight;
-        const clamped = Math.max(minTop, Math.min(maxTop, current));
-        if (clamped !== current) {
-            topPanel.style.height = clamped + 'px';
-            const record = findRecord(UI.data, UI.currentRecordId);
-            if (record) {
-                record.dividerHeight = clamped;
-                debouncedSave(UI.data);
-            }
-        }
-    });
+    // Window resize clamping handled by restoreDividerHeight() in visualViewport handler
 }
 
 /**
