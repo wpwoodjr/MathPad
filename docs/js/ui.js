@@ -2,17 +2,8 @@
  * MathPad UI - User interface components and event handling
  */
 
-// On-screen debug log for mobile — remove when done
-function _debugLog(msg) {
-    let el = document.getElementById('_debugLog');
-    if (!el) {
-        el = document.createElement('div');
-        el.id = '_debugLog';
-        el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:150px;overflow:auto;background:rgba(0,0,0,0.9);color:#0f0;font:14px monospace;padding:6px;z-index:99999;pointer-events:none';
-        document.body.appendChild(el);
-    }
-    el.textContent = msg + '\n' + el.textContent.split('\n').slice(0, 10).join('\n');
-}
+// true when pop-up keyboard is detected
+let _keyboardIsShowing = false;
 
 /**
  * Application state (separate from DOM references)
@@ -1189,22 +1180,12 @@ function setupEventListeners() {
     });
 
     // Mobile keyboard handling: shrink entire app to fit above keyboard
-    let kbDividerAdjusted = false; // true when divider temporarily adjusted for keyboard
     if (window.visualViewport) {
-        let keyboardIsShowing = false;
-        let lastFocusInTime = 0;
         let vpHeightAtFocus = 0;
+        let panelFocusTime = 0;
 
-        // Prevent iOS Safari from scrolling the whole page when focusing inputs
-        window.addEventListener('scroll', () => {
-            if (keyboardIsShowing) {
-                window.scrollTo(0, 0);
-            }
-        });
-
-        // Expand the focused panel (vars or formulas) for the keyboard
-        // After keyboard resize, ensure the textarea scrolls to show the caret
-        // (iOS doesn't auto-scroll textareas to the cursor on focus)
+        // After keyboard resize, ensure the textarea / input scrolls to show the caret
+        // (iOS doesn't auto-scroll to the cursor on focus)
         function ensureActiveCaretVisible() {
             const active = document.activeElement;
             if (active && active.tagName === 'TEXTAREA') {
@@ -1212,9 +1193,12 @@ function setupEventListeners() {
                 if (info && info.editor && info.editor.textarea === active) {
                     info.editor.ensureCaretVisible();
                 }
+            } else if (active && active.tagName === 'INPUT') {
+                active.scrollIntoView({ block: 'center' });
             }
         }
 
+        // Expand the focused panel (vars or formulas) for the keyboard
         function adjustPanelForFocus(active) {
             const info = UI.editors.get(UI.currentRecordId);
             if (!info) return;
@@ -1223,7 +1207,6 @@ function setupEventListeners() {
             const formulasPanel = info.container.querySelector('.formulas-panel');
             if (!variablesPanel || !formulasPanel || !info.container.contains(active)) return;
 
-            kbDividerAdjusted = true;
             const varsHeader = variablesPanel.querySelector('.variables-header');
             const varsHeaderH = varsHeader ? varsHeader.offsetHeight : 0;
             const divider = info.container.querySelector('.panel-divider');
@@ -1239,54 +1222,52 @@ function setupEventListeners() {
             }
         }
 
+        // Track focusin on panel inputs — gates keyboard detection in VP resize
+        document.addEventListener('focusin', (e) => {
+            if (_keyboardIsShowing) return;
+
+            const info = UI.editors.get(UI.currentRecordId);
+            if (!info) return;
+            const variablesPanel = info.container.querySelector('.variables-panel');
+            const formulasPanel = info.container.querySelector('.formulas-panel');
+            if (!variablesPanel || !formulasPanel) return;
+            if (!variablesPanel.contains(e.target) && !formulasPanel.contains(e.target)) return;
+
+            panelFocusTime = Date.now();
+            vpHeightAtFocus = window.visualViewport.height;
+        });
+
+        // VP resize: detect keyboard and handle dismiss
         window.visualViewport.addEventListener('resize', () => {
             const vpHeight = window.visualViewport.height;
-            const recentFocus = (Date.now() - lastFocusInTime) < 1000;
-            keyboardIsShowing = (recentFocus || keyboardIsShowing) && vpHeight < vpHeightAtFocus * 0.85;
+            const recentPanelFocus = (Date.now() - panelFocusTime) < 1000;
+            const kbDetected = (recentPanelFocus || _keyboardIsShowing) && vpHeight < vpHeightAtFocus * 0.85;
             const appContainer = document.querySelector('.app-container');
             if (!appContainer) return;
 
-            if (keyboardIsShowing) {
-                const kbJustAppeared = !kbDividerAdjusted;
+            if (kbDetected) {
+                _keyboardIsShowing = true;
                 appContainer.style.height = vpHeight + 'px';
-                adjustPanelForFocus(document.activeElement);
-                window.scrollTo(0, 0);
-                // Only scroll to caret when keyboard first appears, not on focus changes
-                if (kbJustAppeared) {
-                    requestAnimationFrame(ensureActiveCaretVisible);
+                // allow user to switch panels without panel adjustment
+                if (recentPanelFocus) {
+                    adjustPanelForFocus(document.activeElement);
+                    ensureActiveCaretVisible();
                 }
-            } else if (kbDividerAdjusted) {
+                appContainer.scrollIntoView(true);
+            } else if (_keyboardIsShowing && vpHeight >= vpHeightAtFocus * 0.85) {
+                // Keyboard dismissed
                 appContainer.style.removeProperty('height');
-                kbDividerAdjusted = false;
+                _keyboardIsShowing = false;
                 restoreDividerHeight(UI.currentRecordId);
                 // Blur so next tap triggers focusin for keyboard detection
                 if (document.activeElement) document.activeElement.blur();
             }
         });
-
-        // Safety net: if visualViewport handler missed the panel adjustment
-        // (e.g. iOS textarea focus timing), retry after keyboard has appeared
-        let focusTimer = null;
-        document.addEventListener('focusin', (e) => {
-            lastFocusInTime = Date.now();
-            clearTimeout(focusTimer);
-            if (!kbDividerAdjusted) vpHeightAtFocus = window.visualViewport.height;
-            focusTimer = setTimeout(() => {
-                const vpHeight = window.visualViewport.height;
-                if (!kbDividerAdjusted && vpHeight < vpHeightAtFocus * 0.85) {
-                    const appContainer = document.querySelector('.app-container');
-                    if (appContainer) appContainer.style.height = vpHeight + 'px';
-                    adjustPanelForFocus(e.target);
-                    window.scrollTo(0, 0);
-                    requestAnimationFrame(ensureActiveCaretVisible);
-                }
-            }, 500);
-        });
     }
 
     // Clamp divider and re-align variable name widths on window resize
     window.addEventListener('resize', () => {
-        if (!kbDividerAdjusted) restoreDividerHeight(UI.currentRecordId);
+        if (!_keyboardIsShowing) restoreDividerHeight(UI.currentRecordId);
         const editorInfo = UI.editors.get(UI.currentRecordId);
         if (editorInfo) editorInfo.variablesManager.alignNameWidths();
     });
@@ -1646,7 +1627,7 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
 
         // Save divider position to current record
         const record = findRecord(UI.data, UI.currentRecordId);
-        if (record) {
+        if (record && !_keyboardIsShowing) {
             record.dividerHeight = topPanel.offsetHeight;
             debouncedSave(UI.data);
         }
@@ -1654,8 +1635,6 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
 
     document.addEventListener('pointerup', endDrag);
     document.addEventListener('pointercancel', endDrag);
-
-    // Window resize clamping handled by restoreDividerHeight() in visualViewport handler
 }
 
 /**
