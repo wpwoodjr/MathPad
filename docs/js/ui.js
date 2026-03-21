@@ -1207,14 +1207,10 @@ function setupEventListeners() {
             const formulasPanel = info.container.querySelector('.formulas-panel');
             if (!variablesPanel || !formulasPanel || !info.container.contains(active)) return;
 
-            const varsHeader = variablesPanel.querySelector('.variables-header');
-            const varsHeaderH = varsHeader ? varsHeader.offsetHeight : 0;
-            const divider = info.container.querySelector('.panel-divider');
-            const dividerH = divider ? divider.offsetHeight : 0;
-            const fmtHeader = formulasPanel.querySelector('.formulas-header');
-            const fmtHeaderH = fmtHeader ? fmtHeader.offsetHeight : 0;
-
+            const varsHeaderH = variablesPanel.querySelector('.variables-header').offsetHeight;
             if (variablesPanel.contains(active)) {
+                const dividerH = info.container.querySelector('.panel-divider').offsetHeight;
+                const fmtHeaderH = formulasPanel.querySelector('.formulas-header').offsetHeight;
                 const maxH = info.container.offsetHeight - dividerH - fmtHeaderH;
                 variablesPanel.style.height = Math.max(varsHeaderH, maxH) + 'px';
             } else if (formulasPanel.contains(active)) {
@@ -1247,20 +1243,27 @@ function setupEventListeners() {
 
             if (kbDetected) {
                 _keyboardIsShowing = true;
-                appContainer.style.height = vpHeight + 'px';
+                const _info = UI.editors.get(UI.currentRecordId);
+                const _varsPanel = _info && _info.container.querySelector('.variables-panel');
+                // Reclaim header/tabs space since they'll be scrolled off
+                const extraH = _varsPanel
+                    ? _varsPanel.getBoundingClientRect().top - appContainer.getBoundingClientRect().top
+                    : 0;
+                appContainer.style.height = (vpHeight + extraH) + 'px';
                 // allow user to switch panels without panel adjustment
                 if (recentPanelFocus) {
                     adjustPanelForFocus(document.activeElement);
                     ensureActiveCaretVisible();
                 }
-                // -1px tricks the browser into actually scrolling (0px is a no-op)
-                appContainer.style.scrollMarginTop = '-1px';
-                appContainer.scrollIntoView(true);
+                if (_varsPanel) _varsPanel.querySelector('.variables-header').scrollIntoView(true);
             } else if (_keyboardIsShowing && vpHeight >= vpHeightAtFocus * 0.85) {
                 // Keyboard dismissed
                 appContainer.style.removeProperty('height');
                 _keyboardIsShowing = false;
                 restoreDividerHeight(UI.currentRecordId);
+                // -1px tricks the browser into actually scrolling (0px is a no-op)
+                appContainer.style.scrollMarginTop = '-1px';
+                appContainer.scrollIntoView(true);
                 // Blur so next tap triggers focusin for keyboard detection
                 if (document.activeElement) document.activeElement.blur();
             }
