@@ -223,7 +223,7 @@ button {
 
 .btn-icon {
     background-color: transparent;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     padding: 6px 10px;
 }
 
@@ -811,9 +811,10 @@ button {
 }
 
 .btn-drive-signin {
-    font-size: 12px;
-    padding: 4px 12px;
     white-space: nowrap;
+}
+.btn-drive-signin .signin-icon {
+    display: none;
 }
 
 .btn-drive-avatar {
@@ -964,7 +965,7 @@ button {
     align-items: center;
     justify-content: center;
     background: transparent;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-size: 18px;
     padding: 8px;
 }
@@ -1179,14 +1180,21 @@ button {
     .header-right {
         gap: 2px;
     }
-}
 
-@media (max-width: 480px) {
-    .btn-drive-signin {
-        font-size: 11px;
-        padding: 3px 8px;
+    .btn-drive-signin .signin-text {
+        display: none;
     }
-
+    .btn-drive-signin .signin-icon {
+        display: inline;
+        font-size: 16px;
+        -webkit-text-stroke: 1px var(--text-primary);
+        color: transparent;
+    }
+    .btn-drive-signin {
+        padding: 2px 6px;
+        border: none;
+        background: transparent;
+    }
 
     .drive-dropdown {
         right: 8px;
@@ -1199,14 +1207,22 @@ button {
         margin-right: 10px;
     }
 
+    .header-center {
+        gap: 2px;
+    }
+
     .app-header button {
         min-width: 30px;
         padding: 6px 4px;
-        font-size: 14px;
     }
 
-    #btn-undo, #btn-redo {
+    .app-header button.settings-btn,
+    .app-header #btn-undo,
+    .app-header #btn-redo {
         font-size: 16px;
+        padding: 2px 4px;
+        min-width: unset;
+        margin-left: 4px;
     }
 }
 
