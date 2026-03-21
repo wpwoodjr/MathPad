@@ -1253,6 +1253,8 @@ function setupEventListeners() {
                     adjustPanelForFocus(document.activeElement);
                     ensureActiveCaretVisible();
                 }
+                // -1px tricks the browser into actually scrolling (0px is a no-op)
+                appContainer.style.scrollMarginTop = '-1px';
                 appContainer.scrollIntoView(true);
             } else if (_keyboardIsShowing && vpHeight >= vpHeightAtFocus * 0.85) {
                 // Keyboard dismissed
