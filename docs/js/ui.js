@@ -1198,13 +1198,28 @@ function setupEventListeners() {
         }
 
         // Expand the focused panel (vars or formulas) for the keyboard
-        function adjustPanelForFocus(active) {
+        // If proportional, scale divider to maintain same ratio as fullscreen
+        function adjustPanelForFocus(active, proportional) {
             const info = UI.editors.get(UI.currentRecordId);
             if (!info) return;
 
             const variablesPanel = info.container.querySelector('.variables-panel');
             const formulasPanel = info.container.querySelector('.formulas-panel');
             if (!variablesPanel || !formulasPanel || !info.container.contains(active)) return;
+
+            if (proportional) {
+                const record = findRecord(UI.data, UI.currentRecordId);
+                const savedH = record && record.dividerHeight;
+                if (savedH) {
+                    // Calculate what percentage the divider was at fullscreen
+                    const fullContainerH = vpHeightAtFocus - variablesPanel.offsetTop
+                        - document.querySelector('.status-bar').offsetHeight;
+                    const ratio = savedH / fullContainerH;
+                    const kbContainerH = info.container.offsetHeight;
+                    variablesPanel.style.height = Math.round(ratio * kbContainerH) + 'px';
+                    return;
+                }
+            }
 
             const varsHeaderH = variablesPanel.querySelector('.variables-header').offsetHeight;
             if (variablesPanel.contains(active)) {
@@ -1229,7 +1244,9 @@ function setupEventListeners() {
             if (!variablesPanel.contains(e.target) && !formulasPanel.contains(e.target)) return;
 
             panelFocusTime = Date.now();
-            vpHeightAtFocus = window.visualViewport.height;
+            // avoid Chrome bug on iOS where it has stale window.visualViewport.height
+            // vpHeightAtFocus = window.visualViewport.height;
+            vpHeightAtFocus = window.innerHeight;
         });
 
         // VP resize: detect keyboard and handle dismiss
@@ -1244,18 +1261,30 @@ function setupEventListeners() {
                 _keyboardIsShowing = true;
                 const _info = UI.editors.get(UI.currentRecordId);
                 const _varsPanel = _info && _info.container.querySelector('.variables-panel');
-                // Reclaim header/tabs space since they'll be scrolled off
-                const extraH = _varsPanel
-                    ? _varsPanel.getBoundingClientRect().top - appContainer.getBoundingClientRect().top
-                    : 0;
-                appContainer.style.height = (vpHeight + extraH) + 'px';
-                // allow user to switch panels without panel adjustment
-                if (recentPanelFocus) {
-                    adjustPanelForFocus(document.activeElement);
-                    ensureActiveCaretVisible();
+                if (vpHeight < vpHeightAtFocus * 0.60) {
+                    // Reclaim header/tabs space since they'll be scrolled off
+                    const extraH = _varsPanel
+                        ? _varsPanel.getBoundingClientRect().top - appContainer.getBoundingClientRect().top
+                        : 0;
+                    appContainer.style.height = (vpHeight + extraH) + 'px';
+                    // allow user to switch panels without panel adjustment
+                    if (recentPanelFocus) {
+                        adjustPanelForFocus(document.activeElement);
+                        ensureActiveCaretVisible();
+                    }
+                    if (_varsPanel) _varsPanel.querySelector('.variables-header').scrollIntoView(true);
+                } else {
+                    // on taller devices show whole app with both panels proportionally sized
+                    appContainer.style.height = vpHeight + 'px';
+                    if (recentPanelFocus) {
+                        adjustPanelForFocus(document.activeElement, true);
+                        ensureActiveCaretVisible();
+                    }
+                    // -1px tricks the browser into actually scrolling (0px is a no-op)
+                    appContainer.style.scrollMarginTop = '-1px';
+                    appContainer.scrollIntoView(true);
                 }
-                if (_varsPanel) _varsPanel.querySelector('.variables-header').scrollIntoView(true);
-            } else if (_keyboardIsShowing && vpHeight >= vpHeightAtFocus * 0.85) {
+            } else if (_keyboardIsShowing) {
                 // Keyboard dismissed
                 appContainer.style.removeProperty('height');
                 _keyboardIsShowing = false;
@@ -1270,11 +1299,16 @@ function setupEventListeners() {
     }
 
     // Clamp divider and re-align variable name widths on window resize
+    let kbdTimeout = null;
     window.addEventListener('resize', () => {
-        // chrome needs time to settle on orientation change
-        if (!_keyboardIsShowing) setTimeout(() => { restoreDividerHeight(UI.currentRecordId) }, 100);
-        const editorInfo = UI.editors.get(UI.currentRecordId);
-        if (editorInfo) editorInfo.variablesManager.alignNameWidths();
+        // chrome needs time to settle on orientation changes
+        if (kbdTimeout) clearTimeout(kbdTimeout);
+        kbdTimeout = setTimeout(() => {
+            kbdTimeout = null;
+            if (!_keyboardIsShowing) restoreDividerHeight(UI.currentRecordId);
+            const editorInfo = UI.editors.get(UI.currentRecordId);
+            if (editorInfo) editorInfo.variablesManager.alignNameWidths();
+        }, 100);
     });
 }
 

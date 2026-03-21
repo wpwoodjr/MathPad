@@ -375,7 +375,7 @@ class VariablesPanel {
             valueElement = document.createElement('input');
             valueElement.type = 'text';
             valueElement.className = 'variable-value-input';
-            valueElement.inputMode = 'decimal';
+            valueElement.inputMode = 'text';
             valueElement.spellcheck = false;
             valueElement.setAttribute('autocapitalize', 'none');
             valueElement.setAttribute('autocorrect', 'off');
