@@ -518,19 +518,18 @@ function restoreDividerHeight(recordId) {
         variablesPanel.style.height = Math.max(minTop, Math.min(maxTop, record.dividerHeight)) + 'px';
     } else {
         // Auto-fit: size to content, clamped between 1/4 and 3/4 of container
-        requestAnimationFrame(() => {
-            const containerHeight = editorInfo.container.offsetHeight;
-            const table = variablesPanel.querySelector('.variables-table');
-            const header = variablesPanel.querySelector('.variables-header');
-            const headerHeight = header ? header.offsetHeight : 0;
-            const contentHeight = (table ? table.scrollHeight : 0) + headerHeight;
-            const minHeight = containerHeight * 0.25;
-            const maxHeight = containerHeight * 0.75;
-            const fitHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight));
-            variablesPanel.style.height = fitHeight + 'px';
-            record.dividerHeight = fitHeight;
-            debouncedSave(UI.data);
-        });
+        variablesPanel.style.height = 0 + 'px';     // ensures scrollHeight reflects true content height, not the container height
+        const containerHeight = editorInfo.container.offsetHeight;
+        const table = variablesPanel.querySelector('.variables-table');
+        const header = variablesPanel.querySelector('.variables-header');
+        const headerHeight = header ? header.offsetHeight : 0;
+        const contentHeight = (table ? table.scrollHeight : 0) + headerHeight;
+        const minHeight = containerHeight * 0.25;
+        const maxHeight = containerHeight * 0.75;
+        const fitHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight));
+        variablesPanel.style.height = fitHeight + 'px';
+        record.dividerHeight = fitHeight;
+        debouncedSave(UI.data);
     }
 }
 
@@ -1272,7 +1271,8 @@ function setupEventListeners() {
 
     // Clamp divider and re-align variable name widths on window resize
     window.addEventListener('resize', () => {
-        if (!_keyboardIsShowing) restoreDividerHeight(UI.currentRecordId);
+        // chrome needs time to settle on orientation change
+        if (!_keyboardIsShowing) setTimeout(() => { restoreDividerHeight(UI.currentRecordId) }, 100);
         const editorInfo = UI.editors.get(UI.currentRecordId);
         if (editorInfo) editorInfo.variablesManager.alignNameWidths();
     });
