@@ -70,6 +70,9 @@ function initUI(data) {
     // Set up event listeners
     setupEventListeners();
 
+    // Set up sidebar resizer and restore width
+    setupSidebarResizer();
+
     // Restore open tabs, or open last viewed record, or first record
     if (data.records.length > 0) {
         const savedTabs = (data.settings && data.settings.openTabs) || [];
@@ -845,12 +848,7 @@ function updateRecordTitleFromContent(record) {
     if (isReferenceRecord(record)) {
         return;
     }
-    let newTitle = getTitleFromContent(record.text);
-
-    // Truncate long titles
-    if (newTitle.length > 30) {
-        newTitle = newTitle.substring(0, 30) + '...';
-    }
+    const newTitle = getTitleFromContent(record.text);
 
     if (newTitle !== record.title) {
         record.title = newTitle;
@@ -1691,6 +1689,56 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
 }
 
 /**
+ * Setup sidebar resizer
+ */
+function setupSidebarResizer() {
+    const divider = document.getElementById('sidebar-divider');
+    const sidebar = document.getElementById('sidebar');
+    if (!divider || !sidebar) return;
+
+    // Restore saved width
+    const savedWidth = UI.data && UI.data.settings && UI.data.settings.sidebarWidth;
+    if (savedWidth) {
+        sidebar.style.width = savedWidth + 'px';
+    }
+
+    let startX, startWidth, dragging = false;
+
+    divider.style.touchAction = 'none';
+
+    divider.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        dragging = true;
+        startX = e.clientX;
+        startWidth = sidebar.offsetWidth;
+        divider.classList.add('dragging');
+        document.body.classList.add('sidebar-resizing');
+    });
+
+    document.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const delta = e.clientX - startX;
+        const newWidth = Math.max(100, Math.min(350, startWidth + delta));
+        sidebar.style.width = newWidth + 'px';
+    });
+
+    function endDrag() {
+        if (!dragging) return;
+        dragging = false;
+        divider.classList.remove('dragging');
+        document.body.classList.remove('sidebar-resizing');
+
+        if (UI.data && UI.data.settings) {
+            UI.data.settings.sidebarWidth = sidebar.offsetWidth;
+            debouncedSave(UI.data);
+        }
+    }
+
+    document.addEventListener('pointerup', endDrag);
+    document.addEventListener('pointercancel', endDrag);
+}
+
+/**
  * Reload the entire UI with new data (e.g. from Drive).
  * Replaces localStorage, clears editors, re-renders everything.
  */
@@ -1715,6 +1763,13 @@ function reloadUIWithData(newData) {
     renderSidebar(true);
     renderTabBar();
     renderDetailsPanel();
+
+    // Restore sidebar width from new data
+    const sidebar = document.getElementById('sidebar');
+    const savedWidth = UI.data.settings && UI.data.settings.sidebarWidth;
+    if (sidebar) {
+        sidebar.style.width = savedWidth ? savedWidth + 'px' : '';
+    }
 
     // Open the last viewed record or the first record
     const lastRecordId = UI.data.settings && UI.data.settings.lastRecordId;
