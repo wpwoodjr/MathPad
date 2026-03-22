@@ -5,6 +5,12 @@
 // true when pop-up keyboard is detected
 let _keyboardIsShowing = false;
 
+// Debug log to status bar — remove when done
+function _debugLog(msg) {
+    const el = document.getElementById('status-text');
+    if (el) el.textContent = msg;
+}
+
 /**
  * Application state (separate from DOM references)
  */
@@ -1250,51 +1256,58 @@ function setupEventListeners() {
         });
 
         // VP resize: detect keyboard and handle dismiss
+        let kbdTimeout2 = null;
         window.visualViewport.addEventListener('resize', () => {
-            const vpHeight = window.visualViewport.height;
             const recentPanelFocus = (Date.now() - panelFocusTime) < 1000;
-            const kbDetected = (recentPanelFocus || _keyboardIsShowing) && vpHeight < vpHeightAtFocus * 0.85;
-            const appContainer = document.querySelector('.app-container');
-            if (!appContainer) return;
+            if (kbdTimeout2) clearTimeout(kbdTimeout2);
+            kbdTimeout2 = setTimeout(() => {
+                kbdTimeout2 = null;
+                const vpHeight = window.visualViewport.height;
+                const vpScale = window.visualViewport.scale;
+                _debugLog(vpScale.toFixed(3) + " " + (vpHeight/vpHeightAtFocus).toFixed(2));
+                const kbDetected = vpScale === 1 && (recentPanelFocus || _keyboardIsShowing) && vpHeight < vpHeightAtFocus * 0.85;
+                const appContainer = document.querySelector('.app-container');
+                if (!appContainer) return;
 
-            if (kbDetected) {
-                _keyboardIsShowing = true;
-                const _info = UI.editors.get(UI.currentRecordId);
-                const _varsPanel = _info && _info.container.querySelector('.variables-panel');
-                if (vpHeight < vpHeightAtFocus * 0.60) {
-                    // Reclaim header/tabs space since they'll be scrolled off
-                    const extraH = _varsPanel
-                        ? _varsPanel.getBoundingClientRect().top - appContainer.getBoundingClientRect().top
-                        : 0;
-                    appContainer.style.height = (vpHeight + extraH) + 'px';
-                    // allow user to switch panels without panel adjustment
-                    if (recentPanelFocus) {
-                        adjustPanelForFocus(document.activeElement);
-                        ensureActiveCaretVisible();
+                if (kbDetected) {
+                    _keyboardIsShowing = true;
+                    const _info = UI.editors.get(UI.currentRecordId);
+                    const _varsPanel = _info && _info.container.querySelector('.variables-panel');
+                    if (vpHeight < vpHeightAtFocus * 0.60) {
+                        // Reclaim header/tabs space since they'll be scrolled off
+                        const extraH = _varsPanel
+                            ? _varsPanel.getBoundingClientRect().top - appContainer.getBoundingClientRect().top
+                            : 0;
+                        appContainer.style.height = (vpHeight + extraH) + 'px';
+                        // allow user to switch panels without panel adjustment
+                        if (recentPanelFocus) {
+                            adjustPanelForFocus(document.activeElement);
+                            ensureActiveCaretVisible();
+                        }
+                        if (_varsPanel) _varsPanel.querySelector('.variables-header').scrollIntoView(true);
+                    } else {
+                        // on taller devices show whole app with both panels proportionally sized
+                        appContainer.style.height = vpHeight + 'px';
+                        if (recentPanelFocus) {
+                            adjustPanelForFocus(document.activeElement, true);
+                            ensureActiveCaretVisible();
+                        }
+                        // -1px tricks the browser into actually scrolling (0px is a no-op)
+                        appContainer.style.scrollMarginTop = '-1px';
+                        appContainer.scrollIntoView(true);
                     }
-                    if (_varsPanel) _varsPanel.querySelector('.variables-header').scrollIntoView(true);
-                } else {
-                    // on taller devices show whole app with both panels proportionally sized
-                    appContainer.style.height = vpHeight + 'px';
-                    if (recentPanelFocus) {
-                        adjustPanelForFocus(document.activeElement, true);
-                        ensureActiveCaretVisible();
-                    }
+                } else if (_keyboardIsShowing) {
+                    // Keyboard dismissed
+                    appContainer.style.removeProperty('height');
+                    _keyboardIsShowing = false;
+                    restoreDividerHeight(UI.currentRecordId);
                     // -1px tricks the browser into actually scrolling (0px is a no-op)
                     appContainer.style.scrollMarginTop = '-1px';
                     appContainer.scrollIntoView(true);
+                    // Blur so next tap triggers focusin for keyboard detection
+                    if (document.activeElement) document.activeElement.blur();
                 }
-            } else if (_keyboardIsShowing) {
-                // Keyboard dismissed
-                appContainer.style.removeProperty('height');
-                _keyboardIsShowing = false;
-                restoreDividerHeight(UI.currentRecordId);
-                // -1px tricks the browser into actually scrolling (0px is a no-op)
-                appContainer.style.scrollMarginTop = '-1px';
-                appContainer.scrollIntoView(true);
-                // Blur so next tap triggers focusin for keyboard detection
-                if (document.activeElement) document.activeElement.blur();
-            }
+            }, 100);
         });
     }
 
