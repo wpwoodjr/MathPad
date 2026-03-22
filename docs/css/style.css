@@ -291,6 +291,26 @@ button {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    flex-shrink: 0;
+}
+
+.sidebar-divider {
+    width: 9px;
+    cursor: col-resize;
+    background: var(--bg-tertiary);
+    border-right: 1px solid var(--border-color);
+    flex-shrink: 0;
+    transition: background-color 0.15s;
+}
+
+@media (hover: hover) {
+    .sidebar-divider:hover {
+        background: var(--accent-primary);
+    }
+}
+
+.sidebar-divider.dragging {
+    background: var(--accent-primary);
 }
 
 .sidebar-header {
@@ -348,12 +368,6 @@ button {
     margin-left: 4px;
     cursor: pointer;
     border-radius: 3px;
-    opacity: 0;
-}
-
-.category-header:hover .category-sort,
-.category-sort.active {
-    opacity: 1;
 }
 
 .category-sort:hover {
@@ -438,6 +452,7 @@ button {
 
 .sidebar-actions-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 8px;
 }
@@ -1094,6 +1109,10 @@ button {
         display: none;
     }
 
+    .sidebar-divider {
+        display: none;
+    }
+
     /* Slide-out sidebar drawer */
     .sidebar {
         position: fixed;
@@ -1249,7 +1268,6 @@ button {
     height: 9px;
     background: var(--bg-tertiary);
     cursor: row-resize;
-    border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
     transition: background-color 0.15s;
     flex-shrink: 0;
@@ -1264,7 +1282,7 @@ button {
     background: var(--accent-primary);
 }
 
-/* Larger touch target for panel divider on mobile */
+/* Larger touch targets for dividers on mobile */
 @media (pointer: coarse) {
     .panel-divider {
         height: 12px;
@@ -1281,12 +1299,33 @@ button {
         bottom: -16px;
         touch-action: none;
     }
+
+    .sidebar-divider {
+        width: 12px;
+        position: relative;
+    }
+
+    .sidebar-divider::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -16px;
+        right: -16px;
+        touch-action: none;
+    }
 }
 
 /* Force cursor during panel resize */
 body.panel-resizing,
 body.panel-resizing * {
     cursor: row-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+body.sidebar-resizing,
+body.sidebar-resizing * {
+    cursor: col-resize !important;
     user-select: none !important;
     -webkit-user-select: none !important;
 }
