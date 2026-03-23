@@ -764,11 +764,15 @@ function solveRecord(text, context, record, parserTokens) {
 
     // Pass 4: Evaluate tables (after all normal solving is complete)
     const tables = [];
+    const savedVars = new Map(context.variables);
     for (const td of tableDefs) {
+        // Restore outer context so tables don't leak state to each other
+        context.variables = new Map(savedVars);
         const tableResult = evaluateTable(td, context, record);
         errors.push(...tableResult.errors);
         tables.push(tableResult);
     }
+    context.variables = savedVars;
 
     // Pass 5: Append references section showing used constants and functions
     // Skip for reference records (Constants, Functions, Default Settings)
@@ -875,6 +879,10 @@ function evaluateTable(tableDef, context, record) {
         }
     }
 
+    // Find equations in body
+    const bodyEqs = findEquationsAndOutputs(tableDef.bodyText, bodyTokens, null);
+    const equations = bodyEqs.equations;
+
     // Pre-parse definition expressions
     const defASTs = [];
     for (const def of definitions) {
@@ -898,6 +906,10 @@ function evaluateTable(tableDef, context, record) {
         groupDigits: record.groupDigits || false
     };
 
+    // Build set of definition names and snapshot pre-table variable values
+    const defNames = new Set(defASTs.map(d => d.name));
+    const preTableVars = new Set(context.variables.keys());
+
     // Iterate
     const rows = [];
     let prevValues = new Map();  // previous row's variable values
@@ -914,6 +926,16 @@ function evaluateTable(tableDef, context, record) {
         // Set up pre-solve values for this row (previous row's values)
         context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
 
+        // Clear equation unknowns: variables that weren't in the outer context,
+        // aren't the iterator, and aren't computed by definitions
+        for (const col of columns) {
+            if (!col.ast && col.name !== tableDef.iteratorName
+                && !defNames.has(col.name) && !preTableVars.has(col.name)) {
+                context.variables.delete(col.name);
+                context.declareVariable(col.name);
+            }
+        }
+
         // Set iterator variable
         context.setVariable(tableDef.iteratorName, val);
 
@@ -925,6 +947,42 @@ function evaluateTable(tableDef, context, record) {
                 context.setVariable(name, value);
             } catch (e) {
                 // Skip errors during iteration (e.g., var~ on row 0)
+            }
+        }
+
+        // Solve equations (Brent's method) for this row
+        for (const eq of equations) {
+            try {
+                const variables = buildVariablesMap([], context);
+                const result = solveEquationInContext(
+                    eq.text, eq.startLine, context, variables,
+                    new Map(), eq.leftText, eq.rightText, eq.modN || null
+                );
+                if (result.solved && result.variable && result.value !== undefined) {
+                    context.setVariable(result.variable, result.value);
+                } else if (result.tooManyUnknowns && !eq._errorReported) {
+                    eq._errorReported = true;
+                    const eqLine = tableDef.startLine + eq.startLine;
+                    errors.push(`Line ${eqLine}: Table equation has too many unknowns: ${result.tooManyUnknowns.join(', ')}`);
+                } else if (!result.solved && !result.tooManyUnknowns && !eq._errorReported) {
+                    // Check balance — 0 unknowns but might not balance
+                    try {
+                        const leftVal = evaluate(parseExpression(eq.leftText), context);
+                        const rightVal = evaluate(parseExpression(eq.rightText), context);
+                        const places = record.places != null ? record.places : 4;
+                        const bal = eq.modN
+                            ? modCheckBalance(leftVal, rightVal, record.degreesMode ? 360 : 2 * Math.PI, places)
+                            : checkBalance(leftVal, rightVal, places);
+                        if (!bal.balanced) {
+                            eq._errorReported = true;
+                            const eqLine = tableDef.startLine + eq.startLine;
+                            const eqText = eq.text.trim().length > 30 ? eq.text.trim().substring(0, 30) + '...' : eq.text.trim();
+                            errors.push(`Line ${eqLine}: Table equation doesn't balance at row ${rowCount}: ${eqText}`);
+                        }
+                    } catch (e) { /* skip eval errors */ }
+                }
+            } catch (e) {
+                // Skip equation errors during iteration
             }
         }
 
@@ -952,7 +1010,13 @@ function evaluateTable(tableDef, context, record) {
             const v = context.getVariable(name);
             if (v !== undefined) prevValues.set(name, v);
         }
-        // Also capture the iterator
+        // Also capture output column variables and the iterator
+        for (const col of columns) {
+            if (!col.ast) {
+                const v = context.getVariable(col.name);
+                if (v !== undefined) prevValues.set(col.name, v);
+            }
+        }
         prevValues.set(tableDef.iteratorName, val);
     }
 

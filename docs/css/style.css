@@ -1524,7 +1524,7 @@ body.sidebar-resizing * {
     border-bottom: 2px solid var(--border-color);
     color: var(--syn-keyword);
     font-weight: 600;
-    font-size: 1.15em;
+    /* font-size: 1.15em; */
     white-space: nowrap;
 }
 

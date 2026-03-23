@@ -17,3 +17,31 @@ table(n; 0; 5) = {
   No clear y/x:>>
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Test table with equation"
+
+--Variables--
+table(x; 0; 5) = {
+  y**2 = x
+  x->
+  y->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Line 7: Table equation doesn't balance at row 0: y**2 = x"; StatusIsError = 1
+"Test table equation doesn't balance"
+
+--Variables--
+y: 17
+
+table(x; 0; 3) = {
+  y**2 = x
+  x->
+  y->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
