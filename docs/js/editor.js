@@ -1027,15 +1027,24 @@ class SimpleEditor {
 
         const block = value.substring(lineStart, blockEnd);
         const lines = block.split('\n');
-        const newLines = lines.map(line => '  ' + line);
+        let totalAdded = 0;
+        let firstLineAdded = 0;
+        const newLines = lines.map((line, i) => {
+            if (line.length > 0) {
+                if (i === 0) firstLineAdded = 2;
+                totalAdded += 2;
+                return '  ' + line;
+            }
+            return line;
+        });
         const newBlock = newLines.join('\n');
 
         this.replaceRange(lineStart, blockEnd, newBlock);
 
         // Adjust selection
-        let newStart = (start === lineStart) ? lineStart : start + 2;
+        let newStart = (start === lineStart) ? lineStart : start + firstLineAdded;
         ta.selectionStart = newStart;
-        ta.selectionEnd = end + (lines.length * 2);
+        ta.selectionEnd = end + totalAdded;
     }
 
     /**
