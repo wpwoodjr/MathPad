@@ -1500,6 +1500,45 @@ body.sidebar-resizing * {
     background: transparent;
 }
 
+/* Table output */
+.variable-table-container {
+    display: block;
+    padding: 4px 8px;
+    white-space: normal;
+    min-height: auto;
+}
+
+.variable-table-container:hover {
+    background: transparent;
+}
+
+.mathpad-table {
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 14px;
+}
+
+.mathpad-table th {
+    padding: 4px 8px;
+    text-align: right;
+    border-bottom: 2px solid var(--border-color);
+    color: var(--syn-keyword);
+    font-weight: 600;
+    font-size: 1.15em;
+    white-space: nowrap;
+}
+
+.mathpad-table td {
+    padding: 2px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.mathpad-table tr:hover {
+    background: var(--bg-hover);
+}
+
 .variable-solve-btn {
     background: transparent;
     border: none;

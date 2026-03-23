@@ -726,9 +726,20 @@ function solveRecord(text, context, record, parserTokens) {
     // These are available via the ? operator and as stale fallback for ~
     context.preSolveValues = context.preSolveValues || capturePreSolveValues(text, allTokens);
 
+    // Detect table definitions and build skip set
+    const tableDefs = findTableDefinitions(text, allTokens);
+    const tableLines = new Set();
+    for (const td of tableDefs) {
+        for (let l = td.startLine; l <= td.endLine; l++) tableLines.add(l);
+    }
+    // Merge table lines into function def lines for equation skipping
+    if (context.localFunctionLines) {
+        for (const l of tableLines) context.localFunctionLines.add(l);
+    }
+
     // Clear output variables and expression outputs so they become unknowns for solving
-    // Uses 'solve' mode to also clear persistent outputs (=> =>>)
-    const clearResult = clearVariables(text, 'solve', allTokens);
+    // Uses 'solve' mode to also clear persistent outputs (:> :>>)
+    const clearResult = clearVariables(text, 'solve', allTokens, tableLines.size > 0 ? tableLines : null);
     text = clearResult.text;
     allTokens = clearResult.allTokens;
 
@@ -736,7 +747,7 @@ function solveRecord(text, context, record, parserTokens) {
     context.clearUsageTracking();
 
     // Pass 1: Variable Discovery (evaluates \expr\, parses declarations)
-    const discovery = discoverVariables(text, context, record, allTokens);
+    const discovery = discoverVariables(text, context, record, allTokens, tableLines.size > 0 ? tableLines : null);
     text = discovery.text;
     allTokens = discovery.allTokens;
     const declarations = discovery.declarations;
@@ -751,14 +762,201 @@ function solveRecord(text, context, record, parserTokens) {
     text = formatResult.text;
     errors.push(...formatResult.errors);
 
-    // Pass 4: Append references section showing used constants and functions
+    // Pass 4: Evaluate tables (after all normal solving is complete)
+    const tables = [];
+    for (const td of tableDefs) {
+        const tableResult = evaluateTable(td, context, record);
+        errors.push(...tableResult.errors);
+        tables.push(tableResult);
+    }
+
+    // Pass 5: Append references section showing used constants and functions
     // Skip for reference records (Constants, Functions, Default Settings)
     const isInReferenceCategory = record.category === 'Reference';
     if (!isInReferenceCategory) {
         text = appendReferencesSection(text, context);
     }
 
-    return { text, solved: solveResult.solved, errors, equationVarStatus: solveResult.equationVarStatus };
+    return { text, solved: solveResult.solved, errors, equationVarStatus: solveResult.equationVarStatus, tables };
+}
+
+/**
+ * Evaluate a table definition: iterate variable from low to high,
+ * evaluating body definitions per row and collecting output column values.
+ */
+function evaluateTable(tableDef, context, record) {
+    const errors = [];
+
+    // Evaluate bounds
+    let low, high, step;
+    try {
+        low = evaluate(parseExpression(tableDef.lowExpr), context);
+    } catch (e) {
+        errors.push(`Line ${tableDef.startLine}: Table low bound cannot be evaluated — ${e.message}`);
+        return { columns: [], rows: [], startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+    }
+    try {
+        high = evaluate(parseExpression(tableDef.highExpr), context);
+    } catch (e) {
+        errors.push(`Line ${tableDef.startLine}: Table high bound cannot be evaluated — ${e.message}`);
+        return { columns: [], rows: [], startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+    }
+    if (tableDef.stepExpr) {
+        try {
+            step = evaluate(parseExpression(tableDef.stepExpr), context);
+        } catch (e) {
+            errors.push(`Line ${tableDef.startLine}: Table step cannot be evaluated — ${e.message}`);
+            return { columns: [], rows: [], startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+        }
+    } else {
+        step = low <= high ? 1 : -1;
+    }
+    if (step === 0) {
+        errors.push(`Line ${tableDef.startLine}: Table step cannot be zero`);
+        return { columns: [], rows: [], startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+    }
+
+    // Evaluate optional font size
+    let fontSize = null;
+    if (tableDef.fontSizeExpr) {
+        try {
+            fontSize = evaluate(parseExpression(tableDef.fontSizeExpr), context);
+        } catch (e) {
+            // Ignore — use default
+        }
+    }
+
+    // Parse body lines to identify definitions and output columns
+    const bodyTokens = new Tokenizer(tableDef.bodyText).tokenize();
+    const definitions = [];  // { name, exprText, lineIdx }
+    const columns = [];      // { name, format, fullPrecision, base }
+
+    for (let i = 0; i < bodyTokens.length; i++) {
+        const lineTokens = bodyTokens[i].filter(t => t.type !== TokenType.EOF);
+        if (lineTokens.length === 0) continue;
+
+        const parsed = parseMarkedLine(tableDef.bodyLines[i] || '', lineTokens);
+        if (!parsed) continue;
+
+        if (parsed.kind === 'declaration') {
+            if (parsed.type === VarType.INPUT) {
+                // Definition — extract expression text
+                const exprText = parsed.valueTokens && parsed.valueTokens.length > 0
+                    ? parsed.valueTokens.map(t => (t.ws || '') + (typeof t.value === 'object' ? t.value.raw || t.value : t.value)).join('')
+                    : null;
+                definitions.push({ name: parsed.name, exprText, lineIdx: i });
+            } else if (parsed.type === VarType.OUTPUT) {
+                // Output column — use label as header if present, else variable name
+                columns.push({
+                    name: parsed.name,
+                    header: (parsed.label && parsed.label.trim()) || parsed.name,
+                    format: parsed.format || null,
+                    fullPrecision: parsed.fullPrecision || false,
+                    base: parsed.base || 10
+                });
+            }
+        } else if (parsed.kind === 'expression-output') {
+            const exprText = tokensToText(parsed.exprTokens).trim();
+            const name = parsed.name || exprText;
+            let ast = null;
+            try {
+                ast = parseExpression(exprText);
+            } catch (e) {
+                errors.push(`Line ${tableDef.startLine}: Error in table expression '${exprText}' — ${e.message}`);
+            }
+            columns.push({
+                name: name,
+                header: (parsed.label && parsed.label.trim()) || name,
+                format: parsed.format || null,
+                fullPrecision: parsed.fullPrecision || false,
+                base: parsed.base || 10,
+                ast: ast
+            });
+        }
+    }
+
+    // Pre-parse definition expressions
+    const defASTs = [];
+    for (const def of definitions) {
+        if (!def.exprText) {
+            defASTs.push({ name: def.name, ast: null });
+            continue;
+        }
+        try {
+            defASTs.push({ name: def.name, ast: parseExpression(def.exprText.trim()) });
+        } catch (e) {
+            errors.push(`Line ${tableDef.startLine}: Error in table definition '${def.name}' — ${e.message}`);
+            defASTs.push({ name: def.name, ast: null });
+        }
+    }
+
+    // Format settings from record
+    const formatOpts = {
+        places: record.places != null ? record.places : 4,
+        stripZeros: record.stripZeros !== false,
+        numberFormat: record.format || 'float',
+        groupDigits: record.groupDigits || false
+    };
+
+    // Iterate
+    const rows = [];
+    let prevValues = new Map();  // previous row's variable values
+    const maxRows = 10000;       // safety limit
+
+    for (let val = low, rowCount = 0;
+         step > 0 ? val <= high : val >= high;
+         val += step, rowCount++) {
+        if (rowCount >= maxRows) {
+            errors.push(`Line ${tableDef.startLine}: Table exceeded ${maxRows} rows`);
+            break;
+        }
+
+        // Set up pre-solve values for this row (previous row's values)
+        context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
+
+        // Set iterator variable
+        context.setVariable(tableDef.iteratorName, val);
+
+        // Evaluate definitions in order
+        for (const { name, ast } of defASTs) {
+            if (!ast) continue;
+            try {
+                const value = evaluate(ast, context);
+                context.setVariable(name, value);
+            } catch (e) {
+                // Skip errors during iteration (e.g., var~ on row 0)
+            }
+        }
+
+        // Collect output values
+        const row = [];
+        for (const col of columns) {
+            let value;
+            if (col.ast) {
+                // Expression output — evaluate the expression
+                try { value = evaluate(col.ast, context); } catch (e) { /* skip */ }
+            } else {
+                value = context.getVariable(col.name);
+            }
+            if (value !== undefined) {
+                row.push(formatVariableValue(value, col.format, col.fullPrecision, formatOpts));
+            } else {
+                row.push('');
+            }
+        }
+        rows.push(row);
+
+        // Capture current values for next row's pre-solve
+        prevValues = new Map();
+        for (const { name } of defASTs) {
+            const v = context.getVariable(name);
+            if (v !== undefined) prevValues.set(name, v);
+        }
+        // Also capture the iterator
+        prevValues.set(tableDef.iteratorName, val);
+    }
+
+    return { columns, rows, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
 }
 
 // Export for use in other modules

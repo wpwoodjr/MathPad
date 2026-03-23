@@ -5,6 +5,7 @@
 // Built-in function names (case-insensitive) for syntax highlighting
 // Derived from evaluator's builtinFunctions to avoid duplicate source of truth
 const editorBuiltinFunctions = new Set(Object.keys(builtinFunctions));
+editorBuiltinFunctions.add('table');
 
 /**
  * Convert parser tokens to editor highlight tokens
@@ -218,6 +219,7 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, t
     const labelRegions = [];
     let lineStart = 0;
     let insideBrace = false;
+    let insideTableBrace = false;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -231,13 +233,20 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, t
         // Update brace state
         if (openBraces > closeBraces) {
             insideBrace = true;
+            // Check if this is a table definition opening
+            const firstTok = tokensByLine[i] && tokensByLine[i].find(t => t.type !== TokenType.EOF && t.type !== TokenType.COMMENT);
+            if (firstTok && firstTok.type === TokenType.IDENTIFIER && firstTok.value.toLowerCase() === 'table') {
+                insideTableBrace = true;
+            }
         } else if (closeBraces > openBraces) {
             insideBrace = false;
+            insideTableBrace = false;
         }
 
         // If we're inside a brace (continuation line), don't treat as label
         // But we still need to find label text after the closing brace
-        if (hadOpenBrace && !line.includes('{')) {
+        // Exception: table body lines are processed normally
+        if (hadOpenBrace && !insideTableBrace && !line.includes('{')) {
             const closeBracePos = line.indexOf('}');
             if (closeBracePos >= 0) {
                 const afterBrace = closeBracePos + 1;
@@ -302,7 +311,7 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, t
                     end: lineStart + r.end
                 });
             }
-        } else if (!result && line.trim() && !insideBrace) {
+        } else if (!result && line.trim() && (!insideBrace || insideTableBrace)) {
             // Plain text line - label/comment (but not if it has error tokens)
             const hasError = parser.tokens.some(t => t.type === TokenType.ERROR || t.type === TokenType.UNEXPECTED_CHAR);
             if (!hasError && parser.tokens.length > 0) {
@@ -389,13 +398,18 @@ function findEquationLabelRegions(line, lineTokens) {
     const regions = [];
 
     // For braced equations, everything before { is label
+    // Exception: table(...) = { lines are fully syntax-highlighted
     const lbrace = lineTokens.find(t => t.type === TokenType.LBRACE);
     if (lbrace) {
-        const bracePos = lbrace.col - 1;
-        if (bracePos > 0) {
-            regions.push({ start: 0, end: bracePos });
+        const firstTok = lineTokens.find(t => t.type !== TokenType.EOF && t.type !== TokenType.COMMENT);
+        const isTable = firstTok && firstTok.type === TokenType.IDENTIFIER && firstTok.value.toLowerCase() === 'table';
+        if (!isTable) {
+            const bracePos = lbrace.col - 1;
+            if (bracePos > 0) {
+                regions.push({ start: 0, end: bracePos });
+            }
+            return regions;
         }
-        return regions;
     }
 
     // Use the existing function to extract the valid equation

@@ -91,6 +91,8 @@ function loadModules() {
     global.findEquationsAndOutputs = variables.findEquationsAndOutputs;
     global.clearExpressionOutputs = variables.clearExpressionOutputs;
     global.buildOutputLine = variables.buildOutputLine;
+    global.findTableDefinitions = variables.findTableDefinitions;
+    global.parseMarkedLine = variables.parseMarkedLine;
 
     // Storage (minimal dependencies)
     const storage = require(path.join(jsPath, 'storage.js'));

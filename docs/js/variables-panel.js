@@ -102,7 +102,16 @@ class VariablesPanel {
         this.varsSectionLineIndex = varsSectionLineIndex;
 
         const allTokens = this.editor.parserTokens;
-        const newDeclarations = parseAllVariables(text, allTokens);
+
+        // Detect table definitions and build skip set
+        const tableDefs = findTableDefinitions(text, allTokens);
+        const tableSkipLines = new Set();
+        for (const td of tableDefs) {
+            for (let l = td.startLine; l <= td.endLine; l++) tableSkipLines.add(l);
+        }
+        this._tableDefs = tableDefs;
+
+        const newDeclarations = parseAllVariables(text, allTokens, tableSkipLines.size > 0 ? tableSkipLines : null);
 
         // Build map keyed by lineIndex for diffing
         const newDeclMap = new Map();
@@ -177,6 +186,7 @@ class VariablesPanel {
                 if (newDeclMap.has(i)) continue; // Already a declaration
                 if (i >= refSectionLineIndex) continue; // In reference section
                 if (consumedLines.has(i)) continue; // Part of a multi-line comment
+                if (tableSkipLines.has(i + 1)) continue; // Inside table definition
 
                 const line = lines[i];
                 const trimmed = line.trim();
@@ -762,6 +772,60 @@ class VariablesPanel {
 
         if (!inserted) {
             this.container.appendChild(row);
+        }
+    }
+
+    /**
+     * Set table data for display. Pass null to clear all tables.
+     */
+    setTableData(tables) {
+        // Remove existing table containers
+        for (const el of this.container.querySelectorAll('.variable-table-container')) {
+            el.remove();
+        }
+
+        if (!tables || tables.length === 0) return;
+
+        for (const table of tables) {
+            if (table.columns.length === 0 || table.rows.length === 0) continue;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'variable-row variable-table-container';
+            wrapper.dataset.lineIndex = table.startLine - 1; // 0-based for insertRowInOrder
+            wrapper.dataset.type = 'table';
+
+            const tableEl = document.createElement('table');
+            tableEl.className = 'mathpad-table';
+            if (table.fontSize) {
+                tableEl.style.fontSize = table.fontSize + 'px';
+            }
+
+            // Header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            for (const col of table.columns) {
+                const th = document.createElement('th');
+                th.textContent = col.header || col.name;
+                headerRow.appendChild(th);
+            }
+            thead.appendChild(headerRow);
+            tableEl.appendChild(thead);
+
+            // Body
+            const tbody = document.createElement('tbody');
+            for (const row of table.rows) {
+                const tr = document.createElement('tr');
+                for (const cell of row) {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
+            tableEl.appendChild(tbody);
+
+            wrapper.appendChild(tableEl);
+            this.insertRowInOrder(wrapper, table.startLine - 1);
         }
     }
 }

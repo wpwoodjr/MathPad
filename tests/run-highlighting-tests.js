@@ -1431,6 +1431,33 @@ function runAllTests() {
                 ["doesn't it?", 'comment']
             ]
         },
+        // Table definition
+        {
+            name: 'table definition header (table(x; 0; 10) = {)',
+            line: 'table(x; 0; 10) = {',
+            assertions: [
+                ['table', 'builtin'],
+                ['(', 'paren'],
+                ['x', 'variable'],
+                [';', 'punctuation'],
+                ['0', 'number'],
+                [';', 'punctuation'],
+                ['10', 'number'],
+                [')', 'paren'],
+                ['=', 'operator'],
+                ['{', 'brace']
+            ]
+        },
+        {
+            name: 'table body label before output (Principal principal$->)',
+            line: 'Principal principal$->',
+            context: 'table(x; 0; 10) = {',
+            assertions: [
+                ['Principal ', 'comment'],
+                ['principal', 'variable-def'],
+                ['$->', 'punctuation']
+            ]
+        },
         // Inline eval
         {
             name: 'inline eval (\\3+4\\)',

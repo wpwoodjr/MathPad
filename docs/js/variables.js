@@ -213,11 +213,12 @@ function findVariablesInExpression(node) {
  * Parse all variable declarations from text (simple parse, no evaluation)
  * Returns array of { name, declaration, lineIndex, value, valueText }
  */
-function parseAllVariables(text, allTokens) {
+function parseAllVariables(text, allTokens, skipLines) {
     const lines = text.split('\n');
     const declarations = [];
 
     for (let i = 0; i < lines.length; i++) {
+        if (skipLines && skipLines.has(i + 1)) continue;
         const lineTokens = getLineTokens(allTokens, i);
 
         const decl = parseVariableLine(lines[i], lineTokens);
@@ -261,7 +262,7 @@ function parseAllVariables(text, allTokens) {
  * @param {object} record - Record settings for formatting
  * @returns {{ text: string, declarations: Array, errors: Array }}
  */
-function discoverVariables(text, context, record, allTokens) {
+function discoverVariables(text, context, record, allTokens, skipLines) {
     const lines = text.split('\n');
     const declarations = [];
     const errors = [];
@@ -269,6 +270,7 @@ function discoverVariables(text, context, record, allTokens) {
     const definedVars = new Set();
 
     for (let i = 0; i < lines.length; i++) {
+        if (skipLines && skipLines.has(i + 1)) continue;
         let line = lines[i];
 
         const lineTokens = getLineTokens(allTokens, i);
@@ -615,10 +617,11 @@ function capturePreSolveValues(text, allTokens) {
  *            'solve' clears output variables (-> ->>) and persistent outputs (=> =>>)
  *            'all' clears all variables
  */
-function clearVariables(text, clearType = 'input', allTokens) {
+function clearVariables(text, clearType = 'input', allTokens, skipLines) {
     const lines = text.split('\n');
 
     for (let i = 0; i < lines.length; i++) {
+        if (skipLines && skipLines.has(i + 1)) continue;
         const lineTokens = getLineTokens(allTokens, i);
 
         const result = parseMarkedLine(lines[i], lineTokens);
@@ -1162,6 +1165,113 @@ function createEvalContext(record, parsedConstants, parsedFunctions, localText =
 // Reference to formatNumber from evaluator.js (will be available globally)
 // This is declared here for reference, actual function is in evaluator.js
 
+/**
+ * Find table definitions in text.
+ * Pattern: table(iterator; low; high) = { body } or table(iterator; low; high; step) = { body }
+ * Returns array of { iteratorName, lowExpr, highExpr, stepExpr, bodyText, bodyLines, startLine, endLine }
+ * Lines are 1-based (matching token line numbers).
+ */
+function findTableDefinitions(text, allTokens) {
+    if (!allTokens) allTokens = new Tokenizer(text).tokenize();
+    const tables = [];
+    const lineOffsets = computeLineOffsets(text);
+
+    // Collect all tokens across lines, tracking brace state
+    let inBrace = false;
+    let braceStartTok = null;
+    let preBraceTokens = []; // tokens on the line before the opening brace
+
+    for (let lineIdx = 0; lineIdx < allTokens.length; lineIdx++) {
+        for (const t of allTokens[lineIdx]) {
+            if (t.type === TokenType.EOF || t.type === TokenType.COMMENT) continue;
+
+            if (t.type === TokenType.LBRACE && !inBrace) {
+                inBrace = true;
+                braceStartTok = t;
+                continue;
+            }
+
+            if (inBrace) {
+                if (t.type === TokenType.RBRACE) {
+                    tryMatchTable(preBraceTokens, braceStartTok, t);
+                    inBrace = false;
+                    preBraceTokens = [];
+                }
+                continue;
+            }
+
+            preBraceTokens.push(t);
+        }
+
+        // Reset pre-brace tokens at end of line if no brace was opened
+        if (!inBrace) preBraceTokens = [];
+    }
+
+    return tables;
+
+    function tryMatchTable(tokens, lbraceTok, rbraceTok) {
+        // Pattern: IDENTIFIER('table') LPAREN args RPAREN OPERATOR('=')
+        if (tokens.length < 5) return;
+        if (tokens[0].type !== TokenType.IDENTIFIER) return;
+        if (tokens[0].value.toLowerCase() !== 'table') return;
+        if (tokens[1].type !== TokenType.LPAREN) return;
+
+        // Find RPAREN
+        let rparenIdx = -1;
+        for (let j = 2; j < tokens.length; j++) {
+            if (tokens[j].type === TokenType.RPAREN) { rparenIdx = j; break; }
+        }
+        if (rparenIdx === -1) return;
+
+        // Next must be OPERATOR('=')
+        if (rparenIdx + 1 >= tokens.length) return;
+        const eqTok = tokens[rparenIdx + 1];
+        if (eqTok.type !== TokenType.OPERATOR || eqTok.value !== '=') return;
+
+        // Split args by semicolons
+        const args = [[]];
+        for (let j = 2; j < rparenIdx; j++) {
+            if (tokens[j].type === TokenType.SEMICOLON) {
+                args.push([]);
+            } else {
+                args[args.length - 1].push(tokens[j]);
+            }
+        }
+
+        // Need 3-5 args: table(iter; low; high [; step [; fontSize]])
+        if (args.length < 3 || args.length > 5) return;
+
+        // Arg 1: iterator name (single identifier)
+        if (args[0].length !== 1 || args[0][0].type !== TokenType.IDENTIFIER) return;
+        const iteratorName = args[0][0].value;
+
+        // Args 2-5: expressions (convert tokens to text using tokensToText pattern)
+        const lowExpr = tokensToText(args[1]).trim();
+        const highExpr = tokensToText(args[2]).trim();
+        const stepExpr = args.length >= 4
+            ? tokensToText(args[3]).trim()
+            : null;
+        const fontSizeExpr = args.length >= 5
+            ? tokensToText(args[4]).trim()
+            : null;
+
+        // Extract body text between { and }
+        const bodyStart = tokenOffset(lineOffsets, lbraceTok) + 1;
+        const bodyEnd = tokenOffset(lineOffsets, rbraceTok);
+        const bodyText = text.substring(bodyStart, bodyEnd);
+        const bodyLines = bodyText.split('\n');
+
+        const startLine = tokens[0].line;  // 1-based
+        const endLine = rbraceTok.line;     // 1-based
+
+        tables.push({
+            iteratorName, lowExpr, highExpr, stepExpr, fontSizeExpr,
+            bodyText, bodyLines,
+            startLine, endLine
+        });
+    }
+}
+
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -1171,6 +1281,6 @@ if (typeof module !== 'undefined' && module.exports) {
         findExpressionOutputs, findEquationsAndOutputs, clearExpressionOutputs,
         findInlineEvaluations, replaceInlineEvaluation,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext,
-        extractEquationFromLine
+        extractEquationFromLine, findTableDefinitions
     };
 }

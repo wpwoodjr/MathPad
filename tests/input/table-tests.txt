@@ -1,0 +1,18 @@
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test tables"
+
+--Variables--
+"*Test table output"
+table(n; 0; 5) = {
+  x: n**2
+  y: sqrt(n)
+  n->
+  x->
+  "sqrt(n)" y->
+  "x**2" x->
+  Expr output x+1->
+  No clear y/x:>>
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -437,6 +437,7 @@ function createEditorForRecord(record) {
                 } else {
                     variablesManager.clearErrors();
                 }
+                variablesManager.setTableData(metadata.tables || null);
                 if (metadata.statusMessage != null) {
                     setStatus(metadata.statusMessage, metadata.statusIsError);
                 }
@@ -1486,6 +1487,7 @@ function handleSolve(undoable = true) {
         // Re-solve formatted output for idempotent results and rounding error detection
         let errors = result.errors;
         let equationVarStatus = result.equationVarStatus;
+        let tables = result.tables || [];
         if (result.solved > 0 && errors.length === 0) {
             const verifyTokens = new Tokenizer(text).tokenize();
             const verifyContext = createEvalContext(record,
@@ -1496,6 +1498,7 @@ function handleSolve(undoable = true) {
             text = verifyResult.text;
             errors = verifyResult.errors;
             equationVarStatus = verifyResult.equationVarStatus;
+            tables = verifyResult.tables || [];
         }
 
         // Enable flash before setValue so onChange's updateFromText highlights changed values
@@ -1522,6 +1525,7 @@ function handleSolve(undoable = true) {
             editorInfo.editor.setTopMetadata({
                 errors: errors,
                 equationVarStatus: equationVarStatus,
+                tables: tables,
                 statusMessage: UI.lastPersistentStatus.message,
                 statusIsError: UI.lastPersistentStatus.isError
             });
@@ -1545,6 +1549,9 @@ function handleSolve(undoable = true) {
         // Set error/equation highlights and clear edit tracking
         editorInfo.variablesManager.setErrors(errors, equationVarStatus);
         editorInfo.variablesManager.clearLastEdited();
+
+        // Display table results
+        editorInfo.variablesManager.setTableData(tables);
 
     } catch (err) {
         setStatus('Error: ' + err.message, true);
@@ -1591,8 +1598,9 @@ function handleClearInput() {
         statusIsError: preStatus.isError
     });
 
-    // Always clear error highlights (even if text unchanged, e.g. failed solve left no values)
+    // Always clear error highlights and table data
     editorInfo.variablesManager.clearErrors();
+    editorInfo.variablesManager.setTableData(null);
 
     setStatus('Cleared');
     if (textChanged) {
