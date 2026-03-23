@@ -1406,27 +1406,27 @@ function runAllTests() {
                 ['->', 'punctuation']
             ]
         },
-        // Persistent output marker (=>)
+        // Persistent output marker (:> :>>)
         {
-            name: 'persistent output with trailing comment (solveCount=> 1 this will persist across clears)',
-            line: 'solveCount=> 1 this will persist across clears',
+            name: 'persistent output with new :> syntax (solveCount:> 1 this will persist)',
+            line: 'solveCount:> 1 this will persist',
             assertions: [
                 ['solveCount', 'variable-def'],
-                ['=>', 'punctuation'],
+                [':>', 'punctuation'],
                 ['1', 'number'],
-                ['this will persist across clears', 'comment']
+                ['this will persist', 'comment']
             ]
         },
         {
-            name: "persistent full precision expression output (Yes sqrt(x)=>> 4 doesn't it?)",
-            line: "Yes sqrt(x)=>> 4 doesn't it?",
+            name: "persistent full precision expression output with :>> (Yes sqrt(x):>> 4 doesn't it?)",
+            line: "Yes sqrt(x):>> 4 doesn't it?",
             assertions: [
                 ['Yes ', 'comment'],
                 ['sqrt', 'builtin'],
                 ['(', 'paren'],
                 ['x', 'variable'],
                 [')', 'paren'],
-                ['=>>', 'punctuation'],
+                [':>>', 'punctuation'],
                 ['4', 'number'],
                 ["doesn't it?", 'comment']
             ]
@@ -1554,11 +1554,11 @@ function runAllTests() {
             ]
         },
         {
-            name: 'degree equality not confused with °=> marker',
-            line: 'x°=>',
+            name: 'degree format with persistent output (x°:>)',
+            line: 'x°:>',
             assertions: [
                 ['x', 'variable-def'],
-                ['°=>', 'punctuation']
+                ['°:>', 'punctuation']
             ]
         }
     ];

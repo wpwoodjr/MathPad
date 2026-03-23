@@ -54,8 +54,8 @@ Or open `docs/index.html` locally in a browser. No build step required.
 | `var:: value` | Full precision, persistent |
 | `var->` | Output — cleared and recomputed on Solve |
 | `var->>` | Output — full precision |
-| `var=>` | Persistent output — recomputed on Solve, kept on Clear |
-| `var=>>` | Persistent output — full precision |
+| `var:>` | Persistent output — recomputed on Solve, kept on Clear |
+| `var:>>` | Persistent output — full precision |
 | `var[lo:hi]:` | Constrain search range for root-finding |
 | `x~` | Pre-solve value (value before this solve started) |
 | `x~?` | 1 if variable has a pre-solve value, 0 otherwise |

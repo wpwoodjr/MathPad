@@ -33,19 +33,19 @@ x: 4
 3+4%+4%%-> 308%
 3+x%+4->
 Persistent money format
-3+4$=> $7.00
-3+4$=>> $7.00
+3+4$:> $7.00
+3+4$:>> $7.00
 Persistent percent format
-(0.075)%=> 7.5%
-(0.075)%=>> 7.5%
+(0.075)%:> 7.5%
+(0.075)%:>> 7.5%
 Persistent variable output with money
 pmt2 = 7
-pmt2$=> $7.00
+pmt2$:> $7.00
 Persistent percent literal and format
-10%=> 0.1
-10%%=> 10%
-10%=>> 0.1
-10%%=>> 10%
+10%:> 0.1
+10%%:> 10%
+10%:>> 0.1
+10%%:>> 10%
 Money format on input marker
 price$<- $100.00
 price + 5$-> $105.00
@@ -73,8 +73,8 @@ Degrees full precision
 angle2°->> 40.123456788999988°
 angle2 = 400.123456789
 Degrees persistent output
-(720 + 45)°=> 45°
-(720 + 45)°=>> 45°
+(720 + 45)°:> 45°
+(720 + 45)°:>> 45°
 Degrees variable with negative value
 set°: -90°
 set-> -90

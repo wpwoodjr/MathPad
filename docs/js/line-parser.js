@@ -29,10 +29,10 @@ const LineType = {
  */
 const MARKER_PRECEDENCE = {
     '->>': 3,
-    '=>>': 3,
+    ':>>': 3,
     '<<-': 3,
     '->': 2,
-    '=>': 2,
+    ':>': 2,
     '<-': 2,
     '::': 1,
     ':': 0
@@ -49,8 +49,8 @@ function getMarkerString(token) {
         case TokenType.ARROW_LEFT_FULL: return '<<-';
         case TokenType.ARROW_RIGHT: return '->';
         case TokenType.ARROW_FULL: return '->>';
-        case TokenType.ARROW_PERSIST: return '=>';
-        case TokenType.ARROW_PERSIST_FULL: return '=>>';
+        case TokenType.ARROW_PERSIST: return ':>';
+        case TokenType.ARROW_PERSIST_FULL: return ':>>';
         default: return null;
     }
 }

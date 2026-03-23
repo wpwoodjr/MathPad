@@ -58,15 +58,15 @@ b-> 77
 
 "persistent output =>"
 p: 42
-p=> 42
-p#16=> 2A#16
-p#16=>> 2A#16
+p:> 42
+p#16:> 2A#16
+p#16:>> 2A#16
 
-"persistent full precision =>>"
+"persistent full precision :>>"
 q: 0o77
-q=>> 63
-q#8=>> 77#8
-q#16=>> 3F#16
+q:>> 63
+q#8:>> 77#8
+q#16:>> 3F#16
 "Test #base as part of marker"
 f4: 54#31
 f4#31-> 54#31

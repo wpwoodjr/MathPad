@@ -59,8 +59,8 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     ### Output markers:
         ->      cleared before solve
         ->>     full precision, cleared before solve
-        =>      persistent output (cleared before solve, NOT by Clear)
-        =>>     persistent output, full precision
+        :>      persistent output (cleared before solve, NOT by Clear)
+        :>>     persistent output, full precision
 
 ## Formatting options
     ### Example input formatting:
@@ -98,9 +98,9 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         hexnum#16: (formatted as hexnum in base 16 followed by #16)
 
     ### Variable clearing
-        When seeing -> ->> => =>> this indicates that the RHS (not including any comments) on that line should be cleared before solving
+        When seeing -> ->> :> :>> this indicates that the RHS (not including any comments) on that line should be cleared before solving
         When seeing <- <<- this indicates that the RHS (not including any comments) on that line should be cleared by the Clear button
-        => =>> are NOT cleared by the Clear button (persistent outputs)
+        :> :>> are NOT cleared by the Clear button (persistent outputs)
 
 ## Limits
     Limits are applied during solving to constrain Brent's search range. Examples:
@@ -119,7 +119,7 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
 
 # Other
 ## Final Output
-    Known values are inserted for -> ->> => =>> declarations
+    Known values are inserted for -> ->> :> :>> declarations
     Known values are inserted for : or :: declarations that don't have a RHS
 
 ## Incomplete equations

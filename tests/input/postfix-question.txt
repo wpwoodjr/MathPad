@@ -80,7 +80,7 @@ Status = "Input and output variables cleared"; StatusIsError = 0
 "Count number of solves using ~? and ~"
 
 solveCount: if(solveCount~?; solveCount~ + 1; 1)
-solveCount=> Use => to persist across clears
+solveCount:> Use :> to persist across clears
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -145,7 +145,7 @@ d2~?->
 d2~->
 
 y = a
-y=> 3
+y:> 3
 // y?->
 y~?->
 
@@ -155,7 +155,7 @@ z~?->
 
 out1 = in1+1
 in1: 2
-out1=> 3
+out1:> 3
 out2->
 
 // in1?->

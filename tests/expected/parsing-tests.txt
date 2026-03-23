@@ -138,7 +138,7 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Expression output with persistent marker =>"
 
-sqrt(4)=> 2
+sqrt(4):> 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -148,7 +148,7 @@ Status = "Nothing to solve"; StatusIsError = 0
 
 pow2: pow2~*2
 power: power~ + 1
-pow2=> 9.2232e+18
-power=> 6.3e+1
-log(pow2; 2)=> 6.3e+1
+pow2:> 9.2232e+18
+power:> 6.3e+1
+log(pow2; 2):> 6.3e+1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

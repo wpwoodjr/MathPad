@@ -160,7 +160,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
   valueTokens: Token[], limits: { lowTokens, highTokens },
   base: number, fullPrecision: boolean,
   format: 'money' | 'percent' | null,
-  marker: ':' | '<-' | '<<-' | '->' | '->>' | '::' | '=>' | '=>>',
+  marker: ':' | '<-' | '<<-' | '->' | '->>' | '::' | ':>' | ':>>',
   markerEndCol: number, comment: string | null, commentUnquoted: boolean,
   label: string              // prefix text before variable name
 }
@@ -178,11 +178,11 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 
 ### Key Enums
 
-**VarType** (`parser.js`): `INPUT` (`:`, `<-`, `<<-`, `::`), `OUTPUT` (`->`, `->>`, `=>`, `=>>`)
+**VarType** (`parser.js`): `INPUT` (`:`, `<-`, `<<-`, `::`), `OUTPUT` (`->`, `->>`, `:>`, `:>>`)
 
-**ClearBehavior** (`parser.js`): `NONE` (`:`, `::`), `ON_CLEAR` (`<-`, `<<-`), `ON_SOLVE` (`->`, `->>`), `ON_SOLVE_ONLY` (`=>`, `=>>`)
+**ClearBehavior** (`parser.js`): `NONE` (`:`, `::`), `ON_CLEAR` (`<-`, `<<-`), `ON_SOLVE` (`->`, `->>`), `ON_SOLVE_ONLY` (`:>`, `:>>`)
 
-**Marker precedence** (`line-parser.js`): `->>`, `=>>`, `<<-` (3) > `->`, `=>`, `<-` (2) > `::` (1) > `:` (0)
+**Marker precedence** (`line-parser.js`): `->>`, `:>>`, `<<-` (3) > `->`, `:>`, `<-` (2) > `::` (1) > `:` (0)
 
 ## Variable Syntax
 
@@ -194,8 +194,8 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 | `var:: value` | INPUT | Full precision, persistent |
 | `var->` | OUTPUT | Cleared before solve |
 | `var->>` | OUTPUT | Full precision, cleared before solve |
-| `var=>` | OUTPUT | Persistent output (cleared before solve, NOT by Clear) |
-| `var=>>` | OUTPUT | Persistent output, full precision |
+| `var:>` | OUTPUT | Persistent output (cleared before solve, NOT by Clear) |
+| `var:>>` | OUTPUT | Persistent output, full precision |
 | `var[lo:hi]:` | With limits | Constrain Brent's search range |
 | `price$:` | Money format | `$` before marker = money format |
 | `rate%: 7.5%` | Percentage | `%` before marker = percent (stored as 0.075) |

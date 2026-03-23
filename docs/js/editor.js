@@ -260,7 +260,7 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, t
         if (!inReferenceSection && result && result.kind === 'declaration') {
             const decl = result;
             const isDefMarker = decl.marker === ':' || decl.marker === '<-' || decl.marker === '::';
-            const isOutMarker = decl.marker === '->' || decl.marker === '->>' || decl.marker === '=>' || decl.marker === '=>>';
+            const isOutMarker = decl.marker === '->' || decl.marker === '->>' || decl.marker === ':>' || decl.marker === ':>>';
             if (isDefMarker || (shadowConstants && isOutMarker && referenceConstants.has(decl.name))) {
                 if (!localVariables.has(decl.name)) {
                     localVariables.set(decl.name, lineStart);

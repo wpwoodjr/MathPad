@@ -635,8 +635,8 @@ function clearVariables(text, clearType = 'input', allTokens) {
                 (clearType === 'output' && clearBehavior === ClearBehavior.ON_SOLVE) ||
                 (clearType === 'solve' && (clearBehavior === ClearBehavior.ON_SOLVE || clearBehavior === ClearBehavior.ON_SOLVE_ONLY));
         } else if (result.kind === 'expression-output' && result.recalculates) {
-            // Skip persistent outputs (=> =>>) unless solving
-            const isPersistent = result.marker === '=>' || result.marker === '=>>';
+            // Skip persistent outputs (:> :>>) unless solving
+            const isPersistent = result.marker === ':>' || result.marker === ':>>';
             shouldClear = clearType === 'solve' || !isPersistent;
         }
 
@@ -808,8 +808,8 @@ function clearExpressionOutputs(text, clearType, allTokens) {
     const outputs = findExpressionOutputs(text, allTokens);
 
     for (const output of outputs) {
-        // Skip persistent outputs (=> =>>) unless solving
-        const isPersistent = output.marker === '=>' || output.marker === '=>>';
+        // Skip persistent outputs (:> :>>) unless solving
+        const isPersistent = output.marker === ':>' || output.marker === ':>>';
         if (output.recalculates && output.valueTokens && output.valueTokens.length > 0 && (clearType === 'solve' || !isPersistent)) {
             const line = lines[output.startLine];
             const markerEndIndex = output.markerEndCol - 1;

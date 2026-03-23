@@ -74,7 +74,7 @@ d = sqrt(a)
 a: 4
 d->
 solveCount: solveCount~ + 1
-solveCount=> 5
+solveCount:> 5
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -97,10 +97,10 @@ interest: if(paymentNum > 0; balance~ * yint; 0)
 principal: if(paymentNum > 0; pmt - interest; 0)
 balance: if(paymentNum > 0; balance~ - principal; pv)
 
-paymentNum=> -1
-balance$=> $250,000
-interest$=>
-principal$=>
+paymentNum:> -1
+balance$:> $250,000
+interest$:>
+principal$:>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1

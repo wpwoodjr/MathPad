@@ -464,10 +464,6 @@ class Tokenizer {
         const ch3 = this.peek(2);
 
         // Check three-character operators FIRST
-        if (ch === '=' && ch2 === '>' && ch3 === '>') {
-            this.advance(3);
-            return this.makeToken(TokenType.ARROW_PERSIST_FULL, '=>>', startLine, startCol);
-        }
         if (ch === '-' && ch2 === '>' && ch3 === '>') {
             this.advance(3);
             return this.makeToken(TokenType.ARROW_FULL, '->>', startLine, startCol);
@@ -491,11 +487,7 @@ class Tokenizer {
             this.advance(2);
             return this.makeToken(TokenType.ARROW_RIGHT, '->', startLine, startCol);
         }
-        if (twoChar === '=>') {
-            this.advance(2);
-            return this.makeToken(TokenType.ARROW_PERSIST, '=>', startLine, startCol);
-        }
-        // Note: :: is handled in the main tokenize() loop for COLON
+        // Note: :: :> :>> are handled in the main tokenize() loop for COLON
 
         // Other two-character operators
         const twoCharOps = ['**', '==', '!=', '<=', '>=', '<<', '>>', '&&', '||', '^^'];
@@ -618,10 +610,15 @@ class Tokenizer {
                 continue;
             }
 
-            // Colon (variable declaration)
+            // Colon (variable declaration): :>> :> :: :
             if (ch === ':') {
-                // Check for :: (full precision marker)
-                if (this.peek(1) === ':') {
+                if (this.peek(1) === '>' && this.peek(2) === '>') {
+                    this.advance(3);
+                    pushToken(this.makeToken(TokenType.ARROW_PERSIST_FULL, ':>>', startLine, startCol));
+                } else if (this.peek(1) === '>') {
+                    this.advance(2);
+                    pushToken(this.makeToken(TokenType.ARROW_PERSIST, ':>', startLine, startCol));
+                } else if (this.peek(1) === ':') {
                     this.advance(2);
                     pushToken(this.makeToken(TokenType.DOUBLE_COLON, '::', startLine, startCol));
                 } else {
@@ -657,15 +654,6 @@ class Tokenizer {
                         pushToken(token);
                         continue;
                     }
-                    if (next === '=' && this.peek(2) === '>') {
-                        const type = this.peek(3) === '>' ? TokenType.ARROW_PERSIST_FULL : TokenType.ARROW_PERSIST;
-                        const marker = type === TokenType.ARROW_PERSIST_FULL ? '=>>' : '=>';
-                        this.advance(1 + marker.length);
-                        const token = this.makeToken(type, ch + marker, startLine, startCol);
-                        token.format = format;
-                        pushToken(token);
-                        continue;
-                    }
                     if (next === '<' && this.peek(2) === '<' && this.peek(3) === '-') {
                         this.advance(4);
                         const token = this.makeToken(TokenType.ARROW_LEFT_FULL, ch + '<<-', startLine, startCol);
@@ -681,8 +669,16 @@ class Tokenizer {
                         continue;
                     }
                     if (next === ':') {
-                        const type = this.peek(2) === ':' ? TokenType.DOUBLE_COLON : TokenType.COLON;
-                        const marker = type === TokenType.DOUBLE_COLON ? '::' : ':';
+                        let type, marker;
+                        if (this.peek(2) === '>' && this.peek(3) === '>') {
+                            type = TokenType.ARROW_PERSIST_FULL; marker = ':>>';
+                        } else if (this.peek(2) === '>') {
+                            type = TokenType.ARROW_PERSIST; marker = ':>';
+                        } else if (this.peek(2) === ':') {
+                            type = TokenType.DOUBLE_COLON; marker = '::';
+                        } else {
+                            type = TokenType.COLON; marker = ':';
+                        }
                         this.advance(1 + marker.length);
                         const token = this.makeToken(type, ch + marker, startLine, startCol);
                         token.format = format;
@@ -702,9 +698,6 @@ class Tokenizer {
                         if (p1 === '-' && p2 === '>') {
                             if (p3 === '>') { markerType = TokenType.ARROW_FULL; markerStr = '->>'; }
                             else { markerType = TokenType.ARROW_RIGHT; markerStr = '->'; }
-                        } else if (p1 === '=' && p2 === '>') {
-                            if (p3 === '>') { markerType = TokenType.ARROW_PERSIST_FULL; markerStr = '=>>'; }
-                            else { markerType = TokenType.ARROW_PERSIST; markerStr = '=>'; }
                         } else if (p1 === '<' && p2 === '<' && p3 === '-') {
                             markerType = TokenType.ARROW_LEFT_FULL;
                             markerStr = '<<-';
@@ -712,7 +705,9 @@ class Tokenizer {
                             markerType = TokenType.ARROW_LEFT;
                             markerStr = '<-';
                         } else if (p1 === ':') {
-                            if (p2 === ':') { markerType = TokenType.DOUBLE_COLON; markerStr = '::'; }
+                            if (p2 === '>' && p3 === '>') { markerType = TokenType.ARROW_PERSIST_FULL; markerStr = ':>>'; }
+                            else if (p2 === '>') { markerType = TokenType.ARROW_PERSIST; markerStr = ':>'; }
+                            else if (p2 === ':') { markerType = TokenType.DOUBLE_COLON; markerStr = '::'; }
                             else { markerType = TokenType.COLON; markerStr = ':'; }
                         }
                         if (markerType) {

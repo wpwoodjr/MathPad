@@ -128,17 +128,17 @@
         <tr><td><code>var:: value</code></td><td>Input</td><td>Full precision, persistent</td></tr>
         <tr><td><code>var-&gt;</code></td><td>Output</td><td>Cleared and recomputed on Solve</td></tr>
         <tr><td><code>var-&gt;&gt;</code></td><td>Output</td><td>Full precision, cleared on Solve</td></tr>
-        <tr><td><code>var=&gt;</code></td><td>Output</td><td>Persistent output &mdash; recomputed on Solve, kept on Clear</td></tr>
-        <tr><td><code>var=&gt;&gt;</code></td><td>Output</td><td>Persistent output, full precision</td></tr>
+        <tr><td><code>var:&gt;</code></td><td>Output</td><td>Persistent output &mdash; recomputed on Solve, kept on Clear</td></tr>
+        <tr><td><code>var:&gt;&gt;</code></td><td>Output</td><td>Persistent output, full precision</td></tr>
         <tr><td><code>var[lo:hi]:</code></td><td>Input</td><td>Constrain root-finding search range</td></tr>
     </table>
 
     <div class="note">
-        <strong>Full precision</strong> markers (<code>::</code>, <code>&lt;&lt;-</code>, <code>-&gt;&gt;</code>, <code>=&gt;&gt;</code>) store and display values with maximum precision instead of rounding to the record's decimal places setting.
+        <strong>Full precision</strong> markers (<code>::</code>, <code>&lt;&lt;-</code>, <code>-&gt;&gt;</code>, <code>:&gt;&gt;</code>) store and display values with maximum precision instead of rounding to the record's decimal places setting.
     </div>
 
     <h3>Input vs Output</h3>
-    <p><strong>Input</strong> markers (<code>:</code>, <code>&lt;-</code>, <code>&lt;&lt;-</code>, <code>::</code>) define variables you provide values for. <strong>Output</strong> markers (<code>-&gt;</code>, <code>-&gt;&gt;</code>, <code>=&gt;</code>, <code>=&gt;&gt;</code>) define variables that MathPad computes. Output variables are cleared before solving so the solver can fill them in.</p>
+    <p><strong>Input</strong> markers (<code>:</code>, <code>&lt;-</code>, <code>&lt;&lt;-</code>, <code>::</code>) define variables you provide values for. <strong>Output</strong> markers (<code>-&gt;</code>, <code>-&gt;&gt;</code>, <code>:&gt;</code>, <code>:&gt;&gt;</code>) define variables that MathPad computes. Output variables are cleared before solving so the solver can fill them in.</p>
 
     <h3>Definitions</h3>
     <p>A variable whose value is an expression (not just a number) acts as a <strong>definition</strong>:</p>
@@ -176,14 +176,14 @@ a**2 + b**2 = c**2</pre>
         <tr><td>Degree literal</td><td><code>400&deg;</code> (stored as 400, no mod)</td></tr>
     </table>
 
-    <h3>Format Suffixes</h3>
-    <p>Add a format suffix before the marker to control display:</p>
+    <h3>Format Prefixes</h3>
+    <p>Add a format prefix before the marker to control display:</p>
     <table>
-        <tr><th>Suffix</th><th>Example</th><th>Display</th></tr>
-        <tr><td><code>$</code></td><td><code>price$: 1234.5</code></td><td><code>$1,234.50</code> (always 2 decimals, comma grouping)</td></tr>
-        <tr><td><code>%</code></td><td><code>rate%: 7.5%</code></td><td><code>7.5%</code> (stored as 0.075)</td></tr>
-        <tr><td><code>&deg;</code></td><td><code>angle&deg;: 400</code></td><td><code>40&deg;</code> (mod 360 on output)</td></tr>
-        <tr><td><code>#16</code></td><td><code>hex#16: 255</code></td><td><code>FF</code> (bases 2-36)</td></tr>
+        <tr><th>Prefix</th><th>Example</th><th>Display</th></tr>
+        <tr><td><code>$</code></td><td><code>price $: 1234.5</code></td><td><code>$1,234.50</code> (always 2 decimals, comma grouping)</td></tr>
+        <tr><td><code>%</code></td><td><code>rate %&lt- 7.5%</code></td><td><code>7.5%</code> (stored as 0.075)</td></tr>
+        <tr><td><code>&deg;</code></td><td><code>angle &deg;: 400</code></td><td><code>40&deg;</code> (mod 360 on output)</td></tr>
+        <tr><td><code>#16</code></td><td><code>hex #16-> 255</code></td><td><code>FF</code> (bases 2-36)</td></tr>
     </table>
 
     <h3>Expression Outputs</h3>

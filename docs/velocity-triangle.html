@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Velocity Triangle</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #1a1a2e;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  min-height: 100vh;
+  padding: 20px;
+}
+h1 { text-align: center; margin-bottom: 16px; font-size: 24px; }
+#panels { max-width: 1200px; margin: 0 auto; }
+.panel {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 24px;
+  position: relative;
+}
+.input-panel {
+  flex: 0 0 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.output-panel { flex: 1; min-width: 0; }
+.output-panel svg { width: 100%; height: auto; max-height: 80vh; }
+textarea {
+  width: 100%;
+  height: 260px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+textarea:focus { outline: none; border-color: #60a5fa; }
+.btn-row { display: flex; gap: 8px; }
+.btn-draw {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 15px;
+  cursor: pointer;
+  font-weight: 600;
+  flex: 1;
+}
+.btn-draw:hover { background: #2563eb; }
+.btn-draw:active { background: #1d4ed8; }
+.btn-action {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.btn-action:hover { background: #1e293b; color: #e2e8f0; border-color: #60a5fa; }
+.btn-remove:hover { background: #450a0a; color: #fca5a5; border-color: #dc2626; }
+.btn-add {
+  display: block;
+  margin: 0 auto 20px;
+  background: transparent;
+  color: #94a3b8;
+  border: 2px dashed #475569;
+  border-radius: 10px;
+  padding: 10px 28px;
+  font-size: 22px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-add:hover { border-color: #60a5fa; color: #60a5fa; }
+.error {
+  background: #450a0a;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  padding: 12px;
+  color: #fca5a5;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+.panel-divider {
+  border: none;
+  border-top: 1px solid #334155;
+  margin-bottom: 24px;
+}
+@media (max-width: 768px) {
+  .panel { flex-direction: column; }
+  .input-panel { flex: none; }
+}
+</style>
+</head>
+<body>
+
+<h1>Velocity Triangle</h1>
+<div id="panels"></div>
+<button class="btn-add" onclick="addPanel()" title="Add triangle">+</button>
+
+<script>
+const STORAGE_KEY = 'velocityTriangles';
+
+const DEFAULT_INPUT = `Ground track
+smg: 9.4
+cmg[0:360]°: 158.5°
+
+Boat through water
+speed: 10
+cts[0:360]°: 162.52°
+
+Current
+drift: 0.9
+set[0:360]°: 210°`;
+
+let panelId = 0;
+// Track rotation state per panel: rotation offset in degrees
+const panelRotation = {};
+
+function savePanels() {
+  const panels = [];
+  for (const el of document.querySelectorAll('.panel')) {
+    const id = el.dataset.panelId;
+    const textarea = document.getElementById(`input-${id}`);
+    if (textarea) panels.push({ text: textarea.value, rotation: panelRotation[id] || 0 });
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(panels));
+}
+
+function loadPanels() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (saved && saved.length > 0) {
+      for (const p of saved) addPanel(p.text, p.rotation || 0);
+      return;
+    }
+  } catch (e) {}
+  addPanel();
+}
+
+function addPanel(inputText, rotation) {
+  const id = panelId++;
+  panelRotation[id] = rotation || 0;
+  const container = document.getElementById('panels');
+
+  if (container.children.length > 0) {
+    const hr = document.createElement('hr');
+    hr.className = 'panel-divider';
+    hr.dataset.panelId = id;
+    container.appendChild(hr);
+  }
+
+  const div = document.createElement('div');
+  div.className = 'panel';
+  div.dataset.panelId = id;
+  div.innerHTML = `
+    <div class="input-panel">
+      <textarea id="input-${id}">${inputText || DEFAULT_INPUT}</textarea>
+      <div class="btn-row">
+        <button class="btn-draw" onclick="drawPanel(${id})">Draw</button>
+        <button class="btn-action" onclick="rotateNorth(${id})" title="Rotate resultant to north">N&#x2191;</button>
+        <button class="btn-action btn-remove" onclick="removePanel(${id})" title="Remove">&#x2715;</button>
+      </div>
+    </div>
+    <div class="output-panel" id="output-${id}"></div>`;
+  container.appendChild(div);
+  drawPanel(id);
+}
+
+function removePanel(id) {
+  const container = document.getElementById('panels');
+  const panel = container.querySelector(`.panel[data-panel-id="${id}"]`);
+  const hr = container.querySelector(`hr[data-panel-id="${id}"]`);
+  if (panel) panel.remove();
+  if (hr) hr.remove();
+  const firstChild = container.firstElementChild;
+  if (firstChild && firstChild.tagName === 'HR') firstChild.remove();
+  delete panelRotation[id];
+  savePanels();
+}
+
+function rotateNorth(id) {
+  const input = document.getElementById(`input-${id}`);
+  try {
+    const data = parseTriangle(input.value);
+    // Toggle: if already rotated, go back to 0
+    if (panelRotation[id]) {
+      panelRotation[id] = 0;
+    } else {
+      panelRotation[id] = -data.resultant.dir.value;
+    }
+    drawPanel(id);
+    savePanels();
+  } catch (e) {}
+}
+
+function parseTriangle(text) {
+  const lines = text.split('\n');
+  const groups = [];
+  let current = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed === '') {
+      if (current) { groups.push(current); current = null; }
+      continue;
+    }
+    const m = trimmed.match(/^(\w+)(?:\[.*?\])?\s*[°%$]*\s*(?:<<-|<-|->>|->|=>>|=>|::|:)\s*(.+)$/);
+    if (m) {
+      if (!current) current = { header: trimmed, vars: [] };
+      const name = m[1];
+      const valStr = m[2].trim().replace(/[°%$]+$/, '');
+      const value = parseFloat(valStr);
+      if (isNaN(value)) throw new Error(`Cannot parse value for "${name}": ${m[2]}`);
+      current.vars.push({ name, value });
+    } else {
+      if (current) groups.push(current);
+      current = { header: trimmed, vars: [] };
+    }
+  }
+  if (current) groups.push(current);
+
+  if (groups.length < 3) throw new Error(`Expected 3 groups (resultant, component1, component2), found ${groups.length}`);
+
+  function extract(g) {
+    if (g.vars.length < 2) throw new Error(`Group "${g.header}" needs 2 variables (magnitude, direction)`);
+    return { header: g.header, mag: g.vars[0], dir: g.vars[1] };
+  }
+  return { resultant: extract(groups[0]), comp1: extract(groups[1]), comp2: extract(groups[2]) };
+}
+
+function bearingToXY(bearing, length) {
+  const rad = bearing * Math.PI / 180;
+  return { x: Math.sin(rad) * length, y: -Math.cos(rad) * length };
+}
+
+function normAngle(a) {
+  return ((a % 360) + 360) % 360;
+}
+
+// Compute geometry points for a triangle (used for shared scale calculation)
+function computeGeometry(data, id) {
+  const rot = panelRotation[id] || 0;
+  const resDir = data.resultant.dir.value + rot;
+  const c1Dir = data.comp1.dir.value + rot;
+  const c2Dir = data.comp2.dir.value + rot;
+
+  const v1 = bearingToXY(c1Dir, data.comp1.mag.value);
+  const v2 = bearingToXY(c2Dir, data.comp2.mag.value);
+  const vr = bearingToXY(resDir, data.resultant.mag.value);
+  const ax = v1.x, ay = v1.y;
+  const bx = ax + v2.x, by = ay + v2.y;
+  const rx = vr.x, ry = vr.y;
+
+  const xs = [0, ax, bx, rx], ys = [0, ay, by, ry];
+  return { ax, ay, bx, by, rx, ry, resDir, c1Dir, c2Dir,
+    minX: Math.min(...xs), maxX: Math.max(...xs),
+    minY: Math.min(...ys), maxY: Math.max(...ys) };
+}
+
+function renderTriangle(data, id, sharedScale) {
+  const { resultant, comp1, comp2 } = data;
+  const colors = { resultant: '#4ade80', comp1: '#60a5fa', comp2: '#fb923c' };
+  const s = `-${id}`;
+  const rot = panelRotation[id] || 0;
+
+  const geo = computeGeometry(data, id);
+  const { ax, ay, bx, by, rx, ry, resDir, c1Dir, c2Dir } = geo;
+
+  const resDirDisplay = normAngle(resDir);
+  const c1DirDisplay = normAngle(c1Dir);
+  const c2DirDisplay = normAngle(c2Dir);
+
+  const svgW = 750, svgH = 540;
+  const drawLeft = 40, drawTop = 80, drawW = 380, drawH = 430;
+  const pad = 30;
+
+  // Use shared scale if provided, otherwise fit to own bounding box
+  const spanX = geo.maxX - geo.minX || 1, spanY = geo.maxY - geo.minY || 1;
+  const scale = sharedScale || Math.min((drawW - 2 * pad) / spanX, (drawH - 2 * pad) / spanY);
+  const offX = drawLeft + pad + ((drawW - 2 * pad) - spanX * scale) / 2 - geo.minX * scale;
+  const offY = drawTop + pad + ((drawH - 2 * pad) - spanY * scale) / 2 - geo.minY * scale;
+
+  function tx(x) { return offX + x * scale; }
+  function ty(y) { return offY + y * scale; }
+
+  const ox = tx(0), oy = ty(0);
+  const Ax = tx(ax), Ay = ty(ay);
+  const Bx = tx(bx), By = ty(by);
+  const Rx = tx(rx), Ry = ty(ry);
+
+  const subtitle = `${resultant.header} = ${comp1.header} + ${comp2.header}`;
+
+  // Compass rose uses rotated bearings
+  function compassLine(bearing, color, name) {
+    const r = 45;
+    const rad = bearing * Math.PI / 180;
+    const lx = Math.sin(rad) * r, ly = -Math.cos(rad) * r;
+    const lr = r + 12;
+    const labelX = Math.sin(rad) * lr, labelY = -Math.cos(rad) * lr;
+    let anchor = 'middle';
+    if (labelX > 10) anchor = 'start';
+    else if (labelX < -10) anchor = 'end';
+    return `<line x1="0" y1="0" x2="${lx.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${color}" stroke-width="2" stroke-dasharray="3,2"/>
+    <text x="${labelX.toFixed(1)}" y="${(labelY + 4).toFixed(1)}" fill="${color}" font-size="10" text-anchor="${anchor}">${name}</text>`;
+  }
+
+  // Compass rose itself rotates so N label stays at true north
+  const compassRose = `<g transform="translate(600, 140)">
+    <circle cx="0" cy="0" r="45" fill="none" stroke="#475569" stroke-width="1"/>
+    <line x1="0" y1="-50" x2="0" y2="50" stroke="#475569" stroke-width="0.5"/>
+    <line x1="-50" y1="0" x2="50" y2="0" stroke="#475569" stroke-width="0.5"/>
+    <text x="0" y="-55" text-anchor="middle" fill="#94a3b8" font-size="13" font-weight="bold">N</text>
+    <text x="57" y="5" text-anchor="middle" fill="#94a3b8" font-size="12">E</text>
+    <text x="0" y="65" text-anchor="middle" fill="#94a3b8" font-size="12">S</text>
+    <text x="-57" y="5" text-anchor="middle" fill="#94a3b8" font-size="12">W</text>
+    ${compassLine(c1Dir, colors.comp1, comp1.dir.name)}
+    ${compassLine(resDir, colors.resultant, resultant.dir.name)}
+    ${compassLine(c2Dir, colors.comp2, comp2.dir.name)}
+  </g>`;
+
+  const gapDist = Math.sqrt((Rx - Bx) ** 2 + (Ry - By) ** 2);
+  const gapLine = gapDist > 2
+    ? `<line x1="${Bx.toFixed(1)}" y1="${By.toFixed(1)}" x2="${Rx.toFixed(1)}" y2="${Ry.toFixed(1)}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4,3"/>`
+    : '';
+
+  // Legend shows rotated direction values
+  function legendEntry(y, color, header, mag, dirName, dirDisplay) {
+    const val1 = `${mag.name} = ${mag.value}`;
+    const dirRounded = Math.round(dirDisplay * 100) / 100;
+    const val2 = `${dirName} = ${dirRounded}°`;
+    return `<line x1="450" y1="${y}" x2="470" y2="${y}" stroke="${color}" stroke-width="3"/>
+    <text x="480" y="${y + 4}" fill="${color}" font-size="15" font-weight="bold">${header}</text>
+    <text x="480" y="${y + 25}" fill="#94a3b8" font-size="14">${val1}, ${val2}</text>`;
+  }
+
+  const legendY = 250, legendH = 220;
+  const legend = `<rect x="430" y="${legendY}" width="290" height="${legendH}" rx="8" fill="rgba(30,41,59,0.9)" stroke="#475569" stroke-width="1"/>
+  ${legendEntry(legendY + 35, colors.resultant, resultant.header, resultant.mag, resultant.dir.name, resDirDisplay)}
+  ${legendEntry(legendY + 100, colors.comp1, comp1.header, comp1.mag, comp1.dir.name, c1DirDisplay)}
+  ${legendEntry(legendY + 165, colors.comp2, comp2.header, comp2.mag, comp2.dir.name, c2DirDisplay)}`;
+
+  function shortenEnd(x1, y1, x2, y2, amount) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < amount) return { x: x2, y: y2 };
+    const f = (len - amount) / len;
+    return { x: x1 + dx * f, y: y1 + dy * f };
+  }
+
+  const sA = shortenEnd(ox, oy, Ax, Ay, 3);
+  const sB = shortenEnd(Ax, Ay, Bx, By, 3);
+  const sR = shortenEnd(ox, oy, Rx, Ry, 3);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" style="background: #1a1a2e; font-family: 'Segoe UI', Arial, sans-serif;">
+  <defs>
+    <marker id="arrow-green${s}" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="${colors.resultant}"/>
+    </marker>
+    <marker id="arrow-blue${s}" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="${colors.comp1}"/>
+    </marker>
+    <marker id="arrow-orange${s}" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="${colors.comp2}"/>
+    </marker>
+  </defs>
+
+  <text x="375" y="35" text-anchor="middle" fill="#e2e8f0" font-size="20" font-weight="bold">Velocity Triangle</text>
+  <text x="375" y="58" text-anchor="middle" fill="#94a3b8" font-size="14">${subtitle}</text>
+
+  ${compassRose}
+
+  <polygon points="${ox.toFixed(1)},${oy.toFixed(1)} ${Ax.toFixed(1)},${Ay.toFixed(1)} ${Rx.toFixed(1)},${Ry.toFixed(1)}" fill="rgba(100,150,255,0.06)" stroke="none"/>
+
+  <line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${sA.x.toFixed(1)}" y2="${sA.y.toFixed(1)}" stroke="${colors.comp1}" stroke-width="2.5" marker-end="url(#arrow-blue${s})"/>
+  <line x1="${Ax.toFixed(1)}" y1="${Ay.toFixed(1)}" x2="${sB.x.toFixed(1)}" y2="${sB.y.toFixed(1)}" stroke="${colors.comp2}" stroke-width="2.5" marker-end="url(#arrow-orange${s})"/>
+  <line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${sR.x.toFixed(1)}" y2="${sR.y.toFixed(1)}" stroke="${colors.resultant}" stroke-width="2.5" marker-end="url(#arrow-green${s})"/>
+
+  ${gapLine}
+
+  <circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="3.5" fill="#e2e8f0"/>
+  <circle cx="${Ax.toFixed(1)}" cy="${Ay.toFixed(1)}" r="3.5" fill="#e2e8f0"/>
+  <circle cx="${Bx.toFixed(1)}" cy="${By.toFixed(1)}" r="3.5" fill="#e2e8f0"/>
+  ${gapDist > 2 ? `<circle cx="${Rx.toFixed(1)}" cy="${Ry.toFixed(1)}" r="3.5" fill="#e2e8f0"/>` : ''}
+
+  ${legend}
+</svg>`;
+}
+
+function drawAllPanels() {
+  const drawW = 380, drawH = 430, pad = 30;
+  const panels = document.querySelectorAll('.panel');
+
+  // Parse all panels, compute shared scale from max span
+  const parsed = [];
+  let maxSpanX = 0, maxSpanY = 0;
+  for (const el of panels) {
+    const id = el.dataset.panelId;
+    const input = document.getElementById(`input-${id}`);
+    try {
+      const data = parseTriangle(input.value);
+      const geo = computeGeometry(data, id);
+      const spanX = geo.maxX - geo.minX || 1;
+      const spanY = geo.maxY - geo.minY || 1;
+      maxSpanX = Math.max(maxSpanX, spanX);
+      maxSpanY = Math.max(maxSpanY, spanY);
+      parsed.push({ id, data, ok: true });
+    } catch (e) {
+      parsed.push({ id, error: e.message, ok: false });
+    }
+  }
+
+  const sharedScale = panels.length > 1
+    ? Math.min((drawW - 2 * pad) / (maxSpanX || 1), (drawH - 2 * pad) / (maxSpanY || 1))
+    : null;
+
+  for (const p of parsed) {
+    const output = document.getElementById(`output-${p.id}`);
+    if (p.ok) {
+      output.innerHTML = renderTriangle(p.data, p.id, sharedScale);
+    } else {
+      output.innerHTML = `<div class="error">${p.error}</div>`;
+    }
+  }
+  savePanels();
+}
+
+function drawPanel(_id) {
+  drawAllPanels();
+}
+
+// Restore from localStorage or start with default
+loadPanels();
+</script>
+
+</body>
+</html>
