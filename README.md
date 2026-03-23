@@ -30,6 +30,7 @@ Or open `docs/index.html` locally in a browser. No build step required.
 - **Variables panel** — structured view of all variables with editable inputs, equation balance highlighting (green/orange/red), and flash animation on value changes
 - **Undo/redo** — full undo history with Ctrl+Z / Ctrl+Y, restores solve results and status
 - **Split-pane layout** — resizable variables panel above the formulas editor
+- **Resizable sidebar** — drag to adjust sidebar width, persisted across sessions
 - **Multiple tabs** — work on several records simultaneously
 - **Dark/light theme** — auto-detects system preference, toggle with one click
 
@@ -146,7 +147,7 @@ Each variable has a ⟲ icon that clears it and solves, making it easy to comput
 ## Technical Details
 
 - Pure client-side JavaScript — no build system, no frameworks, no server
-- ~11,000 lines of JS across 14 modules
+- ~11,500 lines of JS across 13 modules
 - Brent's root-finding algorithm with adaptive bracketing, known-scale heuristics, and two-sweep solving that prefers natural unknowns over substitution-reduced equations
 - Token-based parser with AST generation for expression evaluation
 - Auto-saves to localStorage with 500ms debounce; Google Drive sync every 15 seconds

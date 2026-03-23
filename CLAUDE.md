@@ -35,11 +35,12 @@ node tests/gen-expected.js TESTNAME
 
 ### UI Layout
 - **Header**: Hamburger menu, title, action buttons (Solve, Clear, Undo ↶, Redo ↷), Drive controls, theme toggle, help (?), settings (⚙)
-- **Sidebar**: Collapsible category groups with record list; special records (Constants ★, Functions ★) at top; Import/Export/Reset and Help/Theme buttons at bottom
+- **Sidebar**: Collapsible category groups with record list; special records (Constants ★, Functions ★) at top; Import/Export/Reset and Help/Theme buttons at bottom; resizable width with drag divider (persistent); scrolls to current record on selection; resizable width with drag divider (persistent); scrolls to current record on selection
 - **Editor area**: Tab bar for multiple open records; split-pane with variables panel (top, resizable) and formulas editor (bottom) with syntax highlighting
 - **Details panel**: Record settings (category, decimal places, format, strip zeros, group digits, degrees mode)
 - **Status bar**: Left shows per-record status; right shows Drive sync info (hidden below 768px, flashes on small screens)
-- **Mobile responsive**: Hamburger sidebar at 768px, icons move to sidebar at 560px, compact layout at 480px
+- **Mobile responsive**: Hamburger sidebar at 768px, icons move to sidebar at 560px, cloud icon for Sign In at 480px, compact layout at 410px
+- **Mobile keyboard**: Currently disabled (early return in VP resize handler) — browser handles keyboard natively. Infrastructure remains for panel-specific focusin guard, two-mode handling (small/tall screens), and `scrollIntoView`-based visual viewport reset. `_keyboardIsShowing` module-level flag guards divider save and window resize.
 
 ### Editor
 - Syntax-highlighted formulas editor with line numbers
@@ -82,7 +83,7 @@ node tests/gen-expected.js TESTNAME
 
 ### Import/Export
 - PalmOS-compatible text format with `~~~~~~~~~~~~~~~~~~~~~~~~~~~` record separator
-- Import: `.txt` files or `.pdb` PalmOS database files
+- Import: `.txt` export files
 - Export: all records to text format
 
 ### Google Drive Integration
@@ -98,18 +99,18 @@ node tests/gen-expected.js TESTNAME
 ### Module Dependency Graph
 
 ```
-app.js (entry point, ~260 lines)
+app.js (entry point, ~250 lines)
   ↓
-ui.js (main orchestration, ~1700 lines)
-  ├→ storage.js (localStorage, import/export, ~900 lines)
-  ├→ drive.js (Google Drive sync, ~970 lines)
-  ├→ editor.js (syntax highlighting editor, ~1300 lines)
-  ├→ variables-panel.js (structured variable display, ~720 lines)
-  ├→ solve-engine.js (solving orchestration, ~610 lines)
-  │     ├→ solver.js (Brent's algorithm, ~800 lines)
-  │     ├→ evaluator.js (expression eval, 50+ builtins, ~770 lines)
-  │     └→ variables.js (variable parsing, ~1100 lines)
-  ├→ parser.js (tokenizer & AST, ~1030 lines)
+ui.js (main orchestration, ~1820 lines)
+  ├→ storage.js (localStorage, import/export, ~930 lines)
+  ├→ drive.js (Google Drive sync, ~990 lines)
+  ├→ editor.js (syntax highlighting editor, ~1290 lines)
+  ├→ variables-panel.js (structured variable display, ~770 lines)
+  ├→ solve-engine.js (solving orchestration, ~770 lines)
+  │     ├→ solver.js (Brent's algorithm, ~790 lines)
+  │     ├→ evaluator.js (expression eval, 50+ builtins, ~870 lines)
+  │     └→ variables.js (variable parsing, ~1180 lines)
+  ├→ parser.js (tokenizer & AST, ~1050 lines)
   ├→ line-parser.js (token-based line parsing, ~710 lines)
   └→ theme.js (light/dark toggle, ~110 lines)
 ```

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathPad Help</title>
+    <link rel="icon" href="MathPad.png" type="image/png">
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --bg-alt: #252526;
+            --text: #d4d4d4;
+            --text-muted: #858585;
+            --accent: #007acc;
+            --border: #3e3e42;
+            --code-bg: #2d2d30;
+            --heading: #569cd6;
+            --link: #4fc1ff;
+        }
+        :root.light {
+                --bg: #ffffff;
+                --bg-alt: #f3f3f3;
+                --text: #1e1e1e;
+                --text-muted: #616161;
+                --accent: #007acc;
+                --border: #d4d4d4;
+                --code-bg: #f5f5f5;
+                --heading: #0000ff;
+                --link: #007acc;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { color: var(--heading); font-size: 24px; border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
+        h2 { color: var(--heading); font-size: 19px; margin-top: 32px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+        h3 { color: var(--heading); font-size: 16px; margin-top: 24px; }
+        a { color: var(--link); }
+        code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 12px 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            border: 1px solid var(--border);
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+        }
+        th { background: var(--bg-alt); }
+        .back-link { margin-bottom: 16px; display: inline-block; }
+        .toc { background: var(--bg-alt); padding: 16px 24px; border-radius: 6px; border: 1px solid var(--border); margin: 16px 0; }
+        .toc ul { margin: 4px 0; padding-left: 20px; }
+        .toc li { margin: 3px 0; }
+        .example { color: var(--text-muted); font-style: italic; }
+        .note { background: var(--bg-alt); padding: 8px 12px; border-left: 3px solid var(--accent); border-radius: 0 4px 4px 0; margin: 12px 0; }
+    </style>
+</head>
+<body>
+    <p class="back-link"><a href="javascript:window.close()">&larr; Close</a></p>
+
+    <h1>MathPad Help</h1>
+    <p>MathPad is an algebraic equation solver. Enter variables and equations, and MathPad automatically detects unknowns and solves using root-finding. Solve forward or backward &mdash; give it any combination of knowns and unknowns.</p>
+
+    <div class="toc">
+        <strong>Contents</strong>
+        <ul>
+            <li><a href="#getting-started">Getting Started</a></li>
+            <li><a href="#variables">Variables</a></li>
+            <li><a href="#equations">Equations</a></li>
+            <li><a href="#number-formats">Number Formats</a></li>
+            <li><a href="#operators">Operators</a></li>
+            <li><a href="#functions">Built-in Functions</a></li>
+            <li><a href="#user-functions">User-defined Functions</a></li>
+            <li><a href="#special-records">Special Records</a></li>
+            <li><a href="#variables-panel">Variables Panel</a></li>
+            <li><a href="#comments">Comments</a></li>
+            <li><a href="#inline-eval">Inline Evaluation</a></li>
+            <li><a href="#pre-solve">Pre-solve Values</a></li>
+            <li><a href="#import-export">Import / Export</a></li>
+            <li><a href="#google-drive">Google Drive Sync</a></li>
+            <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
+            <li><a href="#settings">Record Settings</a></li>
+            <li><a href="#example">Example: Loan Calculator</a></li>
+        </ul>
+    </div>
+
+    <h2 id="getting-started">Getting Started</h2>
+    <p>MathPad organizes work into <strong>records</strong>, each with a formulas editor and a variables panel. Use the sidebar to create, rename, and switch between records. Open multiple records as tabs.</p>
+    <ol>
+        <li>Type variable declarations and equations in the formulas editor</li>
+        <li>Click <strong>Solve</strong> (or press Ctrl+Enter) to compute results</li>
+        <li>Edit values in the variables panel to quickly change inputs and re-solve</li>
+    </ol>
+
+    <h2 id="variables">Variables</h2>
+    <p>Variables are declared with a name followed by a <strong>marker</strong> that determines their behavior:</p>
+
+    <table>
+        <tr><th>Syntax</th><th>Type</th><th>Behavior</th></tr>
+        <tr><td><code>var: value</code></td><td>Input</td><td>Persistent &mdash; keeps value across Solve and Clear</td></tr>
+        <tr><td><code>var&lt;- value</code></td><td>Input</td><td>Cleared by the Clear button</td></tr>
+        <tr><td><code>var&lt;&lt;- value</code></td><td>Input</td><td>Full precision, cleared by Clear</td></tr>
+        <tr><td><code>var:: value</code></td><td>Input</td><td>Full precision, persistent</td></tr>
+        <tr><td><code>var-&gt;</code></td><td>Output</td><td>Cleared and recomputed on Solve</td></tr>
+        <tr><td><code>var-&gt;&gt;</code></td><td>Output</td><td>Full precision, cleared on Solve</td></tr>
+        <tr><td><code>var=&gt;</code></td><td>Output</td><td>Persistent output &mdash; recomputed on Solve, kept on Clear</td></tr>
+        <tr><td><code>var=&gt;&gt;</code></td><td>Output</td><td>Persistent output, full precision</td></tr>
+        <tr><td><code>var[lo:hi]:</code></td><td>Input</td><td>Constrain root-finding search range</td></tr>
+    </table>
+
+    <div class="note">
+        <strong>Full precision</strong> markers (<code>::</code>, <code>&lt;&lt;-</code>, <code>-&gt;&gt;</code>, <code>=&gt;&gt;</code>) store and display values with maximum precision instead of rounding to the record's decimal places setting.
+    </div>
+
+    <h3>Input vs Output</h3>
+    <p><strong>Input</strong> markers (<code>:</code>, <code>&lt;-</code>, <code>&lt;&lt;-</code>, <code>::</code>) define variables you provide values for. <strong>Output</strong> markers (<code>-&gt;</code>, <code>-&gt;&gt;</code>, <code>=&gt;</code>, <code>=&gt;&gt;</code>) define variables that MathPad computes. Output variables are cleared before solving so the solver can fill them in.</p>
+
+    <h3>Definitions</h3>
+    <p>A variable whose value is an expression (not just a number) acts as a <strong>definition</strong>:</p>
+    <pre>area: length * width
+circumference: 2 * pi * radius</pre>
+    <p>Definitions are evaluated in dependency order &mdash; out-of-order and chained dependencies are handled automatically.</p>
+
+    <h2 id="equations">Equations</h2>
+    <p>An equation is any line with <code>=</code> between two expressions:</p>
+    <pre>distance = speed * time
+a**2 + b**2 = c**2</pre>
+
+    <p>If all variables have values, MathPad checks that both sides <strong>balance</strong>. If there's an unknown, it <strong>solves</strong> using Brent's root-finding method.</p>
+
+    <h3>Degree Equality</h3>
+    <p>Use <code>=&deg;</code> for mod-aware comparison (mod 360 in degrees mode, mod 2&pi; in radians):</p>
+    <pre>heading =&deg; target_heading</pre>
+    <p>This correctly handles wraparound &mdash; e.g., 359&deg; and 1&deg; are only 2&deg; apart. Also works as a logical operator in expressions, returning 1 (true) or 0 (false).</p>
+
+    <h3>Multi-line Equations</h3>
+    <p>Wrap long equations in curly braces:</p>
+    <pre>{long_expression_a + long_expression_b
+ = long_expression_c + long_expression_d}</pre>
+
+    <h2 id="number-formats">Number Formats</h2>
+
+    <h3>Number Literals</h3>
+    <table>
+        <tr><th>Format</th><th>Example</th></tr>
+        <tr><td>Decimal</td><td><code>123</code>, <code>3.14</code>, <code>1.5e-10</code></td></tr>
+        <tr><td>Hexadecimal</td><td><code>0xFF</code></td></tr>
+        <tr><td>Binary</td><td><code>0b1010</code></td></tr>
+        <tr><td>Octal</td><td><code>0o77</code></td></tr>
+        <tr><td>Percent literal</td><td><code>5%</code> (stored as 0.05)</td></tr>
+        <tr><td>Degree literal</td><td><code>400&deg;</code> (stored as 400, no mod)</td></tr>
+    </table>
+
+    <h3>Format Suffixes</h3>
+    <p>Add a format suffix before the marker to control display:</p>
+    <table>
+        <tr><th>Suffix</th><th>Example</th><th>Display</th></tr>
+        <tr><td><code>$</code></td><td><code>price$: 1234.5</code></td><td><code>$1,234.50</code> (always 2 decimals, comma grouping)</td></tr>
+        <tr><td><code>%</code></td><td><code>rate%: 7.5%</code></td><td><code>7.5%</code> (stored as 0.075)</td></tr>
+        <tr><td><code>&deg;</code></td><td><code>angle&deg;: 400</code></td><td><code>40&deg;</code> (mod 360 on output)</td></tr>
+        <tr><td><code>#16</code></td><td><code>hex#16: 255</code></td><td><code>FF</code> (bases 2-36)</td></tr>
+    </table>
+
+    <h3>Expression Outputs</h3>
+    <p>Format suffixes also work on expression outputs:</p>
+    <pre>total cost: qty * unit_price
+(total cost)$-&gt;
+(rate)%-&gt;
+(heading)&deg;-&gt;</pre>
+
+    <h2 id="operators">Operators</h2>
+    <p>Listed by precedence (highest to lowest):</p>
+    <table>
+        <tr><th>Operator</th><th>Description</th></tr>
+        <tr><td><code>- + ~ !</code></td><td>Unary: negate, plus, bitwise NOT, logical NOT</td></tr>
+        <tr><td><code>**</code></td><td>Power (right-associative)</td></tr>
+        <tr><td><code>* /</code></td><td>Multiply, Divide</td></tr>
+        <tr><td><code>+ -</code></td><td>Add, Subtract</td></tr>
+        <tr><td><code>&lt;&lt; &gt;&gt;</code></td><td>Bit shift left, right</td></tr>
+        <tr><td><code>&amp;</code></td><td>Bitwise AND</td></tr>
+        <tr><td><code>| ^</code></td><td>Bitwise OR, XOR</td></tr>
+        <tr><td><code>== != &lt; &lt;= &gt; &gt;=</code></td><td>Comparison (returns 1 or 0)</td></tr>
+        <tr><td><code>&amp;&amp;</code></td><td>Logical AND</td></tr>
+        <tr><td><code>|| ^^</code></td><td>Logical OR, XOR</td></tr>
+    </table>
+
+    <h2 id="functions">Built-in Functions</h2>
+    <p>Function arguments are separated by semicolons: <code>f(a; b; c)</code></p>
+
+    <h3>Math</h3>
+    <table>
+        <tr><th>Function</th><th>Description</th></tr>
+        <tr><td><code>Abs(x)</code></td><td>Absolute value</td></tr>
+        <tr><td><code>Sign(x)</code></td><td>-1, 0, or 1</td></tr>
+        <tr><td><code>Int(x)</code></td><td>Integer part (truncate toward zero)</td></tr>
+        <tr><td><code>Frac(x)</code></td><td>Fractional part</td></tr>
+        <tr><td><code>Round(x)</code></td><td>Round to nearest integer</td></tr>
+        <tr><td><code>Floor(x)</code></td><td>Round down</td></tr>
+        <tr><td><code>Ceil(x)</code></td><td>Round up</td></tr>
+        <tr><td><code>Mod(a; b)</code></td><td>Remainder (always non-negative for positive b)</td></tr>
+        <tr><td><code>Sqrt(x)</code></td><td>Square root</td></tr>
+        <tr><td><code>Cbrt(x)</code></td><td>Cube root</td></tr>
+        <tr><td><code>Root(x; n)</code></td><td>Nth root</td></tr>
+        <tr><td><code>Exp(x)</code></td><td>e raised to x</td></tr>
+        <tr><td><code>Ln(x)</code></td><td>Natural logarithm</td></tr>
+        <tr><td><code>Log(x)</code></td><td>Base-10 logarithm</td></tr>
+        <tr><td><code>Fact(n)</code></td><td>Factorial (n!)</td></tr>
+        <tr><td><code>Pi</code></td><td>3.14159...</td></tr>
+        <tr><td><code>Rand</code></td><td>Random number 0 to 1</td></tr>
+    </table>
+
+    <h3>Trigonometry</h3>
+    <p>Uses degrees or radians depending on the record's <strong>Degrees mode</strong> setting.</p>
+    <table>
+        <tr><th>Function</th><th>Description</th></tr>
+        <tr><td><code>Sin(x)</code>, <code>Cos(x)</code>, <code>Tan(x)</code></td><td>Trigonometric functions</td></tr>
+        <tr><td><code>ASin(x)</code>, <code>ACos(x)</code>, <code>ATan(x)</code></td><td>Inverse trig</td></tr>
+        <tr><td><code>SinH(x)</code>, <code>CosH(x)</code>, <code>TanH(x)</code></td><td>Hyperbolic</td></tr>
+        <tr><td><code>ASinH(x)</code>, <code>ACosH(x)</code>, <code>ATanH(x)</code></td><td>Inverse hyperbolic</td></tr>
+        <tr><td><code>Radians(deg)</code></td><td>Convert degrees to radians</td></tr>
+        <tr><td><code>Degrees(rad)</code></td><td>Convert radians to degrees</td></tr>
+    </table>
+
+    <h3>Date and Time</h3>
+    <table>
+        <tr><th>Function</th><th>Description</th></tr>
+        <tr><td><code>Now</code></td><td>Current date/time as days since epoch</td></tr>
+        <tr><td><code>Days(y; m; d)</code></td><td>Date to days since epoch</td></tr>
+        <tr><td><code>JDays(julian)</code></td><td>Julian day number to days</td></tr>
+        <tr><td><code>Date(days)</code></td><td>Days to date number (YYYYMMDD)</td></tr>
+        <tr><td><code>JDate(days)</code></td><td>Days to Julian day number</td></tr>
+        <tr><td><code>Year(days)</code>, <code>Month(days)</code>, <code>Day(days)</code></td><td>Extract date components</td></tr>
+        <tr><td><code>Weekday(days)</code></td><td>Day of week (0=Sunday)</td></tr>
+        <tr><td><code>Hour(days)</code>, <code>Minute(days)</code>, <code>Second(days)</code></td><td>Extract time components</td></tr>
+        <tr><td><code>Hours(h; m; s)</code></td><td>Convert to fractional hours</td></tr>
+        <tr><td><code>HMS(hours)</code></td><td>Convert fractional hours to HHMMSS</td></tr>
+    </table>
+
+    <h3>Control Flow</h3>
+    <table>
+        <tr><th>Function</th><th>Description</th></tr>
+        <tr><td><code>If(cond; then; else)</code></td><td>Conditional &mdash; returns <em>then</em> if cond is non-zero, <em>else</em> otherwise</td></tr>
+        <tr><td><code>Choose(n; v1; v2; ...)</code></td><td>Returns the nth value (1-based)</td></tr>
+        <tr><td><code>Min(a; b; ...)</code></td><td>Minimum of values</td></tr>
+        <tr><td><code>Max(a; b; ...)</code></td><td>Maximum of values</td></tr>
+        <tr><td><code>Avg(a; b; ...)</code></td><td>Average of values</td></tr>
+        <tr><td><code>Sum(a; b; ...)</code></td><td>Sum of values</td></tr>
+    </table>
+
+    <h3>Other</h3>
+    <table>
+        <tr><th>Function</th><th>Description</th></tr>
+        <tr><td><code>Pmt(pv; rate; n; fv)</code></td><td>Loan/annuity payment calculation</td></tr>
+        <tr><td><code>isClose(a; b; places)</code></td><td>1 if a and b are equal within tolerance, 0 otherwise</td></tr>
+        <tr><td><code>Tau</code></td><td>2&pi; (always)</td></tr>
+        <tr><td><code>Perigon</code></td><td>360 in degrees mode, 2&pi; in radians mode</td></tr>
+        <tr><td><code>Places</code></td><td>Current record's decimal places setting</td></tr>
+    </table>
+
+    <h2 id="user-functions">User-defined Functions</h2>
+    <p>Define functions in any record using the syntax:</p>
+    <pre>f(x; y) = expression using x and y</pre>
+    <p>Define functions in the special <strong>"Functions"</strong> record to make them available to all records. Function parameters use semicolons as separators, just like built-in functions.</p>
+    <p class="example">Example: pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)</p>
+
+    <h2 id="special-records">Special Records</h2>
+    <table>
+        <tr><th>Name</th><th>Purpose</th></tr>
+        <tr><td><strong>Constants</strong></td><td>Variables defined here are available in all other records</td></tr>
+        <tr><td><strong>Functions</strong></td><td>User-defined functions available to all records</td></tr>
+        <tr><td><strong>Default Settings</strong></td><td>Settings template for newly created records</td></tr>
+    </table>
+
+    <h2 id="variables-panel">Variables Panel</h2>
+    <p>The variables panel (above the formulas editor) shows a structured view of all variables:</p>
+    <ul>
+        <li>Editable inputs for variable values &mdash; edit and press Tab or click away to apply</li>
+        <li>Readonly fields for output values (selectable and copyable)</li>
+        <li>Equation highlighting: <span style="color:#4ec9b0">green</span> = balanced, <span style="color:#cca700">orange</span> = unbalanced, <span style="color:#f44747">red</span> = error</li>
+        <li>Click the solve button next to an output variable to clear it and solve</li>
+        <li>Press Escape in an input to revert to the previous value</li>
+    </ul>
+
+    <h3>--Variables-- Section</h3>
+    <p>Add a <code>--Variables--</code> line in the formulas editor. Only lines <strong>below</strong> this marker appear in the variables panel. Lines above it (formulas, equations) are hidden from the panel.</p>
+    <ul>
+        <li>Plain text lines become labels in the panel</li>
+        <li>Empty lines become spacers</li>
+        <li>Lines starting with <code>//</code> are hidden</li>
+    </ul>
+
+    <h2 id="comments">Comments</h2>
+    <p>Text in double quotes is treated as a comment and ignored by the solver:</p>
+    <pre>"This is a comment"
+x: 42    "the answer"</pre>
+    <p>Comments after a variable declaration appear in the variables panel.</p>
+
+    <h2 id="inline-eval">Inline Evaluation</h2>
+    <p>Wrap an expression in backslashes to evaluate it in-place during solve:</p>
+    <pre>tax_rate: 0.08
+total: subtotal * (1 + \tax_rate\)</pre>
+    <p>The <code>\tax_rate\</code> is replaced with its value (0.08) in the text after solving.</p>
+
+    <h2 id="pre-solve">Pre-solve Values</h2>
+    <p>Access a variable's value from <em>before</em> the current solve started:</p>
+    <table>
+        <tr><th>Syntax</th><th>Description</th></tr>
+        <tr><td><code>x~</code></td><td>Pre-solve value of x (error if none)</td></tr>
+        <tr><td><code>x~?</code></td><td>1 if x has a pre-solve value, 0 otherwise</td></tr>
+    </table>
+    <p class="example">Example: counter: if(counter~?; counter~ + 1; 0) &mdash; increments each time you solve</p>
+
+    <h2 id="import-export">Import / Export</h2>
+    <ul>
+        <li><strong>Export</strong>: saves all records to a text file</li>
+        <li><strong>Import</strong>: loads records from a <code>.txt</code> export file</li>
+        <li>Import replaces all existing records</li>
+    </ul>
+    <p>Access Import/Export from the sidebar buttons.</p>
+
+    <h2 id="google-drive">Google Drive Sync</h2>
+    <p>Click <strong>Sign In</strong> to sync records to Google Drive:</p>
+    <ul>
+        <li>Records are saved to a "MathPad" folder in your Drive root</li>
+        <li>Auto-syncs every 15 seconds when changes are detected</li>
+        <li>Conflict detection &mdash; prompts you if Drive has newer data</li>
+        <li>Works across devices (phone, tablet, desktop)</li>
+        <li>Optional &mdash; MathPad works fully offline using local storage</li>
+    </ul>
+
+    <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+    <table>
+        <tr><th>Shortcut</th><th>Action</th></tr>
+        <tr><td><code>Ctrl+Enter</code></td><td>Solve current record</td></tr>
+        <tr><td><code>Ctrl+Z</code></td><td>Undo</td></tr>
+        <tr><td><code>Ctrl+Y</code> / <code>Ctrl+Shift+Z</code></td><td>Redo</td></tr>
+        <tr><td><code>Tab</code> / <code>Shift+Tab</code></td><td>Cycle through variable inputs</td></tr>
+        <tr><td><code>Escape</code></td><td>Revert edited variable value</td></tr>
+    </table>
+
+    <h2 id="settings">Record Settings</h2>
+    <p>Click the gear icon to configure per-record settings:</p>
+    <table>
+        <tr><th>Setting</th><th>Description</th></tr>
+        <tr><td>Category</td><td>Organize records into collapsible groups in the sidebar</td></tr>
+        <tr><td>Decimal Places</td><td>Number of decimal places for output (default 2)</td></tr>
+        <tr><td>Format</td><td>Float, Scientific, or Engineering notation</td></tr>
+        <tr><td>Strip Zeros</td><td>Remove trailing zeros from output</td></tr>
+        <tr><td>Group Digits</td><td>Add comma separators (1,234,567)</td></tr>
+        <tr><td>Degrees Mode</td><td>Trig functions use degrees instead of radians</td></tr>
+    </table>
+
+    <h2 id="example">Example: Loan Calculator</h2>
+    <pre>"Loan calculator"
+
+--Formulas--
+pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+
+--Equations--
+pmt = pmt(pv; rate/12; years*12; fv)
+
+--Variables--
+pv $&lt;-   $100,000     "present value (loan or annuity)"
+fv $&lt;-   $0           "future value (balloon payment)"
+rate %&lt;- 6.125%       "annual interest rate %"
+years &lt;- 30           "number of years"
+pmt $&lt;-               "monthly payment"</pre>
+
+    <p><strong>How it works:</strong></p>
+    <ol>
+        <li>The <strong>Formulas</strong> section defines a reusable payment function</li>
+        <li>The <strong>Equations</strong> section ties the function to the variables</li>
+        <li>The <strong>Variables</strong> section lists inputs and outputs &mdash; <code>$</code> formats as money, <code>%</code> as percent</li>
+        <li>Click <strong>Solve</strong> to calculate <code>pmt: -$607.61</code></li>
+        <li>To solve backwards, set <code>pmt: -$2,000</code> and clear <code>pv</code>, then solve &mdash; MathPad finds <code>pv: $329,158.21</code></li>
+    </ol>
+
+    <p class="back-link"><a href="javascript:window.close()">&larr; Close</a></p>
+    <script>
+        // Match MathPad's theme setting
+        var theme = localStorage.getItem('mathpad_theme');
+        if (!theme) {
+            try { theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch(e) {}
+        }
+        if (theme === 'light') document.documentElement.classList.add('light');
+    </script>
+</body>
+</html>

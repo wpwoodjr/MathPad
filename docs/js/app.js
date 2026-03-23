@@ -188,63 +188,7 @@ function showAbout() {
  * Show help
  */
 function showHelp() {
-    const helpText = `
-MathPad Web - Quick Reference
-
-VARIABLE DECLARATIONS:
-  varname: value      Standard variable
-  varname<- value     Input variable (cleared on load)
-  varname-> value     Output variable (cleared on solve)
-  varname:: value     Full precision output
-  varname->> value    Full precision output variable
-  varname[lo:hi]: val Variable with search limits
-
-EQUATIONS:
-  expression = expression
-  {multi-line equation}
-
-OPERATORS (by precedence):
-  || ^^          Logical OR, XOR
-  &&             Logical AND
-  == != < <= > >= Comparison
-  | ^            Bitwise OR, XOR
-  &              Bitwise AND
-  << >>          Shift
-  + -            Add, Subtract
-  * /            Multiply, Divide
-  **             Power (right-associative)
-  - + ~ !        Unary minus, plus, NOT, logical NOT
-
-BUILT-IN FUNCTIONS:
-  Math: Abs, Sign, Int, Frac, Round, Floor, Ceil, Mod
-        Sqrt, Cbrt, Root, Exp, Ln, Log, Fact, Pi
-  Trig: Sin, ASin, SinH, ASinH, Cos, ACos, CosH, ACosH
-        Tan, ATan, TanH, ATanH, Radians, Degrees
-  Date: Now, Days, JDays, Date, JDate, Year, Month, Day
-        Weekday, Hour, Minute, Second, Hours, HMS
-  Control: If(cond;then;else), Choose(n;v1;v2;...)
-  Other: Min, Max, Avg, Sum, Rand
-
-SPECIAL RECORDS:
-  "Constants" - Variables available in all records
-  "Functions" - User-defined functions: f(x;y) = expr
-
-INLINE EVALUATION:
-  \\expression\\  - Evaluates and replaces with result
-
-KEYBOARD SHORTCUTS:
-  Ctrl+Enter    Solve current record
-  Ctrl+S        (Auto-saved)
-
-NUMBERS:
-  123, 3.14, 1.5e-10    Decimal
-  0xFF, 0b1010, 0o77    Hex, Binary, Octal
-
-COMMENTS:
-  "Text in double quotes"
-`;
-
-    alert(helpText);
+    window.open('help.html', '_blank');
 }
 
 // Export to global scope
