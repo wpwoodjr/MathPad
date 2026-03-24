@@ -87,8 +87,12 @@ class VariablesPanel {
      * Shows one row per declaration line and expression output
      */
     updateFromText(text) {
-        // Find where references section starts (if present) — excluded from panel
-        const refSectionStart = text.indexOf('"--- Reference Constants and Functions ---"');
+        // Find where references/table outputs section starts (if present) — excluded from panel
+        let refSectionStart = text.indexOf('"--- Reference Constants and Functions ---"');
+        const tableOutputStart = text.indexOf('"--- Table Outputs ---"');
+        if (tableOutputStart >= 0 && (refSectionStart < 0 || tableOutputStart < refSectionStart)) {
+            refSectionStart = tableOutputStart;
+        }
         const refSectionLineIndex = refSectionStart >= 0
             ? text.substring(0, refSectionStart).split('\n').length - 1
             : Infinity;
@@ -787,6 +791,10 @@ class VariablesPanel {
         if (!tables || tables.length === 0) return;
 
         for (const table of tables) {
+            if (table.type === 'table2') {
+                this._renderTable2(table);
+                continue;
+            }
             if (table.columns.length === 0 || table.rows.length === 0) continue;
 
             const wrapper = document.createElement('div');
@@ -827,6 +835,90 @@ class VariablesPanel {
             wrapper.appendChild(tableEl);
             this.insertRowInOrder(wrapper, table.startLine - 1);
         }
+    }
+
+    /**
+     * Render a 2D table (table2) with row/column iterator labels
+     */
+    _renderTable2(table) {
+        if (table.grid.length === 0 || table.colValues.length === 0) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'variable-row variable-table-container';
+        wrapper.dataset.lineIndex = table.startLine - 1;
+        wrapper.dataset.type = 'table';
+
+        const tableEl = document.createElement('table');
+        tableEl.className = 'mathpad-table mathpad-table2';
+        if (table.fontSize) tableEl.style.fontSize = table.fontSize + 'px';
+
+        const numRows = table.rowValues.length;
+        const numCols = table.colValues.length;
+
+        // Header row 1: empty + empty + iter2Label spanning columns
+        const thead = document.createElement('thead');
+        const headerRow1 = document.createElement('tr');
+        headerRow1.appendChild(document.createElement('th')); // x label column
+        headerRow1.appendChild(document.createElement('th')); // row values column
+        const iter2Th = document.createElement('th');
+        iter2Th.textContent = table.iter2Label;
+        iter2Th.colSpan = numCols;
+        iter2Th.className = 'mathpad-table2-label';
+        headerRow1.appendChild(iter2Th);
+        thead.appendChild(headerRow1);
+
+        // Header row 2: empty + empty + column values
+        const headerRow2 = document.createElement('tr');
+        const cellHeaderTh = document.createElement('th');
+        cellHeaderTh.textContent = table.cellHeader || '';
+        cellHeaderTh.colSpan = 2;
+        cellHeaderTh.className = 'mathpad-table2-label';
+        cellHeaderTh.style.textAlign = 'right';
+        headerRow2.appendChild(cellHeaderTh);
+        for (const cv of table.colValues) {
+            const th = document.createElement('th');
+            th.textContent = cv;
+            headerRow2.appendChild(th);
+        }
+        thead.appendChild(headerRow2);
+        tableEl.appendChild(thead);
+
+        // Body rows
+        const tbody = document.createElement('tbody');
+        const midRow = Math.floor(numRows / 2);
+
+        for (let r = 0; r < numRows; r++) {
+            const tr = document.createElement('tr');
+
+            // iter1 label (only on middle row, spanning all rows)
+            if (r === 0) {
+                const labelTh = document.createElement('th');
+                const labelDiv = document.createElement('div');
+                labelDiv.textContent = table.iter1Label;
+                labelDiv.className = 'mathpad-table2-row-label-text';
+                labelTh.appendChild(labelDiv);
+                labelTh.rowSpan = numRows;
+                labelTh.className = 'mathpad-table2-label mathpad-table2-row-label';
+                tr.appendChild(labelTh);
+            }
+
+            // Row value
+            const rowTh = document.createElement('th');
+            rowTh.textContent = table.rowValues[r];
+            tr.appendChild(rowTh);
+
+            // Cell values
+            for (let c = 0; c < numCols; c++) {
+                const td = document.createElement('td');
+                td.textContent = table.grid[r][c] || '';
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+        tableEl.appendChild(tbody);
+
+        wrapper.appendChild(tableEl);
+        this.insertRowInOrder(wrapper, table.startLine - 1);
     }
 }
 

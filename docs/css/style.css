@@ -1539,6 +1539,22 @@ body.sidebar-resizing * {
     background: var(--bg-hover);
 }
 
+.mathpad-table .mathpad-table2-label {
+    text-align: center;
+    font-style: italic;
+}
+
+.mathpad-table .mathpad-table2-row-label {
+    vertical-align: middle;
+    padding: 4px 2px;
+}
+
+.mathpad-table2-row-label-text {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    margin: auto;
+}
+
 .variable-solve-btn {
     background: transparent;
     border: none;

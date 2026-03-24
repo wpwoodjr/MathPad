@@ -666,9 +666,48 @@ function formatOutput(text, declarations, context, computedValues, record, solve
  * Remove existing references section from text
  */
 function removeReferencesSection(text) {
-    // Remove everything from "--- Reference Constants and Functions ---" to end
-    const pattern = /\n*"--- Reference Constants and Functions ---"[\s\S]*$/;
-    return text.replace(pattern, '');
+    // Remove table outputs section and references section from end
+    text = text.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
+    text = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
+    return text;
+}
+
+/**
+ * Append table outputs section showing table results as text
+ */
+function appendTableOutputsSection(text, tables) {
+    if (!tables || tables.length === 0) return text;
+
+    // Check if any tables have data
+    const hasTables = tables.some(t =>
+        t.type === 'table2' ? t.grid.length > 0 : (t.rows && t.rows.length > 0)
+    );
+    if (!hasTables) return text;
+
+    const lines = ['"--- Table Outputs ---"'];
+
+    for (const table of tables) {
+        if (table.type === 'table2') {
+            if (table.grid.length === 0) continue;
+            // 2D table: labels line, colValues header, then grid rows
+            lines.push(`"${table.iter1Label}"\t"${table.iter2Label}"\t"${table.cellHeader}"`);
+            lines.push(`\t${table.colValues.join('\t')}`);
+            for (let r = 0; r < table.rowValues.length; r++) {
+                lines.push(`${table.rowValues[r]}\t${table.grid[r].join('\t')}`);
+            }
+        } else {
+            if (!table.rows || table.rows.length === 0) continue;
+            // 1D table: column headers, then rows
+            lines.push(table.columns.map(c => '"' + (c.header || c.name) + '"').join('\t'));
+            for (const row of table.rows) {
+                lines.push(row.join('\t'));
+            }
+        }
+        lines.push(''); // blank line between tables
+    }
+
+    text = text.trimEnd() + '\n\n' + lines.join('\n').trimEnd();
+    return text;
 }
 
 /**
@@ -768,7 +807,9 @@ function solveRecord(text, context, record, parserTokens) {
     for (const td of tableDefs) {
         // Restore outer context so tables don't leak state to each other
         context.variables = new Map(savedVars);
-        const tableResult = evaluateTable(td, context, record);
+        const tableResult = td.type === 'table2'
+            ? evaluateTable2(td, context, record)
+            : evaluateTable(td, context, record);
         errors.push(...tableResult.errors);
         tables.push(tableResult);
     }
@@ -780,6 +821,9 @@ function solveRecord(text, context, record, parserTokens) {
     if (!isInReferenceCategory) {
         text = appendReferencesSection(text, context);
     }
+
+    // Pass 6: Append table outputs section
+    text = appendTableOutputsSection(text, tables);
 
     return { text, solved: solveResult.solved, errors, equationVarStatus: solveResult.equationVarStatus, tables };
 }
@@ -1021,6 +1065,185 @@ function evaluateTable(tableDef, context, record) {
     }
 
     return { columns, rows, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+}
+
+/**
+ * Evaluate a 2D table: nested iteration over two variables.
+ * Produces a grid with iter1 as rows and iter2 as columns.
+ */
+function evaluateTable2(tableDef, context, record) {
+    const errors = [];
+
+    // Evaluate bounds for both iterators
+    let low1, high1, step1, low2, high2, step2;
+    try { low1 = evaluate(parseExpression(tableDef.lowExpr), context); }
+    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 row low bound error — ${e.message}`); return makeEmpty(); }
+    try { high1 = evaluate(parseExpression(tableDef.highExpr), context); }
+    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 row high bound error — ${e.message}`); return makeEmpty(); }
+    try { step1 = evaluate(parseExpression(tableDef.stepExpr), context); }
+    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 row step error — ${e.message}`); return makeEmpty(); }
+    try { low2 = evaluate(parseExpression(tableDef.low2Expr), context); }
+    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 col low bound error — ${e.message}`); return makeEmpty(); }
+    try { high2 = evaluate(parseExpression(tableDef.high2Expr), context); }
+    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 col high bound error — ${e.message}`); return makeEmpty(); }
+    try { step2 = evaluate(parseExpression(tableDef.step2Expr), context); }
+    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 col step error — ${e.message}`); return makeEmpty(); }
+
+    if (step1 === 0 || step2 === 0) {
+        errors.push(`Line ${tableDef.startLine}: Table2 step cannot be zero`);
+        return makeEmpty();
+    }
+
+    // Font size
+    let fontSize = null;
+    if (tableDef.fontSizeExpr) {
+        try { fontSize = evaluate(parseExpression(tableDef.fontSizeExpr), context); } catch (e) { }
+    }
+
+    // Parse body: definitions, output columns, equations (same as evaluateTable)
+    const bodyTokens = new Tokenizer(tableDef.bodyText).tokenize();
+    const definitions = [];
+    const outputVars = []; // variables to display as cell values (excluding the two iterators)
+    let iter1Header = tableDef.iteratorName;
+    let iter2Header = tableDef.iterator2Name;
+
+    for (let i = 0; i < bodyTokens.length; i++) {
+        const lineTokens = bodyTokens[i].filter(t => t.type !== TokenType.EOF);
+        if (lineTokens.length === 0) continue;
+        const parsed = parseMarkedLine(tableDef.bodyLines[i] || '', lineTokens);
+        if (!parsed) continue;
+
+        if (parsed.kind === 'declaration') {
+            if (parsed.type === VarType.INPUT) {
+                const exprText = parsed.valueTokens && parsed.valueTokens.length > 0
+                    ? parsed.valueTokens.map(t => (t.ws || '') + (typeof t.value === 'object' ? t.value.raw || t.value : t.value)).join('')
+                    : null;
+                definitions.push({ name: parsed.name, exprText });
+            } else if (parsed.type === VarType.OUTPUT) {
+                const label = (parsed.label && parsed.label.trim()) || parsed.name;
+                if (parsed.name === tableDef.iteratorName) {
+                    iter1Header = label;
+                } else if (parsed.name === tableDef.iterator2Name) {
+                    iter2Header = label;
+                } else {
+                    outputVars.push({
+                        name: parsed.name,
+                        header: label,
+                        format: parsed.format || null,
+                        fullPrecision: parsed.fullPrecision || false,
+                        base: parsed.base || 10
+                    });
+                }
+            }
+        }
+    }
+
+    // Find equations
+    const bodyEqs = findEquationsAndOutputs(tableDef.bodyText, bodyTokens, null);
+    const equations = bodyEqs.equations;
+
+    // Pre-parse definitions
+    const defASTs = [];
+    for (const def of definitions) {
+        if (!def.exprText) { defASTs.push({ name: def.name, ast: null }); continue; }
+        try { defASTs.push({ name: def.name, ast: parseExpression(def.exprText.trim()) }); }
+        catch (e) { defASTs.push({ name: def.name, ast: null }); }
+    }
+
+    const defNames = new Set(defASTs.map(d => d.name));
+    const preTableVars = new Set(context.variables.keys());
+
+    const formatOpts = {
+        places: record.places != null ? record.places : 4,
+        stripZeros: record.stripZeros !== false,
+        numberFormat: record.format || 'float',
+        groupDigits: record.groupDigits || false
+    };
+
+    // Build column values (iter2 range)
+    const colValues = [];
+    for (let v = low2; step2 > 0 ? v <= high2 : v >= high2; v += step2) {
+        colValues.push(v);
+        if (colValues.length > 10000) break;
+    }
+
+    // Build row values (iter1 range)
+    const rowValues = [];
+    for (let v = low1; step1 > 0 ? v <= high1 : v >= high1; v += step1) {
+        rowValues.push(v);
+        if (rowValues.length > 10000) break;
+    }
+
+    // Use first output var for cell values (or empty if none)
+    const cellVar = outputVars.length > 0 ? outputVars[0] : null;
+
+    // Iterate: rows × columns
+    const grid = [];
+    for (const rowVal of rowValues) {
+        const gridRow = [];
+        for (const colVal of colValues) {
+            // Clear equation unknowns
+            if (cellVar && !preTableVars.has(cellVar.name) && !defNames.has(cellVar.name)) {
+                context.variables.delete(cellVar.name);
+                context.declareVariable(cellVar.name);
+            }
+
+            // Set both iterators
+            context.setVariable(tableDef.iteratorName, rowVal);
+            context.setVariable(tableDef.iterator2Name, colVal);
+
+            // Evaluate definitions
+            for (const { name, ast } of defASTs) {
+                if (!ast) continue;
+                try { context.setVariable(name, evaluate(ast, context)); } catch (e) { }
+            }
+
+            // Solve equations
+            for (const eq of equations) {
+                try {
+                    const variables = buildVariablesMap([], context);
+                    const result = solveEquationInContext(
+                        eq.text, eq.startLine, context, variables,
+                        new Map(), eq.leftText, eq.rightText, eq.modN || null
+                    );
+                    if (result.solved && result.variable && result.value !== undefined) {
+                        context.setVariable(result.variable, result.value);
+                    }
+                } catch (e) { }
+            }
+
+            // Collect cell value
+            if (cellVar) {
+                const value = context.getVariable(cellVar.name);
+                if (value !== undefined) {
+                    gridRow.push(formatVariableValue(value, cellVar.format, cellVar.fullPrecision, formatOpts));
+                } else {
+                    gridRow.push('');
+                }
+            } else {
+                gridRow.push('');
+            }
+        }
+        grid.push(gridRow);
+    }
+
+    return {
+        type: 'table2',
+        iter1Label: iter1Header,
+        iter2Label: iter2Header,
+        rowValues: rowValues.map(v => formatVariableValue(v, null, false, formatOpts)),
+        colValues: colValues.map(v => formatVariableValue(v, null, false, formatOpts)),
+        cellHeader: cellVar ? cellVar.header : '',
+        grid,
+        fontSize,
+        startLine: tableDef.startLine,
+        endLine: tableDef.endLine,
+        errors
+    };
+
+    function makeEmpty() {
+        return { type: 'table2', iter1Label: '', iter2Label: '', rowValues: [], colValues: [], cellHeader: '', grid: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+    }
 }
 
 // Export for use in other modules

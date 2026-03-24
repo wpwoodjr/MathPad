@@ -1585,7 +1585,8 @@ function handleClearInput() {
     clearResult = clearVariables(clearResult.text, 'output', clearResult.allTokens);
     text = clearResult.text;
 
-    // Remove references section
+    // Remove table outputs and references sections
+    text = text.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
     text = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
 
     // Enable flash before setValue so onChange's updateFromText highlights changed values

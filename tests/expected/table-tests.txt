@@ -16,6 +16,15 @@ table(n; 0; 5) = {
   Expr output x+1->
   No clear y/x:>>
 }
+
+"--- Table Outputs ---"
+"n"	"x"	"sqrt(n)"	"x**2"	"Expr output"	"No clear"
+0	0	0	0	1	NaN
+1	1	1	1	2	1
+2	4	1.41	4	5	0.353553390593274
+3	9	1.73	9	10	0.192450089729875
+4	16	2	16	17	0.125
+5	25	2.24	25	26	0.089442719099992
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -29,6 +38,15 @@ table(x; 0; 5) = {
   x->
   y->
 }
+
+"--- Table Outputs ---"
+"x"	"y"
+0	0
+1	1
+2	1.4142
+3	1.7321
+4	2
+5	2.2361
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -44,4 +62,34 @@ table(x; 0; 3) = {
   x->
   y->
 }
+
+"--- Table Outputs ---"
+"x"	"y"
+0	17
+1	17
+2	17
+3	17
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Test table2"
+
+--Variables--
+"*Test table2"
+
+table2(x; 0; 4; 2; y; 2; 3; 1) = {
+  z = x*y
+  X Value x->
+  Y Value y->
+  Z Value z->
+}
+
+"--- Table Outputs ---"
+"X Value"	"Y Value"	"Z Value"
+	2	3
+0	0	0
+2	4	6
+4	8	12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

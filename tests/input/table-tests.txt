@@ -42,3 +42,18 @@ table(x; 0; 3) = {
   y->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test table2"
+
+--Variables--
+"*Test table2"
+
+table2(x; 0; 4; 2; y; 2; 3; 1) = {
+  z = x*y
+  X Value x->
+  Y Value y->
+  Z Value z->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
