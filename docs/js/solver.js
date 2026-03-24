@@ -644,9 +644,11 @@ function buildSubstitutionMap(equations, context, errors = []) {
         try {
             // First try simple definition
             let def = isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
+            let isDefinition = !!def;
             if (!def || context.hasVariable(def.variable)) {
                 // Try algebraic derivation
                 def = deriveSubstitution(eq.text, context, eq.leftText, eq.rightText);
+                isDefinition = false;
             }
 
             if (!def || context.hasVariable(def.variable) || substitutions.has(def.variable)) {
@@ -667,7 +669,7 @@ function buildSubstitutionMap(equations, context, errors = []) {
             if (!hasSubstitutedVar) {
                 // Store both the AST and the source equation's line number
                 // so we don't apply a substitution back to its own source equation
-                substitutions.set(def.variable, { ast: def.expressionAST, sourceLine: eq.startLine, modN: !!eq.modN });
+                substitutions.set(def.variable, { ast: def.expressionAST, sourceLine: eq.startLine, modN: !!eq.modN, isDefinition });
                 dependencies.set(def.variable, exprVars);
             }
         } catch (e) {

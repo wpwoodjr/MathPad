@@ -81,7 +81,7 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
     }
 
     // If multiple unknowns, try applying substitutions
-    if (unknowns.length > 1 && substitutions.size > 0) {
+    if (unknowns.length >= 1 && substitutions.size > 0) {
         // Filter out substitutions derived from this equation (they would create an identity)
         // and extract just the AST from each substitution entry
         const applicableSubs = new Map();
@@ -214,6 +214,13 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
         changed = false;
 
         const substitutions = buildSubstitutionMap(equations, context, errors);
+
+        // Definition substitutions for undeclared intermediates only (sweep 0)
+        // Safe to inline because these variables exist only in equations, not as user-declared vars
+        const definitionSubs = new Map();
+        for (const [varName, sub] of substitutions) {
+            if (sub.isDefinition && !variables.has(varName)) definitionSubs.set(varName, sub);
+        }
 
         // Pass 1: Evaluate definition equations (var = expr) before solving
         // This lets direct computations resolve before Brent's method runs,
@@ -430,7 +437,7 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
                     // Sweep 1: with substitutions to reduce multi-unknown equations
                     const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
                     const result = solveEquationInContext(eq.text, eq.startLine, context, variables,
-                        sweep === 0 ? new Map() : substitutions, eq.leftText, eq.rightText, modValue);
+                        sweep === 0 ? definitionSubs : substitutions, eq.leftText, eq.rightText, modValue);
                     if (result.solved) {
                         context.setVariable(result.variable, result.value);
                         computedValues.set(result.variable, result.value);
