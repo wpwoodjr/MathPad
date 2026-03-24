@@ -899,7 +899,7 @@ function evaluateTable(tableDef, context, record) {
                 const exprText = parsed.valueTokens && parsed.valueTokens.length > 0
                     ? parsed.valueTokens.map(t => (t.ws || '') + (typeof t.value === 'object' ? t.value.raw || t.value : t.value)).join('')
                     : null;
-                definitions.push({ name: parsed.name, exprText, lineIdx: i });
+                definitions.push({ name: parsed.name, exprText, limits: parsed.limits || null, lineIdx: i });
             } else if (parsed.type === VarType.OUTPUT) {
                 // Output column — use label as header if present, else variable name
                 columns.push({
@@ -907,7 +907,8 @@ function evaluateTable(tableDef, context, record) {
                     header: (parsed.label && parsed.label.trim()) || parsed.name,
                     format: parsed.format || null,
                     fullPrecision: parsed.fullPrecision || false,
-                    base: parsed.base || 10
+                    base: parsed.base || 10,
+                    limits: parsed.limits || null
                 });
             }
         } else if (parsed.kind === 'expression-output') {
@@ -957,9 +958,8 @@ function evaluateTable(tableDef, context, record) {
         groupDigits: record.groupDigits || false
     };
 
-    // Build set of definition names and snapshot pre-table variable values
-    const defNames = new Set(defASTs.map(d => d.name));
-    const preTableVars = new Set(context.variables.keys());
+    // Build set of definition names (only those with expressions, not bare declarations)
+    const defNames = new Set(defASTs.filter(d => d.ast).map(d => d.name));
 
     // Iterate
     const rows = [];
@@ -977,13 +977,11 @@ function evaluateTable(tableDef, context, record) {
         // Set up pre-solve values for this row (previous row's values)
         context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
 
-        // Clear equation unknowns: variables that weren't in the outer context,
-        // aren't the iterator, and aren't computed by definitions
-        for (const col of columns) {
-            if (!col.ast && col.name !== tableDef.iteratorName
-                && !defNames.has(col.name) && !preTableVars.has(col.name)) {
-                context.variables.delete(col.name);
-                context.declareVariable(col.name);
+        // Clear unknowns: bare input declarations (no expression) are equation unknowns
+        for (const { name, ast } of defASTs) {
+            if (!ast) {
+                context.variables.delete(name);
+                context.declareVariable(name);
             }
         }
 
@@ -1002,44 +1000,45 @@ function evaluateTable(tableDef, context, record) {
         }
 
         // Solve equations (Brent's method) for this row
+        // Build variables map with limits — input declarations (<-, :) take precedence
+        // over output declarations (->) for Brent's search range
+        const tableVarDecls = [];
+        for (const def of definitions) {
+            if (def.limits) tableVarDecls.push({ name: def.name, declaration: { limits: def.limits }, value: null });
+        }
+        for (const col of columns) {
+            if (col.limits) tableVarDecls.push({ name: col.name, declaration: { limits: col.limits }, value: null });
+        }
+        const variables = buildVariablesMap(tableVarDecls, context);
+
+        const badVars = new Set();
         for (const eq of equations) {
             try {
-                const variables = buildVariablesMap([], context);
                 const result = solveEquationInContext(
                     eq.text, eq.startLine, context, variables,
                     new Map(), eq.leftText, eq.rightText, eq.modN || null
                 );
                 if (result.solved && result.variable && result.value !== undefined) {
                     context.setVariable(result.variable, result.value);
-                } else if (result.tooManyUnknowns && !eq._errorReported) {
-                    eq._errorReported = true;
-                    const eqLine = tableDef.startLine + eq.startLine;
-                    errors.push(`Line ${eqLine}: Table equation has too many unknowns: ${result.tooManyUnknowns.join(', ')}`);
-                } else if (!result.solved && !result.tooManyUnknowns && !eq._errorReported) {
-                    // Check balance — 0 unknowns but might not balance
+                    // Check if equation actually balances with the found root
                     try {
-                        const leftVal = evaluate(parseExpression(eq.leftText), context);
-                        const rightVal = evaluate(parseExpression(eq.rightText), context);
+                        const l = evaluate(parseExpression(eq.leftText), context);
+                        const r = evaluate(parseExpression(eq.rightText), context);
                         const places = record.places != null ? record.places : 4;
-                        const bal = eq.modN
-                            ? modCheckBalance(leftVal, rightVal, record.degreesMode ? 360 : 2 * Math.PI, places)
-                            : checkBalance(leftVal, rightVal, places);
-                        if (!bal.balanced) {
-                            eq._errorReported = true;
-                            const eqLine = tableDef.startLine + eq.startLine;
-                            const eqText = eq.text.trim().length > 30 ? eq.text.trim().substring(0, 30) + '...' : eq.text.trim();
-                            errors.push(`Line ${eqLine}: Table equation doesn't balance at row ${rowCount}: ${eqText}`);
-                        }
-                    } catch (e) { /* skip eval errors */ }
+                        if (!checkBalance(l, r, places).balanced) badVars.add(result.variable);
+                    } catch (e) { badVars.add(result.variable); }
+                } else if (result.error && result.variable) {
+                    badVars.add(result.variable);
+                } else if (result.tooManyUnknowns) {
+                    for (const v of result.tooManyUnknowns) badVars.add(v);
                 }
-            } catch (e) {
-                // Skip equation errors during iteration
-            }
+            } catch (e) { }
         }
 
-        // Collect output values
+        // Collect output values — suppress cells for variables that failed to solve
         const row = [];
         for (const col of columns) {
+            if (badVars.has(col.name)) { row.push(''); continue; }
             let value;
             if (col.ast) {
                 // Expression output — evaluate the expression
@@ -1125,7 +1124,7 @@ function evaluateTable2(tableDef, context, record) {
                 const exprText = parsed.valueTokens && parsed.valueTokens.length > 0
                     ? parsed.valueTokens.map(t => (t.ws || '') + (typeof t.value === 'object' ? t.value.raw || t.value : t.value)).join('')
                     : null;
-                definitions.push({ name: parsed.name, exprText });
+                definitions.push({ name: parsed.name, exprText, limits: parsed.limits || null });
             } else if (parsed.type === VarType.OUTPUT) {
                 const label = (parsed.label && parsed.label.trim()) || parsed.name;
                 if (parsed.name === tableDef.iteratorName) {
@@ -1138,7 +1137,8 @@ function evaluateTable2(tableDef, context, record) {
                         header: label,
                         format: parsed.format || null,
                         fullPrecision: parsed.fullPrecision || false,
-                        base: parsed.base || 10
+                        base: parsed.base || 10,
+                        limits: parsed.limits || null
                     });
                 }
             }
@@ -1157,8 +1157,7 @@ function evaluateTable2(tableDef, context, record) {
         catch (e) { defASTs.push({ name: def.name, ast: null }); }
     }
 
-    const defNames = new Set(defASTs.map(d => d.name));
-    const preTableVars = new Set(context.variables.keys());
+    const defNames = new Set(defASTs.filter(d => d.ast).map(d => d.name));
 
     const formatOpts = {
         places: record.places != null ? record.places : 4,
@@ -1189,10 +1188,12 @@ function evaluateTable2(tableDef, context, record) {
     for (const rowVal of rowValues) {
         const gridRow = [];
         for (const colVal of colValues) {
-            // Clear equation unknowns
-            if (cellVar && !preTableVars.has(cellVar.name) && !defNames.has(cellVar.name)) {
-                context.variables.delete(cellVar.name);
-                context.declareVariable(cellVar.name);
+            // Clear unknowns: bare input declarations (no expression) are equation unknowns
+            for (const { name, ast } of defASTs) {
+                if (!ast) {
+                    context.variables.delete(name);
+                    context.declareVariable(name);
+                }
             }
 
             // Set both iterators
@@ -1205,22 +1206,39 @@ function evaluateTable2(tableDef, context, record) {
                 try { context.setVariable(name, evaluate(ast, context)); } catch (e) { }
             }
 
-            // Solve equations
+            // Solve equations — input declaration limits take precedence over output limits
+            const tableVarDecls = [];
+            for (const def of definitions) {
+                if (def.limits) tableVarDecls.push({ name: def.name, declaration: { limits: def.limits }, value: null });
+            }
+            for (const ov of outputVars) {
+                if (ov.limits) tableVarDecls.push({ name: ov.name, declaration: { limits: ov.limits }, value: null });
+            }
+            const variables = buildVariablesMap(tableVarDecls, context);
+
+            let cellBad = false;
             for (const eq of equations) {
                 try {
-                    const variables = buildVariablesMap([], context);
                     const result = solveEquationInContext(
                         eq.text, eq.startLine, context, variables,
                         new Map(), eq.leftText, eq.rightText, eq.modN || null
                     );
                     if (result.solved && result.variable && result.value !== undefined) {
                         context.setVariable(result.variable, result.value);
+                        try {
+                            const l = evaluate(parseExpression(eq.leftText), context);
+                            const r = evaluate(parseExpression(eq.rightText), context);
+                            const places = record.places != null ? record.places : 4;
+                            if (!checkBalance(l, r, places).balanced) cellBad = true;
+                        } catch (e) { cellBad = true; }
+                    } else if (result.error || result.tooManyUnknowns) {
+                        cellBad = true;
                     }
                 } catch (e) { }
             }
 
-            // Collect cell value
-            if (cellVar) {
+            // Collect cell value — suppress if equation didn't balance
+            if (cellVar && !cellBad) {
                 const value = context.getVariable(cellVar.name);
                 if (value !== undefined) {
                     gridRow.push(formatVariableValue(value, cellVar.format, cellVar.fullPrecision, formatOpts));

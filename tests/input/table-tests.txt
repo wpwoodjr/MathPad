@@ -24,6 +24,7 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 --Variables--
 table(x; 0; 5) = {
   y**2 = x
+  y<-
   x->
   y->
 }
@@ -52,8 +53,226 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 
 table2(x; 0; 4; 2; y; 2; 3; 1) = {
   z = x*y
+  z<-
   X Value x->
   Y Value y->
   Z Value z->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test table suppresses bad cells"
+
+--Variables--
+"*Bad cells should be empty when equation doesn't balance"
+
+fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
+tempAdjust(temp; refTemp; tempAdjFactor) = 1 + (refTemp - temp)/tempAdjFactor/100
+estWatts(power; limitPower; maxMotorPower; adjustedTemp) = power/(limitPower/maxMotorPower)*adjustedTemp
+adjustedTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
+a: 0.00170924441718192
+b: -0.188898975432704
+c: 8.01215375719881
+d: -78.2255835191052
+refTemp: 68.5
+tempAdjFactor: 6
+batteryCapacity: 252
+batteryAdjFactor: 0.96
+temperature: 70
+limitPwr: 420
+
+table(hours; 2; 7) = {
+  hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
+  MMP<-
+  Hours hours->
+  User Pwr averagePwr->
+  Max Motor Pwr MMP->
+}
+
+averagePwr: 125
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Bike Range"
+"shouldn't provide table answers when the equation doesn't balance"
+
+--Formulas--
+fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
+tempAdjust(temp; refTemp; tempAdjFactor) = 1 + (refTemp - temp)/tempAdjFactor/100
+estWatts(power; limitPower; maxMotorPower; adjustedTemp) = power/(limitPower/maxMotorPower)*adjustedTemp
+
+--Equations--
+adjustedTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
+hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; maxMotorPwr; adjustedTemp); a; b; c; d)
+
+--Constants--
+a: 0.00170924441718192
+b: -0.188898975432704
+c: 8.01215375719881
+d: -78.2255835191052
+refTemp: 68.5
+tempAdjFactor: 6
+batteryCapacity: 252
+batteryAdjFactor: 0.96
+
+--Variables--
+"*Bike range calculator"
+
+averagePwr<- 145
+maxMotorPwr<- 91.9
+hours<<- 6
+temperature<- 70
+limitPwr: 420
+
+table(hours; 2; 7) = {
+  hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
+  MMP<-
+  Hours hours->
+  User Pwr averagePwr->
+  Max Motor Pwr MMP->
+}
+
+table(averagePwr; 100; 150; 5) = {
+  hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
+  MMP<-
+  User Pwr averagePwr->
+  Hours hours->
+  Max Motor Pwr MMP->
+}
+
+table2(averagePwr; 100; 150; 5; MMP; 100; 200; 10) = {
+  hrs = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
+  hrs<-
+  User Pwr averagePwr->
+  Max Motor Pwr MMP->
+  Hours hrs->
+}
+
+table2(averagePwr; 100; 150; 5; hours; 2; 7; 0.5) = {
+  hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
+  MMP<-
+  User Pwr averagePwr->
+  Hours hours->
+  Max Motor Pwr MMP->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test tables 5"
+
+--Variables--
+"*Test table and table2 limits"
+
+w: 1
+u = 2
+table2(x; 0; 4; 2; y; 2; 3; 1) = {
+  -w/u = x*y - z
+  z<-
+  X Value x->
+  Y Value y->
+  Z Value z[0:10]->
+}
+
+table(x; 0; 4) = {
+  z = x + 7
+  z<-
+  x->
+  z[0:10]->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test tables 6"
+
+--Variables--
+"*Test table and table2 limits on input declarations"
+
+w: 1
+u = 2
+table2(x; 0; 4; 2; y; 2; 3; 1) = {
+  -w/u = x*y - z + v
+  v: 10
+  z[10:20]<-
+  X Value x->
+  Y Value y->
+  z->
+}
+
+table(x; 0; 4) = {
+  z = x + 7
+  z[0:10]:
+  x->
+  z->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Bike Range"
+
+--Formulas--
+fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
+tempAdjust(temp; refTemp; tempAdjFactor) = 1 + (refTemp - temp)/tempAdjFactor/100
+estWatts(userPwr; limitPower; maxMotorPower; adjustedTemp) = userPwr/(limitPower/maxMotorPower)*adjustedTemp
+runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d) = adjBattCap/fitWatts(estWatts(userPwr; limitPwr; maxMotorPwr; adjTemp); a; b; c; d)
+
+--Equations--
+adjTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
+adjBattCap = battCap*battAdjFactor
+hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
+
+--Constants--
+a: 0.00170924441718192
+b: -0.188898975432704
+c: 8.01215375719881
+d: -78.2255835191052
+refTemp: 68.5
+tempAdjFactor: 6
+battCap: 252
+battAdjFactor: 0.96
+
+--Variables--
+"*Bike range calculator"
+
+userPwr<- 145
+maxMotorPwr<- 91.9
+hours<<- 6
+temperature<- 70
+limitPwr: 420
+
+table(hours; 2; 7) = {
+  hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
+  maxMotorPwr[60:240]<-
+  Hours hours->
+  User Pwr userPwr->
+  Max Motor Pwr maxMotorPwr->
+}
+
+table(userPwr; 100; 150; 5) = {
+  hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
+  maxMotorPwr[60:240]<-
+  User Pwr userPwr->
+  Hours hours->
+  Max Motor Pwr maxMotorPwr->
+}
+
+table2(userPwr; 100; 150; 5; maxMotorPwr; 100; 200; 10) = {
+  hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
+  hours<-
+  User Pwr userPwr->
+  Max Motor Pwr maxMotorPwr->
+  Hours hours->
+}
+
+table2(userPwr; 100; 150; 5; hours; 2; 7; 0.5) = {
+  hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
+  maxMotorPwr[60:240]<-
+  User Pwr userPwr->
+  Hours hours->
+  Max Motor Pwr maxMotorPwr->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
