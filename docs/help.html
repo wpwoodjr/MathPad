@@ -101,6 +101,7 @@
             <li><a href="#comments">Comments</a></li>
             <li><a href="#inline-eval">Inline Evaluation</a></li>
             <li><a href="#pre-solve">Pre-solve Values</a></li>
+            <li><a href="#tables-grids">Tables and Grids</a></li>
             <li><a href="#import-export">Import / Export</a></li>
             <li><a href="#google-drive">Google Drive Sync</a></li>
             <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
@@ -334,6 +335,54 @@ total: subtotal * (1 + \tax_rate\)</pre>
         <tr><td><code>x~?</code></td><td>1 if x has a pre-solve value, 0 otherwise</td></tr>
     </table>
     <p class="example">Example: counter: if(counter~?; counter~ + 1; 0) &mdash; increments each time you solve</p>
+
+    <h2 id="tables-grids">Tables and Grids</h2>
+    <p>Use <code>table</code> to iterate a variable over a range and display results in columns. Use <code>grid</code> for 2D cell grids with two iterators.</p>
+
+    <h3>Table (Columnar Output)</h3>
+    <pre>table("Distance vs Time") = {
+  distance = speed * time
+  speed: 60
+  time&lt;- 1..5
+  time-&gt;
+  distance-&gt;
+}</pre>
+
+    <h3>Grid (2D Cell Grid)</h3>
+    <pre>grid("Multiplication") = {
+  z = x * y
+  z&lt;-
+  x&lt;- 1..5
+  y&lt;- 1..5
+  x-&gt;
+  y-&gt;
+  z-&gt;
+}</pre>
+
+    <h3>Body Declarations</h3>
+    <table>
+        <tr><th>Syntax</th><th>Role</th><th>Description</th></tr>
+        <tr><td><code>x&lt;- 0..10</code></td><td>Iterator</td><td>Range from 0 to 10, step 1</td></tr>
+        <tr><td><code>x: 0..10..2</code></td><td>Iterator</td><td>Range with step 2</td></tr>
+        <tr><td><code>z&lt;-</code> or <code>z:</code></td><td>Unknown</td><td>Bare declaration &mdash; solved by equations</td></tr>
+        <tr><td><code>z[lo:hi]&lt;-</code></td><td>Unknown with limits</td><td>Constrain search range</td></tr>
+        <tr><td><code>v: 10</code></td><td>Definition</td><td>Expression value set per row</td></tr>
+        <tr><td><code>Label z-&gt;</code></td><td>Output</td><td>Output column with optional label</td></tr>
+    </table>
+
+    <h3>Equations</h3>
+    <p>Include equations inside the body. If the body has no equations, the table inherits equations from the surrounding record. If the body has any equations, only those are used.</p>
+
+    <h3>Options</h3>
+    <p>An optional font size can be specified as a second argument:</p>
+    <pre>table("Title"; 12) = {
+  ...
+}</pre>
+    <p>Click a table title to collapse or expand it.</p>
+
+    <div class="note">
+        <strong>Grid hover:</strong> Hovering over a grid cell highlights the row, column, and header for easy reading.
+    </div>
 
     <h2 id="import-export">Import / Export</h2>
     <ul>

@@ -142,11 +142,11 @@ averagePwr: 125
 "--- Table Outputs ---"
 "Bad cells"
 "Hours"	"User Pwr"	"Max Motor Pwr"
-2	125	223.44
-3	125	191.31
-4	125	162.31
-5	125	131.56
-6	125	106.59
+2	125	
+3	125	
+4	125	
+5	125	
+6	125	
 7	125
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -225,56 +225,56 @@ grid("MMP grid") = {
 "--- Table Outputs ---"
 "Hours vs MMP"
 "Hours"	"User Pwr"	"Max Motor Pwr"
-2	145	192.6
-3	145	164.9
-4	145	139.9
-5	145	113.4
-6	145	91.9
+2	145	
+3	145	
+4	145	
+5	145	
+6	145	
 7	145	
 
 "User Pwr vs MMP"
 "User Pwr"	"Hours"	"Max Motor Pwr"
-100	6	133.2
-105	6	126.9
-110	6	121.1
-115	6	115.9
-120	6	111
-125	6	106.6
-130	6	102.5
+100	6	
+105	6	
+110	6	
+115	6	
+120	6	
+125	6	
+130	6	
 135	6	
 140	6	
-145	6	91.9
+145	6	
 150	6	
 
 "Hours grid"
 "User Pwr"	"Max Motor Pwr"	"Hours"
 	100	110	120	130	140	150	160	170	180	190	200
-100	8.5	7.4	6.7	6.1	5.7	5.4	5.1	4.9	4.6	4.3	4.1
-105	7.9	7	6.3	5.9	5.5	5.2	4.9	4.6	4.4	4.1	3.8
-110	7.4	6.6	6.1	5.6	5.3	5	4.7	4.4	4.1	3.8	3.5
-115	7	6.3	5.8	5.4	5.1	4.8	4.5	4.2	3.9	3.6	3.3
-120	6.7	6.1	5.6	5.2	4.9	4.6	4.3	4	3.6	3.3	3
-125	6.4	5.8	5.4	5.1	4.7	4.4	4.1	3.7	3.4	3	2.7
-130	6.1	5.6	5.2	4.9	4.5	4.2	3.9	3.5	3.1	2.8	2.5
-135	5.9	5.5	5.1	4.7	4.4	4	3.6	3.3	2.9	2.5	2.2
-140	5.7	5.3	4.9	4.5	4.2	3.8	3.4	3	2.7	2.3	2
-145	5.6	5.1	4.8	4.4	4	3.6	3.2	2.8	2.4	2.1	1.8
-150	5.4	5	4.6	4.2	3.8	3.4	3	2.6	2.2	1.9	1.6
+100											
+105											
+110											
+115											
+120											
+125											
+130											
+135											
+140											
+145											
+150											
 
 "MMP grid"
 "User Pwr"	"Hours"	"Max Motor Pwr"
 	2	2.5	3	3.5	4	4.5	5	5.5	6	6.5	7
-100	279.3	258.1	239.1	221.1	202.9	183.8	164.4	147	133.2	122.9	115.1
-105	266	245.8	227.8	210.6	193.2	175.1	156.6	140	126.9	117.1	109.6
-110	253.9	234.6	217.4	201	184.4	167.1	149.5	133.6	121.1	111.8	104.7
-115	242.9	224.4	208	192.3	176.4	159.9	143	127.8	115.9	106.9	100.1
-120	232.8	215	199.3	184.3	169.1	153.2	137	122.5	111	102.4	
-125	223.4	206.4	191.3	176.9	162.3	147.1	131.6	117.6	106.6		
-130	214.8	198.5	184	170.1	156.1	141.4	126.5	113.1	102.5		
-135	206.9	191.2	177.1	163.8	150.3	136.2	121.8	108.9			
-140	199.5	184.3	170.8	157.9	144.9	131.3	117.5	105			
-145	192.6	178	164.9	152.5	139.9	126.8	113.4	101.4	91.9		
-150	186.2	172	159.4	147.4	135.3	122.6	109.6
+100											
+105											
+110											
+115											
+120											
+125											
+130											
+135											
+140											
+145											
+150
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -309,9 +309,9 @@ table("1D limits") = {
 "2D limits"
 "X Value"	"Y Value"	"Z Value"
 	2	3
-0	0.5	0.5
-2	4.5	6.5
-4	8.5	
+0		
+2		
+4		
 
 "1D limits"
 "x"	"z"
@@ -319,7 +319,7 @@ table("1D limits") = {
 1	8
 2	9
 3	10
-4
+4	11
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -355,9 +355,9 @@ table("1D input limits") = {
 "2D input limits"
 "X Value"	"Y Value"	"z"
 	2	3
-0	10.5	10.5
-2	14.5	16.5
-4	18.5	
+0		
+2		
+4		
 
 "1D input limits"
 "x"	"z"
@@ -444,56 +444,56 @@ grid("MMP grid 2") = {
 "--- Table Outputs ---"
 "Hours vs MMP 2"
 "Hours"	"User Pwr"	"Max Motor Pwr"
-2	145	192.6
-3	145	164.9
-4	145	139.9
-5	145	113.4
-6	145	91.9
-7	145	79.4
+2	145	
+3	145	
+4	145	
+5	145	
+6	145	
+7	145	
 
 "User Pwr vs MMP 2"
 "User Pwr"	"Hours"	"Max Motor Pwr"
-100	6	133.2
-105	6	126.9
-110	6	121.1
-115	6	115.9
-120	6	111
-125	6	106.6
-130	6	102.5
-135	6	98.7
-140	6	95.2
-145	6	91.9
-150	6	88.8
+100	6	
+105	6	
+110	6	
+115	6	
+120	6	
+125	6	
+130	6	
+135	6	
+140	6	
+145	6	
+150	6	
 
 "Hours grid 2"
 "User Pwr"	"Max Motor Pwr"	"Hours"
 	100	110	120	130	140	150	160	170	180	190	200
-100	8.5	7.4	6.7	6.1	5.7	5.4	5.1	4.9	4.6	4.3	4.1
-105	7.9	7	6.3	5.9	5.5	5.2	4.9	4.6	4.4	4.1	3.8
-110	7.4	6.6	6.1	5.6	5.3	5	4.7	4.4	4.1	3.8	3.5
-115	7	6.3	5.8	5.4	5.1	4.8	4.5	4.2	3.9	3.6	3.3
-120	6.7	6.1	5.6	5.2	4.9	4.6	4.3	4	3.6	3.3	3
-125	6.4	5.8	5.4	5.1	4.7	4.4	4.1	3.7	3.4	3	2.7
-130	6.1	5.6	5.2	4.9	4.5	4.2	3.9	3.5	3.1	2.8	2.5
-135	5.9	5.5	5.1	4.7	4.4	4	3.6	3.3	2.9	2.5	2.2
-140	5.7	5.3	4.9	4.5	4.2	3.8	3.4	3	2.7	2.3	2
-145	5.6	5.1	4.8	4.4	4	3.6	3.2	2.8	2.4	2.1	1.8
-150	5.4	5	4.6	4.2	3.8	3.4	3	2.6	2.2	1.9	1.6
+100											
+105											
+110											
+115											
+120											
+125											
+130											
+135											
+140											
+145											
+150											
 
 "MMP grid 2"
 "User Pwr"	"Hours"	"Max Motor Pwr"
 	2	2.5	3	3.5	4	4.5	5	5.5	6	6.5	7
-100			239.1	221.1	202.9	183.8	164.4	147	133.2	122.9	115.1
-105			227.8	210.6	193.2	175.1	156.6	140	126.9	117.1	109.6
-110		234.6	217.4	201	184.4	167.1	149.5	133.6	121.1	111.8	104.7
-115		224.4	208	192.3	176.4	159.9	143	127.8	115.9	106.9	100.1
-120	232.8	215	199.3	184.3	169.1	153.2	137	122.5	111	102.4	95.9
-125	223.4	206.4	191.3	176.9	162.3	147.1	131.6	117.6	106.6	98.3	92.1
-130	214.8	198.5	184	170.1	156.1	141.4	126.5	113.1	102.5	94.6	88.6
-135	206.9	191.2	177.1	163.8	150.3	136.2	121.8	108.9	98.7	91.1	85.3
-140	199.5	184.3	170.8	157.9	144.9	131.3	117.5	105	95.2	87.8	82.2
-145	192.6	178	164.9	152.5	139.9	126.8	113.4	101.4	91.9	84.8	79.4
-150	186.2	172	159.4	147.4	135.3	122.6	109.6	98	88.8	82	76.7
+100											
+105											
+110											
+115											
+120											
+125											
+130											
+135											
+140											
+145											
+150
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -518,4 +518,163 @@ table("Unused var") = {
 1	2
 2	4
 3	6
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test table inherits outer equations"
+
+--Formulas--
+fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
+tempAdjust(temp; refTemp; tempAdjFactor) = 1 + (refTemp - temp)/tempAdjFactor/100
+estWatts(userPwr; limitPower; maxMotorPower; adjustedTemp) = userPwr/(limitPower/maxMotorPower)*adjustedTemp
+runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d) = adjBattCap/fitWatts(estWatts(userPwr; limitPwr; maxMotorPwr; adjTemp); a; b; c; d)
+
+--Equations--
+adjTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
+adjBattCap = battCap*battAdjFactor
+hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
+
+--Constants--
+a: 0.00170924441718192
+b: -0.188898975432704
+c: 8.01215375719881
+d: -78.2255835191052
+refTemp: 68.5
+tempAdjFactor: 6
+battCap: 252
+battAdjFactor: 0.96
+
+--Variables--
+"*Inherits hours equation from outer context"
+
+userPwr: 145
+maxMotorPwr: 91.9
+hours:: 6
+temperature: 70
+limitPwr: 420
+
+table("Inherited eq") = {
+  maxMotorPwr[60:240]<-
+  hours: 2..7
+  Hours hours->
+  User Pwr userPwr->
+  Max Motor Pwr maxMotorPwr->
+}
+
+"--- Table Outputs ---"
+"Inherited eq"
+"Hours"	"User Pwr"	"Max Motor Pwr"
+2	145	192.6
+3	145	164.9
+4	145	139.9
+5	145	113.4
+6	145	91.9
+7	145	79.4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test table with body equation overrides outer"
+
+--Formulas--
+fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
+tempAdjust(temp; refTemp; tempAdjFactor) = 1 + (refTemp - temp)/tempAdjFactor/100
+estWatts(userPwr; limitPower; maxMotorPower; adjustedTemp) = userPwr/(limitPower/maxMotorPower)*adjustedTemp
+runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d) = adjBattCap/fitWatts(estWatts(userPwr; limitPwr; maxMotorPwr; adjTemp); a; b; c; d)
+
+--Equations--
+adjTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
+adjBattCap = battCap*battAdjFactor
+hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
+
+--Constants--
+a: 0.00170924441718192
+b: -0.188898975432704
+c: 8.01215375719881
+d: -78.2255835191052
+refTemp: 68.5
+tempAdjFactor: 6
+battCap: 252
+battAdjFactor: 0.96
+
+--Variables--
+"*Body equation used instead of outer"
+
+userPwr: 145
+maxMotorPwr: 91.9
+hours:: 6
+temperature: 70
+limitPwr: 420
+
+table("Body eq") = {
+  hours = maxMotorPwr / 50
+  maxMotorPwr<-
+  hours: 2..7
+  Hours hours->
+  Max Motor Pwr maxMotorPwr->
+}
+
+"--- Table Outputs ---"
+"Body eq"
+"Hours"	"Max Motor Pwr"
+2	100
+3	150
+4	200
+5	250
+6	300
+7	350
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test table inherits equations with intermediates"
+
+--Formulas--
+fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
+tempAdjust(temp; refTemp; tempAdjFactor) = 1 + (refTemp - temp)/tempAdjFactor/100
+estWatts(userPwr; limitPower; maxMotorPower; adjustedTemp) = userPwr/(limitPower/maxMotorPower)*adjustedTemp
+runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d) = adjBattCap/fitWatts(estWatts(userPwr; limitPwr; maxMotorPwr; adjTemp); a; b; c; d)
+
+--Equations--
+adjTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
+adjBattCap = battCap*battAdjFactor
+hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
+
+--Constants--
+a: 0.00170924441718192
+b: -0.188898975432704
+c: 8.01215375719881
+d: -78.2255835191052
+refTemp: 68.5
+tempAdjFactor: 6
+battCap: 252
+battAdjFactor: 0.96
+
+--Variables--
+"*Solves for temperature via inherited equations with intermediates"
+
+userPwr: 125
+maxMotorPwr: 162.3
+hours:: 4
+temperature: 70
+limitPwr: 420
+
+table("Temp from inherited eqs") = {
+  maxMotorPwr: 120..180..20
+  temperature<-
+  MMP maxMotorPwr->
+  Temp temperature->
+}
+
+"--- Table Outputs ---"
+"Temp from inherited eqs"
+"MMP"	"Temp"
+120	-141
+140	-25.4
+160	61.4
+180	128.8
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -151,10 +151,44 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
 
 ## Two-sweep equation solving (Pass 2)
     Sweep 0: solve equations with 1 natural unknown (no substitutions)
+        Auto-inlines definition equations for undeclared intermediate variables
     Sweep 1: use substitutions for remaining equations
     Break-on-solve: after Brent's solves one equation, break out so definitions can evaluate with the new value
+    solveEquations takes equations as parameter (caller owns equation discovery)
+        Enables reuse by both main solver and table/grid per-row evaluation
 
 ## Algebraic substitution
     deriveSubstitution in solver.js via tryIsolateVariable
     Recursive peeling of binary operations one level at a time via invertOperation
     Handles arbitrary-depth nesting (e.g., a*b/D = C → a = C*D/b)
+
+## Tables and Grids
+    ### Syntax
+        table("Title") = { body }       columnar output, 1+ iterators
+        table("Title"; fontSize) = { body }   optional font size
+        grid("Title") = { body }        2D cell grid, 2+ iterators
+    ### Body declarations
+        x<- 0..10          iterator (range, step defaults to 1 or -1)
+        x: 0..10..2        iterator with explicit step
+        z<-  or  z:         unknown (bare, no value) — solved by equations
+        z[lo:hi]<-          unknown with limits
+        v: 10               definition (expression value)
+        Label z->           output column with optional label
+        (expr)->            expression output column
+    ### Tokens
+        .. is DOT_DOT token (parser.js) for range syntax
+    ### Equation inheritance
+        If body has equations, only those are used
+        If body has no equations, outer record equations are inherited
+    ### Evaluation (solve-engine.js: evaluateTable)
+        findTableDefinitions (variables.js) detects table/grid blocks
+        Table lines added to localFunctionLines skip set (not treated as record equations)
+        Each row/cell solved fresh via solveEquations (same pipeline as main solver)
+        Pre-solve context reset per row (user declarations only)
+        Per-cell error suppression (bad cells empty, good cells show values)
+        Unused variable warnings with actual line numbers
+    ### Rendering (variables-panel.js)
+        setTableData() renders table results in variables panel
+        _renderTable2() renders 2D grids with row/col/header hover highlighting
+        Collapsible titles (click to toggle)
+        Table output text section ("--- Table Outputs ---") appended for copy/export

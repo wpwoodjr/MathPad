@@ -171,24 +171,22 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
 }
 
 /**
- * Solve equations and return computed values (no text modification)
- * @param {string} text - The formula text (with \expr\ already evaluated)
+ * Solve equations and return computed values (no text modification).
+ * Used by both the main solver and table/grid per-row evaluation.
  * @param {EvalContext} context - Context with known variables
- * @param {Array} declarations - Parsed declarations from discoverVariables
- * @param {Object} record - Record settings (for places -> tolerance)
- * @returns {{ computedValues: Map, solved: number, errors: Array, solveFailures: Map }}
+ * @param {Array} declarations - Variable declarations (for limits and user-provided tracking)
+ * @param {Object} record - Record settings (places, degreesMode, etc.)
+ * @param {Array} equations - Equations to solve (from findEquationsAndOutputs)
+ * @param {Array} exprOutputs - Expression outputs (from findEquationsAndOutputs)
+ * @param {Map} initialComputedValues - Pre-computed values to seed (e.g., early expression outputs)
+ * @returns {{ computedValues: Map, solved: number, errors: Array, solveFailures: Map, equationVarStatus: Map }}
  */
-function solveEquations(text, context, declarations, record = {}, allTokens, earlyExprOutputs = new Map()) {
+function solveEquations(context, declarations, record = {}, equations, exprOutputs = [], initialComputedValues = null) {
     const places = record.places != null ? record.places : 4;
     const errors = [];
-    const computedValues = new Map();
+    const computedValues = initialComputedValues ? new Map(initialComputedValues) : new Map();
     const solveFailures = new Map(); // Track last failure per variable
     let solved = 0;
-
-    // Pre-populate with expression outputs evaluated during discovery (top-to-bottom)
-    for (const [lineIndex, result] of earlyExprOutputs) {
-        computedValues.set(`__exprout_${lineIndex}`, result);
-    }
 
     // Build variables map for lookup
     let variables = buildVariablesMap(declarations);
@@ -201,8 +199,6 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
         }
     }
 
-    // Compute equations and expression outputs ONCE (text doesn't change within this function)
-    const { equations, exprOutputs } = findEquationsAndOutputs(text, allTokens, context.localFunctionLines);
 
     // Iterative solving
     const maxIterations = 50;
@@ -561,7 +557,7 @@ function solveEquations(text, context, declarations, record = {}, allTokens, ear
         }
     }
 
-    return { computedValues, solved, errors, solveFailures, equations, exprOutputs, equationVarStatus };
+    return { computedValues, solved, errors, solveFailures, equationVarStatus };
 }
 
 /**
@@ -800,12 +796,24 @@ function solveRecord(text, context, record, parserTokens) {
     const declarations = discovery.declarations;
     const errors = [...(context.functionErrors || []), ...discovery.errors];
 
+    // Save pre-solve variable state (user declarations only, no equation-computed values)
+    // Tables use this as the clean base for each row
+    const preSolveVars = new Map(context.variables);
+
+    // Find equations and expression outputs
+    const { equations: outerEquations, exprOutputs } = findEquationsAndOutputs(text, allTokens, context.localFunctionLines);
+
     // Pass 2: Equation Solving (computes values, no text modification)
-    const solveResult = solveEquations(text, context, declarations, record, allTokens, discovery.earlyExprOutputs);
+    // Seed early expression outputs so solveEquations doesn't re-evaluate them
+    const earlyComputedValues = new Map();
+    for (const [lineIndex, result] of discovery.earlyExprOutputs) {
+        earlyComputedValues.set(`__exprout_${lineIndex}`, result);
+    }
+    const solveResult = solveEquations(context, declarations, record, outerEquations, exprOutputs, earlyComputedValues);
     errors.push(...solveResult.errors);
 
     // Pass 3: Format Output (inserts values into text, reuses equations/exprOutputs from pass 2)
-    const formatResult = formatOutput(text, declarations, context, solveResult.computedValues, record, solveResult.solveFailures, solveResult.equations, solveResult.exprOutputs);
+    const formatResult = formatOutput(text, declarations, context, solveResult.computedValues, record, solveResult.solveFailures, outerEquations, exprOutputs);
     text = formatResult.text;
     errors.push(...formatResult.errors);
 
@@ -815,7 +823,7 @@ function solveRecord(text, context, record, parserTokens) {
     for (const td of tableDefs) {
         // Restore outer context so tables don't leak state to each other
         context.variables = new Map(savedVars);
-        const tableResult = evaluateTable(td, context, record);
+        const tableResult = evaluateTable(td, context, record, outerEquations, preSolveVars);
         errors.push(...tableResult.errors);
         tables.push(tableResult);
     }
@@ -839,7 +847,7 @@ function solveRecord(text, context, record, parserTokens) {
  * Parses body for iterators (x<- 0..4), unknowns (z<-), definitions (v: 10),
  * outputs (z->), and equations. Dimensionality determined by iterator count.
  */
-function evaluateTable(tableDef, context, record) {
+function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) {
     const errors = [];
     const isGrid = tableDef.keyword === 'grid';
     const emptyResult = () => isGrid
@@ -920,9 +928,9 @@ function evaluateTable(tableDef, context, record) {
         }
     }
 
-    // Find equations in body
+    // Find equations in body — if none, inherit outer equations from the record
     const bodyEqs = findEquationsAndOutputs(tableDef.bodyText, bodyTokens, null);
-    const equations = bodyEqs.equations;
+    const equations = bodyEqs.equations.length > 0 ? bodyEqs.equations : (outerEquations || []);
 
     // Pre-parse definition expressions
     const defASTs = [];
@@ -1022,8 +1030,33 @@ function evaluateTable(tableDef, context, record) {
         return buildVariablesMap(tableVarDecls, context);
     }
 
-    // Shared per-cell evaluation: clear unknowns, set iterators, evaluate defs, solve equations
+    // Build declarations for solveEquations from table body definitions and limits
+    const tableDeclarations = [];
+    for (const def of definitions) {
+        tableDeclarations.push({
+            name: def.name, value: null,
+            declaration: { type: VarType.INPUT, limits: def.limits || null }
+        });
+    }
+    for (const unk of unknowns) {
+        tableDeclarations.push({
+            name: unk.name, value: null,
+            declaration: { type: VarType.INPUT, limits: unk.limits || null }
+        });
+    }
+    for (const col of columns) {
+        if (col.limits) {
+            tableDeclarations.push({
+                name: col.name, value: null,
+                declaration: { type: VarType.OUTPUT, limits: col.limits }
+            });
+        }
+    }
+
+    // Shared per-cell evaluation: reset context, set up variables, solve via solveEquations
     function evaluateCell(iterValues) {
+        // Reset to pre-solve state (user declarations only, no equation-computed intermediates)
+        if (preSolveVars) context.variables = new Map(preSolveVars);
         // Clear unknowns
         for (const { name, ast } of defASTs) {
             if (!ast) { context.variables.delete(name); context.declareVariable(name); }
@@ -1032,34 +1065,17 @@ function evaluateTable(tableDef, context, record) {
         for (const iv of iterValues) {
             context.setVariable(iv.name, iv.value);
         }
-        // Evaluate definitions
+        // Evaluate body definitions
         for (const { name, ast } of defASTs) {
             if (!ast) continue;
             try { context.setVariable(name, evaluate(ast, context)); } catch (e) { }
         }
-        // Solve equations
-        const variables = buildTableVarsMap();
+        // Use the same solving pipeline as the main solver
+        const solveResult = solveEquations(context, tableDeclarations, record, equations);
+        // Collect variables that failed to solve
         const badVars = new Set();
-        for (const eq of equations) {
-            try {
-                const result = solveEquationInContext(
-                    eq.text, eq.startLine, context, variables,
-                    new Map(), eq.leftText, eq.rightText, eq.modN || null
-                );
-                if (result.solved && result.variable && result.value !== undefined) {
-                    context.setVariable(result.variable, result.value);
-                    try {
-                        const l = evaluate(parseExpression(eq.leftText), context);
-                        const r = evaluate(parseExpression(eq.rightText), context);
-                        const places = record.places != null ? record.places : 4;
-                        if (!checkBalance(l, r, places).balanced) badVars.add(result.variable);
-                    } catch (e) { badVars.add(result.variable); }
-                } else if (result.error && result.variable) {
-                    badVars.add(result.variable);
-                } else if (result.tooManyUnknowns) {
-                    for (const v of result.tooManyUnknowns) badVars.add(v);
-                }
-            } catch (e) { }
+        for (const [varName, failure] of solveResult.solveFailures) {
+            badVars.add(varName);
         }
         return badVars;
     }

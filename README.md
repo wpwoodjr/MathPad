@@ -22,6 +22,7 @@ Or open `docs/index.html` locally in a browser. No build step required.
 - **User-defined Functions** — define functions like `f(x;y) = expr` in any record, or in the "Functions" record to make them available globally
 - **Global Constants** — define constants in a "Constants" record, available to all other records
 - **Google Drive Sync** — sign in with Google to sync records across devices with automatic conflict detection
+- **Tables and Grids** — iterate variables over ranges to produce columnar tables or 2D grids, with per-cell equation solving
 - **Import/Export** — compatible with original PalmOS MathPad export format
 
 ### Editor
@@ -99,6 +100,38 @@ When a system has multiple unknowns, the solver derives algebraic substitutions 
 
 Subtraction (`-`), commuted forms (`C + var * B`), and swapped sides (`D = var * B + C`) all work. Substitutions chain across equations in the system.
 
+### Tables and Grids
+
+Use `table` for columnar output and `grid` for 2D cell grids:
+
+```
+table("Distance vs Time") = {
+  distance = speed * time
+  speed: 60
+  time<- 1..5
+  time->
+  distance->
+}
+
+grid("Multiplication") = {
+  z = x * y
+  z<-
+  x<- 1..5
+  y<- 1..5
+  x->
+  y->
+  z->
+}
+```
+
+**Body declarations:**
+- `x<- 0..10` or `x: 0..10..2` — iterator (range with optional step)
+- `z<-` or `z:` — unknown for equation solving (bare, no value)
+- `v: 10` — definition (expression value)
+- `Label z->` — output column with optional label
+
+Tables inherit outer equations when the body has none; body equations override if any are present. Tables also inherit all outer values, however a value may be overridden by a declaration in the table.  Each row/cell is solved independently. Optional font size: `table("Title"; 12) = { ... }`.
+
 ### Keyboard Shortcuts
 
 - `Ctrl+Enter` — Solve current record
@@ -147,7 +180,7 @@ Each variable has a ⟲ icon that clears it and solves, making it easy to comput
 ## Technical Details
 
 - Pure client-side JavaScript — no build system, no frameworks, no server
-- ~11,500 lines of JS across 13 modules
+- ~12,300 lines of JS across 13 modules
 - Brent's root-finding algorithm with adaptive bracketing, known-scale heuristics, and two-sweep solving that prefers natural unknowns over substitution-reduced equations
 - Token-based parser with AST generation for expression evaluation
 - Auto-saves to localStorage with 500ms debounce; Google Drive sync every 15 seconds

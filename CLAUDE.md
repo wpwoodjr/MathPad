@@ -21,10 +21,10 @@ node --check docs/js/ui.js
 node --check docs/js/drive.js
 # etc.
 
-# Run solver tests (17 tests)
+# Run solver tests (27 tests)
 node tests/run-tests.js
 
-# Run syntax highlighting tests (117 tests)
+# Run syntax highlighting tests (128 tests)
 node tests/run-highlighting-tests.js
 
 # Generate expected test output
@@ -64,9 +64,24 @@ node tests/gen-expected.js TESTNAME
 - Pipeline: discover variables → evaluate inline expressions (`\expr\`) → evaluate definitions → build substitutions → solve equations with Brent's method → format output
 - Iterative refinement: multiple passes until convergence
 - **Two-sweep equation solving**: Pass 2 first tries equations with 1 natural unknown (no substitutions), then equations that need substitutions — prevents degenerate equations from related substitutions
+- **Auto-inline definitions**: Sweep 0 auto-inlines definition equations for undeclared intermediate variables, avoiding spurious roots from substitution
 - **Break-on-solve**: After Brent's solves one equation, restarts so definitions can evaluate with the new value before a second Brent's step picks an inconsistent root
 - Results inserted back into text preserving comments and formatting
 - Error reporting with line numbers shown in status bar
+
+### Tables and Grids
+- **`table("Title") = { body }`** — columnar output iterating 1+ variables over a range
+- **`grid("Title") = { body }`** — 2D cell grid iterating 2+ variables
+- Body declarations: iterators (`x<- 0..10` or `x: 0..10..2`), unknowns (`z<-`), definitions (`v: 10`), outputs (`Label z->`)
+- `..` range syntax (`DOT_DOT` token) for iterator bounds with optional step
+- Tables/grids inherit outer equations when body has none; body equations override if present
+- Each row/cell solved fresh using unified `solveEquations` pipeline
+- Pre-solve context reset per row (user declarations only, no equation-computed intermediates)
+- Per-cell error suppression (bad cells empty, good cells show values)
+- Unused variable warnings with actual line numbers
+- Grid hover: row + column + header highlighting
+- Collapsible titles; optional font size parameter: `table("Title"; 12) = { ... }`
+- Table output text section (`"--- Table Outputs ---"`) appended for copy/export
 
 ### Number Formatting
 - Decimal places, strip trailing zeros, comma grouping, scientific/engineering notation
@@ -99,17 +114,17 @@ node tests/gen-expected.js TESTNAME
 ### Module Dependency Graph
 
 ```
-app.js (entry point, ~250 lines)
+app.js (entry point, ~200 lines)
   ↓
-ui.js (main orchestration, ~1820 lines)
+ui.js (main orchestration, ~1830 lines)
   ├→ storage.js (localStorage, import/export, ~930 lines)
   ├→ drive.js (Google Drive sync, ~990 lines)
-  ├→ editor.js (syntax highlighting editor, ~1290 lines)
-  ├→ variables-panel.js (structured variable display, ~770 lines)
-  ├→ solve-engine.js (solving orchestration, ~770 lines)
+  ├→ editor.js (syntax highlighting editor, ~1310 lines)
+  ├→ variables-panel.js (structured variable display, ~1010 lines)
+  ├→ solve-engine.js (solving + table/grid eval, ~1210 lines)
   │     ├→ solver.js (Brent's algorithm, ~790 lines)
   │     ├→ evaluator.js (expression eval, 50+ builtins, ~870 lines)
-  │     └→ variables.js (variable parsing, ~1180 lines)
+  │     └→ variables.js (variable parsing + table detection, ~1280 lines)
   ├→ parser.js (tokenizer & AST, ~1050 lines)
   ├→ line-parser.js (token-based line parsing, ~710 lines)
   └→ theme.js (light/dark toggle, ~110 lines)
@@ -124,16 +139,16 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 | File | Purpose |
 |------|---------|
 | `ui.js` | UI state, event handling, record management, sidebar/tabs/details rendering |
-| `solve-engine.js` | `solveRecord()` main entry, equation solving orchestration, output formatting |
+| `solve-engine.js` | `solveRecord()` main entry, equation solving orchestration, output formatting, table/grid evaluation (`evaluateTable`) |
 | `solver.js` | Brent's root-finding algorithm, equation detection, substitution derivation (`deriveSubstitution`, `tryIsolateVariable`) |
 | `evaluator.js` | Expression evaluation, 50+ built-in functions, `formatNumber()`, `checkBalance()` |
-| `variables.js` | Variable declaration parsing, `parseAllVariables()`, `setVariableValue()`, `buildOutputLine()` |
+| `variables.js` | Variable declaration parsing, `parseAllVariables()`, `setVariableValue()`, `buildOutputLine()`, `findTableDefinitions()` |
 | `parser.js` | Tokenizer (tokens have `.ws` whitespace, `.raw` error text), AST generation, `VarType`/`ClearBehavior` enums |
 | `line-parser.js` | Token-based line parser for declarations and expression outputs, `LineParser`, `tokensToText()` |
 | `storage.js` | localStorage persistence, `debouncedSave()`, `cancelPendingSave()`, import/export |
 | `drive.js` | Google Drive auth (GIS), file CRUD, sync cycle, conflict detection, `DriveState` |
 | `editor.js` | `SimpleEditor` class with syntax highlighting, undo/redo stack, `tokenizeMathPad()` |
-| `variables-panel.js` | `VariablesPanel` class, structured variable display, value editing, equation highlights |
+| `variables-panel.js` | `VariablesPanel` class, structured variable display, value editing, equation highlights, table/grid rendering |
 | `theme.js` | Light/dark theme detection, toggle, persistence (IIFE, ES2015-safe) |
 
 ### Data Structures
@@ -265,7 +280,9 @@ App loads → localStorage (instant) → check Drive metadata
 3. Handle in `line-parser.js` `LineParser` and `getMarkerString()`
 4. Handle in `solveRecord()` if special behavior needed
 
-**Modifying solving behavior**: Edit `solveRecord()` in `solve-engine.js`
+**Modifying solving behavior**: Edit `solveRecord()` in `solve-engine.js`. `solveEquations()` takes equations as a parameter (caller owns equation discovery), enabling reuse by both the main solver and table/grid per-row evaluation.
+
+**Adding a table/grid feature**: Table detection is in `findTableDefinitions()` (variables.js), evaluation in `evaluateTable()` (solve-engine.js), rendering in `setTableData()` / `_renderTable2()` (variables-panel.js), styling in style.css (`.mathpad-table`, `.mathpad-grid`)
 
 **Algebraic substitution** (`deriveSubstitution` in `solver.js`): Derives substitutions to reduce multi-unknown equations to single-unknown for Brent's. Uses recursive `tryIsolateVariable` to peel off binary operations one level at a time via `invertOperation`, handling arbitrary-depth nesting (e.g., `a*b/D = C` → `a = C*D/b`). Subsumes additive patterns (`var*B + C = D`), nested products/quotients, and `**` (power) inversion.
 
