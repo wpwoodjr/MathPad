@@ -310,7 +310,12 @@ class VariablesPanel {
             row.dataset.lineIndex = info.lineIndex;
             row.dataset.type = 'label';
 
-            if (info.name) {
+            if (info.name && /^-{3,}$/.test(info.name.trim())) {
+                // Dash line → horizontal rule
+                const hr = document.createElement('hr');
+                hr.className = 'variable-divider';
+                row.appendChild(hr);
+            } else if (info.name) {
                 // Label row with text - use same styling as declaration comments
                 const label = document.createElement('span');
                 label.className = 'variable-comment';

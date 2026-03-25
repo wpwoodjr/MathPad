@@ -443,6 +443,7 @@ function createEditorForRecord(record) {
                 }
             } else {
                 variablesManager.clearErrors();
+                variablesManager.setTableData(null);
             }
         }
         syncFromVariables = false;

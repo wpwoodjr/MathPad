@@ -1496,6 +1496,13 @@ body.sidebar-resizing * {
     height: 6px;
 }
 
+.variable-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 2px 0;
+    width: 100%;
+}
+
 .variable-row[data-type="label"]:hover {
     background: transparent;
 }
