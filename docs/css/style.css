@@ -1542,7 +1542,16 @@ body.sidebar-resizing * {
     white-space: nowrap;
 }
 
-.mathpad-table tr:hover {
+.mathpad-table:not(.mathpad-table2) tr:hover {
+    background: var(--bg-hover);
+}
+
+.mathpad-table2 tr:hover td,
+.mathpad-table2 tr:hover .grid-row-value {
+    background: var(--bg-hover);
+}
+
+.mathpad-table2 .col-hover {
     background: var(--bg-hover);
 }
 

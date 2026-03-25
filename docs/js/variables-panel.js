@@ -891,9 +891,11 @@ class VariablesPanel {
         cellHeaderTh.className = 'mathpad-table2-label';
         cellHeaderTh.style.textAlign = 'right';
         headerRow2.appendChild(cellHeaderTh);
-        for (const cv of table.colValues) {
+        for (let c = 0; c < table.colValues.length; c++) {
             const th = document.createElement('th');
-            th.textContent = cv;
+            th.textContent = table.colValues[c];
+            th.dataset.col = c;
+            th.className = 'grid-col-value';
             headerRow2.appendChild(th);
         }
         thead.appendChild(headerRow2);
@@ -921,17 +923,66 @@ class VariablesPanel {
             // Row value
             const rowTh = document.createElement('th');
             rowTh.textContent = table.rowValues[r];
+            rowTh.className = 'grid-row-value';
             tr.appendChild(rowTh);
 
             // Cell values
             for (let c = 0; c < numCols; c++) {
                 const td = document.createElement('td');
                 td.textContent = table.grid[r][c] || '';
+                td.dataset.col = c;
                 tr.appendChild(td);
             }
             tbody.appendChild(tr);
         }
         tableEl.appendChild(tbody);
+
+        // Column + header hover highlighting
+        // Hovering a column header highlights that column
+        for (const th of headerRow2.querySelectorAll('.grid-col-value')) {
+            th.addEventListener('mouseenter', () => {
+                const col = th.dataset.col;
+                th.classList.add('col-hover');
+                for (const cell of tbody.querySelectorAll(`td[data-col="${col}"]`)) {
+                    cell.classList.add('col-hover');
+                }
+            });
+            th.addEventListener('mouseleave', () => {
+                const col = th.dataset.col;
+                th.classList.remove('col-hover');
+                for (const cell of tbody.querySelectorAll(`td[data-col="${col}"]`)) {
+                    cell.classList.remove('col-hover');
+                }
+            });
+        }
+
+        const colHeaderRow = thead.rows[1]; // row with column values
+        tableEl.addEventListener('mouseenter', (e) => {
+            const td = e.target.closest('td');
+            if (!td || td.dataset.col == null) return;
+            const col = td.dataset.col;
+            for (const cell of tbody.querySelectorAll(`td[data-col="${col}"]`)) {
+                cell.classList.add('col-hover');
+            }
+            // Highlight column header (offset by 1 for the merged cell)
+            const colHeader = colHeaderRow && headerRow2.cells[parseInt(col) + 1];
+            if (colHeader) colHeader.classList.add('col-hover');
+            // Highlight row header (the <th> in the same <tr>)
+            const rowTh = td.parentElement.querySelector('.grid-row-value');
+            if (rowTh) rowTh.classList.add('col-hover');
+        }, true);
+        tableEl.addEventListener('mouseleave', (e) => {
+            const td = e.target.closest('td');
+            if (!td || td.dataset.col == null) return;
+            const col = td.dataset.col;
+            for (const cell of tbody.querySelectorAll(`td[data-col="${col}"]`)) {
+                cell.classList.remove('col-hover');
+            }
+            const colHeader = colHeaderRow && headerRow2.cells[parseInt(col) + 1];
+            if (colHeader) colHeader.classList.remove('col-hover');
+            const rowTh = td.parentElement.querySelector('.grid-row-value');
+            if (rowTh) rowTh.classList.remove('col-hover');
+        }, true);
 
         wrapper.appendChild(tableEl);
         this.insertRowInOrder(wrapper, table.startLine - 1);
