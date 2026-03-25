@@ -687,7 +687,7 @@ function appendTableOutputsSection(text, tables) {
 
     // Check if any tables have data
     const hasTables = tables.some(t =>
-        t.type === 'table2' ? t.grid.length > 0 : (t.rows && t.rows.length > 0)
+        t.type === 'grid' ? t.grid.length > 0 : (t.rows && t.rows.length > 0)
     );
     if (!hasTables) return text;
 
@@ -697,7 +697,7 @@ function appendTableOutputsSection(text, tables) {
         // Title line
         if (table.title) lines.push(`"${table.title}"`);
 
-        if (table.type === 'table2') {
+        if (table.type === 'grid') {
             if (table.grid.length === 0) continue;
             lines.push(`"${table.iter1Label}"\t"${table.iter2Label}"\t"${table.cellHeader}"`);
             lines.push(`\t${table.colValues.join('\t')}`);
@@ -841,8 +841,9 @@ function solveRecord(text, context, record, parserTokens) {
  */
 function evaluateTable(tableDef, context, record) {
     const errors = [];
-    const emptyResult = (type) => type === 'table2'
-        ? { type: 'table2', title: tableDef.title, iter1Label: '', iter2Label: '', rowValues: [], colValues: [], cellHeader: '', grid: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors }
+    const isGrid = tableDef.keyword === 'grid';
+    const emptyResult = () => isGrid
+        ? { type: 'grid', title: tableDef.title, iter1Label: '', iter2Label: '', rowValues: [], colValues: [], cellHeader: '', grid: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors }
         : { type: 'table', title: tableDef.title, columns: [], rows: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
 
     // Evaluate optional font size
@@ -882,16 +883,17 @@ function evaluateTable(tableDef, context, record) {
                             startExpr: tokensToText(parts[0]).trim(),
                             endExpr: tokensToText(parts[1]).trim(),
                             stepExpr: parts.length >= 3 ? tokensToText(parts[2]).trim() : null,
-                            header: (parsed.label && parsed.label.trim()) || parsed.name
+                            header: (parsed.label && parsed.label.trim()) || parsed.name,
+                            lineIdx: i
                         });
                     }
                 } else if (parsed.valueTokens && parsed.valueTokens.length > 0) {
                     // Definition with expression
                     const exprText = parsed.valueTokens.map(t => (t.ws || '') + (typeof t.value === 'object' ? t.value.raw || t.value : t.value)).join('');
-                    definitions.push({ name: parsed.name, exprText, limits: parsed.limits || null });
+                    definitions.push({ name: parsed.name, exprText, limits: parsed.limits || null, lineIdx: i });
                 } else {
                     // Bare declaration → unknown for equation solving
-                    unknowns.push({ name: parsed.name, limits: parsed.limits || null });
+                    unknowns.push({ name: parsed.name, limits: parsed.limits || null, lineIdx: i });
                 }
             } else if (parsed.type === VarType.OUTPUT) {
                 columns.push({
@@ -950,12 +952,51 @@ function evaluateTable(tableDef, context, record) {
             }
             if (step === 0) {
                 errors.push(`Line ${tableDef.startLine}: Table step cannot be zero for '${iter.name}'`);
-                return emptyResult(iterators.length >= 2 ? 'table2' : 'table');
+                return emptyResult();
             }
             evaledIterators.push({ ...iter, start, end, step });
         } catch (e) {
             errors.push(`Line ${tableDef.startLine}: Table bounds error for '${iter.name}' — ${e.message}`);
-            return emptyResult(iterators.length >= 2 ? 'table2' : 'table');
+            return emptyResult();
+        }
+    }
+
+    // Check for unused declared variables (iterators, unknowns, definitions)
+    const referencedVars = new Set();
+    for (const eq of equations) {
+        try {
+            const leftAST = parseExpression(eq.leftText);
+            const rightAST = parseExpression(eq.rightText);
+            for (const v of findVariablesInAST(leftAST)) referencedVars.add(v);
+            for (const v of findVariablesInAST(rightAST)) referencedVars.add(v);
+        } catch (e) { }
+    }
+    for (const def of definitions) {
+        if (def.exprText) {
+            try {
+                for (const v of findVariablesInAST(parseExpression(def.exprText.trim()))) referencedVars.add(v);
+            } catch (e) { }
+        }
+    }
+    for (const col of columns) {
+        if (col.ast) {
+            for (const v of findVariablesInAST(col.ast)) referencedVars.add(v);
+        }
+        referencedVars.add(col.name);
+    }
+    for (const iter of iterators) {
+        if (!referencedVars.has(iter.name)) {
+            errors.push(`Line ${tableDef.startLine + iter.lineIdx}: Table variable '${iter.name}' is not used in any equation or output`);
+        }
+    }
+    for (const unk of unknowns) {
+        if (!referencedVars.has(unk.name)) {
+            errors.push(`Line ${tableDef.startLine + unk.lineIdx}: Table variable '${unk.name}' is not used in any equation or output`);
+        }
+    }
+    for (const def of definitions) {
+        if (!referencedVars.has(def.name)) {
+            errors.push(`Line ${tableDef.startLine + def.lineIdx}: Table variable '${def.name}' is not used in any equation or output`);
         }
     }
 
@@ -1023,12 +1064,12 @@ function evaluateTable(tableDef, context, record) {
         return badVars;
     }
 
-    // ==================== 1D TABLE ====================
-    if (evaledIterators.length <= 1) {
+    // ==================== TABLE (columnar) ====================
+    if (tableDef.keyword === 'table') {
         const iter = evaledIterators[0];
         if (!iter) {
             errors.push(`Line ${tableDef.startLine}: Table has no iterator (use x<- 0..10)`);
-            return emptyResult('table');
+            return emptyResult();
         }
 
         const rows = [];
@@ -1074,13 +1115,37 @@ function evaluateTable(tableDef, context, record) {
         return { type: 'table', title: tableDef.title, columns, rows, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
     }
 
-    // ==================== 2D TABLE ====================
-    const iter1 = evaledIterators[0];
-    const iter2 = evaledIterators[1];
+    // ==================== GRID (2D cell values) ====================
+    if (evaledIterators.length < 2) {
+        errors.push(`Line ${tableDef.startLine}: Grid requires at least 2 iterators (use x<- 0..10)`);
+        return emptyResult();
+    }
+    // Determine grid axes from OUTPUT order (not iterator declaration order)
+    // First iterator output = rows, second = columns, first non-iterator output = cell
+    const iterMap = new Map(evaledIterators.map(it => [it.name, it]));
+    const iterNames = new Set(iterMap.keys());
+    let iter1 = null, iter2 = null, cellVar = null;
+    let iter1Label = '', iter2Label = '';
 
-    // Find the cell output variable (first non-iterator output)
-    const iterNames = new Set(evaledIterators.map(it => it.name));
-    const cellVar = columns.find(c => !c.ast && !iterNames.has(c.name)) || null;
+    for (const col of columns) {
+        if (!col.ast && iterMap.has(col.name)) {
+            if (!iter1) {
+                iter1 = iterMap.get(col.name);
+                iter1Label = col.header || iter1.header;
+            } else if (!iter2) {
+                iter2 = iterMap.get(col.name);
+                iter2Label = col.header || iter2.header;
+            }
+        } else if (!cellVar && !col.ast && !iterNames.has(col.name)) {
+            cellVar = col;
+        }
+    }
+
+    // Fallback if iterators not found in outputs
+    if (!iter1) iter1 = evaledIterators[0];
+    if (!iter2) iter2 = evaledIterators[1];
+    if (!iter1Label) iter1Label = iter1.header;
+    if (!iter2Label) iter2Label = iter2.header;
 
     // Build value arrays
     const rowValues = [];
@@ -1113,8 +1178,8 @@ function evaluateTable(tableDef, context, record) {
     }
 
     return {
-        type: 'table2', title: tableDef.title,
-        iter1Label: iter1.header, iter2Label: iter2.header,
+        type: 'grid', title: tableDef.title,
+        iter1Label, iter2Label,
         rowValues: rowValues.map(v => formatVariableValue(v, null, false, formatOpts)),
         colValues: colValues.map(v => formatVariableValue(v, null, false, formatOpts)),
         cellHeader: cellVar ? cellVar.header : '',

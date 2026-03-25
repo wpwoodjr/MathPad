@@ -6,6 +6,7 @@
 // Derived from evaluator's builtinFunctions to avoid duplicate source of truth
 const editorBuiltinFunctions = new Set(Object.keys(builtinFunctions));
 editorBuiltinFunctions.add('table');
+editorBuiltinFunctions.add('grid');
 
 /**
  * Convert parser tokens to editor highlight tokens
@@ -236,7 +237,7 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, t
             insideBrace = true;
             // Check if this is a table definition opening
             const firstTok = tokensByLine[i] && tokensByLine[i].find(t => t.type !== TokenType.EOF && t.type !== TokenType.COMMENT);
-            if (firstTok && firstTok.type === TokenType.IDENTIFIER && firstTok.value.toLowerCase() === 'table') {
+            if (firstTok && firstTok.type === TokenType.IDENTIFIER && ['table', 'grid'].includes(firstTok.value.toLowerCase())) {
                 insideTableBrace = true;
             }
         } else if (closeBraces > openBraces) {
@@ -403,7 +404,7 @@ function findEquationLabelRegions(line, lineTokens) {
     const lbrace = lineTokens.find(t => t.type === TokenType.LBRACE);
     if (lbrace) {
         const firstTok = lineTokens.find(t => t.type !== TokenType.EOF && t.type !== TokenType.COMMENT);
-        const isTable = firstTok && firstTok.type === TokenType.IDENTIFIER && firstTok.value.toLowerCase() === 'table';
+        const isTable = firstTok && firstTok.type === TokenType.IDENTIFIER && ['table', 'grid'].includes(firstTok.value.toLowerCase());
         if (!isTable) {
             const bracePos = lbrace.col - 1;
             if (bracePos > 0) {

@@ -54,7 +54,7 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 --Variables--
 "*Test table2"
 
-table("2D test") = {
+grid("2D test") = {
   z = x*y
   z<-
   x<- 0..4..2
@@ -150,7 +150,7 @@ table("User Pwr vs MMP") = {
   Max Motor Pwr MMP->
 }
 
-table("Hours grid") = {
+grid("Hours grid") = {
   hrs = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   hrs<-
   averagePwr<- 100..150..5
@@ -160,7 +160,7 @@ table("Hours grid") = {
   Hours hrs->
 }
 
-table("MMP grid") = {
+grid("MMP grid") = {
   hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   MMP<-
   averagePwr<- 100..150..5
@@ -180,7 +180,7 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 
 w: 1
 u = 2
-table("2D limits") = {
+grid("2D limits") = {
   -w/u = x*y - z
   z<-
   x<- 0..4..2
@@ -208,7 +208,7 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 
 w: 1
 u = 2
-table("2D input limits") = {
+grid("2D input limits") = {
   -w/u = x*y - z + v
   v: 10
   z[10:20]<-
@@ -280,7 +280,7 @@ table("User Pwr vs MMP 2") = {
   Max Motor Pwr maxMotorPwr->
 }
 
-table("Hours grid 2") = {
+grid("Hours grid 2") = {
   hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
   hours<-
   userPwr<- 100..150..5
@@ -290,7 +290,7 @@ table("Hours grid 2") = {
   Hours hours->
 }
 
-table("MMP grid 2") = {
+grid("MMP grid 2") = {
   hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
   maxMotorPwr[60:240]<-
   userPwr<- 100..150..5
@@ -298,5 +298,21 @@ table("MMP grid 2") = {
   User Pwr userPwr->
   Hours hours->
   Max Motor Pwr maxMotorPwr->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test unused table variable warning"
+
+--Variables--
+x: 3
+table("Unused var") = {
+  y = x * 2
+  y<-
+  typo<-
+  x<- 1..3
+  x->
+  y->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

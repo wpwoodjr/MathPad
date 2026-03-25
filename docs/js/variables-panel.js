@@ -791,7 +791,7 @@ class VariablesPanel {
         if (!tables || tables.length === 0) return;
 
         for (const table of tables) {
-            if (table.type === 'table2') {
+            if (table.type === 'grid') {
                 this._renderTable2(table);
                 continue;
             }
@@ -846,7 +846,7 @@ class VariablesPanel {
     }
 
     /**
-     * Render a 2D table (table2) with row/column iterator labels
+     * Render a 2D grid with row/column iterator labels
      */
     _renderTable2(table) {
         if (table.grid.length === 0 || table.colValues.length === 0) return;

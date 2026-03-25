@@ -1216,7 +1216,8 @@ function findTableDefinitions(text, allTokens) {
         // Find the table identifier (skip leading COMMENT tokens)
         const tableIdx = tokens.findIndex(t => t.type === TokenType.IDENTIFIER);
         if (tableIdx < 0) return;
-        if (tokens[tableIdx].value.toLowerCase() !== 'table') return;
+        const keyword = tokens[tableIdx].value.toLowerCase();
+        if (keyword !== 'table' && keyword !== 'grid') return;
         if (tableIdx + 1 >= tokens.length || tokens[tableIdx + 1].type !== TokenType.LPAREN) return;
 
         // Find RPAREN
@@ -1264,7 +1265,7 @@ function findTableDefinitions(text, allTokens) {
         const startLine = tokens[tableIdx].line;  // 1-based
         const endLine = rbraceTok.line;     // 1-based
 
-        tables.push({ title, fontSizeExpr, bodyText, bodyLines, startLine, endLine });
+        tables.push({ keyword, title, fontSizeExpr, bodyText, bodyLines, startLine, endLine });
     }
 }
 
