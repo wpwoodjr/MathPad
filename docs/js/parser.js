@@ -43,6 +43,7 @@ const TokenType = {
     ARROW_PERSIST_FULL: 'ARROW_PERSIST_FULL', // =>>
     DOUBLE_COLON: 'DOUBLE_COLON',   // ::
     FORMATTER: 'FORMATTER',          // $ % # (format suffixes)
+    DOT_DOT: 'DOT_DOT',             // .. (range in table iterators)
     UNEXPECTED_CHAR: 'UNEXPECTED_CHAR' // unrecognized characters in input
 };
 
@@ -239,7 +240,8 @@ class Tokenizer {
         }
 
         // Decimal point (with or without trailing digits: 1.5 and 1. are both valid)
-        if (this.peek() === '.') {
+        // But don't consume . if followed by another . (range operator: 0..4)
+        if (this.peek() === '.' && this.peek(1) !== '.') {
             const ch = this.advance(); // .
             value += ch;
             raw += ch;
@@ -723,6 +725,13 @@ class Tokenizer {
                 }
                 this.advance();
                 pushToken(this.makeToken(TokenType.FORMATTER, ch, startLine, startCol));
+                continue;
+            }
+
+            // Range operator (..) for table iterators
+            if (ch === '.' && this.peek(1) === '.') {
+                this.advance(2);
+                pushToken(this.makeToken(TokenType.DOT_DOT, '..', startLine, startCol));
                 continue;
             }
 

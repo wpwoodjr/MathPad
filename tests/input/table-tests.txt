@@ -5,9 +5,10 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 
 --Variables--
 "*Test table output"
-table(n; 0; 5) = {
+table("Test 1D") = {
   x: n**2
   y: sqrt(n)
+  n<- 0..5
   n->
   x->
   "sqrt(n)" y->
@@ -22,9 +23,10 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Test table with equation"
 
 --Variables--
-table(x; 0; 5) = {
+table("Equation test") = {
   y**2 = x
   y<-
+  x<- 0..5
   x->
   y->
 }
@@ -37,8 +39,9 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 --Variables--
 y: 17
 
-table(x; 0; 3) = {
+table("Balance test") = {
   y**2 = x
+  x<- 0..3
   x->
   y->
 }
@@ -51,9 +54,11 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 --Variables--
 "*Test table2"
 
-table2(x; 0; 4; 2; y; 2; 3; 1) = {
+table("2D test") = {
   z = x*y
   z<-
+  x<- 0..4..2
+  y<- 2..3
   X Value x->
   Y Value y->
   Z Value z->
@@ -82,9 +87,10 @@ batteryAdjFactor: 0.96
 temperature: 70
 limitPwr: 420
 
-table(hours; 2; 7) = {
+table("Bad cells") = {
   hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   MMP<-
+  hours<- 2..7
   Hours hours->
   User Pwr averagePwr->
   Max Motor Pwr MMP->
@@ -126,33 +132,39 @@ hours<<- 6
 temperature<- 70
 limitPwr: 420
 
-table(hours; 2; 7) = {
+table("Hours vs MMP") = {
   hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   MMP<-
+  hours<- 2..7
   Hours hours->
   User Pwr averagePwr->
   Max Motor Pwr MMP->
 }
 
-table(averagePwr; 100; 150; 5) = {
+table("User Pwr vs MMP") = {
   hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   MMP<-
+  averagePwr<- 100..150..5
   User Pwr averagePwr->
   Hours hours->
   Max Motor Pwr MMP->
 }
 
-table2(averagePwr; 100; 150; 5; MMP; 100; 200; 10) = {
+table("Hours grid") = {
   hrs = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   hrs<-
+  averagePwr<- 100..150..5
+  MMP<- 100..200..10
   User Pwr averagePwr->
   Max Motor Pwr MMP->
   Hours hrs->
 }
 
-table2(averagePwr; 100; 150; 5; hours; 2; 7; 0.5) = {
+table("MMP grid") = {
   hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   MMP<-
+  averagePwr<- 100..150..5
+  hours<- 2..7..0.5
   User Pwr averagePwr->
   Hours hours->
   Max Motor Pwr MMP->
@@ -168,17 +180,20 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 
 w: 1
 u = 2
-table2(x; 0; 4; 2; y; 2; 3; 1) = {
+table("2D limits") = {
   -w/u = x*y - z
   z<-
+  x<- 0..4..2
+  y<- 2..3
   X Value x->
   Y Value y->
   Z Value z[0:10]->
 }
 
-table(x; 0; 4) = {
+table("1D limits") = {
   z = x + 7
   z<-
+  x<- 0..4
   x->
   z[0:10]->
 }
@@ -193,18 +208,21 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 
 w: 1
 u = 2
-table2(x; 0; 4; 2; y; 2; 3; 1) = {
+table("2D input limits") = {
   -w/u = x*y - z + v
   v: 10
   z[10:20]<-
+  x<- 0..4..2
+  y<- 2..3
   X Value x->
   Y Value y->
   z->
 }
 
-table(x; 0; 4) = {
+table("1D input limits") = {
   z = x + 7
   z[0:10]:
+  x<- 0..4
   x->
   z->
 }
@@ -244,33 +262,39 @@ hours<<- 6
 temperature<- 70
 limitPwr: 420
 
-table(hours; 2; 7) = {
+table("Hours vs MMP 2") = {
   hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
   maxMotorPwr[60:240]<-
+  hours<- 2..7
   Hours hours->
   User Pwr userPwr->
   Max Motor Pwr maxMotorPwr->
 }
 
-table(userPwr; 100; 150; 5) = {
+table("User Pwr vs MMP 2") = {
   hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
   maxMotorPwr[60:240]<-
+  userPwr<- 100..150..5
   User Pwr userPwr->
   Hours hours->
   Max Motor Pwr maxMotorPwr->
 }
 
-table2(userPwr; 100; 150; 5; maxMotorPwr; 100; 200; 10) = {
+table("Hours grid 2") = {
   hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
   hours<-
+  userPwr<- 100..150..5
+  maxMotorPwr<- 100..200..10
   User Pwr userPwr->
   Max Motor Pwr maxMotorPwr->
   Hours hours->
 }
 
-table2(userPwr; 100; 150; 5; hours; 2; 7; 0.5) = {
+table("MMP grid 2") = {
   hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
   maxMotorPwr[60:240]<-
+  userPwr<- 100..150..5
+  hours<- 2..7..0.5
   User Pwr userPwr->
   Hours hours->
   Max Motor Pwr maxMotorPwr->

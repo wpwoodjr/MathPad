@@ -1167,8 +1167,9 @@ function createEvalContext(record, parsedConstants, parsedFunctions, localText =
 
 /**
  * Find table definitions in text.
- * Pattern: table(iterator; low; high) = { body } or table(iterator; low; high; step) = { body }
- * Returns array of { iteratorName, lowExpr, highExpr, stepExpr, bodyText, bodyLines, startLine, endLine }
+ * Pattern: table("title" [; fontSize]) = { body }
+ * Iterators declared inside body: x<- 0..4 or y<- 0..8..2
+ * Returns array of { title, fontSizeExpr, bodyText, bodyLines, startLine, endLine }
  * Lines are 1-based (matching token line numbers).
  */
 function findTableDefinitions(text, allTokens) {
@@ -1183,7 +1184,7 @@ function findTableDefinitions(text, allTokens) {
 
     for (let lineIdx = 0; lineIdx < allTokens.length; lineIdx++) {
         for (const t of allTokens[lineIdx]) {
-            if (t.type === TokenType.EOF || t.type === TokenType.COMMENT) continue;
+            if (t.type === TokenType.EOF) continue;
 
             if (t.type === TokenType.LBRACE && !inBrace) {
                 inBrace = true;
@@ -1210,16 +1211,17 @@ function findTableDefinitions(text, allTokens) {
     return tables;
 
     function tryMatchTable(tokens, lbraceTok, rbraceTok) {
-        // Pattern: IDENTIFIER('table'|'table2') LPAREN args RPAREN OPERATOR('=')
-        if (tokens.length < 5) return;
-        if (tokens[0].type !== TokenType.IDENTIFIER) return;
-        const keyword = tokens[0].value.toLowerCase();
-        if (keyword !== 'table' && keyword !== 'table2') return;
-        if (tokens[1].type !== TokenType.LPAREN) return;
+        // Pattern: IDENTIFIER('table') LPAREN "title" [; fontSize] RPAREN OPERATOR('=')
+        if (tokens.length < 4) return;
+        // Find the table identifier (skip leading COMMENT tokens)
+        const tableIdx = tokens.findIndex(t => t.type === TokenType.IDENTIFIER);
+        if (tableIdx < 0) return;
+        if (tokens[tableIdx].value.toLowerCase() !== 'table') return;
+        if (tableIdx + 1 >= tokens.length || tokens[tableIdx + 1].type !== TokenType.LPAREN) return;
 
         // Find RPAREN
         let rparenIdx = -1;
-        for (let j = 2; j < tokens.length; j++) {
+        for (let j = tableIdx + 2; j < tokens.length; j++) {
             if (tokens[j].type === TokenType.RPAREN) { rparenIdx = j; break; }
         }
         if (rparenIdx === -1) return;
@@ -1229,14 +1231,28 @@ function findTableDefinitions(text, allTokens) {
         const eqTok = tokens[rparenIdx + 1];
         if (eqTok.type !== TokenType.OPERATOR || eqTok.value !== '=') return;
 
-        // Split args by semicolons
+        // Extract args: title (COMMENT token) and optional fontSize
+        let title = '';
+        let fontSizeExpr = null;
+        const argTokens = tokens.slice(tableIdx + 2, rparenIdx);
+
+        // Split by semicolons
         const args = [[]];
-        for (let j = 2; j < rparenIdx; j++) {
-            if (tokens[j].type === TokenType.SEMICOLON) {
-                args.push([]);
-            } else {
-                args[args.length - 1].push(tokens[j]);
-            }
+        for (const t of argTokens) {
+            if (t.type === TokenType.SEMICOLON) args.push([]);
+            else args[args.length - 1].push(t);
+        }
+
+        // Arg 1: title (COMMENT token = quoted string)
+        if (args[0].length > 0 && args[0][0].type === TokenType.COMMENT) {
+            title = args[0][0].value;
+        } else if (args[0].length > 0) {
+            title = tokensToText(args[0]).trim();
+        }
+
+        // Arg 2: optional fontSize expression
+        if (args.length >= 2 && args[1].length > 0) {
+            fontSizeExpr = tokensToText(args[1]).trim();
         }
 
         // Extract body text between { and }
@@ -1245,45 +1261,10 @@ function findTableDefinitions(text, allTokens) {
         const bodyText = text.substring(bodyStart, bodyEnd);
         const bodyLines = bodyText.split('\n');
 
-        const startLine = tokens[0].line;  // 1-based
+        const startLine = tokens[tableIdx].line;  // 1-based
         const endLine = rbraceTok.line;     // 1-based
 
-        if (keyword === 'table2') {
-            // table2(iter1; low1; high1; step1; iter2; low2; high2; step2 [; fontSize])
-            if (args.length < 8 || args.length > 9) return;
-            if (args[0].length !== 1 || args[0][0].type !== TokenType.IDENTIFIER) return;
-            if (args[4].length !== 1 || args[4][0].type !== TokenType.IDENTIFIER) return;
-
-            tables.push({
-                type: 'table2',
-                iteratorName: args[0][0].value,
-                lowExpr: tokensToText(args[1]).trim(),
-                highExpr: tokensToText(args[2]).trim(),
-                stepExpr: tokensToText(args[3]).trim(),
-                iterator2Name: args[4][0].value,
-                low2Expr: tokensToText(args[5]).trim(),
-                high2Expr: tokensToText(args[6]).trim(),
-                step2Expr: tokensToText(args[7]).trim(),
-                fontSizeExpr: args.length >= 9 ? tokensToText(args[8]).trim() : null,
-                bodyText, bodyLines,
-                startLine, endLine
-            });
-        } else {
-            // table(iter; low; high [; step [; fontSize]])
-            if (args.length < 3 || args.length > 5) return;
-            if (args[0].length !== 1 || args[0][0].type !== TokenType.IDENTIFIER) return;
-
-            tables.push({
-                type: 'table',
-                iteratorName: args[0][0].value,
-                lowExpr: tokensToText(args[1]).trim(),
-                highExpr: tokensToText(args[2]).trim(),
-                stepExpr: args.length >= 4 ? tokensToText(args[3]).trim() : null,
-                fontSizeExpr: args.length >= 5 ? tokensToText(args[4]).trim() : null,
-                bodyText, bodyLines,
-                startLine, endLine
-            });
-        }
+        tables.push({ title, fontSizeExpr, bodyText, bodyLines, startLine, endLine });
     }
 }
 

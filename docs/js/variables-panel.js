@@ -799,8 +799,16 @@ class VariablesPanel {
 
             const wrapper = document.createElement('div');
             wrapper.className = 'variable-row variable-table-container';
-            wrapper.dataset.lineIndex = table.startLine - 1; // 0-based for insertRowInOrder
+            wrapper.dataset.lineIndex = table.startLine - 1;
             wrapper.dataset.type = 'table';
+
+            // Title label
+            if (table.title) {
+                const titleEl = document.createElement('div');
+                titleEl.className = 'mathpad-table-title';
+                titleEl.textContent = table.title;
+                wrapper.appendChild(titleEl);
+            }
 
             const tableEl = document.createElement('table');
             tableEl.className = 'mathpad-table';
@@ -847,6 +855,14 @@ class VariablesPanel {
         wrapper.className = 'variable-row variable-table-container';
         wrapper.dataset.lineIndex = table.startLine - 1;
         wrapper.dataset.type = 'table';
+
+        // Title label
+        if (table.title) {
+            const titleEl = document.createElement('div');
+            titleEl.className = 'mathpad-table-title';
+            titleEl.textContent = table.title;
+            wrapper.appendChild(titleEl);
+        }
 
         const tableEl = document.createElement('table');
         tableEl.className = 'mathpad-table mathpad-table2';

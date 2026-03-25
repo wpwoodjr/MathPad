@@ -694,9 +694,11 @@ function appendTableOutputsSection(text, tables) {
     const lines = ['"--- Table Outputs ---"'];
 
     for (const table of tables) {
+        // Title line
+        if (table.title) lines.push(`"${table.title}"`);
+
         if (table.type === 'table2') {
             if (table.grid.length === 0) continue;
-            // 2D table: labels line, colValues header, then grid rows
             lines.push(`"${table.iter1Label}"\t"${table.iter2Label}"\t"${table.cellHeader}"`);
             lines.push(`\t${table.colValues.join('\t')}`);
             for (let r = 0; r < table.rowValues.length; r++) {
@@ -704,7 +706,6 @@ function appendTableOutputsSection(text, tables) {
             }
         } else {
             if (!table.rows || table.rows.length === 0) continue;
-            // 1D table: column headers, then rows
             lines.push(table.columns.map(c => '"' + (c.header || c.name) + '"').join('\t'));
             for (const row of table.rows) {
                 lines.push(row.join('\t'));
@@ -814,9 +815,7 @@ function solveRecord(text, context, record, parserTokens) {
     for (const td of tableDefs) {
         // Restore outer context so tables don't leak state to each other
         context.variables = new Map(savedVars);
-        const tableResult = td.type === 'table2'
-            ? evaluateTable2(td, context, record)
-            : evaluateTable(td, context, record);
+        const tableResult = evaluateTable(td, context, record);
         errors.push(...tableResult.errors);
         tables.push(tableResult);
     }
@@ -836,55 +835,28 @@ function solveRecord(text, context, record, parserTokens) {
 }
 
 /**
- * Evaluate a table definition: iterate variable from low to high,
- * evaluating body definitions per row and collecting output column values.
+ * Evaluate a table definition (unified 1D/2D).
+ * Parses body for iterators (x<- 0..4), unknowns (z<-), definitions (v: 10),
+ * outputs (z->), and equations. Dimensionality determined by iterator count.
  */
 function evaluateTable(tableDef, context, record) {
     const errors = [];
-
-    // Evaluate bounds
-    let low, high, step;
-    try {
-        low = evaluate(parseExpression(tableDef.lowExpr), context);
-    } catch (e) {
-        errors.push(`Line ${tableDef.startLine}: Table low bound cannot be evaluated — ${e.message}`);
-        return { columns: [], rows: [], startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
-    }
-    try {
-        high = evaluate(parseExpression(tableDef.highExpr), context);
-    } catch (e) {
-        errors.push(`Line ${tableDef.startLine}: Table high bound cannot be evaluated — ${e.message}`);
-        return { columns: [], rows: [], startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
-    }
-    if (tableDef.stepExpr) {
-        try {
-            step = evaluate(parseExpression(tableDef.stepExpr), context);
-        } catch (e) {
-            errors.push(`Line ${tableDef.startLine}: Table step cannot be evaluated — ${e.message}`);
-            return { columns: [], rows: [], startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
-        }
-    } else {
-        step = low <= high ? 1 : -1;
-    }
-    if (step === 0) {
-        errors.push(`Line ${tableDef.startLine}: Table step cannot be zero`);
-        return { columns: [], rows: [], startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
-    }
+    const emptyResult = (type) => type === 'table2'
+        ? { type: 'table2', title: tableDef.title, iter1Label: '', iter2Label: '', rowValues: [], colValues: [], cellHeader: '', grid: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors }
+        : { type: 'table', title: tableDef.title, columns: [], rows: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
 
     // Evaluate optional font size
     let fontSize = null;
     if (tableDef.fontSizeExpr) {
-        try {
-            fontSize = evaluate(parseExpression(tableDef.fontSizeExpr), context);
-        } catch (e) {
-            // Ignore — use default
-        }
+        try { fontSize = evaluate(parseExpression(tableDef.fontSizeExpr), context); } catch (e) { }
     }
 
-    // Parse body lines to identify definitions and output columns
+    // Parse body lines: iterators, definitions, unknowns, outputs, equations
     const bodyTokens = new Tokenizer(tableDef.bodyText).tokenize();
-    const definitions = [];  // { name, exprText, lineIdx }
-    const columns = [];      // { name, format, fullPrecision, base }
+    const iterators = [];    // { name, startExpr, endExpr, stepExpr, header }
+    const definitions = [];  // { name, exprText, limits }
+    const unknowns = [];     // { name, limits }
+    const columns = [];      // { name, header, format, fullPrecision, base, limits, ast }
 
     for (let i = 0; i < bodyTokens.length; i++) {
         const lineTokens = bodyTokens[i].filter(t => t.type !== TokenType.EOF);
@@ -895,13 +867,33 @@ function evaluateTable(tableDef, context, record) {
 
         if (parsed.kind === 'declaration') {
             if (parsed.type === VarType.INPUT) {
-                // Definition — extract expression text
-                const exprText = parsed.valueTokens && parsed.valueTokens.length > 0
-                    ? parsed.valueTokens.map(t => (t.ws || '') + (typeof t.value === 'object' ? t.value.raw || t.value : t.value)).join('')
-                    : null;
-                definitions.push({ name: parsed.name, exprText, limits: parsed.limits || null, lineIdx: i });
+                // Check if valueTokens contain DOT_DOT → iterator
+                const hasDotDot = parsed.valueTokens && parsed.valueTokens.some(t => t.type === TokenType.DOT_DOT);
+                if (hasDotDot) {
+                    // Parse range: start..end or start..end..step
+                    const parts = [[]];
+                    for (const t of parsed.valueTokens) {
+                        if (t.type === TokenType.DOT_DOT) parts.push([]);
+                        else parts[parts.length - 1].push(t);
+                    }
+                    if (parts.length >= 2) {
+                        iterators.push({
+                            name: parsed.name,
+                            startExpr: tokensToText(parts[0]).trim(),
+                            endExpr: tokensToText(parts[1]).trim(),
+                            stepExpr: parts.length >= 3 ? tokensToText(parts[2]).trim() : null,
+                            header: (parsed.label && parsed.label.trim()) || parsed.name
+                        });
+                    }
+                } else if (parsed.valueTokens && parsed.valueTokens.length > 0) {
+                    // Definition with expression
+                    const exprText = parsed.valueTokens.map(t => (t.ws || '') + (typeof t.value === 'object' ? t.value.raw || t.value : t.value)).join('');
+                    definitions.push({ name: parsed.name, exprText, limits: parsed.limits || null });
+                } else {
+                    // Bare declaration → unknown for equation solving
+                    unknowns.push({ name: parsed.name, limits: parsed.limits || null });
+                }
             } else if (parsed.type === VarType.OUTPUT) {
-                // Output column — use label as header if present, else variable name
                 columns.push({
                     name: parsed.name,
                     header: (parsed.label && parsed.label.trim()) || parsed.name,
@@ -915,18 +907,13 @@ function evaluateTable(tableDef, context, record) {
             const exprText = tokensToText(parsed.exprTokens).trim();
             const name = parsed.name || exprText;
             let ast = null;
-            try {
-                ast = parseExpression(exprText);
-            } catch (e) {
+            try { ast = parseExpression(exprText); } catch (e) {
                 errors.push(`Line ${tableDef.startLine}: Error in table expression '${exprText}' — ${e.message}`);
             }
             columns.push({
-                name: name,
-                header: (parsed.label && parsed.label.trim()) || name,
-                format: parsed.format || null,
-                fullPrecision: parsed.fullPrecision || false,
-                base: parsed.base || 10,
-                ast: ast
+                name, header: (parsed.label && parsed.label.trim()) || name,
+                format: parsed.format || null, fullPrecision: parsed.fullPrecision || false,
+                base: parsed.base || 10, limits: parsed.limits || null, ast
             });
         }
     }
@@ -938,19 +925,40 @@ function evaluateTable(tableDef, context, record) {
     // Pre-parse definition expressions
     const defASTs = [];
     for (const def of definitions) {
-        if (!def.exprText) {
-            defASTs.push({ name: def.name, ast: null });
-            continue;
-        }
+        if (!def.exprText) { defASTs.push({ name: def.name, ast: null }); continue; }
+        try { defASTs.push({ name: def.name, ast: parseExpression(def.exprText.trim()) }); }
+        catch (e) { defASTs.push({ name: def.name, ast: null }); }
+    }
+    // Add unknowns as bare entries (no AST)
+    for (const unk of unknowns) {
+        defASTs.push({ name: unk.name, ast: null });
+    }
+
+    const defNames = new Set(defASTs.filter(d => d.ast).map(d => d.name));
+
+    // Evaluate iterator bounds
+    const evaledIterators = [];
+    for (const iter of iterators) {
         try {
-            defASTs.push({ name: def.name, ast: parseExpression(def.exprText.trim()) });
+            const start = evaluate(parseExpression(iter.startExpr), context);
+            const end = evaluate(parseExpression(iter.endExpr), context);
+            let step;
+            if (iter.stepExpr) {
+                step = evaluate(parseExpression(iter.stepExpr), context);
+            } else {
+                step = start <= end ? 1 : -1;
+            }
+            if (step === 0) {
+                errors.push(`Line ${tableDef.startLine}: Table step cannot be zero for '${iter.name}'`);
+                return emptyResult(iterators.length >= 2 ? 'table2' : 'table');
+            }
+            evaledIterators.push({ ...iter, start, end, step });
         } catch (e) {
-            errors.push(`Line ${tableDef.startLine}: Error in table definition '${def.name}' — ${e.message}`);
-            defASTs.push({ name: def.name, ast: null });
+            errors.push(`Line ${tableDef.startLine}: Table bounds error for '${iter.name}' — ${e.message}`);
+            return emptyResult(iterators.length >= 2 ? 'table2' : 'table');
         }
     }
 
-    // Format settings from record
     const formatOpts = {
         places: record.places != null ? record.places : 4,
         stripZeros: record.stripZeros !== false,
@@ -958,59 +966,38 @@ function evaluateTable(tableDef, context, record) {
         groupDigits: record.groupDigits || false
     };
 
-    // Build set of definition names (only those with expressions, not bare declarations)
-    const defNames = new Set(defASTs.filter(d => d.ast).map(d => d.name));
-
-    // Iterate
-    const rows = [];
-    let prevValues = new Map();  // previous row's variable values
-    const maxRows = 10000;       // safety limit
-
-    for (let val = low, rowCount = 0;
-         step > 0 ? val <= high : val >= high;
-         val += step, rowCount++) {
-        if (rowCount >= maxRows) {
-            errors.push(`Line ${tableDef.startLine}: Table exceeded ${maxRows} rows`);
-            break;
-        }
-
-        // Set up pre-solve values for this row (previous row's values)
-        context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
-
-        // Clear unknowns: bare input declarations (no expression) are equation unknowns
-        for (const { name, ast } of defASTs) {
-            if (!ast) {
-                context.variables.delete(name);
-                context.declareVariable(name);
-            }
-        }
-
-        // Set iterator variable
-        context.setVariable(tableDef.iteratorName, val);
-
-        // Evaluate definitions in order
-        for (const { name, ast } of defASTs) {
-            if (!ast) continue;
-            try {
-                const value = evaluate(ast, context);
-                context.setVariable(name, value);
-            } catch (e) {
-                // Skip errors during iteration (e.g., var~ on row 0)
-            }
-        }
-
-        // Solve equations (Brent's method) for this row
-        // Build variables map with limits — input declarations (<-, :) take precedence
-        // over output declarations (->) for Brent's search range
+    // Build variables map with limits from declarations
+    function buildTableVarsMap() {
         const tableVarDecls = [];
         for (const def of definitions) {
             if (def.limits) tableVarDecls.push({ name: def.name, declaration: { limits: def.limits }, value: null });
         }
+        for (const unk of unknowns) {
+            if (unk.limits) tableVarDecls.push({ name: unk.name, declaration: { limits: unk.limits }, value: null });
+        }
         for (const col of columns) {
             if (col.limits) tableVarDecls.push({ name: col.name, declaration: { limits: col.limits }, value: null });
         }
-        const variables = buildVariablesMap(tableVarDecls, context);
+        return buildVariablesMap(tableVarDecls, context);
+    }
 
+    // Shared per-cell evaluation: clear unknowns, set iterators, evaluate defs, solve equations
+    function evaluateCell(iterValues) {
+        // Clear unknowns
+        for (const { name, ast } of defASTs) {
+            if (!ast) { context.variables.delete(name); context.declareVariable(name); }
+        }
+        // Set iterators
+        for (const iv of iterValues) {
+            context.setVariable(iv.name, iv.value);
+        }
+        // Evaluate definitions
+        for (const { name, ast } of defASTs) {
+            if (!ast) continue;
+            try { context.setVariable(name, evaluate(ast, context)); } catch (e) { }
+        }
+        // Solve equations
+        const variables = buildTableVarsMap();
         const badVars = new Set();
         for (const eq of equations) {
             try {
@@ -1020,7 +1007,6 @@ function evaluateTable(tableDef, context, record) {
                 );
                 if (result.solved && result.variable && result.value !== undefined) {
                     context.setVariable(result.variable, result.value);
-                    // Check if equation actually balances with the found root
                     try {
                         const l = evaluate(parseExpression(eq.leftText), context);
                         const r = evaluate(parseExpression(eq.rightText), context);
@@ -1034,242 +1020,109 @@ function evaluateTable(tableDef, context, record) {
                 }
             } catch (e) { }
         }
-
-        // Collect output values — suppress cells for variables that failed to solve
-        const row = [];
-        for (const col of columns) {
-            if (badVars.has(col.name)) { row.push(''); continue; }
-            let value;
-            if (col.ast) {
-                // Expression output — evaluate the expression
-                try { value = evaluate(col.ast, context); } catch (e) { /* skip */ }
-            } else {
-                value = context.getVariable(col.name);
-            }
-            if (value !== undefined) {
-                row.push(formatVariableValue(value, col.format, col.fullPrecision, formatOpts));
-            } else {
-                row.push('');
-            }
-        }
-        rows.push(row);
-
-        // Capture current values for next row's pre-solve
-        prevValues = new Map();
-        for (const { name } of defASTs) {
-            const v = context.getVariable(name);
-            if (v !== undefined) prevValues.set(name, v);
-        }
-        // Also capture output column variables and the iterator
-        for (const col of columns) {
-            if (!col.ast) {
-                const v = context.getVariable(col.name);
-                if (v !== undefined) prevValues.set(col.name, v);
-            }
-        }
-        prevValues.set(tableDef.iteratorName, val);
+        return badVars;
     }
 
-    return { columns, rows, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
-}
+    // ==================== 1D TABLE ====================
+    if (evaledIterators.length <= 1) {
+        const iter = evaledIterators[0];
+        if (!iter) {
+            errors.push(`Line ${tableDef.startLine}: Table has no iterator (use x<- 0..10)`);
+            return emptyResult('table');
+        }
 
-/**
- * Evaluate a 2D table: nested iteration over two variables.
- * Produces a grid with iter1 as rows and iter2 as columns.
- */
-function evaluateTable2(tableDef, context, record) {
-    const errors = [];
+        const rows = [];
+        let prevValues = new Map();
+        const maxRows = 10000;
 
-    // Evaluate bounds for both iterators
-    let low1, high1, step1, low2, high2, step2;
-    try { low1 = evaluate(parseExpression(tableDef.lowExpr), context); }
-    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 row low bound error — ${e.message}`); return makeEmpty(); }
-    try { high1 = evaluate(parseExpression(tableDef.highExpr), context); }
-    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 row high bound error — ${e.message}`); return makeEmpty(); }
-    try { step1 = evaluate(parseExpression(tableDef.stepExpr), context); }
-    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 row step error — ${e.message}`); return makeEmpty(); }
-    try { low2 = evaluate(parseExpression(tableDef.low2Expr), context); }
-    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 col low bound error — ${e.message}`); return makeEmpty(); }
-    try { high2 = evaluate(parseExpression(tableDef.high2Expr), context); }
-    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 col high bound error — ${e.message}`); return makeEmpty(); }
-    try { step2 = evaluate(parseExpression(tableDef.step2Expr), context); }
-    catch (e) { errors.push(`Line ${tableDef.startLine}: Table2 col step error — ${e.message}`); return makeEmpty(); }
+        for (let val = iter.start, rowCount = 0;
+             iter.step > 0 ? val <= iter.end : val >= iter.end;
+             val += iter.step, rowCount++) {
+            if (rowCount >= maxRows) { errors.push(`Line ${tableDef.startLine}: Table exceeded ${maxRows} rows`); break; }
 
-    if (step1 === 0 || step2 === 0) {
-        errors.push(`Line ${tableDef.startLine}: Table2 step cannot be zero`);
-        return makeEmpty();
-    }
+            context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
+            const badVars = evaluateCell([{ name: iter.name, value: val }]);
 
-    // Font size
-    let fontSize = null;
-    if (tableDef.fontSizeExpr) {
-        try { fontSize = evaluate(parseExpression(tableDef.fontSizeExpr), context); } catch (e) { }
-    }
-
-    // Parse body: definitions, output columns, equations (same as evaluateTable)
-    const bodyTokens = new Tokenizer(tableDef.bodyText).tokenize();
-    const definitions = [];
-    const outputVars = []; // variables to display as cell values (excluding the two iterators)
-    let iter1Header = tableDef.iteratorName;
-    let iter2Header = tableDef.iterator2Name;
-
-    for (let i = 0; i < bodyTokens.length; i++) {
-        const lineTokens = bodyTokens[i].filter(t => t.type !== TokenType.EOF);
-        if (lineTokens.length === 0) continue;
-        const parsed = parseMarkedLine(tableDef.bodyLines[i] || '', lineTokens);
-        if (!parsed) continue;
-
-        if (parsed.kind === 'declaration') {
-            if (parsed.type === VarType.INPUT) {
-                const exprText = parsed.valueTokens && parsed.valueTokens.length > 0
-                    ? parsed.valueTokens.map(t => (t.ws || '') + (typeof t.value === 'object' ? t.value.raw || t.value : t.value)).join('')
-                    : null;
-                definitions.push({ name: parsed.name, exprText, limits: parsed.limits || null });
-            } else if (parsed.type === VarType.OUTPUT) {
-                const label = (parsed.label && parsed.label.trim()) || parsed.name;
-                if (parsed.name === tableDef.iteratorName) {
-                    iter1Header = label;
-                } else if (parsed.name === tableDef.iterator2Name) {
-                    iter2Header = label;
+            // Collect output values
+            const row = [];
+            for (const col of columns) {
+                if (badVars.has(col.name)) { row.push(''); continue; }
+                let value;
+                if (col.ast) {
+                    try { value = evaluate(col.ast, context); } catch (e) { }
                 } else {
-                    outputVars.push({
-                        name: parsed.name,
-                        header: label,
-                        format: parsed.format || null,
-                        fullPrecision: parsed.fullPrecision || false,
-                        base: parsed.base || 10,
-                        limits: parsed.limits || null
-                    });
+                    value = context.getVariable(col.name);
                 }
+                if (value !== undefined) {
+                    row.push(formatVariableValue(value, col.format, col.fullPrecision, formatOpts));
+                } else { row.push(''); }
             }
+            rows.push(row);
+
+            // Capture for next row's pre-solve
+            prevValues = new Map();
+            for (const { name } of defASTs) {
+                const v = context.getVariable(name);
+                if (v !== undefined) prevValues.set(name, v);
+            }
+            for (const col of columns) {
+                if (!col.ast) { const v = context.getVariable(col.name); if (v !== undefined) prevValues.set(col.name, v); }
+            }
+            prevValues.set(iter.name, val);
         }
+
+        return { type: 'table', title: tableDef.title, columns, rows, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
     }
 
-    // Find equations
-    const bodyEqs = findEquationsAndOutputs(tableDef.bodyText, bodyTokens, null);
-    const equations = bodyEqs.equations;
+    // ==================== 2D TABLE ====================
+    const iter1 = evaledIterators[0];
+    const iter2 = evaledIterators[1];
 
-    // Pre-parse definitions
-    const defASTs = [];
-    for (const def of definitions) {
-        if (!def.exprText) { defASTs.push({ name: def.name, ast: null }); continue; }
-        try { defASTs.push({ name: def.name, ast: parseExpression(def.exprText.trim()) }); }
-        catch (e) { defASTs.push({ name: def.name, ast: null }); }
-    }
+    // Find the cell output variable (first non-iterator output)
+    const iterNames = new Set(evaledIterators.map(it => it.name));
+    const cellVar = columns.find(c => !c.ast && !iterNames.has(c.name)) || null;
 
-    const defNames = new Set(defASTs.filter(d => d.ast).map(d => d.name));
-
-    const formatOpts = {
-        places: record.places != null ? record.places : 4,
-        stripZeros: record.stripZeros !== false,
-        numberFormat: record.format || 'float',
-        groupDigits: record.groupDigits || false
-    };
-
-    // Build column values (iter2 range)
-    const colValues = [];
-    for (let v = low2; step2 > 0 ? v <= high2 : v >= high2; v += step2) {
-        colValues.push(v);
-        if (colValues.length > 10000) break;
-    }
-
-    // Build row values (iter1 range)
+    // Build value arrays
     const rowValues = [];
-    for (let v = low1; step1 > 0 ? v <= high1 : v >= high1; v += step1) {
-        rowValues.push(v);
-        if (rowValues.length > 10000) break;
+    for (let v = iter1.start; iter1.step > 0 ? v <= iter1.end : v >= iter1.end; v += iter1.step) {
+        rowValues.push(v); if (rowValues.length > 10000) break;
+    }
+    const colValues = [];
+    for (let v = iter2.start; iter2.step > 0 ? v <= iter2.end : v >= iter2.end; v += iter2.step) {
+        colValues.push(v); if (colValues.length > 10000) break;
     }
 
-    // Use first output var for cell values (or empty if none)
-    const cellVar = outputVars.length > 0 ? outputVars[0] : null;
-
-    // Iterate: rows × columns
     const grid = [];
     for (const rowVal of rowValues) {
         const gridRow = [];
         for (const colVal of colValues) {
-            // Clear unknowns: bare input declarations (no expression) are equation unknowns
-            for (const { name, ast } of defASTs) {
-                if (!ast) {
-                    context.variables.delete(name);
-                    context.declareVariable(name);
-                }
-            }
+            context.preSolveValues = new Map();
+            const badVars = evaluateCell([
+                { name: iter1.name, value: rowVal },
+                { name: iter2.name, value: colVal }
+            ]);
 
-            // Set both iterators
-            context.setVariable(tableDef.iteratorName, rowVal);
-            context.setVariable(tableDef.iterator2Name, colVal);
-
-            // Evaluate definitions
-            for (const { name, ast } of defASTs) {
-                if (!ast) continue;
-                try { context.setVariable(name, evaluate(ast, context)); } catch (e) { }
-            }
-
-            // Solve equations — input declaration limits take precedence over output limits
-            const tableVarDecls = [];
-            for (const def of definitions) {
-                if (def.limits) tableVarDecls.push({ name: def.name, declaration: { limits: def.limits }, value: null });
-            }
-            for (const ov of outputVars) {
-                if (ov.limits) tableVarDecls.push({ name: ov.name, declaration: { limits: ov.limits }, value: null });
-            }
-            const variables = buildVariablesMap(tableVarDecls, context);
-
-            let cellBad = false;
-            for (const eq of equations) {
-                try {
-                    const result = solveEquationInContext(
-                        eq.text, eq.startLine, context, variables,
-                        new Map(), eq.leftText, eq.rightText, eq.modN || null
-                    );
-                    if (result.solved && result.variable && result.value !== undefined) {
-                        context.setVariable(result.variable, result.value);
-                        try {
-                            const l = evaluate(parseExpression(eq.leftText), context);
-                            const r = evaluate(parseExpression(eq.rightText), context);
-                            const places = record.places != null ? record.places : 4;
-                            if (!checkBalance(l, r, places).balanced) cellBad = true;
-                        } catch (e) { cellBad = true; }
-                    } else if (result.error || result.tooManyUnknowns) {
-                        cellBad = true;
-                    }
-                } catch (e) { }
-            }
-
-            // Collect cell value — suppress if equation didn't balance
-            if (cellVar && !cellBad) {
+            if (cellVar && !badVars.has(cellVar.name)) {
                 const value = context.getVariable(cellVar.name);
                 if (value !== undefined) {
                     gridRow.push(formatVariableValue(value, cellVar.format, cellVar.fullPrecision, formatOpts));
-                } else {
-                    gridRow.push('');
-                }
-            } else {
-                gridRow.push('');
-            }
+                } else { gridRow.push(''); }
+            } else { gridRow.push(''); }
         }
         grid.push(gridRow);
     }
 
     return {
-        type: 'table2',
-        iter1Label: iter1Header,
-        iter2Label: iter2Header,
+        type: 'table2', title: tableDef.title,
+        iter1Label: iter1.header, iter2Label: iter2.header,
         rowValues: rowValues.map(v => formatVariableValue(v, null, false, formatOpts)),
         colValues: colValues.map(v => formatVariableValue(v, null, false, formatOpts)),
         cellHeader: cellVar ? cellVar.header : '',
-        grid,
-        fontSize,
-        startLine: tableDef.startLine,
-        endLine: tableDef.endLine,
-        errors
+        grid, fontSize,
+        startLine: tableDef.startLine, endLine: tableDef.endLine, errors
     };
-
-    function makeEmpty() {
-        return { type: 'table2', iter1Label: '', iter2Label: '', rowValues: [], colValues: [], cellHeader: '', grid: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
-    }
 }
+
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

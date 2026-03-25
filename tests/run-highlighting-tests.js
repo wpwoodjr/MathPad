@@ -1433,16 +1433,12 @@ function runAllTests() {
         },
         // Table definition
         {
-            name: 'table definition header (table(x; 0; 10) = {)',
-            line: 'table(x; 0; 10) = {',
+            name: 'table definition header (table("Title") = {)',
+            line: 'table("Title") = {',
             assertions: [
                 ['table', 'builtin'],
                 ['(', 'paren'],
-                ['x', 'variable'],
-                [';', 'punctuation'],
-                ['0', 'number'],
-                [';', 'punctuation'],
-                ['10', 'number'],
+                ['"Title"', 'comment'],
                 [')', 'paren'],
                 ['=', 'operator'],
                 ['{', 'brace']
@@ -1451,11 +1447,25 @@ function runAllTests() {
         {
             name: 'table body label before output (Principal principal$->)',
             line: 'Principal principal$->',
-            context: 'table(x; 0; 10) = {',
+            context: 'table("Test") = {',
             assertions: [
                 ['Principal ', 'comment'],
                 ['principal', 'variable-def'],
                 ['$->', 'punctuation']
+            ]
+        },
+        {
+            name: 'table iterator range (x<- 0..10..2)',
+            line: '  x<- 0..10..2',
+            context: 'table("Test") = {',
+            assertions: [
+                ['x', 'variable-def'],
+                ['<-', 'punctuation'],
+                ['0', 'number'],
+                ['..', 'punctuation'],
+                ['10', 'number'],
+                ['..', 'punctuation'],
+                ['2', 'number']
             ]
         },
         // Inline eval

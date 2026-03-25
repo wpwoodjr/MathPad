@@ -1501,6 +1501,13 @@ body.sidebar-resizing * {
 }
 
 /* Table output */
+.mathpad-table-title {
+    font-weight: 600;
+    color: var(--syn-keyword);
+    padding: 4px 0 2px;
+    font-size: 1.1em;
+}
+
 .variable-table-container {
     display: block;
     padding: 4px 8px;
