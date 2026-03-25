@@ -177,14 +177,12 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
  * @param {Array} declarations - Variable declarations (for limits and user-provided tracking)
  * @param {Object} record - Record settings (places, degreesMode, etc.)
  * @param {Array} equations - Equations to solve (from findEquationsAndOutputs)
- * @param {Array} exprOutputs - Expression outputs (from findEquationsAndOutputs)
- * @param {Map} initialComputedValues - Pre-computed values to seed (e.g., early expression outputs)
  * @returns {{ computedValues: Map, solved: number, errors: Array, solveFailures: Map, equationVarStatus: Map }}
  */
-function solveEquations(context, declarations, record = {}, equations, exprOutputs = [], initialComputedValues = null) {
+function solveEquations(context, declarations, record = {}, equations) {
     const places = record.places != null ? record.places : 4;
     const errors = [];
-    const computedValues = initialComputedValues ? new Map(initialComputedValues) : new Map();
+    const computedValues = new Map();
     const solveFailures = new Map(); // Track last failure per variable
     let solved = 0;
 
@@ -473,35 +471,6 @@ function solveEquations(context, declarations, record = {}, equations, exprOutpu
     for (const [line, unknowns] of unsolvedEquations) {
         if (!unknowns.some(v => solveFailures.has(v))) {
             errors.push(`Line ${line + 1}: Too many unknowns (${unknowns.join(', ')})`);
-        }
-    }
-
-    // Evaluate expression outputs (expr:, expr::, expr->, expr->>)
-    // Skip outputs already evaluated during discovery (top-to-bottom) or with existing values
-    for (const output of exprOutputs) {
-        // Skip if already evaluated during discovery
-        if (computedValues.has(`__exprout_${output.startLine}`)) {
-            continue;
-        }
-        // Skip non-recalculating outputs that already have a value
-        if (!output.recalculates && output.valueTokens && output.valueTokens.length > 0) {
-            continue;
-        }
-        try {
-            const ast = parseTokens(output.exprTokens);
-            const value = evaluate(ast, context);
-            // Store with marker info for formatting
-            computedValues.set(`__exprout_${output.startLine}`, {
-                value,
-                fullPrecision: output.fullPrecision,
-                marker: output.marker,
-                format: output.format,
-                base: output.base
-            });
-        } catch (e) {
-            // Report parse/eval errors including undefined variables
-            // (if variable is undefined at this point, solving didn't define it)
-            errors.push(`Line ${output.startLine + 1}: ${e.message}`);
         }
     }
 
@@ -804,16 +773,34 @@ function solveRecord(text, context, record, parserTokens) {
     const { equations: outerEquations, exprOutputs } = findEquationsAndOutputs(text, allTokens, context.localFunctionLines);
 
     // Pass 2: Equation Solving (computes values, no text modification)
-    // Seed early expression outputs so solveEquations doesn't re-evaluate them
-    const earlyComputedValues = new Map();
-    for (const [lineIndex, result] of discovery.earlyExprOutputs) {
-        earlyComputedValues.set(`__exprout_${lineIndex}`, result);
-    }
-    const solveResult = solveEquations(context, declarations, record, outerEquations, exprOutputs, earlyComputedValues);
+    // Pass 2: Equation Solving
+    const solveResult = solveEquations(context, declarations, record, outerEquations);
     errors.push(...solveResult.errors);
 
-    // Pass 3: Format Output (inserts values into text, reuses equations/exprOutputs from pass 2)
-    const formatResult = formatOutput(text, declarations, context, solveResult.computedValues, record, solveResult.solveFailures, outerEquations, exprOutputs);
+    // Evaluate expression outputs (between solve and format)
+    const computedValues = solveResult.computedValues;
+    // Seed with early expression outputs from discovery
+    for (const [lineIndex, result] of discovery.earlyExprOutputs) {
+        computedValues.set(`__exprout_${lineIndex}`, result);
+    }
+    // Evaluate remaining expression outputs
+    for (const output of exprOutputs) {
+        if (computedValues.has(`__exprout_${output.startLine}`)) continue;
+        if (!output.recalculates && output.valueTokens && output.valueTokens.length > 0) continue;
+        try {
+            const ast = parseTokens(output.exprTokens);
+            const value = evaluate(ast, context);
+            computedValues.set(`__exprout_${output.startLine}`, {
+                value, fullPrecision: output.fullPrecision,
+                marker: output.marker, format: output.format, base: output.base
+            });
+        } catch (e) {
+            errors.push(`Line ${output.startLine + 1}: ${e.message}`);
+        }
+    }
+
+    // Pass 3: Format Output
+    const formatResult = formatOutput(text, declarations, context, computedValues, record, solveResult.solveFailures, outerEquations, exprOutputs);
     text = formatResult.text;
     errors.push(...formatResult.errors);
 
