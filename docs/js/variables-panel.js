@@ -807,6 +807,12 @@ class VariablesPanel {
                 const titleEl = document.createElement('div');
                 titleEl.className = 'mathpad-table-title';
                 titleEl.textContent = table.title;
+                titleEl.style.fontSize = (table.fontSize || 14) + 'px';
+                titleEl.addEventListener('click', () => {
+                    titleEl.classList.toggle('collapsed');
+                    const tableEl = wrapper.querySelector('.mathpad-table');
+                    if (tableEl) tableEl.style.display = titleEl.classList.contains('collapsed') ? 'none' : '';
+                });
                 wrapper.appendChild(titleEl);
             }
 
@@ -861,11 +867,17 @@ class VariablesPanel {
             const titleEl = document.createElement('div');
             titleEl.className = 'mathpad-table-title';
             titleEl.textContent = table.title;
+            titleEl.style.fontSize = (table.fontSize || 14) + 'px';
+            titleEl.addEventListener('click', () => {
+                titleEl.classList.toggle('collapsed');
+                const tableEl = wrapper.querySelector('.mathpad-table');
+                if (tableEl) tableEl.style.display = titleEl.classList.contains('collapsed') ? 'none' : '';
+            });
             wrapper.appendChild(titleEl);
         }
 
         const tableEl = document.createElement('table');
-        tableEl.className = 'mathpad-table mathpad-table2';
+        tableEl.className = 'mathpad-table mathpad-grid';
         if (table.fontSize) tableEl.style.fontSize = table.fontSize + 'px';
 
         const numRows = table.rowValues.length;
@@ -879,7 +891,7 @@ class VariablesPanel {
         const iter2Th = document.createElement('th');
         iter2Th.textContent = table.iter2Label;
         iter2Th.colSpan = numCols;
-        iter2Th.className = 'mathpad-table2-label';
+        iter2Th.className = 'mathpad-grid-label';
         headerRow1.appendChild(iter2Th);
         thead.appendChild(headerRow1);
 
@@ -888,7 +900,7 @@ class VariablesPanel {
         const cellHeaderTh = document.createElement('th');
         cellHeaderTh.textContent = table.cellHeader || '';
         cellHeaderTh.colSpan = 2;
-        cellHeaderTh.className = 'mathpad-table2-label';
+        cellHeaderTh.className = 'mathpad-grid-label';
         cellHeaderTh.style.textAlign = 'right';
         headerRow2.appendChild(cellHeaderTh);
         for (let c = 0; c < table.colValues.length; c++) {
@@ -913,10 +925,10 @@ class VariablesPanel {
                 const labelTh = document.createElement('th');
                 const labelDiv = document.createElement('div');
                 labelDiv.textContent = table.iter1Label;
-                labelDiv.className = 'mathpad-table2-row-label-text';
+                labelDiv.className = 'mathpad-grid-row-label-text';
                 labelTh.appendChild(labelDiv);
                 labelTh.rowSpan = numRows;
-                labelTh.className = 'mathpad-table2-label mathpad-table2-row-label';
+                labelTh.className = 'mathpad-grid-label mathpad-grid-row-label';
                 tr.appendChild(labelTh);
             }
 

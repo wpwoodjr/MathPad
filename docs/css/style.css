@@ -1502,10 +1502,23 @@ body.sidebar-resizing * {
 
 /* Table output */
 .mathpad-table-title {
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-weight: normal;
     color: var(--syn-keyword);
-    padding: 4px 0 2px;
-    font-size: 1.1em;
+    background: var(--bg-hover);
+    padding: 4px 8px;
+    margin-bottom: 4px;
+    border-radius: 3px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.mathpad-table-title::before {
+    content: '▾ ';
+}
+
+.mathpad-table-title.collapsed::before {
+    content: '▸ ';
 }
 
 .variable-table-container {
@@ -1530,8 +1543,7 @@ body.sidebar-resizing * {
     text-align: right;
     border-bottom: 2px solid var(--border-color);
     color: var(--syn-keyword);
-    font-weight: 600;
-    /* font-size: 1.15em; */
+    font-weight: normal;
     white-space: nowrap;
 }
 
@@ -1542,30 +1554,30 @@ body.sidebar-resizing * {
     white-space: nowrap;
 }
 
-.mathpad-table:not(.mathpad-table2) tr:hover {
+.mathpad-table:not(.mathpad-grid) tr:hover {
     background: var(--bg-hover);
 }
 
-.mathpad-table2 tr:hover td,
-.mathpad-table2 tr:hover .grid-row-value {
+.mathpad-grid tr:hover td,
+.mathpad-grid tr:hover .grid-row-value {
     background: var(--bg-hover);
 }
 
-.mathpad-table2 .col-hover {
+.mathpad-grid .col-hover {
     background: var(--bg-hover);
 }
 
-.mathpad-table .mathpad-table2-label {
+.mathpad-table .mathpad-grid-label {
     text-align: center;
     font-style: italic;
 }
 
-.mathpad-table .mathpad-table2-row-label {
+.mathpad-table .mathpad-grid-row-label {
     vertical-align: middle;
     padding: 4px 2px;
 }
 
-.mathpad-table2-row-label-text {
+.mathpad-grid-row-label-text {
     writing-mode: vertical-lr;
     transform: rotate(180deg);
     margin: auto;
