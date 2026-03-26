@@ -1269,6 +1269,38 @@ function findTableDefinitions(text, allTokens) {
     }
 }
 
+/**
+ * Expand \expr\ patterns in a display string (comments, table titles).
+ * Evaluates each expression in context and replaces with formatted result.
+ * Does NOT modify the source text — display-only.
+ */
+function expandInlineExprs(text, context, record) {
+    return text.replace(/\\([^\\]+)\\/g, (match, expr) => {
+        try {
+            const tokens = new Tokenizer(expr).tokenize()[0].filter(t => t.type !== TokenType.EOF);
+            const fmt = getInlineEvalFormat(tokens, record || {});
+            // Strip format suffix tokens before parsing expression
+            let exprTokens = tokens;
+            const last = tokens[tokens.length - 1];
+            if (last && last.type === TokenType.FORMATTER) {
+                exprTokens = tokens.slice(0, -1);
+            } else if (tokens.length >= 2 && last && last.type === TokenType.NUMBER &&
+                       tokens[tokens.length - 2].type === TokenType.FORMATTER &&
+                       tokens[tokens.length - 2].value === '#') {
+                exprTokens = tokens.slice(0, -2);
+            }
+            const ast = parseTokens(exprTokens);
+            const value = evaluate(ast, context);
+            if (fmt.varFormat) {
+                return formatVariableValue(value, fmt.varFormat, false, fmt);
+            }
+            return formatNumber(value, fmt.places, fmt.stripZeros, fmt.numberFormat, fmt.base, fmt.groupDigits);
+        } catch (e) {
+            return match; // leave unexpanded on error
+        }
+    });
+}
+
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -1276,7 +1308,7 @@ if (typeof module !== 'undefined' && module.exports) {
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         buildOutputLine, capturePreSolveValues, clearVariables, findEquations,
         findExpressionOutputs, findEquationsAndOutputs, clearExpressionOutputs,
-        findInlineEvaluations, replaceInlineEvaluation,
+        findInlineEvaluations, replaceInlineEvaluation, expandInlineExprs,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext,
         extractEquationFromLine, findTableDefinitions
     };

@@ -468,3 +468,19 @@ grid("Payment vs years and rate") = {
   pmt$->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test table title inline expansion"
+
+--Variables--
+years: 30
+rate: 0.06125
+
+table("Amort for \years\ years at \rate%\") = {
+  x: years
+  years: 1..3
+  years->
+  x->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -725,3 +725,27 @@ grid("Payment vs years and rate") = {
 7.75%	-$941.28	-$820.95	-$755.33	-$716.41
 8%	-$955.65	-$836.44	-$771.82	-$733.76
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Test table title inline expansion"
+
+--Variables--
+years: 30
+rate: 0.06125
+
+table("Amort for \years\ years at \rate%\") = {
+  x: years
+  years: 1..3
+  years->
+  x->
+}
+
+"--- Table Outputs ---"
+"Amort for 30 years at 6.13%"
+"years"	"x"
+1	1
+2	2
+3	3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

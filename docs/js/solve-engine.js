@@ -995,6 +995,9 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         }
     }
 
+    // Expand \expr\ in title before iteration modifies context
+    const expandedTitle = tableDef.title ? expandInlineExprs(tableDef.title, context, record) : '';
+
     const formatOpts = {
         places: record.places != null ? record.places : 4,
         stripZeros: record.stripZeros !== false,
@@ -1115,7 +1118,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             prevValues.set(iter.name, val);
         }
 
-        return { type: 'table', title: tableDef.title, columns, rows, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+        return { type: 'table', title: expandedTitle, columns, rows, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
     }
 
     // ==================== GRID (2D cell values) ====================
@@ -1191,7 +1194,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     }
 
     return {
-        type: 'grid', title: tableDef.title,
+        type: 'grid', title: expandedTitle,
         iter1Label, iter2Label,
         rowValues: rowValues.map(v => formatVariableValue(v, iter1Format, iter1FullPrec, formatOpts)),
         colValues: colValues.map(v => formatVariableValue(v, iter2Format, iter2FullPrec, formatOpts)),

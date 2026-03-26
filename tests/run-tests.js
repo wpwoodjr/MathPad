@@ -93,6 +93,7 @@ function loadModules() {
     global.buildOutputLine = variables.buildOutputLine;
     global.findTableDefinitions = variables.findTableDefinitions;
     global.parseMarkedLine = variables.parseMarkedLine;
+    global.expandInlineExprs = variables.expandInlineExprs;
 
     // Storage (minimal dependencies)
     const storage = require(path.join(jsPath, 'storage.js'));
