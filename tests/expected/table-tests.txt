@@ -679,6 +679,101 @@ table("Temp from inherited eqs") = {
 180	128.8
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test peek at intermediate doesn't affect table solving"
+
+--Formulas--
+fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
+tempAdjust(temp; refTemp; tempAdjFactor) = 1 + (refTemp - temp)/tempAdjFactor/100
+estWatts(userPwr; limitPower; maxMotorPower; adjustedTemp) = userPwr/(limitPower/maxMotorPower)*adjustedTemp
+runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d) = adjBattCap/fitWatts(estWatts(userPwr; limitPwr; maxMotorPwr; adjTemp); a; b; c; d)
+
+--Equations--
+adjTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
+adjBattCap = battCap*battAdjFactor
+hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
+adjTemp-> 1
+
+--Constants--
+a: 0.00170924441718192
+b: -0.188898975432704
+c: 8.01215375719881
+d: -78.2255835191052
+refTemp: 68.5
+tempAdjFactor: 6
+battCap: 252
+battAdjFactor: 0.96
+
+--Variables--
+"*Peek at adjTemp shouldn't cause spurious roots in table"
+
+userPwr: 125
+maxMotorPwr: 162.3
+hours:: 4
+temperature: 70
+limitPwr: 420
+
+table("Temp with peek") = {
+  maxMotorPwr: 120..180..20
+  temperature<-
+  MMP maxMotorPwr->
+  Temp temperature->
+}
+
+"--- Table Outputs ---"
+"Temp with peek"
+"MMP"	"Temp"
+120	-141
+140	-25.4
+160	61.4
+180	128.8
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test body defs using equation-solved output"
+
+--Formulas--
+pmt(pv; fv; rate; n; pmtDue) = -(pv + fv/(1 + rate)**n)*rate / ((1 - (1 + rate)**-n)*(1 + rate)**pmtDue)
+
+--Equations--
+pmt = pmt(pv; fv; r; years*pmtsYr; pmtDue)
+r = (1 + rate/cmpndsYr)**(cmpndsYr/pmtsYr) - 1
+r %->> 0.510416666666669%
+
+--Variables--
+pv $: $100,000
+fv $: $0
+rate %: 6.125%
+years : 30
+pmtsYr: 12
+cmpndsYr: 12
+pmt $: -$607.61
+pmtDue: 0
+
+table("Amortization") = {
+  paymentNum: 0..3
+  interest: if(paymentNum > 0; -balance~ * r; 0)
+  principal: if(paymentNum > 0; pmt - interest; pmtDue*pmt)
+  balance: if(paymentNum > 0; balance~ + principal; pv + pmtDue*pmt)
+  "Pmt#" paymentNum->
+  "Balance" balance$->
+  "Interest" interest$->
+  "Principal" principal$->
+}
+
+"--- Table Outputs ---"
+"Amortization"
+"Pmt#"	"Balance"	"Interest"	"Principal"
+0	$100,000.00	$0.00	$0.00
+1	$99,902.81	-$510.42	-$97.19
+2	$99,805.12	-$509.92	-$97.69
+3	$99,706.93	-$509.42	-$98.19
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Nothing to solve"; StatusIsError = 0

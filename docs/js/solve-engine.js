@@ -209,8 +209,11 @@ function solveEquations(context, declarations, record = {}, equations) {
 
         const substitutions = buildSubstitutionMap(equations, context, errors);
 
-        // Definition substitutions for undeclared intermediates only (sweep 0)
-        // Safe to inline because these variables exist only in equations, not as user-declared vars
+        // Definition substitutions for undeclared intermediates only (sweep 0).
+        // These variables exist only in equations, not as user-declared vars.
+        // Inlining prevents spurious roots from Brent's solving for them directly.
+        // Declared variables use sweep 1 substitutions instead — isDefinitionEquation
+        // handles their direct evaluation safely without Brent's.
         const definitionSubs = new Map();
         for (const [varName, sub] of substitutions) {
             if (sub.isDefinition && !variables.has(varName)) definitionSubs.set(varName, sub);
@@ -765,14 +768,12 @@ function solveRecord(text, context, record, parserTokens) {
     const declarations = discovery.declarations;
     const errors = [...(context.functionErrors || []), ...discovery.errors];
 
-    // Save pre-solve variable state (user declarations only, no equation-computed values)
-    // Tables use this as the clean base for each row
+    // Save pre-solve variable state for tables (user declarations only)
     const preSolveVars = new Map(context.variables);
 
     // Find equations and expression outputs
     const { equations: outerEquations, exprOutputs } = findEquationsAndOutputs(text, allTokens, context.localFunctionLines);
 
-    // Pass 2: Equation Solving (computes values, no text modification)
     // Pass 2: Equation Solving
     const solveResult = solveEquations(context, declarations, record, outerEquations);
     errors.push(...solveResult.errors);
@@ -1045,7 +1046,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
     // Shared per-cell evaluation: reset context, set up variables, solve via solveEquations
     function evaluateCell(iterValues) {
-        // Reset to pre-solve state (user declarations only, no equation-computed intermediates)
+        // Reset to pre-solve state (user declarations only, no equation-computed values)
         if (preSolveVars) context.variables = new Map(preSolveVars);
         // Clear unknowns
         for (const { name, ast } of defASTs) {
@@ -1055,13 +1056,19 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         for (const iv of iterValues) {
             context.setVariable(iv.name, iv.value);
         }
-        // Evaluate body definitions
+        // Evaluate body definitions (may fail if they depend on equation results like r)
         for (const { name, ast } of defASTs) {
             if (!ast) continue;
             try { context.setVariable(name, evaluate(ast, context)); } catch (e) { }
         }
         // Use the same solving pipeline as the main solver
         const solveResult = solveEquations(context, tableDeclarations, record, equations);
+        // Retry body definitions that failed — equation solving may have resolved
+        // variables they depend on (e.g. r solved from inherited r = expr)
+        for (const { name, ast } of defASTs) {
+            if (!ast || context.hasVariable(name)) continue;
+            try { context.setVariable(name, evaluate(ast, context)); } catch (e) { }
+        }
         // Collect variables that failed to solve
         const badVars = new Set();
         for (const [varName, failure] of solveResult.solveFailures) {
