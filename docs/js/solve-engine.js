@@ -179,7 +179,7 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
  * @param {Array} equations - Equations to solve (from findEquationsAndOutputs)
  * @returns {{ computedValues: Map, solved: number, errors: Array, solveFailures: Map, equationVarStatus: Map }}
  */
-function solveEquations(context, declarations, record = {}, equations) {
+function solveEquations(context, declarations, record = {}, equations, bodyDefinitions = []) {
     const places = record.places != null ? record.places : 4;
     const errors = [];
     const computedValues = new Map();
@@ -206,6 +206,23 @@ function solveEquations(context, declarations, record = {}, equations) {
 
     while (changed && iterations++ < maxIterations) {
         changed = false;
+
+        // Evaluate body definitions (: declarations from table body or outer solve).
+        // Runs before equations so definitions feed into equation evaluation.
+        // The iterative loop handles out-of-order deps and equation-dependent defs.
+        for (const { name, ast } of bodyDefinitions) {
+            if (!ast) continue;
+            try {
+                const value = evaluate(ast, context);
+                const oldVal = context.hasVariable(name) ? context.getVariable(name) : undefined;
+                if (oldVal !== value) {
+                    context.setVariable(name, value);
+                    changed = true;
+                }
+            } catch (e) {
+                // May resolve on next iteration after equations are solved
+            }
+        }
 
         const substitutions = buildSubstitutionMap(equations, context, errors);
 
@@ -457,6 +474,15 @@ function solveEquations(context, declarations, record = {}, equations) {
                     if (sweep > 0) errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
                 }
             }
+        }
+    }
+
+    // Report body definitions that still couldn't evaluate
+    for (const { name, ast, exprText } of bodyDefinitions) {
+        if (!ast || context.hasVariable(name)) continue;
+        try { evaluate(ast, context); } catch (e) {
+            const lineIndex = (variables.get(name) || {}).lineIndex;
+            errors.push(`Line ${(lineIndex != null ? lineIndex : 0) + 1}: Cannot evaluate "${exprText || name}" - ${e.message}`);
         }
     }
 
@@ -761,7 +787,7 @@ function solveRecord(text, context, record, parserTokens) {
     // Clear usage tracking from any previous solve
     context.clearUsageTracking();
 
-    // Pass 1: Variable Discovery (evaluates \expr\, parses declarations)
+    // Pass 1: Variable Discovery (parses declarations, evaluates definitions)
     const discovery = discoverVariables(text, context, record, allTokens, tableLines.size > 0 ? tableLines : null);
     text = discovery.text;
     allTokens = discovery.allTokens;
@@ -774,9 +800,30 @@ function solveRecord(text, context, record, parserTokens) {
     // Find equations and expression outputs
     const { equations: outerEquations, exprOutputs } = findEquationsAndOutputs(text, allTokens, context.localFunctionLines);
 
+    // Build body definitions from declarations that couldn't evaluate during discovery
+    // (e.g. x<- pmt*2 where pmt is equation-solved). solveEquations retries these.
+    const bodyDefinitions = [];
+    for (const decl of declarations) {
+        if (decl.value === null && decl.valueTokens && decl.valueTokens.length > 0 &&
+            decl.declaration.type !== VarType.OUTPUT) {
+            try {
+                const exprText = tokensToText(decl.valueTokens).trim();
+                bodyDefinitions.push({ name: decl.name, ast: parseTokens(decl.valueTokens), exprText });
+            } catch (e) {
+                errors.push(`Line ${decl.lineIndex + 1}: Cannot evaluate "${tokensToText(decl.valueTokens).trim()}" - ${e.message}`);
+            }
+        }
+    }
+
     // Pass 2: Equation Solving
-    const solveResult = solveEquations(context, declarations, record, outerEquations);
+    const solveResult = solveEquations(context, declarations, record, outerEquations, bodyDefinitions);
     errors.push(...solveResult.errors);
+
+    // Update preSolveVars with body definitions resolved by solveEquations
+    // (safe: these are INPUT definitions, not equation intermediates)
+    for (const { name } of bodyDefinitions) {
+        if (context.hasVariable(name)) preSolveVars.set(name, context.getVariable(name));
+    }
 
     // Evaluate expression outputs (between solve and format)
     const computedValues = solveResult.computedValues;
@@ -1056,19 +1103,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         for (const iv of iterValues) {
             context.setVariable(iv.name, iv.value);
         }
-        // Evaluate body definitions (may fail if they depend on equation results like r)
-        for (const { name, ast } of defASTs) {
-            if (!ast) continue;
-            try { context.setVariable(name, evaluate(ast, context)); } catch (e) { }
-        }
-        // Use the same solving pipeline as the main solver
-        const solveResult = solveEquations(context, tableDeclarations, record, equations);
-        // Retry body definitions that failed — equation solving may have resolved
-        // variables they depend on (e.g. r solved from inherited r = expr)
-        for (const { name, ast } of defASTs) {
-            if (!ast || context.hasVariable(name)) continue;
-            try { context.setVariable(name, evaluate(ast, context)); } catch (e) { }
-        }
+        // Solve with body definitions handled inside the iterative loop
+        const solveResult = solveEquations(context, tableDeclarations, record, equations, defASTs);
         // Collect variables that failed to solve
         const badVars = new Set();
         for (const [varName, failure] of solveResult.solveFailures) {

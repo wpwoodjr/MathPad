@@ -280,7 +280,7 @@ App loads → localStorage (instant) → check Drive metadata
 3. Handle in `line-parser.js` `LineParser` and `getMarkerString()`
 4. Handle in `solveRecord()` if special behavior needed
 
-**Modifying solving behavior**: Edit `solveRecord()` in `solve-engine.js`. `solveEquations()` takes equations as a parameter (caller owns equation discovery), enabling reuse by both the main solver and table/grid per-row evaluation.
+**Modifying solving behavior**: Edit `solveRecord()` in `solve-engine.js`. `solveEquations(context, declarations, record, equations, bodyDefinitions)` takes equations and optional body definitions as parameters, enabling reuse by both the main solver and table/grid per-row evaluation. Body definitions (`:` declarations) are evaluated in the iterative loop alongside equations, handling out-of-order deps and equation-dependent definitions.
 
 **Adding a table/grid feature**: Table detection is in `findTableDefinitions()` (variables.js), evaluation in `evaluateTable()` (solve-engine.js), rendering in `setTableData()` / `_renderTable2()` (variables-panel.js), styling in style.css (`.mathpad-table`, `.mathpad-grid`)
 

@@ -381,38 +381,6 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
         }
     }
 
-    // Retry pass: evaluate definitions that failed on first pass (out-of-order deps)
-    // Iterate until no more progress (handles chained dependencies)
-    let retryProgress = true;
-    while (retryProgress) {
-        retryProgress = false;
-        for (const decl of declarations) {
-            if (decl.value === null && decl.valueTokens && decl.valueTokens.length > 0 &&
-                decl.declaration.type !== VarType.OUTPUT) {
-                try {
-                    const ast = parseTokens(decl.valueTokens);
-                    decl.value = evaluate(ast, context);
-                    context.setVariable(decl.name, decl.value);
-                    retryProgress = true;
-                } catch (e) {
-                    // May resolve on next iteration
-                }
-            }
-        }
-    }
-    // Report errors for definitions that still couldn't evaluate
-    for (const decl of declarations) {
-        if (decl.value === null && decl.valueTokens && decl.valueTokens.length > 0 &&
-            decl.declaration.type !== VarType.OUTPUT) {
-            try {
-                const ast = parseTokens(decl.valueTokens);
-                evaluate(ast, context);
-            } catch (e) {
-                errors.push(`Line ${decl.lineIndex + 1}: Cannot evaluate "${tokensToText(decl.valueTokens).trim()}" - ${e.message}`);
-            }
-        }
-    }
-
     return {
         text: text,
         declarations: declarations,

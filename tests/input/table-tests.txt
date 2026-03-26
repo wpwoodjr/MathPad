@@ -561,3 +561,88 @@ table("Amort for \years\ years at \rate%\") = {
   x->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test out of order dependencies in table body"
+"(balance before principal)"
+
+--Formulas--
+pmt(pv; fv; rate; n; pmtDue) = -(pv + fv/(1 + rate)**n)*rate / ((1 - (1 + rate)**-n)*(1 + rate)**pmtDue)
+
+--Equations--
+pmt = pmt(pv; fv; r; years*pmtsYr; pmtDue)
+r = (1 + rate/cmpndsYr)**(cmpndsYr/pmtsYr) - 1
+// r %->> 0.712945221110274%
+
+--Variables--
+"*Enter all but one values, then click solve"
+
+pv $: $100,000     "present value (loan or annuity)"
+fv $: $0           "future value (balloon payment)"
+rate %: 6.125%     "annual interest rate %"
+years : 30         "number of years"
+pmtsYr: 7          "payments per year"
+cmpndsYr: 0.046    "compounds per year"
+pmt $: -$808.96    "payment"
+pmtDue: 0          "pmt due - 0 end period, 1 begin period"
+
+
+---
+
+table("Amortization Schedule for \years\ year(s) at \rate%\") = {
+//   lastPmt: years*pmtsYr - pmtDue
+  paymentNum: 0..years*pmtsYr - pmtDue
+  interest: if(paymentNum > 0; -balance~ * r; 0)
+  balance: if(paymentNum > 0; balance~ + principal; pv + pmtDue*pmt)
+  principal: if(paymentNum > 0; pmt - interest; pmtDue*pmt)
+  year: floor((paymentNum - 1)/pmtsYr) + 1
+
+  "Pmt#" paymentNum->
+  Year year->
+  "Balance" balance$->
+  "Interest" interest$->
+  "Principal" principal$->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test dependency resolution after solve in outer solve and table"
+
+z = x**y
+
+z-> 8
+x: 2
+y: 3
+
+z*7-> 56
+r: z*7
+r-> 56
+
+table("test final pass") = {
+  x: 1..4
+  r: z*7
+  x->
+  y->
+  r->
+  z*7->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test out-of-order outer defs available in table"
+
+--Variables--
+b: a + 3
+a: 5
+
+table("outer def order") = {
+  x: 1..3
+  c: b * x
+  x->
+  b->
+  c->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
