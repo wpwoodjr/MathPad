@@ -444,3 +444,27 @@ table("Temp from inherited eqs") = {
   Temp temperature->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test grid with formatted axes"
+
+--Formulas--
+pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+
+--Equations--
+pmt = pmt(pv; rate/12; years*12; fv)
+
+--Variables--
+pv: 100000
+fv: 0
+
+grid("Payment vs years and rate") = {
+  pmt<-
+  rate: 4%..8%..0.25%
+  years: 15..30..5
+  rate%->
+  years->
+  pmt$->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

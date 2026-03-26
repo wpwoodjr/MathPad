@@ -444,6 +444,13 @@ function createEditorForRecord(record) {
             } else {
                 variablesManager.clearErrors();
                 variablesManager.setTableData(null);
+                // Strip stale reference and table output sections on edit
+                let stripped = value;
+                stripped = stripped.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
+                stripped = stripped.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
+                if (stripped !== value) {
+                    editor.setValue(stripped, false);
+                }
             }
         }
         syncFromVariables = false;

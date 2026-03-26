@@ -1079,9 +1079,9 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         let prevValues = new Map();
         const maxRows = 10000;
 
-        for (let val = iter.start, rowCount = 0;
-             iter.step > 0 ? val <= iter.end : val >= iter.end;
-             val += iter.step, rowCount++) {
+        for (let rowCount = 0; ; rowCount++) {
+            const val = iter.start + rowCount * iter.step;
+            if (iter.step > 0 ? val > iter.end : val < iter.end) break;
             if (rowCount >= maxRows) { errors.push(`Line ${tableDef.startLine}: Table exceeded ${maxRows} rows`); break; }
 
             context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
@@ -1129,15 +1129,21 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     const iterNames = new Set(iterMap.keys());
     let iter1 = null, iter2 = null, cellVar = null;
     let iter1Label = '', iter2Label = '';
+    let iter1Format = null, iter2Format = null;
+    let iter1FullPrec = false, iter2FullPrec = false;
 
     for (const col of columns) {
         if (!col.ast && iterMap.has(col.name)) {
             if (!iter1) {
                 iter1 = iterMap.get(col.name);
                 iter1Label = col.header || iter1.header;
+                iter1Format = col.format;
+                iter1FullPrec = col.fullPrecision;
             } else if (!iter2) {
                 iter2 = iterMap.get(col.name);
                 iter2Label = col.header || iter2.header;
+                iter2Format = col.format;
+                iter2FullPrec = col.fullPrecision;
             }
         } else if (!cellVar && !col.ast && !iterNames.has(col.name)) {
             cellVar = col;
@@ -1152,11 +1158,15 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
     // Build value arrays
     const rowValues = [];
-    for (let v = iter1.start; iter1.step > 0 ? v <= iter1.end : v >= iter1.end; v += iter1.step) {
+    for (let i = 0; ; i++) {
+        const v = iter1.start + i * iter1.step;
+        if (iter1.step > 0 ? v > iter1.end : v < iter1.end) break;
         rowValues.push(v); if (rowValues.length > 10000) break;
     }
     const colValues = [];
-    for (let v = iter2.start; iter2.step > 0 ? v <= iter2.end : v >= iter2.end; v += iter2.step) {
+    for (let i = 0; ; i++) {
+        const v = iter2.start + i * iter2.step;
+        if (iter2.step > 0 ? v > iter2.end : v < iter2.end) break;
         colValues.push(v); if (colValues.length > 10000) break;
     }
 
@@ -1183,8 +1193,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     return {
         type: 'grid', title: tableDef.title,
         iter1Label, iter2Label,
-        rowValues: rowValues.map(v => formatVariableValue(v, null, false, formatOpts)),
-        colValues: colValues.map(v => formatVariableValue(v, null, false, formatOpts)),
+        rowValues: rowValues.map(v => formatVariableValue(v, iter1Format, iter1FullPrec, formatOpts)),
+        colValues: colValues.map(v => formatVariableValue(v, iter2Format, iter2FullPrec, formatOpts)),
         cellHeader: cellVar ? cellVar.header : '',
         grid, fontSize,
         startLine: tableDef.startLine, endLine: tableDef.endLine, errors
