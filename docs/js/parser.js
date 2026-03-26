@@ -507,7 +507,7 @@ class Tokenizer {
         }
 
         // Single-character operators (% is not an operator - use mod() function)
-        const singleCharOps = ['+', '-', '*', '/', '&', '|', '^', '~', '!', '<', '>', '=', '?', '\\'];
+        const singleCharOps = ['+', '-', '*', '/', '&', '|', '^', '~', '!', '<', '>', '=', '?'];
         if (singleCharOps.includes(ch)) {
             this.advance();
             return this.makeToken(TokenType.OPERATOR, ch, startLine, startCol);

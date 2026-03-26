@@ -52,56 +52,11 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Nothing to solve"; StatusIsError = 0
-"Test 6: Inline eval before // comment"
-
-x: 3
-5 // result should be 5
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Nothing to solve"; StatusIsError = 0
-"Test 7: Inline eval inside // comment should NOT expand"
-
-x: 3
-// \x + 2\ stays unexpanded
-x-> 3
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Nothing to solve"; StatusIsError = 0
-"Test 8: Inline eval inside quoted comment should NOT expand"
-
-x: 3
-"\x + 2\ stays unexpanded"
-x-> 3
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Nothing to solve"; StatusIsError = 0
 "Test 9: Variable declaration after // should be ignored"
 
 // x: 99
 y: 7
 y-> 7
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved 1 equation"; StatusIsError = 0
-"misc \expr\ tests"
-
-a$: $10.994
-b = $10.99
-b$->> $10.99
-
-// \a$\
-"\a$\"
-$10.99
-1099.4%
-B#16
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1

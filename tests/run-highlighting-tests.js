@@ -1035,46 +1035,6 @@ function runAllTests() {
                 ['->', 'punctuation']
             ]
         },
-        // Inline eval with money format suffix
-        {
-            name: 'inline eval with money suffix (b = \\a$\\)',
-            line: 'b = \\a$\\',
-            context: 'a$: $10.994',
-            assertions: [
-                ['b', 'variable'],
-                ['=', 'operator'],
-                ['\\', 'inline-marker'],
-                ['a', 'variable'],
-                ['$', 'variable'],
-            ]
-        },
-        {
-            name: 'inline eval with percent suffix (b = \\a%\\)',
-            line: 'b = \\a%\\',
-            context: 'a%: 10%',
-            assertions: [
-                ['b', 'variable'],
-                ['=', 'operator'],
-                ['\\', 'inline-marker'],
-                ['a', 'variable'],
-                ['%', 'variable'],
-            ]
-        },
-        // Inline eval with formatter then money literal expression
-        {
-            name: 'inline eval formatter then money literal (\\x$\\+$.01->)',
-            line: '\\x$\\+$.01->',
-            context: 'x$: $10',
-            assertions: [
-                ['\\', 'inline-marker'],
-                ['x', 'variable'],
-                ['$', 'variable'],
-                ['\\', 'inline-marker'],
-                ['+', 'operator'],
-                ['$.01', 'number'],
-                ['->', 'punctuation']
-            ]
-        },
         // Money literal expression output
         {
             name: 'money literal expression output ($99.99+$.01->)',
@@ -1466,56 +1426,6 @@ function runAllTests() {
                 ['10', 'number'],
                 ['..', 'punctuation'],
                 ['2', 'number']
-            ]
-        },
-        // Inline eval
-        {
-            name: 'inline eval (\\3+4\\)',
-            line: '\\3+4\\',
-            assertions: [
-                ['\\', 'inline-marker'],
-                ['3', 'number'],
-                ['+', 'operator'],
-                ['4', 'number'],
-                ['\\', 'inline-marker']
-            ]
-        },
-        {
-            name: 'inline eval with labels (Here we are testing \\3+4\\ again)',
-            line: 'Here we are testing \\3+4\\ again',
-            assertions: [
-                ['Here we are testing ', 'comment'],
-                ['\\', 'inline-marker'],
-                ['3', 'number'],
-                ['+', 'operator'],
-                ['4', 'number'],
-                ['\\', 'inline-marker'],
-                [' again', 'comment']
-            ]
-        },
-        {
-            name: 'multiple inline evals with labels (Here we are testing \\3+4\\ again ... \\3+4\\ test)',
-            line: 'Here we are testing \\3+4\\ again Here we are testing \\3+4\\ again \\3+4\\ test',
-            assertions: [
-                ['Here we are testing ', 'comment'],
-                ['\\', 'inline-marker'],
-                ['3', 'number'],
-                ['+', 'operator'],
-                ['4', 'number'],
-                ['\\', 'inline-marker'],
-                [' again Here we are testing ', 'comment'],
-                ['\\', 'inline-marker'],
-                ['3', 'number'],
-                ['+', 'operator'],
-                ['4', 'number'],
-                ['\\', 'inline-marker'],
-                [' again ', 'comment'],
-                ['\\', 'inline-marker'],
-                ['3', 'number'],
-                ['+', 'operator'],
-                ['4', 'number'],
-                ['\\', 'inline-marker'],
-                [' test', 'comment']
             ]
         },
         // Full precision input marker (<<-)

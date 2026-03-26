@@ -50,11 +50,6 @@ y::
 y->
 y->>
 
-"\a#16\ inline eval with base format"
-a: 77
-b = \a#16\
-b->
-
 "persistent output =>"
 p: 42
 p:> 99

@@ -275,70 +275,8 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
 
         const lineTokens = getLineTokens(allTokens, i);
 
-        // Find backslash operator pairs and tokens between them for \expr\ detection
-        const backslashIndices = [];
-        for (let j = 0; j < lineTokens.length; j++) {
-            if (lineTokens[j].type === TokenType.OPERATOR && lineTokens[j].value === '\\') {
-                backslashIndices.push(j);
-            }
-        }
-
-        // Build inline eval matches from pairs (each pair = one \expr\)
-        let lineModified = false;
-        const inlineMatches = [];
-        for (let j = 0; j + 1 < backslashIndices.length; j += 2) {
-            const openIdx = backslashIndices[j];
-            const closeIdx = backslashIndices[j + 1];
-            const openTok = lineTokens[openIdx];
-            const closeTok = lineTokens[closeIdx];
-            const start = openTok.col - 1;   // 0-based string index of opening \
-            const end = closeTok.col;         // 0-based index after closing \
-            // Tokens between the backslashes (the expression content)
-            const innerTokens = lineTokens.slice(openIdx + 1, closeIdx);
-            inlineMatches.push({
-                expression: line.substring(start + 1, end - 1).trim(),
-                innerTokens,
-                start,
-                end
-            });
-        }
-
-        // Process inline expressions from right to left to preserve positions
-        for (let j = inlineMatches.length - 1; j >= 0; j--) {
-            const evalInfo = inlineMatches[j];
-            try {
-                // Strip format suffix ($, %, #base) before parsing — for output formatting only.
-                // The tokenizer produces FORMATTER($), FORMATTER(%), or FORMATTER(#)+NUMBER
-                // at the end of inline evals, just like before declaration markers.
-                let exprTokens = evalInfo.innerTokens;
-                const lastTok = exprTokens.length > 0 ? exprTokens[exprTokens.length - 1] : null;
-                if (lastTok && lastTok.type === TokenType.FORMATTER &&
-                    (lastTok.value === '$' || lastTok.value === '%' || lastTok.value === '°')) {
-                    exprTokens = exprTokens.slice(0, -1);
-                } else if (exprTokens.length >= 2 && lastTok && lastTok.type === TokenType.NUMBER &&
-                           exprTokens[exprTokens.length - 2].type === TokenType.FORMATTER &&
-                           exprTokens[exprTokens.length - 2].value === '#') {
-                    // #base suffix (e.g., \a#16\) — strip FORMATTER(#) + NUMBER
-                    exprTokens = exprTokens.slice(0, -2);
-                }
-                const ast = parseTokens(exprTokens);
-                const value = evaluate(ast, context);
-                const format = getInlineEvalFormat(evalInfo.innerTokens, record, null);
-                const formatted = formatVariableValue(value, format.varFormat, false, format);
-                line = line.substring(0, evalInfo.start) + formatted + line.substring(evalInfo.end);
-                lineModified = true;
-            } catch (e) {
-                errors.push(`Line ${i + 1}: Cannot evaluate \\${evalInfo.expression}\\ - ${e.message}`);
-            }
-        }
-
-        if (lineModified) {
-            lines[i] = line;
-        }
-
         // Parse declaration or expression output from this line
-        // If line was modified by inline eval, tokens are stale — re-tokenize
-        const marked = parseMarkedLine(line, lineModified ? undefined : lineTokens);
+        const marked = parseMarkedLine(line, lineTokens);
         if (marked && marked.kind === 'declaration') {
             const decl = marked;
             const name = decl.name;
@@ -432,7 +370,7 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
                 t.type === TokenType.ARROW_PERSIST_FULL
             );
             if (hasCodeMarker) {
-                const tokensForCheck = lineModified ? (new Tokenizer(line).tokenize()[0] || []) : lineTokens;
+                const tokensForCheck = lineTokens;
                 for (const tok of tokensForCheck) {
                     if (tok.type === TokenType.ERROR) {
                         errors.push(`Line ${i + 1}: ${tok.value}`);
@@ -475,14 +413,12 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
         }
     }
 
-    const newText = lines.join('\n');
-    const newTokens = new Tokenizer(newText).tokenize();
     return {
-        text: newText,
+        text: text,
         declarations: declarations,
         earlyExprOutputs: earlyExprOutputs,
         errors: errors,
-        allTokens: newTokens
+        allTokens: allTokens
     };
 }
 
@@ -1308,7 +1244,7 @@ if (typeof module !== 'undefined' && module.exports) {
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         buildOutputLine, capturePreSolveValues, clearVariables, findEquations,
         findExpressionOutputs, findEquationsAndOutputs, clearExpressionOutputs,
-        findInlineEvaluations, replaceInlineEvaluation, expandInlineExprs,
+        expandInlineExprs,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext,
         extractEquationFromLine, findTableDefinitions
     };

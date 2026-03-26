@@ -99,7 +99,6 @@
             <li><a href="#special-records">Special Records</a></li>
             <li><a href="#variables-panel">Variables Panel</a></li>
             <li><a href="#comments">Comments</a></li>
-            <li><a href="#inline-eval">Inline Evaluation</a></li>
             <li><a href="#pre-solve">Pre-solve Values</a></li>
             <li><a href="#tables-grids">Tables and Grids</a></li>
             <li><a href="#import-export">Import / Export</a></li>
@@ -320,12 +319,6 @@ a**2 + b**2 = c**2</pre>
     <pre>"This is a comment"
 x: 42    "the answer"</pre>
     <p>Comments after a variable declaration appear in the variables panel.</p>
-
-    <h2 id="inline-eval">Inline Evaluation</h2>
-    <p>Wrap an expression in backslashes to evaluate it in-place during solve:</p>
-    <pre>tax_rate: 0.08
-total: subtotal * (1 + \tax_rate\)</pre>
-    <p>The <code>\tax_rate\</code> is replaced with its value (0.08) in the text after solving.</p>
 
     <h2 id="pre-solve">Pre-solve Values</h2>
     <p>Access a variable's value from <em>before</em> the current solve started:</p>

@@ -694,11 +694,6 @@ button {
     color: var(--error-color);
 }
 
-.tok-inline-marker {
-    color: var(--success-color);
-    font-weight: bold;
-}
-
 /* Details Panel */
 .details-panel {
     width: var(--details-width);

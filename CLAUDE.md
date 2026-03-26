@@ -61,7 +61,7 @@ node tests/gen-expected.js TESTNAME
 
 ### Solving
 - **Solve button** or Ctrl+Enter triggers `solveRecord()` in solve-engine.js
-- Pipeline: discover variables → evaluate inline expressions (`\expr\`) → evaluate definitions → build substitutions → solve equations with Brent's method → format output
+- Pipeline: discover variables → evaluate definitions → build substitutions → solve equations with Brent's method → format output
 - Iterative refinement: multiple passes until convergence
 - **Two-sweep equation solving**: Pass 2 first tries equations with 1 natural unknown (no substitutions), then equations that need substitutions — prevents degenerate equations from related substitutions
 - **Auto-inline definitions**: Sweep 0 auto-inlines definition equations for undeclared intermediate variables, avoiding spurious roots from substitution
@@ -219,7 +219,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 | `expr$->` | Expression output | Format expression result as money |
 | `x~` | Pre-solve value | Strictly returns value before this solve started |
 | `x~?` | Existence check | 1 if x has a pre-solve value, 0 otherwise |
-| `\expr\` | Inline eval | Evaluates and replaces with result during solve |
+| `\expr\` | Inline eval (table/grid titles only) | Evaluates expression for display in title |
 
 ## Built-in Functions
 

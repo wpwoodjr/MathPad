@@ -46,52 +46,11 @@ x->
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Test 6: Inline eval before // comment"
-
-x: 3
-\x + 2\ // result should be 5
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Test 7: Inline eval inside // comment should NOT expand"
-
-x: 3
-// \x + 2\ stays unexpanded
-x->
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Test 8: Inline eval inside quoted comment should NOT expand"
-
-x: 3
-"\x + 2\ stays unexpanded"
-x->
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Test 9: Variable declaration after // should be ignored"
 
 // x: 99
 y: 7
 y->
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"misc \expr\ tests"
-
-a$: $10.994
-b = \a$\
-b$->>
-
-// \a$\
-"\a$\"
-\a$\
-\a%\
-\a#16\
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1

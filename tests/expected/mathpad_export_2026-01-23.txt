@@ -223,18 +223,6 @@ width4-> 23.7171
 width5-> 23.7171
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 6; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved 1 equation"; StatusIsError = 0
-"01 \expr\: Inline eval error: Undefined variable: a"
-
-a: cos(1)
-
-b = 0.540302
-
-a-> 0.540302
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Solved 3 equations"; StatusIsError = 0
@@ -248,19 +236,6 @@ Status = "Solved 3 equations"; StatusIsError = 0
 
   height-> 5.49
   width-> 3.09
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Solved 1 equation"; StatusIsError = 0
-"02 \expr\: \a$\ doesn't preserve $ formatting"
-
-a$: $10.994
-
-b = $10.99
-
-a$-> $10.99
-a$->> $10.994
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1

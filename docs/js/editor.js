@@ -79,7 +79,6 @@ function tokenizeMathPad(text, options = {}) {
     let lastTokenWasVar = false;
     let lastTokenWasBuiltin = false;
     let lastTokenEnd = 0;
-    let inInlineEval = false;  // Track whether we're inside \..\ inline eval markers
     let prevHighlightType = null;
     let prevTokenLine = 0;
 
@@ -95,7 +94,6 @@ function tokenizeMathPad(text, options = {}) {
             lastTokenWasVar = false;
             lastTokenWasBuiltin = false;
             prevHighlightType = null;
-            inInlineEval = false;
             prevTokenLine = token.line;
         }
 
@@ -156,8 +154,6 @@ function tokenizeMathPad(text, options = {}) {
                 // # (base suffix) matches the preceding identifier style in declaration context
                 if ((lastTokenWasVarDef || lastTokenWasBuiltin) && tokenStart === lastTokenEnd) {
                     highlightType = lastTokenWasBuiltin ? 'builtin' : 'variable-def';
-                } else if (inInlineEval && lastTokenWasVar && tokenStart === lastTokenEnd) {
-                    highlightType = 'variable'; // format suffix in inline eval (\a$\, \a%\, \a#16\)
                 } else {
                     highlightType = 'error'; // formatter in expression context is a syntax error
                 }
@@ -168,12 +164,6 @@ function tokenizeMathPad(text, options = {}) {
                 break;
             default:
                 highlightType = 'punctuation';
-        }
-
-        // Check for inline evaluation marker (backslash)
-        if (token.type === TokenType.OPERATOR && token.value === '\\') {
-            highlightType = 'inline-marker';
-            inInlineEval = !inInlineEval;
         }
 
         // Track highlight type for lookback in identifier classification
