@@ -348,24 +348,11 @@ class LineParser {
             return true;
         }
 
-        // Operators connect terms in expressions
+        // Any operator before a variable is an expression context
+        // (unary: -x-> or binary: a-x->). Input markers (<- : ::)
+        // already returned false above, so this only applies to outputs.
         if (prevToken.type === TokenType.OPERATOR) {
-            if (prevToken.value === '-') {
-                // Check if binary minus (something connects to it before)
-                if (varInfo.varTokenStartIndex >= 2) {
-                    const prevPrev = this.tokens[varInfo.varTokenStartIndex - 2];
-                    if (prevPrev.type === TokenType.IDENTIFIER ||
-                        prevPrev.type === TokenType.NUMBER ||
-                        prevPrev.type === TokenType.RPAREN ||
-                        prevPrev.type === TokenType.RBRACKET ||
-                        prevPrev.type === TokenType.OPERATOR ||
-                        prevPrev.type === TokenType.LPAREN) {
-                        return true; // Binary minus connecting terms
-                    }
-                }
-                return false; // Unary minus or label with dash
-            }
-            return true; // Other operators directly connect
+            return true;
         }
 
         return false;
