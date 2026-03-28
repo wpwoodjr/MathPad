@@ -129,11 +129,10 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         y + x =
             y and x must have values (after solving)
 
-## \expr\ substitutions
-    An expr enclosed in backslashes is replaced by the result. Variables may be used if they have a known value.  The substitutions are done during variable discovery.
-        \3+4\ becomes 7
-        If x: 3, then \x+2\ becomes 5.  If x does not have a value, it's an error
-        \cos(1)\ should become 0.5403 (assuming Decimal Places is set to 4)
+## \expr\ in table/grid titles
+    Only supported in table/grid title strings for display purposes.
+    Example: table("Payment for \pv$\ loan at \rate%\") = { ... }
+    Evaluated via expandInlineExprs (display-only, does not modify source text).
 
 ## --Variables-- section
     A --Variables-- line in formulas text causes only items below it to appear in the variables panel.
@@ -144,23 +143,57 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     "Functions" — user-defined functions: f(x;y) = expr
     "Default Settings" — template for new record settings
 
+## solveEquations iterative loop
+    solveEquations(context, declarations, record, equations, bodyDefinitions)
+    Used by both main solver (solveRecord) and table/grid per-row evaluation (evaluateCell)
+
+    while (changed && iterations < 50):
+
+        ### [1] Body definitions (:defs not yet resolved)
+            Evaluates bodyDefinitions (array of {name, ast})
+            Outer solve: declarations that failed during discoverVariables
+                (out-of-order deps like b: a+3 before a: 5, or equation-dependent like x: pmt*2)
+            Table body: defASTs from table body declarations
+            Iterative loop handles both cases — retries until resolved or no progress
+
+        ### [2] Build substitution map (buildSubstitutionMap in solver.js)
+            For each equation:
+                Try isDefinitionEquation (var = expr) → isDefinition: true
+                Else try deriveSubstitution (algebraic isolation) → isDefinition: false
+            Marks overdetermined: true when 2nd isDefinition found for same variable
+            deriveSubstitution uses tryIsolateVariable — recursive peeling of binary ops
+                via invertOperation, handles arbitrary-depth nesting (a*b/D = C → a = C*D/b)
+
+        ### [3] Build sweep 0 subs
+            Filter substitutions: variable has no value, no limits, not overdetermined
+            Includes both definition and derived substitutions
+            Includes declared variables (so peeking via adjTemp->> doesn't change solve behavior)
+            Overdetermined guard prevents inlining variables with multiple definitions
+                (e.g., speed in overdetermined vector navigation systems)
+
+        ### [4] Pass 1: Evaluate fully-known substitutions
+            For each substitution (definition or derived):
+                If expression has no unknowns: evaluate directly, check limits, set variable
+            Handles both var = expr and algebraically derived forms (e.g. x - a = 3 → x = a + 3)
+            Direct computation avoids Brent's — faster and more precise
+
+        ### [5] Pass 2: Equation solving (two sweeps)
+            Sweep 0: apply [3] subs only → solve equations with 1 remaining unknown
+                Natural solving preferred — avoids degenerate equations from substitutions
+            Sweep 1: apply all [2] subs → solve equations reduced to 1 unknown
+            For definition equations (var = expr):
+                If user-provided value and RHS has unknowns: set value, fall through to Brent's
+                If RHS fully known: evaluate directly, skip Brent's
+                If variable not provided and not computed: skip (don't Brent's a definition)
+            Brent's root-finding for remaining 1-unknown equations
+            Break-on-solve: after solving one equation, restart loop so [1] and [4]
+                can evaluate with the new value before a second Brent's step
+
 ## Definition evaluation order
-    : definitions are evaluated in discoverVariables, not in solveEquations
-    Retry pass: deferred definitions are retried iteratively until no more progress
-    Handles out-of-order deps and chained deps; circular deps terminate cleanly
-
-## Two-sweep equation solving (Pass 2)
-    Sweep 0: solve equations with 1 natural unknown (no substitutions)
-        Auto-inlines definition equations for undeclared intermediate variables
-    Sweep 1: use substitutions for remaining equations
-    Break-on-solve: after Brent's solves one equation, break out so definitions can evaluate with the new value
-    solveEquations takes equations as parameter (caller owns equation discovery)
-        Enables reuse by both main solver and table/grid per-row evaluation
-
-## Algebraic substitution
-    deriveSubstitution in solver.js via tryIsolateVariable
-    Recursive peeling of binary operations one level at a time via invertOperation
-    Handles arbitrary-depth nesting (e.g., a*b/D = C → a = C*D/b)
+    discoverVariables evaluates : definitions in a single top-to-bottom pass (no retry loop)
+    Definitions that fail (out-of-order deps, equation-dependent) go into bodyDefinitions
+    solveEquations handles them in its iterative loop via [1]
+    preSolveVars updated with resolved bodyDefinition values after solve (for table access)
 
 ## Tables and Grids
     ### Syntax
@@ -183,8 +216,8 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     ### Evaluation (solve-engine.js: evaluateTable)
         findTableDefinitions (variables.js) detects table/grid blocks
         Table lines added to localFunctionLines skip set (not treated as record equations)
-        Each row/cell solved fresh via solveEquations (same pipeline as main solver)
-        Pre-solve context reset per row (user declarations only)
+        Each row/cell: reset context to preSolveVars, clear unknowns, set iterators
+        Calls solveEquations with body defASTs as bodyDefinitions (same pipeline as main solver)
         Per-cell error suppression (bad cells empty, good cells show values)
         Unused variable warnings with actual line numbers
     ### Rendering (variables-panel.js)

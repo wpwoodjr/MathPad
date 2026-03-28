@@ -651,7 +651,11 @@ function buildSubstitutionMap(equations, context, errors = []) {
                 isDefinition = false;
             }
 
-            if (!def || context.hasVariable(def.variable) || substitutions.has(def.variable)) {
+            if (!def || context.hasVariable(def.variable)) continue;
+            if (substitutions.has(def.variable)) {
+                // Multiple equations define this variable — mark as overdetermined
+                // so sweep 0 won't inline it (inlining one discards the others)
+                if (isDefinition) substitutions.get(def.variable).overdetermined = true;
                 continue;
             }
 

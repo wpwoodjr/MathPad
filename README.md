@@ -43,7 +43,7 @@ Or open `docs/index.html` locally in a browser. No build step required.
 - **Percent format** (`rate%:`) — stores as decimal, displays with `%`
 - **Degrees format** (`angle°:`) — displays mod 360 with `°` suffix
 - **Numeric bases** (`hex#16:`) — bases 2 through 36
-- **Inline evaluation** (`\expr\`) — evaluates expression and substitutes result in text
+- **Inline evaluation** (`\expr\`) — evaluates expression in table/grid titles for display
 
 ### Variable Types
 

@@ -30,3 +30,92 @@ hours<<- 4.002376641968735
 temperature<- 70
 limitPwr: 420
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 3 equations"; StatusIsError = 0
+"Non-definition form: derived sub inlined to avoid spurious root"
+
+--Formulas--
+fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
+estWatts(userPwr; limitPower; maxMotorPower; adjustedTemp) = userPwr/(limitPower/maxMotorPower)*adjustedTemp
+
+--Equations--
+adjTemp - ((refTemp - temperature)/tempAdjFactor/100) = 1
+adjBattCap = battCap*battAdjFactor
+hours = adjBattCap/fitWatts(estWatts(userPwr; limitPwr; maxMotorPwr; adjTemp); a; b; c; d)
+
+--Constants--
+a: 0.00170924441718192
+b: -0.188898975432704
+c: 8.01215375719881
+d: -78.2255835191052
+refTemp: 68.5
+tempAdjFactor: 6
+battCap: 252
+battAdjFactor: 0.96
+
+--Variables--
+userPwr: 180
+maxMotorPwr: 160
+hours:: 4
+temperature: 246.9
+limitPwr: 420
+
+table("Temperature test 1") = {
+  maxMotorPwr: 160..160
+  temperature<-
+  MMP maxMotorPwr->
+  Temp temperature->
+}
+
+"--- Table Outputs ---"
+"Temperature test 1"
+"MMP"	"Temp"
+160	246.9
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 3 equations"; StatusIsError = 0
+"Non-definition form with peek: same result as without peek"
+
+--Formulas--
+fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
+estWatts(userPwr; limitPower; maxMotorPower; adjustedTemp) = userPwr/(limitPower/maxMotorPower)*adjustedTemp
+
+--Equations--
+adjTemp - ((refTemp - temperature)/tempAdjFactor/100) = 1
+adjBattCap = battCap*battAdjFactor
+hours = adjBattCap/fitWatts(estWatts(userPwr; limitPwr; maxMotorPwr; adjTemp); a; b; c; d)
+adjTemp->> 0.702666666666667
+
+--Constants--
+a: 0.00170924441718192
+b: -0.188898975432704
+c: 8.01215375719881
+d: -78.2255835191052
+refTemp: 68.5
+tempAdjFactor: 6
+battCap: 252
+battAdjFactor: 0.96
+
+--Variables--
+userPwr: 180
+maxMotorPwr: 160
+hours:: 4
+temperature: 246.9
+limitPwr: 420
+
+table("Temperature test 2") = {
+  maxMotorPwr: 160..160
+  temperature<-
+  MMP maxMotorPwr->
+  Temp temperature->
+}
+
+"--- Table Outputs ---"
+"Temperature test 2"
+"MMP"	"Temp"
+160	246.9
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
