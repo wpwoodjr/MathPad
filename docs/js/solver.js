@@ -652,12 +652,7 @@ function buildSubstitutionMap(equations, context, errors = []) {
             }
 
             if (!def || context.hasVariable(def.variable)) continue;
-            if (substitutions.has(def.variable)) {
-                // Multiple equations define this variable — mark as overdetermined
-                // so sweep 0 won't inline it (inlining one discards the others)
-                if (isDefinition) substitutions.get(def.variable).overdetermined = true;
-                continue;
-            }
+            if (substitutions.has(def.variable)) continue;
 
             const exprVars = findVariablesInAST(def.expressionAST);
 

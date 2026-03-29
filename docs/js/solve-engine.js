@@ -182,6 +182,17 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
 // Set to true to enable detailed solve logging in the console
 let debugSolve = false;
 
+// Simple AST to string for debug logging
+const _astStr = (n) => {
+    if (!n) return '?';
+    if (n.type === 'NUMBER') return String(n.value);
+    if (n.type === 'VARIABLE') return n.name;
+    if (n.type === 'BINARY_OP') return `(${_astStr(n.left)} ${n.op} ${_astStr(n.right)})`;
+    if (n.type === 'UNARY_OP') return `${n.op}${_astStr(n.operand)}`;
+    if (n.type === 'FUNCTION_CALL') return `${n.name}(${(n.args||[]).map(_astStr).join('; ')})`;
+    return n.type;
+};
+
 function solveEquations(context, declarations, record = {}, equations, bodyDefinitions = []) {
     const places = record.places != null ? record.places : 4;
     const errors = [];
@@ -233,34 +244,22 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         const substitutions = buildSubstitutionMap(equations, context, errors);
 
         // Substitutions for sweep 0: inline any substitution (definition or
-        // algebraically derived) for variables with no value, no limits, and
-        // not overdetermined. Prevents spurious roots from Brent's solving for
-        // intermediates. Includes declared variables so "peeking" (e.g. adjTemp->>)
+        // algebraically derived) for variables with no value and no limits.
+        // Prevents spurious roots from Brent's solving for intermediates.
+        // Includes declared variables so "peeking" (e.g. adjTemp->>)
         // doesn't change solve behavior.
         const definitionSubs = new Map();
         for (const [varName, sub] of substitutions) {
-            if (sub.overdetermined) continue;
             if (context.hasVariable(varName)) continue;
             const varInfo = variables.get(varName);
             if (varInfo && varInfo.declaration && varInfo.declaration.limits) continue;
             definitionSubs.set(varName, sub);
         }
-        // [2] Build substitution map + [3] Build sweep 0 subs
-        // Simple AST to string for logging
-        const _astStr = (n) => {
-            if (!n) return '?';
-            if (n.type === 'NUMBER') return String(n.value);
-            if (n.type === 'VARIABLE') return n.name;
-            if (n.type === 'BINARY_OP') return `(${_astStr(n.left)} ${n.op} ${_astStr(n.right)})`;
-            if (n.type === 'UNARY_OP') return `${n.op}${_astStr(n.operand)}`;
-            if (n.type === 'FUNCTION_CALL') return `${n.name}(${(n.args||[]).map(_astStr).join('; ')})`;
-            return n.type;
-        };
         if (debugSolve) {
             console.log('  --- [2] Build substitution map ---');
             if (substitutions.size > 0) {
                 for (const [k, v] of substitutions) {
-                    console.log(`    ${k} → ${_astStr(v.ast)} (isDef:${v.isDefinition}, overdet:${v.overdetermined||false}, line:${v.sourceLine})`);
+                    console.log(`    ${k} → ${_astStr(v.ast)} (isDef:${v.isDefinition}, line:${v.sourceLine})`);
                 }
             } else {
                 console.log('    (none)');
@@ -320,18 +319,17 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             }
         }
 
-        // Pass 2: Solve equations — two sweeps:
-        //   Sweep 0: only equations with 1 natural unknown (no substitutions)
-        //   Sweep 1: equations reduced to 1 unknown via substitutions
-        // Natural solving is preferred because substitutions can create degenerate
-        // equations (e.g., substituting one vector component into a related vector
-        // equation produces a near-tautology with false roots)
-        if (debugSolve) console.log('  --- [5] Pass 2: Equation solving (sweep 0: use [3] subs, sweep 1: use all [2] subs) ---');
+        // Pass 2: Solve equations — three sweeps:
+        //   Sweep 0: natural 1-unknown only (no subs), skip if unknown is in [3] (should be substituted)
+        //   Sweep 1: equations reduced to 1 unknown via [3] definitionSubs
+        //   Sweep 2: equations reduced to 1 unknown via all [2] substitutions
+        // Natural solving first prevents substitution-created degenerate equations
+        // (e.g., inlining speed into smg equation creates multi-root trig equation)
+        if (debugSolve) console.log('  --- [5] Pass 2: Equation solving (sweep 0: natural, sweep 1: [3] subs) ---');
         for (let sweep = 0; sweep < 2 && !changed; sweep++) {
+            const sweepSubs = sweep === 0 ? new Map() : definitionSubs;
             for (const eq of equations) {
                 try {
-                    if (eq.text.includes('\\')) continue;
-
                     // Handle incomplete equations (expr =)
                     if (eq.leftText && !eq.rightText) {
                         if (sweep > 0) continue; // already handled
@@ -348,77 +346,33 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                         continue;
                     }
 
-                    // Handle definition equations not fully resolved in Pass 1
-                    // =° equations skip definition shortcut — Brent's handles mod-aware solving
+                    // Definition equations (var = expr): skip if [4] already handled,
+                    // or if variable has no value (don't Brent's a bare definition).
+                    // Fall through to Brent's only when variable has a value and RHS has unknowns
+                    // (e.g., user set x: 5, equation x = a + b → solve for a or b).
                     const def = !eq.modN && isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
                     if (def) {
-                        const varInfo = variables.get(def.variable);
                         const rhsVars = findVariablesInAST(def.expressionAST);
                         const rhsUnknowns = [...rhsVars].filter(v => !context.hasVariable(v));
+                        if (rhsUnknowns.length === 0) { unsolvedEquations.delete(eq.startLine); continue; }
+                        if (!context.hasVariable(def.variable)) continue;
+                    }
 
-                        // If user provided value and RHS has unknowns, use equation to solve
-                        if (varInfo && varInfo.value !== null && userProvidedVars.has(def.variable)) {
-                            context.setVariable(def.variable, varInfo.value);
-                            if (rhsUnknowns.length === 0) { unsolvedEquations.delete(eq.startLine); continue; }
-                        }
-
-                        // Skip if variable already computed and RHS is fully known
-                        if (context.hasVariable(def.variable) && !userProvidedVars.has(def.variable)) {
-                            if (rhsUnknowns.length === 0) { unsolvedEquations.delete(eq.startLine); continue; }
-                        }
-
-                        // If RHS is fully known, evaluate (may not have been computed in Pass 1)
-                        if (rhsUnknowns.length === 0) {
-                            if (sweep > 0) { continue; } // already handled in sweep 0
-                            try {
-                                const subAsts = new Map([...substitutions].map(([k, v]) => [k, v.ast]));
-                                let ast = substituteInAST(def.expressionAST, subAsts);
-                                const value = evaluate(ast, context);
-
-                                if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
-                                    try {
-                                        const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
-                                        const highAST = parseTokens(varInfo.declaration.limits.highTokens);
-                                        const low = evaluate(lowAST, context);
-                                        const high = evaluate(highAST, context);
-                                        if (value < low || value > high) {
-                                            solveFailures.set(def.variable, {
-                                                error: `Computed value ${value} is outside limits [${low}, ${high}]`,
-                                                line: eq.startLine
-                                            });
-                                            continue;
-                                        }
-                                    } catch (e) {
-                                        // Ignore limit evaluation errors
-                                    }
-                                }
-
-                                const oldVal = context.hasVariable(def.variable) ? context.getVariable(def.variable) : undefined;
-                                if (oldVal !== value) {
-                                    context.setVariable(def.variable, value);
-                                    computedValues.set(def.variable, value);
-                                    changed = true;
-                                    solved++;
-                                    if (debugSolve) console.log(`    Sweep ${sweep} def: ${def.variable} = ${value} (from "${eq.text.substring(0, 50)}")`);
-                                }
-                            } catch (e) {
-                                if (!(e instanceof EvalError)) {
-                                    errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
-                                }
-                            }
-                            unsolvedEquations.delete(eq.startLine);
-                            continue;
-                        }
-
-                        if (!userProvidedVars.has(def.variable) && !context.hasVariable(def.variable)) continue;
+                    // Sweep 0: skip if the natural 1-unknown is in definitionSubs
+                    // (it should be substituted away, not solved directly by Brent's)
+                    if (sweep === 0 && definitionSubs.size > 0) {
+                        try {
+                            const lVars = findVariablesInAST(parseExpression(eq.leftText));
+                            const rVars = eq.rightText ? findVariablesInAST(parseExpression(eq.rightText)) : new Set();
+                            const eqUnknowns = [...new Set([...lVars, ...rVars])].filter(v => !context.hasVariable(v));
+                            if (eqUnknowns.length === 1 && definitionSubs.has(eqUnknowns[0])) continue;
+                        } catch (e) { /* parse error — let solveEquationInContext handle it */ }
                     }
 
                     // Try to solve the equation numerically
-                    // Sweep 0: no substitutions (natural 1-unknown only)
-                    // Sweep 1: with substitutions to reduce multi-unknown equations
                     const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
                     const result = solveEquationInContext(eq.text, eq.startLine, context, variables,
-                        sweep === 0 ? definitionSubs : substitutions, eq.leftText, eq.rightText, modValue);
+                        sweepSubs, eq.leftText, eq.rightText, modValue);
                     if (result.solved) {
                         context.setVariable(result.variable, result.value);
                         computedValues.set(result.variable, result.value);

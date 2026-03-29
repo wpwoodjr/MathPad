@@ -160,16 +160,14 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
             For each equation:
                 Try isDefinitionEquation (var = expr) → isDefinition: true
                 Else try deriveSubstitution (algebraic isolation) → isDefinition: false
-            Marks overdetermined: true when 2nd isDefinition found for same variable
+                First substitution per variable wins; duplicates skipped
             deriveSubstitution uses tryIsolateVariable — recursive peeling of binary ops
                 via invertOperation, handles arbitrary-depth nesting (a*b/D = C → a = C*D/b)
 
         ### [3] Build sweep 0 subs
-            Filter substitutions: variable has no value, no limits, not overdetermined
+            Filter substitutions: variable has no value, no limits
             Includes both definition and derived substitutions
             Includes declared variables (so peeking via adjTemp->> doesn't change solve behavior)
-            Overdetermined guard prevents inlining variables with multiple definitions
-                (e.g., speed in overdetermined vector navigation systems)
 
         ### [4] Pass 1: Evaluate fully-known substitutions
             For each substitution (definition or derived):
@@ -178,14 +176,15 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
             Direct computation avoids Brent's — faster and more precise
 
         ### [5] Pass 2: Equation solving (two sweeps)
-            Sweep 0: apply [3] subs only → solve equations with 1 remaining unknown
-                Natural solving preferred — avoids degenerate equations from substitutions
-            Sweep 1: apply all [2] subs → solve equations reduced to 1 unknown
+            Sweep 0: no subs → natural 1-unknown equations only
+                Skip if the sole unknown is in [3] (should be substituted, not solved directly)
+                Prevents spurious roots (e.g. adjTemp solved from hours equation in isolation)
+            Sweep 1: apply [3] subs → solve equations reduced to 1 unknown
             For definition equations (var = expr):
-                If user-provided value and RHS has unknowns: set value, fall through to Brent's
-                If RHS fully known: evaluate directly, skip Brent's
-                If variable not provided and not computed: skip (don't Brent's a definition)
-            Brent's root-finding for remaining 1-unknown equations
+                If RHS fully known: skip (already handled by [4])
+                If variable has no value: skip (don't Brent's a bare definition)
+                Otherwise fall through to Brent's (e.g. user set x:5, solve x=a+b for a)
+            Brent's root-finding for 1-unknown equations
             Break-on-solve: after solving one equation, restart loop so [1] and [4]
                 can evaluate with the new value before a second Brent's step
 
