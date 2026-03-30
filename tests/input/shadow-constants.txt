@@ -113,7 +113,7 @@ h:
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"test a: e before e-> shadows it"
+"test a: e where e-> shadows the constant (a has no value)"
 
 a: e
 a->

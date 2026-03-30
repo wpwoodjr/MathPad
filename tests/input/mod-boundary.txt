@@ -197,10 +197,9 @@ a =° atan(b; -1)
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° definition bypass — with limits"
+"=° definition — with limits"
 
-// y =° 365 + a is a definition equation, but =° skips the shortcut
-// Definition would give y = 365 (outside limits), Brent's finds y = 5
+// y =° 365 + a: direct eval gives y = 365, outside limits → Brent's finds y = 5
 a: 0
 y[-10:10]->
 y =° 365 + a
@@ -208,9 +207,9 @@ y =° 365 + a
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° definition bypass — without limits"
+"=° definition — without limits"
 
-// Without limits, Brent's finds smallest positive representative
+// Without limits, direct eval gives expression value (365)
 a: 0
 y->
 y =° 365 + a
@@ -218,9 +217,9 @@ y =° 365 + a
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° definition bypass — non-standard limits"
+"=° definition — non-standard limits"
 
-// Limits [360:480], Brent's finds y = 365 (the representative in range)
+// Limits [360:480], direct eval gives 5 (outside limits) → Brent's finds y = 365
 a: 0
 y[360:480]->
 y =° 5 + a
@@ -288,8 +287,7 @@ Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
 "=° residual check — wide limits reject wrapping discontinuity"
 
-// Limits [-600:600] span >> 360, wrapping discontinuity at v = -539
-// Residual check rejects false root, finds real root at v = 1
+// Limits [-600:600]: direct eval gives 361, within limits
 v[-600:600]->
 v =° 360 + 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -304,11 +302,11 @@ x: 2*pi()
 y[-1:1]->
 x + 0.1 =° y
 
-// Definition bypass in radians: z =° 2*pi + 1 → z = 1
+// Direct eval in radians: z =° 2*pi + 1 → z = 2*pi+1 ≈ 7.28, outside [-4:4] → Brent's finds z = 1
 z[-4:4]->
 z =° 2*pi() + 1
 
-// Without limits: smallest positive representative
+// Without limits: direct eval gives expression value (4*pi+0.5 ≈ 13.07)
 w->
 w =° 4*pi() + 0.5
 

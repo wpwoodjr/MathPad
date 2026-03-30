@@ -193,7 +193,9 @@ const _astStr = (n) => {
     return n.type;
 };
 
+let _solvePass = 0;
 function solveEquations(context, declarations, record = {}, equations, bodyDefinitions = []) {
+    if (debugSolve) console.log(`\n========== solveEquations pass ${++_solvePass} (${equations.length} equations, ${bodyDefinitions.length} bodyDefs) ==========`);
     const places = record.places != null ? record.places : 4;
     const errors = [];
     const computedValues = new Map();
@@ -223,19 +225,14 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         if (debugSolve) console.log(`\n=== Iteration ${iterations} ===`);
 
         // ① Evaluate body definitions (: declarations from table body or outer solve).
-        // Runs before equations so definitions feed into equation evaluation.
-        // The iterative loop handles out-of-order deps and equation-dependent defs.
         if (debugSolve) console.log(`  --- [1] Body definitions (:defs not yet resolved)${bodyDefinitions.length === 0 ? ' (none)' : ''} ---`);
         for (const { name, ast } of bodyDefinitions) {
-            if (!ast) continue;
+            if (!ast || context.hasVariable(name)) continue;
             try {
                 const value = evaluate(ast, context);
-                const oldVal = context.hasVariable(name) ? context.getVariable(name) : undefined;
-                if (oldVal !== value) {
-                    context.setVariable(name, value);
-                    changed = true;
-                    if (debugSolve) console.log(`    ${name} = ${value}`);
-                }
+                context.setVariable(name, value);
+                changed = true;
+                if (debugSolve) console.log(`    ${name} = ${value}`);
             } catch (e) {
                 if (debugSolve) console.log(`    ${name}: deferred (${e.message})`);
             }
@@ -243,46 +240,39 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
         const substitutions = buildSubstitutionMap(equations, context, errors);
 
-        // Substitutions for sweep 0: inline any substitution (definition or
-        // algebraically derived) for variables with no value and no limits.
-        // Prevents spurious roots from Brent's solving for intermediates.
-        // Includes declared variables so "peeking" (e.g. adjTemp->>)
-        // doesn't change solve behavior.
-        const definitionSubs = new Map();
-        for (const [varName, sub] of substitutions) {
-            if (context.hasVariable(varName)) continue;
-            const varInfo = variables.get(varName);
-            if (varInfo && varInfo.declaration && varInfo.declaration.limits) continue;
-            definitionSubs.set(varName, sub);
-        }
         if (debugSolve) {
             console.log('  --- [2] Build substitution map ---');
             if (substitutions.size > 0) {
-                for (const [k, v] of substitutions) {
-                    console.log(`    ${k} → ${_astStr(v.ast)} (isDef:${v.isDefinition}, line:${v.sourceLine})`);
+                for (const [k, subs] of substitutions) {
+                    for (const s of subs) {
+                        console.log(`    ${k} → ${_astStr(s.ast)} (line:${s.sourceLine + 1})`);
+                    }
                 }
             } else {
                 console.log('    (none)');
             }
         }
-        if (debugSolve) console.log(`  --- [3] Sweep 0 subs: ${[...definitionSubs.keys()].join(', ') || '(none)'} ---`);
 
-        // Pass 1: Evaluate fully-known substitutions (definition or derived)
-        // Direct computation before Brent's — handles both var = expr and
-        // algebraically derived forms (e.g. x - a = 3 → x = a + 3)
-        if (debugSolve) console.log('  --- [4] Pass 1: Evaluate fully-known substitutions ---');
-        for (const [varName, sub] of substitutions) {
+        // [3] Evaluate fully-known substitutions — direct computation before Brent's
+        if (debugSolve) console.log('  --- [3] Evaluate fully-known substitutions ---');
+        for (const [varName, subs] of substitutions) {
             if (context.hasVariable(varName)) continue;
-            // =° substitutions skip direct evaluation — Brent's handles mod-aware solving
-            if (sub.modN) continue;
-            const subVars = findVariablesInAST(sub.ast);
-            const subUnknowns = [...subVars].filter(v => !context.hasVariable(v));
-            if (subUnknowns.length > 0) {
-                if (debugSolve) console.log(`    ${varName}: deferred (unknowns: ${subUnknowns.join(', ')})`);
+            // Try each sub — use first fully-evaluable one
+            let chosen = null;
+            for (const sub of subs) {
+                if ([...findVariablesInAST(sub.ast)].some(v => !context.hasVariable(v))) continue;
+                chosen = sub;
+                break;
+            }
+            if (!chosen) {
+                if (debugSolve) {
+                    const unknowns = [...findVariablesInAST(subs[0].ast)].filter(v => !context.hasVariable(v));
+                    console.log(`    ${varName}: deferred (unknowns: ${unknowns.join(', ')})`);
+                }
                 continue;
             }
             try {
-                const value = evaluate(sub.ast, context);
+                const value = evaluate(chosen.ast, context);
                 const varInfo = variables.get(varName);
 
                 // Check limits if defined
@@ -295,7 +285,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                         if (value < low || value > high) {
                             solveFailures.set(varName, {
                                 error: `Computed value ${value} is outside limits [${low}, ${high}]`,
-                                line: sub.sourceLine
+                                line: chosen.sourceLine
                             });
                             if (debugSolve) console.log(`    ${varName}: outside limits [${low}, ${high}]`);
                             continue;
@@ -307,25 +297,36 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
                 context.setVariable(varName, value);
                 computedValues.set(varName, value);
-                unsolvedEquations.delete(sub.sourceLine);
+                unsolvedEquations.delete(chosen.sourceLine);
                 changed = true;
                 solved++;
-                if (debugSolve) console.log(`    ${varName} = ${value} (isDef:${sub.isDefinition})`);
+                if (debugSolve) console.log(`    ${varName} = ${value}`);
             } catch (e) {
                 if (debugSolve) console.log(`    ${varName}: eval error (${e.message})`);
                 if (!(e instanceof EvalError)) {
-                    errors.push(`Line ${sub.sourceLine + 1}: ${e.message}`);
+                    errors.push(`Line ${chosen.sourceLine + 1}: ${e.message}`);
                 }
             }
         }
 
-        // Pass 2: Solve equations — three sweeps:
-        //   Sweep 0: natural 1-unknown only (no subs), skip if unknown is in [3] (should be substituted)
-        //   Sweep 1: equations reduced to 1 unknown via [3] definitionSubs
-        //   Sweep 2: equations reduced to 1 unknown via all [2] substitutions
-        // Natural solving first prevents substitution-created degenerate equations
-        // (e.g., inlining speed into smg equation creates multi-root trig equation)
-        if (debugSolve) console.log('  --- [5] Pass 2: Equation solving (sweep 0: natural, sweep 1: [3] subs) ---');
+        // [4] Build sweep subs — only if [3] didn't resolve everything
+        // Filter: variables with no value, no limits. Used as skip list for sweep 0
+        // and substitutions for sweep 1.
+        const definitionSubs = new Map();
+        if (!changed) {
+            for (const [varName, subs] of substitutions) {
+                if (context.hasVariable(varName)) continue;
+                const varInfo = variables.get(varName);
+                if (varInfo && varInfo.declaration && varInfo.declaration.limits) continue;
+                definitionSubs.set(varName, subs[0]);
+            }
+        }
+        if (debugSolve) console.log(`  --- [4] Sweep subs: ${[...definitionSubs.keys()].join(', ') || '(none)'} ---`);
+
+        // [5] Equation solving — two sweeps:
+        //   Sweep 0: natural 1-unknown only (no subs), skip if unknown is in [4]
+        //   Sweep 1: equations reduced to 1 unknown via [4] subs
+        if (debugSolve) console.log('  --- [5] Equation solving (sweep 0: natural, sweep 1: [4] subs) ---');
         for (let sweep = 0; sweep < 2 && !changed; sweep++) {
             const sweepSubs = sweep === 0 ? new Map() : definitionSubs;
             for (const eq of equations) {
@@ -335,11 +336,12 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                         if (sweep > 0) continue; // already handled
                         try {
                             let ast = parseExpression(eq.leftText);
-                            const subAsts = new Map([...substitutions].map(([k, v]) => [k, v.ast]));
+                            const subAsts = new Map([...substitutions].map(([k, v]) => [k, v[0].ast]));
                             ast = substituteInAST(ast, subAsts);
                             const value = evaluate(ast, context);
                             computedValues.set(`__incomplete_${eq.startLine}`, value);
                             solved++;
+                            if (debugSolve) console.log(`    Incomplete: ${eq.leftText} = ${value}`);
                         } catch (e) {
                             // Unknown variables - skip
                         }
@@ -732,7 +734,7 @@ function solveRecord(text, context, record, parserTokens) {
     // (e.g. x<- pmt*2 where pmt is equation-solved). solveEquations retries these.
     const bodyDefinitions = [];
     for (const decl of declarations) {
-        if (decl.value === null && decl.valueTokens && decl.valueTokens.length > 0 &&
+        if (decl.valueTokens && decl.valueTokens.length > 0 &&
             decl.declaration.type !== VarType.OUTPUT) {
             try {
                 const exprText = tokensToText(decl.valueTokens).trim();
@@ -1023,9 +1025,10 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     function evaluateCell(iterValues) {
         // Reset to pre-solve state (user declarations only, no equation-computed values)
         if (preSolveVars) context.variables = new Map(preSolveVars);
-        // Clear unknowns
+        // Clear body variables for re-evaluation per row
         for (const { name, ast } of defASTs) {
-            if (!ast) { context.variables.delete(name); context.declareVariable(name); }
+            context.variables.delete(name);
+            if (!ast) context.declareVariable(name); // unknowns need declaration
         }
         // Set iterators
         for (const iv of iterValues) {

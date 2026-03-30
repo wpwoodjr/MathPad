@@ -628,3 +628,13 @@ mod(-0.5; 1)->> 0.5
 mod(-10; 3)->> 2
 mod(10; -3)->> -2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Incomplete equation with substitution"
+
+x = y + 1
+y: 3
+x + 10 = 14
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

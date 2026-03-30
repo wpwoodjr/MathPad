@@ -582,3 +582,12 @@ mod(-0.5; 1)->>
 mod(-10; 3)->>
 mod(10; -3)->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Incomplete equation with substitution"
+
+x = y + 1
+y: 3
+x + 10 =
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

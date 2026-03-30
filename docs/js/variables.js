@@ -312,29 +312,13 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
             // Track that this variable is declared (even if no value yet)
             context.declareVariable(name);
 
-            // Evaluate the value if present
-            let value = null;
             const valueTokens = decl.valueTokens;
-
-            if (valueTokens && valueTokens.length > 0 && !isOutput) {
-                try {
-                    const ast = parseTokens(valueTokens);
-                    value = evaluate(ast, context);
-                } catch (e) {
-                    // Defer — may resolve after later declarations are processed
-                }
-
-                // Add to context for subsequent lines
-                if (value !== null) {
-                    context.setVariable(name, value);
-                }
-            }
 
             declarations.push({
                 name: name,
                 declaration: decl,
                 lineIndex: i,
-                value: value,
+                value: null,
                 valueTokens: valueTokens,
                 markerEndCol: decl.markerEndCol
             });

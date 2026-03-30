@@ -150,42 +150,42 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     while (changed && iterations < 50):
 
         ### [1] Body definitions (:defs not yet resolved)
-            Evaluates bodyDefinitions (array of {name, ast})
+            Evaluates bodyDefinitions (array of {name, ast}), skips if already has value
             Outer solve: declarations that failed during discoverVariables
                 (out-of-order deps like b: a+3 before a: 5, or equation-dependent like x: pmt*2)
-            Table body: defASTs from table body declarations
-            Iterative loop handles both cases — retries until resolved or no progress
+            Table body: defASTs from table body declarations (cleared per row)
 
         ### [2] Build substitution map (buildSubstitutionMap in solver.js)
             For each equation:
-                Try isDefinitionEquation (var = expr) → isDefinition: true
-                Else try deriveSubstitution (algebraic isolation) → isDefinition: false
-                First substitution per variable wins; duplicates skipped
+                Try isDefinitionEquation (left side simple variable)
+                Else try deriveSubstitution (algebraic isolation)
+                Multiple subs per variable stored as array (first + alternates)
             deriveSubstitution uses tryIsolateVariable — recursive peeling of binary ops
                 via invertOperation, handles arbitrary-depth nesting (a*b/D = C → a = C*D/b)
 
-        ### [3] Build sweep 0 subs
+        ### [3] Evaluate fully-known substitutions
+            For each variable's subs array: try each, evaluate first fully-evaluable one
+            Check limits, set variable. Direct computation avoids Brent's.
+            Alternates enable direct eval when primary sub has unknowns
+                (e.g. k has sub k→j+350 with unknown j, alt k→l/2 with known l)
+
+        ### [4] Build sweep subs (only if [3] didn't set changed)
             Filter substitutions: variable has no value, no limits
-            Includes both definition and derived substitutions
-            Includes declared variables (so peeking via adjTemp->> doesn't change solve behavior)
+            Uses first sub per variable for inlining
+            Serves as skip list for sweep 0 and substitutions for sweep 1
 
-        ### [4] Pass 1: Evaluate fully-known substitutions
-            For each substitution (definition or derived):
-                If expression has no unknowns: evaluate directly, check limits, set variable
-            Handles both var = expr and algebraically derived forms (e.g. x - a = 3 → x = a + 3)
-            Direct computation avoids Brent's — faster and more precise
-
-        ### [5] Pass 2: Equation solving (two sweeps)
+        ### [5] Equation solving (only if nothing changed)
             Sweep 0: no subs → natural 1-unknown equations only
-                Skip if the sole unknown is in [3] (should be substituted, not solved directly)
+                Skip if the sole unknown is in [4] (should be substituted, not solved directly)
                 Prevents spurious roots (e.g. adjTemp solved from hours equation in isolation)
-            Sweep 1: apply [3] subs → solve equations reduced to 1 unknown
+            Sweep 1: apply [4] subs → solve equations reduced to 1 unknown
+            Incomplete equations (expr =): evaluate and insert result
             For definition equations (var = expr):
-                If RHS fully known: skip (already handled by [4])
+                If RHS fully known: skip (already handled by [3])
                 If variable has no value: skip (don't Brent's a bare definition)
                 Otherwise fall through to Brent's (e.g. user set x:5, solve x=a+b for a)
             Brent's root-finding for 1-unknown equations
-            Break-on-solve: after solving one equation, restart loop so [1] and [4]
+            Break-on-solve: after solving one equation, restart loop so [1] and [3]
                 can evaluate with the new value before a second Brent's step
 
 ## Definition evaluation order

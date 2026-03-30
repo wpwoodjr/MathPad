@@ -63,8 +63,9 @@ node tests/gen-expected.js TESTNAME
 - **Solve button** or Ctrl+Enter triggers `solveRecord()` in solve-engine.js
 - Pipeline: discover variables → evaluate definitions → build substitutions → solve equations with Brent's method → format output
 - Iterative refinement: multiple passes until convergence
-- **Two-sweep equation solving**: Pass 2 sweep 0 tries equations with 1 natural unknown using filtered substitutions, sweep 1 uses all substitutions — prevents degenerate equations from related substitutions
-- **Sweep 0 substitutions**: Inlines any substitution (definition or derived) for variables with no value, no limits, not overdetermined — prevents spurious roots; declaring a variable (e.g. `adjTemp->>`) to peek at its value doesn't change solve behavior
+- **Direct evaluation first**: Fully-known substitutions (definition or algebraically derived) are evaluated directly before Brent's — multiple subs per variable tried (alternates)
+- **Two-sweep equation solving**: Sweep 0 tries natural 1-unknown equations (no subs), skipping variables in the sweep sub list; sweep 1 applies sweep subs to reduce unknowns
+- **Sweep subs**: Variables with no value, no limits — declaring a variable (e.g. `adjTemp->>`) to peek doesn't change solve behavior
 - **Break-on-solve**: After Brent's solves one equation, restarts so definitions can evaluate with the new value before a second Brent's step picks an inconsistent root
 - Results inserted back into text preserving comments and formatting
 - Error reporting with line numbers shown in status bar

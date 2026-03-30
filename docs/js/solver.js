@@ -642,17 +642,21 @@ function buildSubstitutionMap(equations, context, errors = []) {
 
     for (const eq of equations) {
         try {
-            // First try simple definition
+            // First try simple definition, then algebraic derivation
             let def = isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
-            let isDefinition = !!def;
             if (!def || context.hasVariable(def.variable)) {
-                // Try algebraic derivation
                 def = deriveSubstitution(eq.text, context, eq.leftText, eq.rightText);
-                isDefinition = false;
             }
 
             if (!def || context.hasVariable(def.variable)) continue;
-            if (substitutions.has(def.variable)) continue;
+
+            const sub = { ast: def.expressionAST, sourceLine: eq.startLine, modN: !!eq.modN };
+
+            if (substitutions.has(def.variable)) {
+                // Add as alternate — [4] tries each, evaluates first fully-known one
+                substitutions.get(def.variable).push(sub);
+                continue;
+            }
 
             const exprVars = findVariablesInAST(def.expressionAST);
 
@@ -666,9 +670,7 @@ function buildSubstitutionMap(equations, context, errors = []) {
             // (unless that variable is known in context)
             const hasSubstitutedVar = [...exprVars].some(v => substitutions.has(v) && !context.hasVariable(v));
             if (!hasSubstitutedVar) {
-                // Store both the AST and the source equation's line number
-                // so we don't apply a substitution back to its own source equation
-                substitutions.set(def.variable, { ast: def.expressionAST, sourceLine: eq.startLine, modN: !!eq.modN, isDefinition });
+                substitutions.set(def.variable, [sub]);
                 dependencies.set(def.variable, exprVars);
             }
         } catch (e) {
