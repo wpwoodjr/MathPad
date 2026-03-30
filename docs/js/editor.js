@@ -202,12 +202,12 @@ function tokenizeMathPad(text, options = {}) {
  * @param {Set} referenceConstants - Constants from Reference section
  * @param {boolean} shadowConstants - If true, output markers also shadow constants
  * @param {Token[][]} tokensByLine - Per-line token arrays from the tokenizer
- * @returns {{ localVariables: Map, labelRegions: Array }}
+ * @returns {{ localVariables: Set, labelRegions: Array }}
  */
 function analyzeLines(text, strippedText, referenceConstants, shadowConstants, tokensByLine) {
     const lines = text.split('\n');
     const strippedLength = strippedText.length;
-    const localVariables = new Map();  // name -> charOffset where shadowing starts
+    const localVariables = new Set();  // variable names that shadow constants
     const labelRegions = [];
     let lineStart = 0;
     let insideBrace = false;
@@ -263,9 +263,7 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, t
             const isDefMarker = decl.marker === ':' || decl.marker === '<-' || decl.marker === '::';
             const isOutMarker = decl.marker === '->' || decl.marker === '->>' || decl.marker === ':>' || decl.marker === ':>>';
             if (isDefMarker || (shadowConstants && isOutMarker && referenceConstants.has(decl.name))) {
-                if (!localVariables.has(decl.name)) {
-                    localVariables.set(decl.name, lineStart);
-                }
+                localVariables.add(decl.name);
             }
         }
 
@@ -491,14 +489,14 @@ function getTokenLength(token, text, start) {
 /**
  * Determine highlight type for an identifier
  */
-function getIdentifierHighlightType(name, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants = new Set(), referenceFunctions = new Set(), localVariables = new Map(), fnParams = null) {
+function getIdentifierHighlightType(name, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants = new Set(), referenceFunctions = new Set(), localVariables = new Set(), fnParams = null) {
     const nameLower = name.toLowerCase();
 
     // Check if a local variable or function parameter shadows a constant
+    // Shadow applies to entire record (not position-dependent)
     function isShadowed(varName) {
         if (fnParams && fnParams.has(varName)) return true;
-        const shadowPos = localVariables.get(varName);
-        return shadowPos !== undefined && tokenStart >= shadowPos;
+        return localVariables.has(varName);
     }
 
     // Look ahead for ( to detect function calls

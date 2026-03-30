@@ -884,17 +884,16 @@ function runAllTests() {
                 ['->>', 'punctuation']
             ]
         },
-        // Constant shadowing is position-aware (matches top-to-bottom evaluator)
-        // c is a constant used before c-> shadows it, so c is still builtin on the a: c line
+        // Constant stays builtin when not shadowed
         {
-            name: 'constant is builtin before shadow line (a: c before c->)',
+            name: 'constant is builtin when not shadowed (a: c without c->)',
             line: 'a: c',
             context: '',
             options: { referenceConstants: new Set(['c']), shadowConstants: true },
             assertions: [
                 ['a', 'variable-def'],
                 [':', 'punctuation'],
-                ['c', 'builtin']  // not yet shadowed
+                ['c', 'builtin']  // no c-> in record, still a constant
             ]
         },
         {

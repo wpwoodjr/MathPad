@@ -757,11 +757,7 @@ function solveRecord(text, context, record, parserTokens) {
 
     // Evaluate expression outputs (between solve and format)
     const computedValues = solveResult.computedValues;
-    // Seed with early expression outputs from discovery
-    for (const [lineIndex, result] of discovery.earlyExprOutputs) {
-        computedValues.set(`__exprout_${lineIndex}`, result);
-    }
-    // Evaluate remaining expression outputs
+    // Evaluate expression outputs
     for (const output of exprOutputs) {
         if (computedValues.has(`__exprout_${output.startLine}`)) continue;
         if (!output.recalculates && output.valueTokens && output.valueTokens.length > 0) continue;

@@ -137,6 +137,16 @@ e->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Shadows are not position dependent"
+
+a: c
+a-> 3
+c: 3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
 Status = "Nothing to solve"; StatusIsError = 0
 "shadow c+c-> expression output"
@@ -149,15 +159,12 @@ c: 299792458
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
-Status = "Line 5: Variable 'c' has no value\nLine 4: Variable 'c' has no value to output"; StatusIsError = 1
+Status = "Line 3: Variable 'c' has no value\nLine 5: Variable 'c' has no value\nLine 4: Variable 'c' has no value to output"; StatusIsError = 1
 "shadow c+c-> before and after c->"
 
-c+c-> 599,584,916
+c+c->
 c->
 c+c->
-
-"--- Reference Constants and Functions ---"
-c: 299792458
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
