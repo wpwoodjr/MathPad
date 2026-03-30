@@ -785,6 +785,62 @@ class VariablesPanel {
     }
 
     /**
+     * Create a collapsible table title element.
+     * Title prefix: 'v' = open, '>' = closed. Toggling updates the source text.
+     */
+    _createTableTitle(table, wrapper) {
+        if (!table.title) return null;
+
+        const rawTitle = table.title;
+        const firstChar = rawTitle.charAt(0);
+        const collapsed = firstChar === '>';
+        const displayTitle = (firstChar === 'v' || firstChar === '>') ? rawTitle.substring(1).trimStart() : rawTitle;
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'mathpad-table-title' + (collapsed ? ' collapsed' : '');
+        titleEl.textContent = displayTitle;
+        titleEl.style.fontSize = (table.fontSize || 14) + 'px';
+
+        // Hide table if collapsed
+        if (collapsed) {
+            setTimeout(() => {
+                const tableEl = wrapper.querySelector('.mathpad-table');
+                if (tableEl) tableEl.style.display = 'none';
+            }, 0);
+        }
+
+        titleEl.addEventListener('click', () => {
+            const isCollapsed = titleEl.classList.toggle('collapsed');
+            const tableEl = wrapper.querySelector('.mathpad-table');
+            if (tableEl) tableEl.style.display = isCollapsed ? 'none' : '';
+
+            // Update title prefix in source text
+            if (this.editor) {
+                const text = this.editor.getValue();
+                const lines = text.split('\n');
+                // Find the table/grid definition line with this title
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const match = line.match(/^((?:table|grid)\s*\(\s*")(.*)("\s*[;)])/i);
+                    if (!match) continue;
+                    const titleInLine = match[2];
+                    // Match against raw title (with or without prefix)
+                    if (titleInLine === rawTitle || titleInLine === displayTitle ||
+                        titleInLine === 'v' + displayTitle || titleInLine === 'v ' + displayTitle ||
+                        titleInLine === '>' + displayTitle || titleInLine === '> ' + displayTitle) {
+                        const newPrefix = isCollapsed ? '> ' : 'v ';
+                        lines[i] = line.replace(match[0], match[1] + newPrefix + displayTitle + match[3]);
+                        this.editor.setValue(lines.join('\n'), false);
+                        break;
+                    }
+                }
+            }
+        });
+
+        return titleEl;
+    }
+
+    /**
      * Set table data for display. Pass null to clear all tables.
      */
     setTableData(tables) {
@@ -808,18 +864,8 @@ class VariablesPanel {
             wrapper.dataset.type = 'table';
 
             // Title label
-            if (table.title) {
-                const titleEl = document.createElement('div');
-                titleEl.className = 'mathpad-table-title';
-                titleEl.textContent = table.title;
-                titleEl.style.fontSize = (table.fontSize || 14) + 'px';
-                titleEl.addEventListener('click', () => {
-                    titleEl.classList.toggle('collapsed');
-                    const tableEl = wrapper.querySelector('.mathpad-table');
-                    if (tableEl) tableEl.style.display = titleEl.classList.contains('collapsed') ? 'none' : '';
-                });
-                wrapper.appendChild(titleEl);
-            }
+            const titleEl = this._createTableTitle(table, wrapper);
+            if (titleEl) wrapper.appendChild(titleEl);
 
             const tableEl = document.createElement('table');
             tableEl.className = 'mathpad-table';
@@ -868,18 +914,8 @@ class VariablesPanel {
         wrapper.dataset.type = 'table';
 
         // Title label
-        if (table.title) {
-            const titleEl = document.createElement('div');
-            titleEl.className = 'mathpad-table-title';
-            titleEl.textContent = table.title;
-            titleEl.style.fontSize = (table.fontSize || 14) + 'px';
-            titleEl.addEventListener('click', () => {
-                titleEl.classList.toggle('collapsed');
-                const tableEl = wrapper.querySelector('.mathpad-table');
-                if (tableEl) tableEl.style.display = titleEl.classList.contains('collapsed') ? 'none' : '';
-            });
-            wrapper.appendChild(titleEl);
-        }
+        const titleEl = this._createTableTitle(table, wrapper);
+        if (titleEl) wrapper.appendChild(titleEl);
 
         const tableEl = document.createElement('table');
         tableEl.className = 'mathpad-table mathpad-grid';

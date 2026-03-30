@@ -18,6 +18,7 @@ const UIState = {
     data: null,              // Persisted data from storage
     currentRecordId: null,   // Currently active record
     openTabs: [],            // List of open tab record IDs
+    visitHistory: [],        // Recently visited record IDs (most recent last)
     editors: new Map(),      // Map of recordId -> editor info
     collapsedCategories: new Set() // Collapsed category names in sidebar
 };
@@ -280,6 +281,11 @@ function openRecord(recordId) {
         UI.openTabs.push(recordId);
     }
 
+    // Track visit history (remove if already present, push to end)
+    const histIdx = UIState.visitHistory.indexOf(recordId);
+    if (histIdx !== -1) UIState.visitHistory.splice(histIdx, 1);
+    UIState.visitHistory.push(recordId);
+
     // Switch to this record
     UI.currentRecordId = recordId;
 
@@ -403,9 +409,17 @@ function createEditorForRecord(record) {
     container.appendChild(formulasPanel);
     UI.editorContainer.appendChild(container);
 
+    // Strip stale table output section (table data not persisted — re-solve to regenerate)
+    let initialText = record.text;
+    initialText = initialText.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
+    if (initialText !== record.text) {
+        record.text = initialText;
+        debouncedSave(UI.data);
+    }
+
     // Create SimpleEditor in formulas panel
     const editor = createEditor(formulasPanel, {
-        value: record.text
+        value: initialText
     });
 
     // Create VariablesPanel manager
@@ -430,7 +444,7 @@ function createEditorForRecord(record) {
         if (!syncFromVariables) {
             if (undoRedo) variablesManager.enableFlash();
             variablesManager.updateFromText(value);
-            // Restore cached highlights and status on undo/redo, clear on normal edits
+            // Restore cached highlights and status on undo/redo
             if (metadata) {
                 if (metadata.errors || metadata.equationVarStatus) {
                     variablesManager.setErrors(metadata.errors, metadata.equationVarStatus);
@@ -441,10 +455,11 @@ function createEditorForRecord(record) {
                 if (metadata.statusMessage != null) {
                     setStatus(metadata.statusMessage, metadata.statusIsError);
                 }
-            } else {
+            }
+            // Strip stale sections and clear solve state only on user keyboard input
+            if (editor.isUserInput) {
                 variablesManager.clearErrors();
                 variablesManager.setTableData(null);
-                // Strip stale reference and table output sections on edit
                 let stripped = value;
                 stripped = stripped.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
                 stripped = stripped.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
@@ -452,6 +467,8 @@ function createEditorForRecord(record) {
                     editor.saveToHistoryNow();
                     editor.setValue(stripped, false);
                 }
+                // Cache cleared state so redo restores it correctly
+                editor.setTopMetadata({ tables: null });
             }
         }
         syncFromVariables = false;
@@ -468,8 +485,10 @@ function createEditorForRecord(record) {
         const oldLength = editor.getValue().length;
         editor.setValue(newText, true);  // undoable=true for granular undo of each change
         syncFromVariables = false;  // Reset immediately so undo can update vars panel
-        const delta = newText.length - oldLength;
-        editor.setCursorPosition(Math.max(0, cursorPos + delta));
+        if (document.activeElement === editor.textarea) {
+            const delta = newText.length - oldLength;
+            editor.setCursorPosition(Math.max(0, cursorPos + delta));
+        }
     });
 
     variablesManager.onSolve((undoable) => {
@@ -632,9 +651,23 @@ function closeTab(recordId) {
         UI.editors.delete(recordId);
     }
 
+    // Remove from visit history
+    const histIdx = UIState.visitHistory.indexOf(recordId);
+    if (histIdx !== -1) UIState.visitHistory.splice(histIdx, 1);
+
     // Switch to another tab if this was the current one
     if (UI.currentRecordId === recordId) {
-        if (UI.openTabs.length > 0) {
+        // Find most recently visited record that's still open
+        let nextId = null;
+        for (let i = UIState.visitHistory.length - 1; i >= 0; i--) {
+            if (UI.openTabs.includes(UIState.visitHistory[i])) {
+                nextId = UIState.visitHistory[i];
+                break;
+            }
+        }
+        if (nextId) {
+            openRecord(nextId);
+        } else if (UI.openTabs.length > 0) {
             const newIndex = Math.min(index, UI.openTabs.length - 1);
             openRecord(UI.openTabs[newIndex]);
         } else {
@@ -1540,18 +1573,18 @@ function handleSolve(undoable = true) {
             });
         }
 
-        // Restore cursor to end of same line (keeps scroll position)
-        const newLines = text.split('\n');
-        const targetLine = Math.min(cursorLine, newLines.length - 1);
-        let newPos = 0;
-        for (let i = 0; i < targetLine; i++) {
-            newPos += newLines[i].length + 1; // +1 for newline
+        // Restore cursor to end of same line only if textarea has focus
+        if (document.activeElement === editorInfo.editor.textarea) {
+            const newLines = text.split('\n');
+            const targetLine = Math.min(cursorLine, newLines.length - 1);
+            let newPos = 0;
+            for (let i = 0; i < targetLine; i++) {
+                newPos += newLines[i].length + 1; // +1 for newline
+            }
+            newPos += newLines[targetLine].length; // end of line
+            editorInfo.editor.setCursorPosition(newPos);
+            editorInfo.editor.textarea.blur();
         }
-        newPos += newLines[targetLine].length; // end of line
-        editorInfo.editor.setCursorPosition(newPos);
-
-        // Don't leave focus in the textarea
-        editorInfo.editor.textarea.blur();
         record.text = text;
         debouncedSave(UI.data);
 
@@ -1620,18 +1653,18 @@ function handleClearInput() {
         });
     }
 
-    // Restore cursor to end of same line (keeps scroll position)
-    const newLines = text.split('\n');
-    const targetLine = Math.min(cursorLine, newLines.length - 1);
-    let newPos = 0;
-    for (let i = 0; i < targetLine; i++) {
-        newPos += newLines[i].length + 1; // +1 for newline
+    // Restore cursor only if textarea has focus
+    if (document.activeElement === editorInfo.editor.textarea) {
+        const newLines = text.split('\n');
+        const targetLine = Math.min(cursorLine, newLines.length - 1);
+        let newPos = 0;
+        for (let i = 0; i < targetLine; i++) {
+            newPos += newLines[i].length + 1; // +1 for newline
+        }
+        newPos += newLines[targetLine].length; // end of line
+        editorInfo.editor.setCursorPosition(newPos);
+        editorInfo.editor.textarea.blur();
     }
-    newPos += newLines[targetLine].length; // end of line
-    editorInfo.editor.setCursorPosition(newPos);
-
-    // Don't leave focus in the textarea
-    editorInfo.editor.textarea.blur();
     record.text = text;
     debouncedSave(UI.data);
 }

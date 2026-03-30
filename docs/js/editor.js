@@ -705,10 +705,12 @@ class SimpleEditor {
         // Restore previous state's value, use popped entry's beforeCursor if available
         // (where user was before this edit group started), otherwise keep current cursor
         const state = this.undoStack[this.undoStack.length - 1];
-        const len = state.value.length;
         this.textarea.value = state.value;
-        this.textarea.selectionStart = Math.min(popped.beforeCursorStart ?? cursorStart, len);
-        this.textarea.selectionEnd = Math.min(popped.beforeCursorEnd ?? cursorEnd, len);
+        if (document.activeElement === this.textarea) {
+            const len = state.value.length;
+            this.textarea.selectionStart = Math.min(popped.beforeCursorStart ?? cursorStart, len);
+            this.textarea.selectionEnd = Math.min(popped.beforeCursorEnd ?? cursorEnd, len);
+        }
 
         this.updateHighlighting();
         this.updateLineNumbers();
@@ -736,8 +738,10 @@ class SimpleEditor {
         this.undoStack.push(state);
 
         this.textarea.value = state.value;
-        this.textarea.selectionStart = state.cursorStart;
-        this.textarea.selectionEnd = state.cursorEnd;
+        if (document.activeElement === this.textarea) {
+            this.textarea.selectionStart = state.cursorStart;
+            this.textarea.selectionEnd = state.cursorEnd;
+        }
 
         this.updateHighlighting();
         this.updateLineNumbers();
@@ -800,10 +804,14 @@ class SimpleEditor {
 
         this.textarea.value = value;
 
-        // Restore cursor position (clamped to new length) to prevent scroll jump
+        // Restore cursor only if textarea has focus (prevents scroll-to-cursor jump
+        // when changes come from vars panel, solve, or other programmatic sources)
         const len = value.length;
-        this.textarea.selectionStart = Math.min(cursorStart, len);
-        this.textarea.selectionEnd = Math.min(cursorEnd, len);
+        if (document.activeElement === this.textarea) {
+            this.textarea.selectionStart = Math.min(cursorStart, len);
+            this.textarea.selectionEnd = Math.min(cursorEnd, len);
+        }
+        this.textarea.scrollTop = scrollTop;
 
         if (undoable && changed) {
             // Push new state as current top of stack
@@ -833,9 +841,7 @@ class SimpleEditor {
         this.lineNumbers.scrollTop = scrollTop;
 
         if (changed) {
-            // Pass preMetadata so onChange knows this is a programmatic change
-            // (not a user edit — don't strip stale sections)
-            this.notifyChange(preMetadata);
+            this.notifyChange();
         }
 
         return changed;
@@ -868,10 +874,12 @@ class SimpleEditor {
     }
 
     onInput() {
+        this.isUserInput = true;
         this.saveToHistory();
         this.updateHighlighting();
         this.updateLineNumbers();
         this.notifyChange();
+        this.isUserInput = false;
     }
 
     onScroll() {
