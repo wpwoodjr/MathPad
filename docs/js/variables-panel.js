@@ -814,24 +814,23 @@ class VariablesPanel {
             const tableEl = wrapper.querySelector('.mathpad-table');
             if (tableEl) tableEl.style.display = isCollapsed ? 'none' : '';
 
-            // Update title prefix in source text
-            if (this.editor) {
+            // Update title prefix in source text using startLine
+            if (this.editor && table.startLine != null) {
                 const text = this.editor.getValue();
                 const lines = text.split('\n');
-                // Find the table/grid definition line with this title
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i];
+                const lineIdx = table.startLine - 1; // startLine is 1-based
+                const line = lines[lineIdx];
+                if (line) {
                     const match = line.match(/^((?:table|grid)\s*\(\s*")(.*)("\s*[;)])/i);
-                    if (!match) continue;
-                    const titleInLine = match[2];
-                    // Match against raw title (with or without prefix)
-                    if (titleInLine === rawTitle || titleInLine === displayTitle ||
-                        titleInLine === 'v' + displayTitle || titleInLine === 'v ' + displayTitle ||
-                        titleInLine === '>' + displayTitle || titleInLine === '> ' + displayTitle) {
+                    if (match) {
+                        // Strip existing v/> prefix from source title
+                        let srcTitle = match[2];
+                        if (srcTitle.charAt(0) === 'v' || srcTitle.charAt(0) === '>') {
+                            srcTitle = srcTitle.substring(1).trimStart();
+                        }
                         const newPrefix = isCollapsed ? '> ' : 'v ';
-                        lines[i] = line.replace(match[0], match[1] + newPrefix + displayTitle + match[3]);
+                        lines[lineIdx] = line.replace(match[0], match[1] + newPrefix + srcTitle + match[3]);
                         this.editor.setValue(lines.join('\n'), false);
-                        break;
                     }
                 }
             }
