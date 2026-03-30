@@ -170,3 +170,65 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 
 --Variables--
 y[0:1]->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Loan calculator with cmpndsYr table"
+
+--Formulas--
+pmt(pv; fv; rate; n; pmtDue) = -(pv + fv/(1 + rate)**n)*rate / ((1 - (1 + rate)**-n)*(1 + rate)**pmtDue)
+
+--Equations--
+pmt = pmt(pv; fv; r; years*pmtsYr; pmtDue)
+r = (1 + rate/cmpndsYr)**(cmpndsYr/pmtsYr) - 1
+// r %->> 0.712945221110274%
+
+--Variables--
+"*Enter all but one values, then click solve"
+
+pv $: $100,000     "present value (loan or annuity)"
+fv $: $0           "future value (balloon payment)"
+rate %: 6.125%     "annual interest rate %"
+years : 30         "number of years"
+pmtsYr: 12         "payments per year"
+cmpndsYr: 12               "compounds per year"
+pmt $: -$607.61    "payment"
+pmtDue: 0          "pmt due - 0 end of period, 1 begin period"
+
+---
+table("> test no limits") = {
+  pmtsYr: 1..12
+  cmpndsYr<-
+  pmtsYr->
+  cmpndsYr->
+}
+
+table("> test [0..12]") = {
+  pmtsYr: 1..12
+  cmpndsYr[0..12]<-
+  pmtsYr->
+  cmpndsYr->
+}
+
+table("> test start just above 0") = {
+  pmtsYr: 1..12
+  cmpndsYr[0.00001..12]<-
+  pmtsYr->
+  cmpndsYr->
+}
+
+table("v test step 2") = {
+  pmtsYr: 1..12
+  cmpndsYr[0..12..2]<-
+  pmtsYr->
+  cmpndsYr->
+}
+
+table("> test fine grid") = {
+  pmtsYr: 1..12
+  cmpndsYr[0..12..0.01]<-
+  pmtsYr->
+  cmpndsYr->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

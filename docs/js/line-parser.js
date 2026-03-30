@@ -251,12 +251,12 @@ class LineParser {
             idx--;
         }
 
-        // Check for limits: [lowExpr : highExpr]
+        // Check for limits: [low:high] or [low..high] or [low..high..step]
         if (idx >= 0 && this.tokens[idx].type === TokenType.RBRACKET) {
             const rbracketIdx = idx;
             let depth = 1;
             idx--;
-            let colonInBracket = -1;
+            const separators = []; // indices of : or .. at depth 1
             while (idx >= 0) {
                 const t = this.tokens[idx];
                 if (t.type === TokenType.RBRACKET) {
@@ -265,18 +265,28 @@ class LineParser {
                     depth--;
                     if (depth === 0) break;
                 }
-                if (depth === 1 && t.type === TokenType.COLON) {
-                    colonInBracket = idx;
+                if (depth === 1 && (t.type === TokenType.COLON || t.type === TokenType.DOT_DOT)) {
+                    separators.push(idx);
                 }
                 idx--;
             }
             // idx is now at LBRACKET (or -1 if unmatched)
+            // separators are in reverse order (right-to-left scan)
             if (idx >= 0) {
                 hasLimits = true;
-                if (colonInBracket !== -1) {
+                if (separators.length >= 2) {
+                    // [low .. high .. step] — separators[1] is first .., separators[0] is second ..
+                    const sep1 = separators[separators.length - 1]; // leftmost
+                    const sep2 = separators[separators.length - 2]; // second
                     limits = {
-                        lowTokens: this.tokens.slice(idx + 1, colonInBracket),
-                        highTokens: this.tokens.slice(colonInBracket + 1, rbracketIdx)
+                        lowTokens: this.tokens.slice(idx + 1, sep1),
+                        highTokens: this.tokens.slice(sep1 + 1, sep2),
+                        stepTokens: this.tokens.slice(sep2 + 1, rbracketIdx)
+                    };
+                } else if (separators.length === 1) {
+                    limits = {
+                        lowTokens: this.tokens.slice(idx + 1, separators[0]),
+                        highTokens: this.tokens.slice(separators[0] + 1, rbracketIdx)
                     };
                 }
                 idx--; // Move past LBRACKET

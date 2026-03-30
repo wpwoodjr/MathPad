@@ -126,6 +126,10 @@ function solveEquationInContext(eqText, eqLine, context, variables, substitution
                 low: evaluate(lowAST, context),
                 high: evaluate(highAST, context)
             };
+            if (varInfo.declaration.limits.stepTokens) {
+                const stepAST = parseTokens(varInfo.declaration.limits.stepTokens);
+                limits.step = evaluate(stepAST, context);
+            }
         } catch (e) {
             // Ignore limit parsing errors
         }
