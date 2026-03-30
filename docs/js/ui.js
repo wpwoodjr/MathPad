@@ -298,7 +298,7 @@ function openRecord(recordId) {
 
     // Scroll sidebar to show current record
     const activeItem = document.querySelector(`.record-item[data-record-id="${recordId}"]`);
-    if (activeItem) activeItem.scrollIntoView({ block: 'center' });
+    if (activeItem) activeItem.scrollIntoView({ block: 'nearest' });
 
     // Restore status from record (don't re-save — it's already persisted)
     if (record.status) {
@@ -449,6 +449,7 @@ function createEditorForRecord(record) {
                 stripped = stripped.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
                 stripped = stripped.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
                 if (stripped !== value) {
+                    editor.saveToHistoryNow();
                     editor.setValue(stripped, false);
                 }
             }

@@ -833,7 +833,9 @@ class SimpleEditor {
         this.lineNumbers.scrollTop = scrollTop;
 
         if (changed) {
-            this.notifyChange();
+            // Pass preMetadata so onChange knows this is a programmatic change
+            // (not a user edit — don't strip stale sections)
+            this.notifyChange(preMetadata);
         }
 
         return changed;
