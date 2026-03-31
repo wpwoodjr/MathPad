@@ -137,22 +137,58 @@ totFFees $->
             {
                 id: generateId(),
                 title: 'Example: TVM',
-                text: `"Loan calculator"
+                text: `"Loan calculator with tables"
 
 --Formulas--
-pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+pmt(pv; fv; rate; n; pmtDue) = -(pv + fv/(1 + rate)**n)*rate / ((1 - (1 + rate)**-n)*(1 + rate)**pmtDue)
 
 --Equations--
-pmt = pmt(pv; rate/12; years*12; fv)
+pmt = pmt(pv; fv; r; years*pmtsYr; pmtDue)
+// r<- vs r: vs r = vs no r
+r = (1 + rate/cmpndsYr)**(cmpndsYr/pmtsYr) - 1
 
 --Variables--
-"*Enter value(s), then calculate a variable by clicking its solve icon \u27F2"
- 
-   pv $<- $100,000     "present value (loan or annuity)"
-   fv $<- $0           "future value (balloon payment)"
- rate %<- 6.125%       "annual interest rate %"
-years <- 30            "number of years"
-  pmt $<-              "monthly payment"
+"*Enter all but one values, then click solve"
+
+pv $: $100,000     "present value (loan or annuity)"
+fv $: $0           "future value (balloon payment)"
+rate %: 6.125%     "annual interest rate %"
+years : 30         "number of years"
+pmtsYr: 12         "payments per year"
+cmpndsYr: 12       "compounds per year"
+pmt $:             "payment"
+pmtDue: 0          "pmt due - 0 end of period, 1 begin period"
+
+---
+
+table("> Amortization Schedule for \\years\\ year(s) at \\rate%\\") = {
+  lastPmt: years*pmtsYr - pmtDue
+  paymentNum: 0..lastPmt
+  interest: if(paymentNum == 0; 0; round(-balance~ * r; 2)) // round to cents
+  principal: if(paymentNum == 0; pmtDue*pmt; if(paymentNum == lastPmt; -balance~; pmt - interest))
+  balance: if(paymentNum == 0; pv + pmtDue*pmt; balance~ + principal)
+  year: floor((paymentNum - 1)/pmtsYr) + 1
+  payment: principal + interest
+
+  "Pmt#" paymentNum->
+  "Year" year->
+  "Payment" payment$->
+  "Principal" principal$->
+  "Interest" interest$->
+  "Balance" balance$->
+}
+
+
+---
+
+grid("v Payment for \\pv$\\ loan at various rates and loan lengths") = {
+  years: 5..30..5
+  rate: rate-0.5%..rate+0.5%..0.0625%
+  pmt<-
+  rate%->
+  years->
+  pmt$->
+}
 `,
                 category: 'Finance',
                 places: 2,
