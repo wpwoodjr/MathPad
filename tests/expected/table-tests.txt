@@ -1617,3 +1617,26 @@ grid("v Payment for \pv$\ loan at various rates and loan lengths") = {
 7.56%	-$2,006.77	-$1,190.28	-$930.57	-$809.42	-$743.06	-$703.50
 7.63%	-$2,009.74	-$1,193.55	-$934.13	-$813.25	-$747.14	-$707.79
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Line 6: Variable \"x\" is already defined\nLine 8: Variable \"y\" is already defined\nLine 9: Variable \"y\" is already defined"; StatusIsError = 1
+"Dup decls in table"
+
+table("Dup decls") = {
+  x: 1..3
+  x: 3..4
+  y: x**2
+  y: x**3
+  y<-
+  x->
+  y->
+}
+
+"--- Table Outputs ---"
+"Dup decls"
+"x"	"y"
+1	1
+2	4
+3	9
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

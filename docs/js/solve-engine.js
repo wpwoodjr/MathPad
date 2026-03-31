@@ -831,6 +831,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     const definitions = [];  // { name, exprText, limits }
     const unknowns = [];     // { name, limits }
     const columns = [];      // { name, header, format, fullPrecision, base, limits, ast }
+    const declaredNames = new Set(); // track duplicate input declarations
 
     for (let i = 0; i < bodyTokens.length; i++) {
         const lineTokens = bodyTokens[i].filter(t => t.type !== TokenType.EOF);
@@ -840,7 +841,13 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         if (!parsed) continue;
 
         if (parsed.kind === 'declaration') {
+            // Check for duplicate input declarations
+            if (parsed.type === VarType.INPUT && declaredNames.has(parsed.name)) {
+                errors.push(`Line ${tableDef.startLine + i + 1}: Variable "${parsed.name}" is already defined`);
+                continue;
+            }
             if (parsed.type === VarType.INPUT) {
+                declaredNames.add(parsed.name);
                 // Check if valueTokens contain DOT_DOT → iterator
                 const hasDotDot = parsed.valueTokens && parsed.valueTokens.some(t => t.type === TokenType.DOT_DOT);
                 if (hasDotDot) {
