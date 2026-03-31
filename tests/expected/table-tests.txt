@@ -1620,7 +1620,7 @@ grid("v Payment for \pv$\ loan at various rates and loan lengths") = {
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 6: Variable \"x\" is already defined\nLine 8: Variable \"y\" is already defined\nLine 9: Variable \"y\" is already defined"; StatusIsError = 1
+Status = "Line 5: Variable \"x\" is already defined\nLine 7: Variable \"y\" is already defined\nLine 8: Variable \"y\" is already defined"; StatusIsError = 1
 "Dup decls in table"
 
 table("Dup decls") = {

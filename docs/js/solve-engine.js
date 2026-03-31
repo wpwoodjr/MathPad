@@ -888,7 +888,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         if (parsed.kind === 'declaration') {
             // Check for duplicate input declarations
             if (parsed.type === VarType.INPUT && declaredNames.has(parsed.name)) {
-                errors.push(`Line ${tableDef.startLine + i + 1}: Variable "${parsed.name}" is already defined`);
+                errors.push(`Line ${tableDef.startLine + i}: Variable "${parsed.name}" is already defined`);
                 continue;
             }
             if (parsed.type === VarType.INPUT) {
