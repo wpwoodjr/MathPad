@@ -471,7 +471,9 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                         const tolPct = parseFloat(toFixed(result.tolerance * 100, pctPlaces));
                         errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (relative diff ${diffPct}% >= ${tolPct}%)`);
                     } else {
-                        const diff = parseFloat(toFixed(result.difference, result.tolPlaces));
+                        const diff = result.difference < 0.001
+                            ? parseFloat(result.difference.toPrecision(2))
+                            : parseFloat(toFixed(result.difference, result.tolPlaces));
                         errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (absolute diff ${diff} >= ${result.tolerance})`);
                     }
                 }
