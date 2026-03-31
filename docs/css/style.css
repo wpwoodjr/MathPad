@@ -1108,10 +1108,10 @@ button {
         display: none;
     }
 
-    /* Slide-out sidebar drawer */
+    /* Slide-out sidebar drawer — hide fully off-screen */
     .sidebar {
         position: fixed;
-        left: -220px;
+        left: -100%;
         top: var(--header-height);
         height: calc(100vh - var(--header-height));
         height: calc(100dvh - var(--header-height)); /* Dynamic viewport height */
