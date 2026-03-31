@@ -591,3 +591,17 @@ x = y + 1
 y: 3
 x + 10 =
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Round: symmetric half-away-from-zero, no FP midpoint errors"
+
+round(1.255; 2)->>
+round(-1.255; 2)->>
+round(1.555; 2)->>
+round(-1.555; 2)->>
+round(0.5)->>
+round(-0.5)->>
+round(0.075; 2)->>
+round(-0.075; 2)->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

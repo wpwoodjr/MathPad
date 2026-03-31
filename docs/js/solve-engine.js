@@ -911,6 +911,17 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
     const defNames = new Set(defASTs.filter(d => d.ast).map(d => d.name));
 
+    // Pre-evaluate body definitions needed for iterator bounds
+    // (e.g., lastPmt: years*pmtsYr - pmtDue used in paymentNum: 0..lastPmt)
+    for (const { name, ast } of defASTs) {
+        if (!ast) continue;
+        try {
+            context.setVariable(name, evaluate(ast, context));
+        } catch (e) {
+            // May depend on iterators or unknowns — skip, will be evaluated later
+        }
+    }
+
     // Evaluate iterator bounds
     const evaledIterators = [];
     for (const iter of iterators) {
@@ -958,6 +969,13 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         referencedVars.add(col.name);
     }
     for (const iter of iterators) {
+        // Include variables used in iterator bounds (e.g., lastPmt in 0..lastPmt)
+        for (const expr of [iter.startExpr, iter.endExpr, iter.stepExpr]) {
+            if (expr) {
+                try { for (const v of findVariablesInAST(parseExpression(expr))) referencedVars.add(v); }
+                catch (e) { }
+            }
+        }
         if (!referencedVars.has(iter.name)) {
             errors.push(`Line ${tableDef.startLine + iter.lineIdx}: Table variable '${iter.name}' is not used in any equation or output`);
         }

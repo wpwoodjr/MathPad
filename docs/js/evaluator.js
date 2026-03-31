@@ -355,10 +355,14 @@ const builtinFunctions = {
     int: (args) => Math.trunc(args[0]),
     frac: (args) => args[0] - Math.trunc(args[0]),
     round: (args) => {
-        if (args.length === 1) return Math.round(args[0]);
-        const places = args[1];
-        const factor = Math.pow(10, places);
-        return Math.round(args[0] * factor) / factor;
+        // Round half away from zero (symmetric for positive/negative)
+        // Uses string-based exponential shift to avoid IEEE 754 midpoint errors
+        // (same approach as toFixed: Number('0.075e2') → 7.5 exact)
+        const x = args[0];
+        const places = args.length > 1 ? args[1] : 0;
+        const shifted = Number(x + 'e' + places);
+        const rounded = Math.sign(shifted) * Math.round(Math.abs(shifted));
+        return Number(rounded + 'e-' + places);
     },
     floor: (args) => Math.floor(args[0]),
     ceil: (args) => Math.ceil(args[0]),
