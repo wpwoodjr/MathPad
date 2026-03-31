@@ -236,24 +236,20 @@ c0: -14
 f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 
 --Variables--
-"*Press Solve to compute all 5 roots"
+"*Press Solve to find all 5 roots"
 
 
+f(x; c5; c4; c3; c2; c1; c0) = 0
 
-f(x1; c5; c4; c3; c2; c1; c0) = 0
-x1->
+x->
 
-f(x2; c5; c4; c3; c2; c1; c0) = 0
-x2[2:2.5]-> "search for solution in range 2 to 2.5"
+x[2:2.5]-> "search for solution in range 2 to 2.5"
 
-f(x3; c5; c4; c3; c2; c1; c0) = 0
-x3[2.5:3]-> "-> solves to record's default precision"
+x[2.5:3]-> "-> solves to record's default precision"
 
-f(x4; c5; c4; c3; c2; c1; c0) = 0
-x4[-1:0]->> "->> provides full precision"
+x[-1:0]->> "->> provides full precision"
 
-f(x5; c5; c4; c3; c2; c1; c0) = 0
-x5[-4:-2]->>`,
+x[-4:-2]->`,
                 category: 'Math',
                 places: 4,
                 stripZeros: true,
