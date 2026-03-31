@@ -172,6 +172,84 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 y[0:1]->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Fifth degree polynomial"
+
+c5: 1
+c4: -2
+c3: -10
+c2: 20
+c1: 9
+c0: -14
+f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
+
+relDiff(x; y) = abs(x - y)/max(abs(x); abs(y))
+
+--Variables--
+"*Press Solve to compute all 5 roots"
+
+
+f(x; c5; c4; c3; c2; c1; c0) = 0
+f(y; c5; c4; c3; c2; c1; c0) = 0
+
+x->
+
+x[2:2.5]->                    "search for solution in range 2 to 2.5"
+
+x[2.5:3]->                    "-> solves to record's default precision"
+
+x[-1:0]->>                    "->> provides full precision"
+
+x[-4:-2]->
+
+x[-2..-4]->
+
+x[0:-3]->>
+x[-3:0]->>
+
+grid("test variable limit solving") = {
+  lim1: -4..3..1
+  lim2: -2..3..1
+  lim1->
+  lim2->
+  x[lim1:lim2]<-
+  y[lim2:lim1]<-
+  relDiff(x; y)->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"x with input decl is nominal value"
+
+c5: 1
+c4: -2
+c3: -10
+c2: 20
+c1: 9
+c0: -14
+f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
+
+--Variables--
+"*Press Solve to compute all 5 roots"
+
+
+f(x; c5; c4; c3; c2; c1; c0) = 0
+
+x->
+
+x[2:2.5]->                    "search for solution in range 2 to 2.5"
+
+x[2.5:3]->                    "-> solves to record's default precision"
+
+x[-1:0]->>                    "->> provides full precision"
+
+x[-4:-2]->
+
+x::
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Loan calculator with cmpndsYr table"

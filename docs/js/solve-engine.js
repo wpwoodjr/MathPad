@@ -516,7 +516,10 @@ function formatOutput(text, declarations, context, computedValues, record, solve
     for (const info of declarations) {
         if (!info.valueTokens || info.valueTokens.length === 0) {
             let value = null;
-            if (context.variables.has(info.name)) {
+            // Check for per-declaration re-solve value (multiple outputs with different limits)
+            if (computedValues.has(`__resolvevar_${info.lineIndex}`)) {
+                value = computedValues.get(`__resolvevar_${info.lineIndex}`);
+            } else if (context.variables.has(info.name)) {
                 value = context.variables.get(info.name);
             } else if (context.constants.has(info.name) && !context.shadowedConstants.has(info.name)) {
                 value = context.constants.get(info.name);
@@ -759,8 +762,48 @@ function solveRecord(text, context, record, parserTokens) {
         if (context.hasVariable(name)) preSolveVars.set(name, context.getVariable(name));
     }
 
-    // Evaluate expression outputs (between solve and format)
+    // Re-solve for additional output declarations with different limits
+    // First output sets the nominal value; subsequent outputs with limits re-solve the equation
     const computedValues = solveResult.computedValues;
+    const seenOutputVars = new Set();
+    for (const decl of declarations) {
+        if (decl.declaration.type !== VarType.OUTPUT) continue;
+        if (!seenOutputVars.has(decl.name)) {
+            seenOutputVars.add(decl.name); // first output is nominal — skip
+            continue;
+        }
+        // Additional output for same variable — re-solve with this declaration's limits
+        if (!decl.declaration.limits) continue; // no limits → just display nominal value
+        if (!context.hasVariable(decl.name)) continue; // nominal wasn't solved
+        // Find the equation that contains this variable
+        for (const eq of outerEquations) {
+            if (!eq.leftText || !eq.rightText) continue;
+            try {
+                const eqVars = new Set([
+                    ...findVariablesInAST(parseExpression(eq.leftText)),
+                    ...findVariablesInAST(parseExpression(eq.rightText))
+                ]);
+                if (!eqVars.has(decl.name)) continue;
+                // Build a temporary variables map with this declaration's limits
+                const tempVars = buildVariablesMap(declarations);
+                tempVars.set(decl.name, decl); // use THIS declaration's limits
+                // Temporarily clear the variable so it's the unknown
+                const savedValue = context.getVariable(decl.name);
+                context.variables.delete(decl.name);
+                context.declareVariable(decl.name);
+                const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
+                const result = solveEquationInContext(eq.text, eq.startLine, context, tempVars,
+                    new Map(), eq.leftText, eq.rightText, modValue);
+                // Restore nominal value
+                context.setVariable(decl.name, savedValue);
+                if (result.solved) {
+                    computedValues.set(`__resolvevar_${decl.lineIndex}`, result.value);
+                }
+                break; // use first matching equation
+            } catch (e) { }
+        }
+    }
+
     // Evaluate expression outputs
     for (const output of exprOutputs) {
         if (computedValues.has(`__exprout_${output.startLine}`)) continue;
