@@ -898,7 +898,40 @@ class VariablesPanel {
 
             wrapper.appendChild(tableEl);
             this.insertRowInOrder(wrapper, table.startLine - 1);
+            this._setStickyHeaderOffsets(wrapper);
         }
+    }
+
+    /**
+     * Set sticky top offsets for thead rows to stack below the sticky title.
+     */
+    _setStickyHeaderOffsets(wrapper) {
+        requestAnimationFrame(() => {
+            const titleEl = wrapper.querySelector('.mathpad-table-title');
+            // Match title width to table width so it covers all columns
+            if (titleEl) {
+                const tableEl = wrapper.querySelector('.mathpad-table');
+                if (tableEl) titleEl.style.minWidth = tableEl.offsetWidth + 'px';
+            }
+            // Title sticks at -4px, so its bottom is at titleHeight - 4
+            const titleBottom = titleEl ? (titleEl.offsetHeight - 4) : 0;
+            const isGrid = wrapper.querySelector('.mathpad-grid');
+            if (isGrid) {
+                // Grid: make thead sticky as a unit (individual th sticky fails for leftmost cells)
+                const thead = wrapper.querySelector('thead');
+                if (thead) thead.style.top = titleBottom + 'px';
+            } else {
+                // Table: individual th sticky
+                const headerRows = wrapper.querySelectorAll('thead tr');
+                let offset = titleBottom;
+                for (const row of headerRows) {
+                    for (const th of row.querySelectorAll('th')) {
+                        th.style.top = offset + 'px';
+                    }
+                    offset += row.offsetHeight;
+                }
+            }
+        });
     }
 
     /**
@@ -1038,6 +1071,7 @@ class VariablesPanel {
 
         wrapper.appendChild(tableEl);
         this.insertRowInOrder(wrapper, table.startLine - 1);
+        this._setStickyHeaderOffsets(wrapper);
     }
 }
 

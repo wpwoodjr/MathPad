@@ -1509,7 +1509,9 @@ body.sidebar-resizing * {
     color: var(--syn-keyword);
     background: var(--bg-hover);
     padding: 4px 8px;
-    margin-bottom: 4px;
+    position: sticky;
+    top: -4px;
+    z-index: 4;
     border-radius: 3px;
     cursor: pointer;
     user-select: none;
@@ -1535,9 +1537,11 @@ body.sidebar-resizing * {
 }
 
 .mathpad-table {
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-family: var(--font-mono);
     font-size: 14px;
+    margin: 0;
 }
 
 .mathpad-table th {
@@ -1547,7 +1551,17 @@ body.sidebar-resizing * {
     color: var(--syn-keyword);
     font-weight: normal;
     white-space: nowrap;
+    position: sticky;
+    z-index: 1;
+    background: var(--bg-secondary);
 }
+
+.mathpad-grid thead {
+    position: sticky;
+    z-index: 3;
+    background: var(--bg-secondary);
+}
+
 
 .mathpad-table td {
     padding: 2px 8px;

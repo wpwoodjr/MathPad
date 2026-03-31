@@ -1122,7 +1122,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                 iter2Format = col.format;
                 iter2FullPrec = col.fullPrecision;
             }
-        } else if (!cellVar && !col.ast && !iterNames.has(col.name)) {
+        } else if (!cellVar && (col.ast || !iterNames.has(col.name))) {
             cellVar = col;
         }
     }
@@ -1158,7 +1158,12 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             ]);
 
             if (cellVar && !badVars.has(cellVar.name)) {
-                const value = context.getVariable(cellVar.name);
+                let value;
+                if (cellVar.ast) {
+                    try { value = evaluate(cellVar.ast, context); } catch (e) { }
+                } else {
+                    value = context.getVariable(cellVar.name);
+                }
                 if (value !== undefined) {
                     gridRow.push(formatVariableValue(value, cellVar.format, cellVar.fullPrecision, formatOpts));
                 } else { gridRow.push(''); }
