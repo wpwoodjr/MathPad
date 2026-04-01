@@ -277,13 +277,13 @@ f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 
 f(x; c5; c4; c3; c2; c1; c0) = 0
 
-x->
+x->                    "positive root closest to 0"
 
-x[2:2.5]-> "search for solution in range 2 to 2.5"
+x[2:2.5]->             "search for root in range 2 to 2.5"
 
-x[2.5:3]-> "-> solves to record's default precision"
+x[2.5:3]->             "-> solves to record's default precision"
 
-x[-1:0]->> "->> provides full precision"
+x[-1:0]->>             "->> provides full precision"
 
 x[-4:-2]->`,
                 category: 'Math',

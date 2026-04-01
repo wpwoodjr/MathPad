@@ -49,69 +49,69 @@ mod(-720; 360)->>
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"Degree equality operator (=°) — mod-aware balance check"
+"Degree equality operator (°=) — mod-aware balance check"
 
 // Same angle, same representation — should balance
 a: 45
 b: 45
-a =° b
+a °= b
 
 // Opposite sides of 0/360 boundary — should balance (mod 360)
 c: 359.99
 d: 0.01
-c =° d
+c °= d
 
 // Wrap-around: 720.5 mod 360 = 0.5, and 0.5 — should balance
 e: 720.5
 f: 0.5
-e =° f
+e °= f
 
 // Large negative wrap: -0.01 mod 360 = 359.99 vs 359.99 — should balance
 g: -0.01
 h: 359.99
-g =° h
+g °= h
 
 // Should NOT balance (different angles even mod 360)
 i: 10
 j: 20
-i =° j
+i °= j
 
 // Should NOT balance — both in (180,360), no normalization shift
 k: 200
 l: 210
-k =° l
+k °= l
 
 // Should NOT balance — wrapping, 0 shifts to 360
 m: 0
 n: 350
-m =° n
+m °= n
 
 // Should NOT balance — straddle n/2, both shift +modN
 o: 178
 p: 182
-o =° p
+o °= p
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° with Brent's solver — solve for unknown"
+"°= with Brent's solver — solve for unknown"
 
-// Solve for x where x =° 350 (Brent should find x near 350)
+// Solve for x where x °= 350 (Brent should find x near 350)
 x[340:360]->
-x =° 350
+x °= 350
 
-// Solve for y where y =° 0.01 (Brent should find y near 0.01)
+// Solve for y where y °= 0.01 (Brent should find y near 0.01)
 y[-10:10]->
-y =° 0.01
+y °= 0.01
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° in braced equations"
+"°= in braced equations"
 
 a: 359.99
 b: 0.01
-{a =° b}
+{a °= b}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -143,22 +143,22 @@ modIsClose(359.99; 0.01; perigon(); places()) && modIsClose(45; 405; perigon(); 
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"=° in radians mode (mod 2*pi)"
+"°= in radians mode (mod 2*pi)"
 
 // Near 2*pi boundary — should balance
 a: 6.28
 b: 0.0031853071795864
-a =° b
+a °= b
 
 // Same value — should balance
 c: 1.5
 d: 1.5
-c =° d
+c °= d
 
 // Should NOT balance
 e: 1
 f: 2
-e =° f
+e °= f
 
 // Straddle pair at places=2
 modIsClose(2*pi(); 2*pi()*(1 - 0.0051); perigon(); places())->
@@ -173,110 +173,110 @@ modIsClose(1; 2; perigon(); places())->
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° with mod-aware Brent's — wrapping past 360°"
+"°= with mod-aware Brent's — wrapping past 360°"
 
 // x + 20 = 370, which is 10° mod 360
 // Without mod-aware error, Brent's sees no sign change in [0:360]
 // With mod-aware error, Brent's correctly finds y = 10
 x: 350
 y[0:360]->
-x + 20 =° y
+x + 20 °= y
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° with mod-aware Brent's — atan discontinuity"
+"°= with mod-aware Brent's — atan discontinuity"
 
 // atan(b; -1) has a discontinuity at b=0: jumps from ~180° to ~-180°
 // Without mod-aware error, Brent's finds false root at discontinuity
 // With mod-aware error, Brent's correctly finds b = tan(10°) ≈ 0.18
 a: 170
 b[-10:10]->
-a =° atan(b; -1)
+a °= atan(b; -1)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° definition — with limits"
+"°= definition — with limits"
 
-// y =° 365 + a: direct eval gives y = 365, outside limits → Brent's finds y = 5
+// y °= 365 + a: direct eval gives y = 365, outside limits → Brent's finds y = 5
 a: 0
 y[-10:10]->
-y =° 365 + a
+y °= 365 + a
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° definition — without limits"
+"°= definition — without limits"
 
 // Without limits, direct eval gives expression value (365)
 a: 0
 y->
-y =° 365 + a
+y °= 365 + a
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° definition — non-standard limits"
+"°= definition — non-standard limits"
 
 // Limits [360:480], direct eval gives 5 (outside limits) → Brent's finds y = 365
 a: 0
 y[360:480]->
-y =° 5 + a
+y °= 5 + a
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° substitution system — two =° equations"
+"°= substitution system — two °= equations"
 
-// Two unknowns, two =° equations — needs substitutions to reduce
-// smg + salt =° cmg derives smg = cmg - salt, plugged into eq 1
+// Two unknowns, two °= equations — needs substitutions to reduce
+// smg + salt °= cmg derives smg = cmg - salt, plugged into eq 1
 salt->
 smg->
-drift =° smg - salt
-smg + salt =° cmg
+drift °= smg - salt
+smg + salt °= cmg
 cmg: 7
 drift: 7
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° substitution system — wrap-around values"
+"°= substitution system — wrap-around values"
 
 // Same structure but values cross 360° boundary
-// cmg=350, drift=20: smg+salt =° 350, smg-salt =° 20
+// cmg=350, drift=20: smg+salt °= 350, smg-salt °= 20
 // smg = (350+20)/2 mod 360 = 185, salt = 185-350 mod 360 = -165 or 195
 salt->
 smg->
-drift =° smg - salt
-smg + salt =° cmg
+drift °= smg - salt
+smg + salt °= cmg
 cmg: 350
 drift: 20
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° mod-aware Brent's — combined cases"
+"°= mod-aware Brent's — combined cases"
 
 a: 1
 
 z[-10:10]->
-z + a =° 365
+z + a °= 365
 
 y[-10:10]->
-y =° 365 + a
+y °= 365 + a
 
 x->
-x =° 365
+x °= 365
 
 w[360:480]->
-w =° 5 + a
+w °= 5 + a
 
 u[-10:10]->
-u =° 365*2 - 1
+u °= 365*2 - 1
 
-drift =° smg - salt
-smg + salt =° cmg
+drift °= smg - salt
+smg + salt °= cmg
 salt<-
 smg<-
 cmg: 12
@@ -285,40 +285,40 @@ drift: 20
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"=° residual check — wide limits reject wrapping discontinuity"
+"°= residual check — wide limits reject wrapping discontinuity"
 
 // Limits [-600:600]: direct eval gives 361, within limits
 v[-600:600]->
-v =° 360 + 1
+v °= 360 + 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"=° mod-aware Brent's — radians mode"
+"°= mod-aware Brent's — radians mode"
 
 // Wrapping past 2*pi: x + 0.1 = 2*pi + 0.1 ≈ 6.3832
 // Brent's finds y ≈ 0.1 (the representative in [-1:1])
 x: 2*pi()
 y[-1:1]->
-x + 0.1 =° y
+x + 0.1 °= y
 
-// Direct eval in radians: z =° 2*pi + 1 → z = 2*pi+1 ≈ 7.28, outside [-4:4] → Brent's finds z = 1
+// Direct eval in radians: z °= 2*pi + 1 → z = 2*pi+1 ≈ 7.28, outside [-4:4] → Brent's finds z = 1
 z[-4:4]->
-z =° 2*pi() + 1
+z °= 2*pi() + 1
 
 // Without limits: direct eval gives expression value (4*pi+0.5 ≈ 13.07)
 w->
-w =° 4*pi() + 0.5
+w °= 4*pi() + 0.5
 
 // atan discontinuity in radians
 // atan(b; -1) ≈ pi - atan(b) for b > 0; need result ≡ 2.967 (≈ pi - 0.175)
 a: 2.967
 b[-10:10]->
-a =° atan(b; -1)
+a °= atan(b; -1)
 
 // Substitution system in radians
-drift =° smg - salt
-smg + salt =° cmg
+drift °= smg - salt
+smg + salt °= cmg
 salt<-
 smg<-
 cmg: 1

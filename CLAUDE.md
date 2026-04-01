@@ -216,7 +216,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 | `price$:` | Money format | `$` before marker = money format |
 | `rate%: 7.5%` | Percentage | `%` before marker = percent (stored as 0.075) |
 | `angle°: 400°` | Degrees | `°` before marker = degrees format (mod 360 on output); `400°` literal = 400 (no mod) |
-| `a =° b` | Degree equality | Mod-aware comparison (mod 360 or mod 2π per degreesMode): equation balance check or logical operator (returns 1/0) |
+| `a °= b` | Degree equality | Mod-aware comparison (mod 360 or mod 2π per degreesMode): equation balance check or logical operator (returns 1/0) |
 | `expr$->` | Expression output | Format expression result as money |
 | `x~` | Pre-solve value | Strictly returns value before this solve started |
 | `x~?` | Existence check | 1 if x has a pre-solve value, 0 otherwise |

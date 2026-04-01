@@ -68,12 +68,12 @@ An equation is any line with `=` between two expressions. If all variables have 
 | Syntax | Behavior |
 |--------|----------|
 | `a = b` | Standard equation — balance check or solve for unknown |
-| `a =° b` | Degree equality — compares mod 360 (or mod 2π in radians mode), so `359.99 =° 0.01` balances |
+| `a °= b` | Degree equality — compares mod 360 (or mod 2π in radians mode), so `359.99 °= 0.01` balances |
 
-The `=°` operator also works as a logical comparison in expressions, returning 1 (true) or 0 (false):
+The `°=` operator also works as a logical comparison in expressions, returning 1 (true) or 0 (false):
 
 ```
-if(heading =° targetHeading; "on course"; "off course")
+if(heading °= targetHeading; "on course"; "off course")
 ```
 
 ### Algebraic Substitution

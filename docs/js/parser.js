@@ -498,10 +498,10 @@ class Tokenizer {
             return this.makeToken(TokenType.OPERATOR, twoChar, startLine, startCol);
         }
 
-        // =° (degree equality — mod-aware equation operator)
-        if (ch === '=' && ch2 === '°') {
+        // °= (degree equality — mod-aware equation operator)
+        if (ch === '°' && ch2 === '=') {
             this.advance(2);
-            const token = this.makeToken(TokenType.OPERATOR, '=°', startLine, startCol);
+            const token = this.makeToken(TokenType.OPERATOR, '°=', startLine, startCol);
             token.modN = true;
             return token;
         }
@@ -638,6 +638,15 @@ class Tokenizer {
                 numToken.line = startLine;
                 numToken.col = startCol;
                 pushToken(numToken);
+                continue;
+            }
+
+            // °= (degree equality — must check before ° is consumed as FORMATTER)
+            if (ch === '°' && this.peek(1) === '=') {
+                this.advance(2);
+                const token = this.makeToken(TokenType.OPERATOR, '°=', startLine, startCol);
+                token.modN = true;
+                pushToken(token);
                 continue;
             }
 

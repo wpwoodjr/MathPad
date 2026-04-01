@@ -1489,13 +1489,13 @@ function runAllTests() {
                 ['0', 'number']
             ]
         },
-        // Degree equality equation operator (=°)
+        // Degree equality equation operator (°=)
         {
-            name: 'degree equality equation (a =° b)',
-            line: 'a =° b',
+            name: 'degree equality equation (a °= b)',
+            line: 'a °= b',
             assertions: [
                 ['a', 'variable'],
-                ['=°', 'operator'],
+                ['°=', 'operator'],
                 ['b', 'variable']
             ]
         },

@@ -566,7 +566,7 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
                 ).trim();
                 // Find = or °= token within braces to split sides
                 const eqTokInBrace = lineTokens.find(t =>
-                    t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '=°') &&
+                    t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '°=') &&
                     t.col > lbraceTok.col && t.col < rbraceTok.col
                 );
                 const braceStart = tokenOffset(lineOffsets, lbraceTok) + 1;
@@ -597,8 +597,8 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
                     tokenOffset(lineOffsets, rbraceTok)
                 );
                 const normalizedContent = rawContent.replace(/\s+/g, ' ').trim();
-                // Split on =° or = for pre-parsed sides (regex fallback for multi-line)
-                const eqMatch = normalizedContent.match(/^(.+?)(=°?)(.+)$/);
+                // Split on °= or = for pre-parsed sides (regex fallback for multi-line)
+                const eqMatch = normalizedContent.match(/^(.+?)(°?=)(.+)$/);
                 equations.push({
                     text: normalizedContent,
                     leftText: eqMatch ? eqMatch[1].trim() : null,
@@ -608,7 +608,7 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
                     isBraced: true,
                     startCol: braceStartTok.col - 1,
                     endCol: rbraceTok.col,
-                    modN: eqMatch && eqMatch[2] === '=°' ? true : null
+                    modN: eqMatch && eqMatch[2] === '°=' ? true : null
                 });
                 inBrace = false;
             }
@@ -646,7 +646,7 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
         if (lineTokens.some(t => t.type === TokenType.ERROR)) return;
 
         // Check for equation using tokens (tokenizer distinguishes = from ==, !=, <=, >=, =>)
-        const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '=°'));
+        const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '°='));
         if (eqTok) {
             const eqInfo = extractEquationFromLine(lineText, lineTokens, eqTok);
             equations.push({
@@ -702,7 +702,7 @@ function clearExpressionOutputs(text, clearType, allTokens) {
 function extractEquationFromLine(lineText, lineTokens) {
     let leftText, rightText;
 
-    const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '=°'));
+    const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '°='));
     if (!eqTok) return { text: lineText, leftText: null, rightText: null };
     const eqWidth = eqTok.value.length; // 1 for '=', 2 for '°='
     leftText = lineText.substring(0, eqTok.col - 1).trim();

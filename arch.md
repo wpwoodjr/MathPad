@@ -42,7 +42,7 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
                 becomes height/9/16 * height = 1000
         pmt = -(pv + fv / (1 + mint)**n) * mint / (1 - (1 + mint)**-n)
         Degree equality:
-            heading =° target_heading
+            heading °= target_heading
                 mod-aware comparison (mod 360 or mod 2π per degreesMode)
 
 ## Variables really only have a name and a value (and possibly a valueText if needed for equations).

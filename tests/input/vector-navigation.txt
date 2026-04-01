@@ -551,18 +551,18 @@ set[0:360] °<- 0°
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"17. Re-solve with =° degree equality"
+"17. Re-solve with °= degree equality"
 
 // Leeway correction
 ws = speed*cos(leeway)
 
 // Solve smg and cts given drift, set (case 1)
 smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2)
-cts =° atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
 
 // Solve drift and set given smg, cts (case 2)
 drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2)
-set =° atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts))
+set °= atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts))
 
 // Heading from water track
 hdg = cts - leeway
@@ -617,15 +617,15 @@ set[0:360] °<- 0°
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"19. =° balance check at places=0 (regular = fails on set equation)"
+"19. °= balance check at places=0 (regular = fails on set equation)"
 
 ws = speed*cos(leeway)
 
 smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2)
-cts =° atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
 
 drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2)
-set =° atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts))
+set °= atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts))
 
 hdg = cts - leeway
 
@@ -641,16 +641,16 @@ set[0:360] °<- 0°
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
-"20. =° re-solve with rounded <- values (neighborhood normalization)"
+"20. °= re-solve with rounded <- values (neighborhood normalization)"
 "Pre-baked rounded values from test 19"
 
 ws = speed*cos(leeway)
 
 smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2)
-cts =° atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
 
 drift = sqrt((smg*sin(cmg) - ws*sin(cts))**2 + (smg*cos(cmg) - ws*cos(cts))**2)
-set =° atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts))
+set °= atan(smg*sin(cmg) - ws*sin(cts); smg*cos(cmg) - ws*cos(cts))
 
 hdg = cts - leeway
 
@@ -671,13 +671,13 @@ Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
 smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
 
 smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
-cmg =° atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
 
 speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
-cts =° atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
 
 drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
-set =° atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
 
 speed = smg*sin(cmg - set) / sin(cts - set)
 drift = smg*sin(cts - cmg) / sin(cts - set)
