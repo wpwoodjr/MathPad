@@ -1091,6 +1091,25 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         }
     }
 
+    // Pre-parse and filter equations containing unknowns (constant across all cells)
+    const unknownNames = new Set(unknowns.map(u => u.name));
+    const balancePlaces = record.places != null ? record.places : 4;
+    const balanceEquations = [];
+    for (const eq of equations) {
+        if (!eq.leftText || !eq.rightText) continue;
+        try {
+            const leftAST = parseExpression(eq.leftText);
+            const rightAST = parseExpression(eq.rightText);
+            const eqVars = new Set([
+                ...findVariablesInAST(leftAST),
+                ...findVariablesInAST(rightAST)
+            ]);
+            if ([...eqVars].some(v => unknownNames.has(v))) {
+                balanceEquations.push({ leftAST, rightAST, modN: eq.modN });
+            }
+        } catch (e) { }
+    }
+
     // Shared per-cell evaluation: reset context, set up variables, solve via solveEquations
     function evaluateCell(iterValues) {
         // Reset to pre-solve state (user declarations only, no equation-computed values)
@@ -1110,6 +1129,21 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         const badVars = new Set();
         for (const [varName, failure] of solveResult.solveFailures) {
             badVars.add(varName);
+        }
+        // Per-cell balance check: verify pre-parsed equations containing unknowns
+        for (const beq of balanceEquations) {
+            try {
+                const leftVal = evaluate(beq.leftAST, context);
+                const rightVal = evaluate(beq.rightAST, context);
+                const modN = beq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
+                const result = modN
+                    ? modCheckBalance(leftVal, rightVal, modN, balancePlaces)
+                    : checkBalance(leftVal, rightVal, balancePlaces);
+                if (!result.balanced) {
+                    for (const unk of unknowns) badVars.add(unk.name);
+                    break;
+                }
+            } catch (e) { }
         }
         return badVars;
     }
