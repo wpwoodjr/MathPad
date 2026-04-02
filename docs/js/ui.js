@@ -459,7 +459,6 @@ function createEditorForRecord(record) {
             // Strip stale sections and clear solve state only on user keyboard input
             if (editor.isUserInput) {
                 variablesManager.clearErrors();
-                variablesManager.setTableData(null);
                 let stripped = value;
                 stripped = stripped.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
                 stripped = stripped.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
@@ -467,6 +466,7 @@ function createEditorForRecord(record) {
                     editor.saveToHistoryNow();
                     editor.setValue(stripped, false);
                 }
+                variablesManager.setTableData(null);
                 // Cache cleared state so redo restores it correctly
                 editor.setTopMetadata({ tables: null });
             }

@@ -920,6 +920,15 @@ class VariablesPanel {
                 // Grid: make thead sticky as a unit (individual th sticky fails for leftmost cells)
                 const thead = wrapper.querySelector('thead');
                 if (thead) thead.style.top = titleBottom + 'px';
+                // Set sticky left offset for row values (after the row label column)
+                const rowLabel = wrapper.querySelector('.mathpad-grid-row-label');
+                if (rowLabel) {
+                    // Row values stick right after the row label, both offset by container padding
+                    const rowValueLeft = rowLabel.offsetWidth - 8;
+                    wrapper.querySelectorAll('.grid-row-value').forEach(th => {
+                        th.style.left = rowValueLeft + 'px';
+                    });
+                }
             } else {
                 // Table: individual th sticky
                 const headerRows = wrapper.querySelectorAll('thead tr');
@@ -959,8 +968,12 @@ class VariablesPanel {
         // Header row 1: empty + empty + iter2Label spanning columns
         const thead = document.createElement('thead');
         const headerRow1 = document.createElement('tr');
-        headerRow1.appendChild(document.createElement('th')); // x label column
-        headerRow1.appendChild(document.createElement('th')); // row values column
+        const h1Empty1 = document.createElement('th');
+        h1Empty1.className = 'grid-sticky-left';
+        headerRow1.appendChild(h1Empty1); // x label column
+        const h1Empty2 = document.createElement('th');
+        h1Empty2.className = 'grid-sticky-left';
+        headerRow1.appendChild(h1Empty2); // row values column
         const iter2Th = document.createElement('th');
         iter2Th.textContent = table.iter2Label;
         iter2Th.colSpan = numCols;
@@ -973,7 +986,7 @@ class VariablesPanel {
         const cellHeaderTh = document.createElement('th');
         cellHeaderTh.textContent = table.cellHeader || '';
         cellHeaderTh.colSpan = 2;
-        cellHeaderTh.className = 'mathpad-grid-label';
+        cellHeaderTh.className = 'mathpad-grid-label grid-sticky-left';
         cellHeaderTh.style.textAlign = 'right';
         headerRow2.appendChild(cellHeaderTh);
         for (let c = 0; c < table.colValues.length; c++) {
@@ -993,7 +1006,7 @@ class VariablesPanel {
         for (let r = 0; r < numRows; r++) {
             const tr = document.createElement('tr');
 
-            // iter1 label (only on middle row, spanning all rows)
+            // iter1 label (only on first row, spanning all rows)
             if (r === 0) {
                 const labelTh = document.createElement('th');
                 const labelDiv = document.createElement('div');
