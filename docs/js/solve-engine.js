@@ -51,16 +51,39 @@ function findVariablesInAST(node) {
 }
 
 /**
+ * Pre-parse equation ASTs onto equation objects (call once, reuse everywhere)
+ */
+function preParseEquations(equations) {
+    for (const eq of equations) {
+        if (eq.leftAST !== undefined) continue; // already parsed
+        try {
+            eq.leftAST = eq.leftText ? parseExpression(eq.leftText) : null;
+            eq.rightAST = eq.rightText ? parseExpression(eq.rightText) : null;
+            if (eq.leftAST && eq.rightAST) {
+                eq.allVars = new Set([
+                    ...findVariablesInAST(eq.leftAST),
+                    ...findVariablesInAST(eq.rightAST)
+                ]);
+            } else {
+                eq.allVars = new Set();
+            }
+            eq.parseError = null;
+        } catch (e) {
+            eq.leftAST = null;
+            eq.rightAST = null;
+            eq.allVars = new Set();
+            eq.parseError = e.message;
+        }
+    }
+}
+
+/**
  * Solve a single equation in context
  */
-function solveEquationInContext(eqText, eqLine, context, variables, substitutions = new Map(), leftText, rightText, modN = null) {
-    if (!leftText || !rightText) {
+function solveEquationInContext(eqLine, context, variables, substitutions = new Map(), modN = null, leftAST, rightAST) {
+    if (!leftAST || !rightAST) {
         return { solved: false };
     }
-
-    // Parse both sides
-    let leftAST = parseExpression(leftText);
-    let rightAST = parseExpression(rightText);
 
     // Find variables in equation
     let leftVars = findVariablesInAST(leftAST);
@@ -202,6 +225,10 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     if (debugSolve) console.log(`\n========== solveEquations pass ${++_solvePass} (${equations.length} equations, ${bodyDefinitions.length} bodyDefs) ==========`);
     const places = record.places != null ? record.places : 4;
     const errors = [];
+    // Report any equation parse errors from preParseEquations
+    for (const eq of equations) {
+        if (eq.parseError) errors.push(`Line ${eq.startLine + 1}: ${eq.parseError}`);
+    }
     const computedValues = new Map();
     const solveFailures = new Map(); // Track last failure per variable
     let solved = 0;
@@ -336,10 +363,10 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             for (const eq of equations) {
                 try {
                     // Handle incomplete equations (expr =)
-                    if (eq.leftText && !eq.rightText) {
+                    if (eq.leftAST && !eq.rightAST) {
                         if (sweep > 0) continue; // already handled
                         try {
-                            let ast = parseExpression(eq.leftText);
+                            let ast = eq.leftAST;
                             const subAsts = new Map([...substitutions].map(([k, v]) => [k, v[0].ast]));
                             ast = substituteInAST(ast, subAsts);
                             const value = evaluate(ast, context);
@@ -356,7 +383,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                     // or if variable has no value (don't Brent's a bare definition).
                     // Fall through to Brent's only when variable has a value and RHS has unknowns
                     // (e.g., user set x: 5, equation x = a + b → solve for a or b).
-                    const def = !eq.modN && isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
+                    const def = !eq.modN && isDefinitionEquation(eq.leftText, eq.rightText, eq.rightAST);
                     if (def) {
                         const rhsVars = findVariablesInAST(def.expressionAST);
                         const rhsUnknowns = [...rhsVars].filter(v => !context.hasVariable(v));
@@ -366,19 +393,15 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
                     // Sweep 0: skip if the natural 1-unknown is in definitionSubs
                     // (it should be substituted away, not solved directly by Brent's)
-                    if (sweep === 0 && definitionSubs.size > 0) {
-                        try {
-                            const lVars = findVariablesInAST(parseExpression(eq.leftText));
-                            const rVars = eq.rightText ? findVariablesInAST(parseExpression(eq.rightText)) : new Set();
-                            const eqUnknowns = [...new Set([...lVars, ...rVars])].filter(v => !context.hasVariable(v));
-                            if (eqUnknowns.length === 1 && definitionSubs.has(eqUnknowns[0])) continue;
-                        } catch (e) { /* parse error — let solveEquationInContext handle it */ }
+                    if (sweep === 0 && definitionSubs.size > 0 && eq.allVars) {
+                        const eqUnknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
+                        if (eqUnknowns.length === 1 && definitionSubs.has(eqUnknowns[0])) continue;
                     }
 
                     // Try to solve the equation numerically
                     const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
-                    const result = solveEquationInContext(eq.text, eq.startLine, context, variables,
-                        sweepSubs, eq.leftText, eq.rightText, modValue);
+                    const result = solveEquationInContext(eq.startLine, context, variables,
+                        sweepSubs, modValue, eq.leftAST, eq.rightAST);
                     if (result.solved) {
                         context.setVariable(result.variable, result.value);
                         computedValues.set(result.variable, result.value);
@@ -442,22 +465,13 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     const equationVarStatus = new Map(); // var name → 'solved' | 'unsolved'
     for (const eq of equations) {
         try {
-            if (!eq.leftText || !eq.rightText) continue;
+            if (!eq.leftAST || !eq.rightAST) continue;
 
-            let leftAST, rightAST;
-            try {
-                leftAST = parseExpression(eq.leftText);
-                rightAST = parseExpression(eq.rightText);
-            } catch (e) {
-                continue; // Parse errors already reported during solving
-            }
-
-            const allVars = new Set([...findVariablesInAST(leftAST), ...findVariablesInAST(rightAST)]);
-            const unknowns = [...allVars].filter(v => !context.hasVariable(v));
+            const unknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
 
             if (unknowns.length === 0) {
-                const leftVal = evaluate(leftAST, context);
-                const rightVal = evaluate(rightAST, context);
+                const leftVal = evaluate(eq.leftAST, context);
+                const rightVal = evaluate(eq.rightAST, context);
                 const result = eq.modN
                     ? modCheckBalance(leftVal, rightVal, record.degreesMode ? 360 : 2 * Math.PI, places)
                     : checkBalance(leftVal, rightVal, places);
@@ -479,9 +493,9 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 }
 
                 // Only track status for equations where all variables are declared (user-visible)
-                if ([...allVars].every(v => variables.has(v))) {
+                if ([...eq.allVars].every(v => variables.has(v))) {
                     const status = balanced ? 'solved' : 'unsolved';
-                    for (const v of allVars) {
+                    for (const v of eq.allVars) {
                         if (!equationVarStatus.has(v)) equationVarStatus.set(v, status);
                     }
                 }
@@ -738,6 +752,7 @@ function solveRecord(text, context, record, parserTokens) {
 
     // Find equations and expression outputs
     const { equations: outerEquations, exprOutputs } = findEquationsAndOutputs(text, allTokens, context.localFunctionLines);
+    preParseEquations(outerEquations);
 
     // Build body definitions from declarations that couldn't evaluate during discovery
     // (e.g. x<- pmt*2 where pmt is equation-solved). solveEquations retries these.
@@ -780,13 +795,9 @@ function solveRecord(text, context, record, parserTokens) {
         if (!context.hasVariable(decl.name)) continue; // nominal wasn't solved
         // Find the equation that contains this variable
         for (const eq of outerEquations) {
-            if (!eq.leftText || !eq.rightText) continue;
+            if (!eq.leftAST || !eq.rightAST) continue;
             try {
-                const eqVars = new Set([
-                    ...findVariablesInAST(parseExpression(eq.leftText)),
-                    ...findVariablesInAST(parseExpression(eq.rightText))
-                ]);
-                if (!eqVars.has(decl.name)) continue;
+                if (!eq.allVars.has(decl.name)) continue;
                 // Build a temporary variables map with this declaration's limits
                 const tempVars = buildVariablesMap(declarations);
                 tempVars.set(decl.name, decl); // use THIS declaration's limits
@@ -795,8 +806,8 @@ function solveRecord(text, context, record, parserTokens) {
                 context.variables.delete(decl.name);
                 context.declareVariable(decl.name);
                 const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
-                const result = solveEquationInContext(eq.text, eq.startLine, context, tempVars,
-                    new Map(), eq.leftText, eq.rightText, modValue);
+                const result = solveEquationInContext(eq.startLine, context, tempVars,
+                    new Map(), modValue, eq.leftAST, eq.rightAST);
                 // Restore nominal value
                 context.setVariable(decl.name, savedValue);
                 if (result.solved) {
@@ -949,6 +960,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     // Find equations in body — if none, inherit outer equations from the record
     const bodyEqs = findEquationsAndOutputs(tableDef.bodyText, bodyTokens, null);
     const equations = bodyEqs.equations.length > 0 ? bodyEqs.equations : (outerEquations || []);
+    preParseEquations(equations); // no-op if outer equations already parsed
 
     // Pre-parse definition expressions
     const defASTs = [];
@@ -1001,12 +1013,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     // Check for unused declared variables (iterators, unknowns, definitions)
     const referencedVars = new Set();
     for (const eq of equations) {
-        try {
-            const leftAST = parseExpression(eq.leftText);
-            const rightAST = parseExpression(eq.rightText);
-            for (const v of findVariablesInAST(leftAST)) referencedVars.add(v);
-            for (const v of findVariablesInAST(rightAST)) referencedVars.add(v);
-        } catch (e) { }
+        for (const v of eq.allVars) referencedVars.add(v);
     }
     for (const def of definitions) {
         if (def.exprText) {
@@ -1097,18 +1104,10 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     const balancePlaces = record.places != null ? record.places : 4;
     const balanceEquations = [];
     for (const eq of equations) {
-        if (!eq.leftText || !eq.rightText) continue;
-        try {
-            const leftAST = parseExpression(eq.leftText);
-            const rightAST = parseExpression(eq.rightText);
-            const eqVars = new Set([
-                ...findVariablesInAST(leftAST),
-                ...findVariablesInAST(rightAST)
-            ]);
-            if ([...eqVars].some(v => unknownNames.has(v))) {
-                balanceEquations.push({ leftAST, rightAST, modN: eq.modN });
-            }
-        } catch (e) { }
+        if (!eq.leftAST || !eq.rightAST) continue;
+        if ([...eq.allVars].some(v => unknownNames.has(v))) {
+            balanceEquations.push({ leftAST: eq.leftAST, rightAST: eq.rightAST, modN: eq.modN });
+        }
     }
 
     // Shared per-cell evaluation: reset context, set up variables, solve via solveEquations

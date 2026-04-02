@@ -478,23 +478,18 @@ function deepCopyAST(node) {
  * Check if an equation is a simple definition: variable = expression
  * Returns { variable, expression AST } or null
  */
-function isDefinitionEquation(eqText, leftText, rightText) {
-    if (!leftText || !rightText) return null;
+function isDefinitionEquation(leftText, rightText, rightAST) {
+    if (!leftText || !rightAST) return null;
 
     // Check if left side is a simple variable name (may have $ or % suffix)
     // Must start with a letter or underscore, not a digit (to avoid matching "1000 = expr")
     if (!/^[a-zA-Z_]\w*[$%]?$/.test(leftText)) return null;
 
-    try {
-        const rightAST = parseExpression(rightText);
-        return {
-            variable: leftText,
-            expressionAST: rightAST,
-            expressionText: rightText
-        };
-    } catch (e) {
-        return null;
-    }
+    return {
+        variable: leftText,
+        expressionAST: rightAST,
+        expressionText: rightText
+    };
 }
 
 /**
@@ -502,24 +497,17 @@ function isDefinitionEquation(eqText, leftText, rightText) {
  * Handles cases like: a/b = c => a = b*c, a + b = c => a = c - b, etc.
  * Returns { variable, expressionAST } or null
  */
-function deriveSubstitution(eqText, context, leftText, rightText) {
-    if (!leftText || !rightText) return null;
+function deriveSubstitution(context, leftText, leftAST, rightAST) {
+    if (!leftAST || !rightAST) return null;
 
     // First check if it's already a simple definition (but only if variable is unknown)
     // Must start with a letter or underscore, not a digit
     if (/^[a-zA-Z_]\w*[$%]?$/.test(leftText) && !context.hasVariable(leftText)) {
-        try {
-            const rightAST = parseExpression(rightText);
-            return { variable: leftText, expressionAST: rightAST };
-        } catch (e) {
-            return null;
-        }
+        return { variable: leftText, expressionAST: rightAST };
     }
 
-    // Try to parse and algebraically manipulate
+    // Try to algebraically manipulate
     try {
-        const leftAST = parseExpression(leftText);
-        const rightAST = parseExpression(rightText);
 
         // Recursively isolate unknown variable from binary operations on either side.
         // Handles nested chains (a*b/D = C → a = C*D/b), additive patterns
@@ -648,9 +636,9 @@ function buildSubstitutionMap(equations, context, errors = []) {
     for (const eq of equations) {
         try {
             // First try simple definition, then algebraic derivation
-            let def = isDefinitionEquation(eq.text, eq.leftText, eq.rightText);
+            let def = isDefinitionEquation(eq.leftText, eq.rightText, eq.rightAST);
             if (!def || context.hasVariable(def.variable)) {
-                def = deriveSubstitution(eq.text, context, eq.leftText, eq.rightText);
+                def = deriveSubstitution(context, eq.leftText, eq.leftAST, eq.rightAST);
             }
 
             if (!def || context.hasVariable(def.variable)) continue;
