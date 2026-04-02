@@ -361,11 +361,10 @@ class VariablesPanel {
         const limitsStr = decl.limits ? `[${tokensToText(decl.limits.lowTokens).trim()}:${tokensToText(decl.limits.highTokens).trim()}]` : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
-        const labelPrefix = decl.label || '';
-        if (labelPrefix) nameLabel.style.whiteSpace = 'pre-wrap';
+        const displayName = (decl.label && decl.label.trim()) ? decl.label.trim() : info.name + limitsStr;
         const nameText = document.createElement('span');
         nameText.className = 'variable-name-text';
-        nameText.textContent = labelPrefix + info.name + limitsStr;
+        nameText.textContent = displayName;
         const markerText = document.createElement('span');
         markerText.className = 'variable-name-marker';
         markerText.textContent = formatSuffix + (decl.marker || ':');
