@@ -198,13 +198,40 @@ function gamma(z) {
 }
 
 /**
- * Parse date text (MM-DD-YYYY or MM-DD-YYYY HH:MM[:SS[.mmm]]) to epoch seconds.
- * Returns null if text doesn't match a date pattern.
+ * Detect locale date field order by formatting a known date.
+ * Returns 'mdy', 'dmy', or 'ymd' and the separator character.
+ */
+const _dateLocale = (() => {
+    try {
+        // Format Jan 2, 2003 — all fields distinct so we can detect order
+        const parts = new Intl.DateTimeFormat(undefined, {
+            month: '2-digit', day: '2-digit', year: 'numeric'
+        }).formatToParts(new Date(2003, 0, 2));
+        const order = parts.filter(p => p.type !== 'literal').map(p => p.type[0]); // ['m','d','y'] etc
+        const sep = (parts.find(p => p.type === 'literal') || { value: '-' }).value;
+        return { order: order.join(''), sep };
+    } catch (e) {
+        return { order: 'mdy', sep: '/' };
+    }
+})();
+
+/**
+ * Parse date text to epoch seconds, using locale-detected field order.
+ * Accepts any separator between date fields (-, /, .).
+ * Optional time: HH:MM[:SS[.mmm]]
+ * Returns null if text doesn't match.
  */
 function parseDateText(text) {
-    const m = text.trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?)?$/);
+    const m = text.trim().match(/^(\d{1,4})[\/\-.](\d{1,4})[\/\-.](\d{1,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?)?$/);
     if (!m) return null;
-    const month = parseInt(m[1]), day = parseInt(m[2]), year = parseInt(m[3]);
+    let month, day, year;
+    if (_dateLocale.order === 'dmy') {
+        day = parseInt(m[1]); month = parseInt(m[2]); year = parseInt(m[3]);
+    } else if (_dateLocale.order === 'ymd') {
+        year = parseInt(m[1]); month = parseInt(m[2]); day = parseInt(m[3]);
+    } else { // mdy
+        month = parseInt(m[1]); day = parseInt(m[2]); year = parseInt(m[3]);
+    }
     const hour = m[4] ? parseInt(m[4]) : 0;
     const minute = m[5] ? parseInt(m[5]) : 0;
     const second = m[6] ? parseFloat(m[6]) : 0;
@@ -226,15 +253,23 @@ function parseDurationText(text) {
 }
 
 /**
- * Format epoch seconds as MM-DD-YYYY, with optional HH:MM[:SS[.mmm]] time.
- * includeTime: true = always show time, false = date only
+ * Format epoch seconds as a locale-formatted date, with optional time.
+ * includeTime: true = always show HH:MM:SS, false = date only
  */
 function formatDateValue(epochSeconds, includeTime) {
     const d = new Date(epochSeconds * 1000);
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     const yyyy = d.getFullYear();
-    let result = `${mm}-${dd}-${yyyy}`;
+    const sep = _dateLocale.sep;
+    let result;
+    if (_dateLocale.order === 'dmy') {
+        result = `${dd}${sep}${mm}${sep}${yyyy}`;
+    } else if (_dateLocale.order === 'ymd') {
+        result = `${yyyy}${sep}${mm}${sep}${dd}`;
+    } else {
+        result = `${mm}${sep}${dd}${sep}${yyyy}`;
+    }
     if (includeTime) {
         const hh = String(d.getHours()).padStart(2, '0');
         const min = String(d.getMinutes()).padStart(2, '0');
