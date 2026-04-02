@@ -183,8 +183,8 @@ a**2 + b**2 = c**2</pre>
         <tr><td><code>$</code></td><td><code>price $: 1234.5</code></td><td><code>$1,234.50</code> (always 2 decimals, comma grouping)</td></tr>
         <tr><td><code>%</code></td><td><code>rate %&lt- 7.5%</code></td><td><code>7.5%</code> (stored as 0.075)</td></tr>
         <tr><td><code>&deg;</code></td><td><code>angle &deg;: 400</code></td><td><code>40&deg;</code> (mod 360 on output)</td></tr>
-        <tr><td><code>@d</code></td><td><code>when @d: 4-1-2026</code></td><td><code>04-01-2026</code> (date)</td></tr>
-        <tr><td><code>@t</code></td><td><code>dur @t: 1:30:00</code></td><td><code>1:30:00</code> (duration in seconds)</td></tr>
+        <tr><td><code>@d</code></td><td><code>when @d: 4/1/2026</code></td><td><code>04/01/2026</code> (date, locale format)</td></tr>
+        <tr><td><code>@t</code></td><td><code>dur @t: 1:30:00</code></td><td><code>1:30:00</code> (duration H:MM:SS)</td></tr>
         <tr><td><code>#16</code></td><td><code>hex #16-> 255</code></td><td><code>FF</code> (bases 2-36)</td></tr>
     </table>
 
@@ -250,17 +250,27 @@ a**2 + b**2 = c**2</pre>
     </table>
 
     <h3>Date and Time</h3>
+    <p>Dates are stored as epoch seconds (seconds since Jan 1, 1970 UTC). Use <code>@d</code> to format as a date and <code>@t</code> for durations:</p>
+    <ul>
+        <li><code>@d-&gt;</code> &mdash; date only (locale format)</li>
+        <li><code>@d-&gt;&gt;</code> &mdash; date and time (HH:MM:SS)</li>
+        <li><code>@d:</code> &mdash; input accepts date text (e.g. <code>4/1/2026 14:30</code>)</li>
+        <li><code>@t-&gt;</code> &mdash; duration as H:MM:SS</li>
+        <li><code>@t-&gt;&gt;</code> &mdash; duration with fractional seconds</li>
+        <li><code>@t:</code> &mdash; input accepts duration text (e.g. <code>1:30:00</code>)</li>
+    </ul>
     <table>
         <tr><th>Function</th><th>Description</th></tr>
         <tr><td><code>Now</code></td><td>Current date/time as epoch seconds</td></tr>
         <tr><td><code>Date(y; m; d [; h; min; s])</code></td><td>Create date as epoch seconds</td></tr>
-        <tr><td><code>Days(d1; d2)</code></td><td>Days between two dates (epoch seconds)</td></tr>
+        <tr><td><code>Days(d1; d2)</code></td><td>Days between two dates</td></tr>
         <tr><td><code>Year(d)</code>, <code>Month(d)</code>, <code>Day(d)</code></td><td>Extract date components</td></tr>
         <tr><td><code>Weekday(d)</code></td><td>Day of week (1=Sunday, 7=Saturday)</td></tr>
         <tr><td><code>Hour(d)</code>, <code>Minute(d)</code>, <code>Second(d)</code></td><td>Extract time components</td></tr>
         <tr><td><code>Hours(d)</code></td><td>Decimal hours of day from date</td></tr>
-        <tr><td><code>TimePart(d)</code></td><td>Seconds since midnight (local time)</td></tr>
+        <tr><td><code>TimePart(d)</code></td><td>Seconds since midnight (for <code>@t</code> display of time-of-day)</td></tr>
     </table>
+    <p class="example">Example: <code>start @d: 4/1/2026 14:30</code> &mdash; <code>Days(start; Now)@t-&gt;</code> shows elapsed time</p>
 
     <h3>Control Flow</h3>
     <table>

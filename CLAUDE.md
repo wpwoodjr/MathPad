@@ -79,7 +79,11 @@ node tests/gen-expected.js TESTNAME
 - Each row/cell solved fresh using unified `solveEquations` pipeline
 - Pre-solve context reset per row (user declarations only, no equation-computed intermediates)
 - Per-cell error suppression (bad cells empty, good cells show values)
+- Per-cell balance checking: equations containing unknowns verified after each solve
 - Unused variable warnings with actual line numbers
+- Grid axes: iterator declaration order (first = rows, second = columns)
+- Grid outputs: declaration order (first = row headers, second = col headers, third = cell value)
+- Grid header values computed from output variable after solving (enables formatted headers like `hours@t->`)
 - Grid hover: row + column + header highlighting
 - Collapsible titles; optional font size parameter: `table("Title"; 12) = { ... }`
 - Table output text section (`"--- Table Outputs ---"`) appended for copy/export
@@ -89,8 +93,19 @@ node tests/gen-expected.js TESTNAME
 - `$` suffix → money format ($1,234.56, always 2 decimals)
 - `%` suffix → percent format (×100, follows record's places setting)
 - `°` suffix → degrees format (mod 360, follows record's places setting)
+- `@d` suffix → date format (locale-aware MM/DD/YYYY or DD/MM/YYYY); `@d->>` includes time
+- `@t` suffix → duration format (H:MM:SS); `@t->>` includes fractional seconds
+- `@d:` and `@t:` parse date/duration text as input values
 - Base notation: `#16` for hex, `#2` for binary, etc. (bases 2-36)
 - Custom `toFixed()` avoids IEEE 754 midpoint rounding errors
+
+### Date/Time
+- Dates stored as epoch seconds (seconds since Jan 1, 1970 UTC)
+- Locale-aware formatting: detects date field order (mdy/dmy/ymd) and separator via `Intl.DateTimeFormat`
+- Input parsing accepts any separator (`-`, `/`, `.`) regardless of locale
+- Built-in functions: `Now`, `Date(y;m;d;h;min;s)`, `Days(d1;d2)`, `Year`, `Month`, `Day`, `Weekday`, `Hour`, `Minute`, `Second`, `Hours`, `TimePart`
+- `TimePart(d)` returns seconds since midnight (local time) — use with `@t` to display time-of-day
+- Constants: `secsPerHour` (3600), `secsPerDay` (86400)
 
 ### Special Records
 - **"Constants"** — variables available to all records
@@ -216,6 +231,8 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 | `price$:` | Money format | `$` before marker = money format |
 | `rate%: 7.5%` | Percentage | `%` before marker = percent (stored as 0.075) |
 | `angle°: 400°` | Degrees | `°` before marker = degrees format (mod 360 on output); `400°` literal = 400 (no mod) |
+| `when@d: 4/1/2026` | Date format | `@d` before marker = date (locale format); `@d->>` includes time |
+| `dur@t: 1:30:00` | Duration format | `@t` before marker = duration H:MM:SS; `@t->>` includes fractional seconds |
 | `a °= b` | Degree equality | Mod-aware comparison (mod 360 or mod 2π per degreesMode): equation balance check or logical operator (returns 1/0) |
 | `expr$->` | Expression output | Format expression result as money |
 | `x~` | Pre-solve value | Strictly returns value before this solve started |
@@ -228,7 +245,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 
 **Trig** (degrees/radians mode): Sin, ASin, SinH, ASinH, Cos, ACos, CosH, ACosH, Tan, ATan, TanH, ATanH, Radians, Degrees
 
-**Date/Time**: Now, Days, JDays, Date, JDate, Year, Month, Day, Weekday, Hour, Minute, Second, Hours, HMS
+**Date/Time**: Now, Date(y;m;d;h;min;s), Days(d1;d2), Year, Month, Day, Weekday, Hour, Minute, Second, Hours, TimePart
 
 **Control**: If(cond;then;else), Choose(n;v1;v2;...), Min, Max, Avg, Sum
 

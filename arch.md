@@ -189,9 +189,10 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
                 can evaluate with the new value before a second Brent's step
 
 ## Definition evaluation order
-    discoverVariables evaluates : definitions in a single top-to-bottom pass (no retry loop)
-    Definitions that fail (out-of-order deps, equation-dependent) go into bodyDefinitions
-    solveEquations handles them in its iterative loop via [1]
+    discoverVariables parses literal values (numbers, dates, durations) directly via parseLiteralValue()
+    Literals set on context immediately; non-literals (expressions) go into bodyDefinitions
+    bodyDefinitions skipped when decl.value !== null (already parsed as literal)
+    solveEquations handles expression definitions in its iterative loop via [1]
     preSolveVars updated with resolved bodyDefinition values after solve (for table access)
 
 ## Tables and Grids
@@ -218,7 +219,15 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         Each row/cell: reset context to preSolveVars, clear unknowns, set iterators
         Calls solveEquations with body defASTs as bodyDefinitions (same pipeline as main solver)
         Per-cell error suppression (bad cells empty, good cells show values)
+        Per-cell balance checking: equations containing unknowns verified after solve
         Unused variable warnings with actual line numbers
+    ### Grid axis and output mapping
+        Iterator declaration order determines axes: first = rows, second = columns
+        Output declaration order determines display: first = row headers, second = col headers, third = cell value
+        Header values computed from output variable after solving (enables formatted headers like hours@t->)
+    ### Equation pre-parsing (preParseEquations)
+        Equation ASTs (leftAST, rightAST, allVars) parsed once onto equation objects
+        Reused by: solveEquationInContext, buildSubstitutionMap, balance checks, per-cell evaluation
     ### Rendering (variables-panel.js)
         setTableData() renders table results in variables panel
         _renderTable2() renders 2D grids with row/col/header hover highlighting

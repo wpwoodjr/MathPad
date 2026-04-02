@@ -165,7 +165,7 @@ years <- 30            "number of years"
 
 1. **Formulas** section defines a reusable payment function `pmt(pv; rate; n; fv)`
 2. **Equations** section ties the function to the variables
-3. **Variables** section lists inputs and outputs — `$` suffix formats as money, `%` as percent
+3. **Variables** section lists inputs and outputs — `$` formats as money, `%` as percent, `@d` as date, `@t` as duration
 4. The `<-` marker means input variables (editable in the variables panel)
 5. **Comments** in double quotes describe each variable
 
