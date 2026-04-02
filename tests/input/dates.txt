@@ -1,0 +1,68 @@
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Dates
+
+// now()@d->> 04-02-2026 09:11:32
+// now()@t->> 493093:11:32.579
+
+t1@d: 04-02-2026 09:03:04.750
+t1@t->
+TimePart(t1)@t->>
+
+n: 1775095376.535
+n@d->
+n@d->>
+floor(n)@d->>
+
+date(2026;04; 01; 22;17;55)->
+date(2026;04; 01; 22;17;55)@d->
+date(2026;04; 01; 22;17;55)@d->>
+
+a @d: 04-01-2026 22:17:55.836
+a->
+a@d->
+a@d->>
+
+a-n @t->
+a-n @t->>
+
+b@d: 04-01-2026 22:22:09.75
+b@d->>
+
+a@t->
+n@t->
+899@t->>
+899@d->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Dates 2
+
+d1@d: 4-1-2026
+d1@d->>
+d2@d->>
+d2 - d1 = 1
+
+1 = days(d1; d3)
+d3@d<<-
+
+t1@t: 10:12:34.001
+1 = days(t1; t2)
+t2@t<<-
+
+t1@t->
+t1@t->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Dates 3
+
+grid("hours grid test") = {
+  nHours: 1..7..0.5
+  speed: 10..70..10
+  dist = nHours*speed
+  hours = nHours*60*60
+  Hours hours @t->
+  Speed speed->
+  Distance dist->
+}

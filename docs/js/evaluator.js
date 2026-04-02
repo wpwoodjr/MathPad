@@ -198,69 +198,70 @@ function gamma(z) {
 }
 
 /**
- * Julian day number calculations
+ * Parse date text (MM-DD-YYYY or MM-DD-YYYY HH:MM[:SS[.mmm]]) to epoch seconds.
+ * Returns null if text doesn't match a date pattern.
  */
-function dateToJulian(year, month, day) {
-    const a = Math.floor((14 - month) / 12);
-    const y = year + 4800 - a;
-    const m = month + 12 * a - 3;
-    return day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
-}
-
-function julianToDate(jd) {
-    const a = jd + 32044;
-    const b = Math.floor((4 * a + 3) / 146097);
-    const c = a - Math.floor(146097 * b / 4);
-    const d = Math.floor((4 * c + 3) / 1461);
-    const e = c - Math.floor(1461 * d / 4);
-    const m = Math.floor((5 * e + 2) / 153);
-
-    const day = e - Math.floor((153 * m + 2) / 5) + 1;
-    const month = m + 3 - 12 * Math.floor(m / 10);
-    const year = 100 * b + d - 4800 + Math.floor(m / 10);
-
-    return { year, month, day };
+function parseDateText(text) {
+    const m = text.trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?)?$/);
+    if (!m) return null;
+    const month = parseInt(m[1]), day = parseInt(m[2]), year = parseInt(m[3]);
+    const hour = m[4] ? parseInt(m[4]) : 0;
+    const minute = m[5] ? parseInt(m[5]) : 0;
+    const second = m[6] ? parseFloat(m[6]) : 0;
+    const wholeSec = Math.floor(second);
+    const ms = Math.round((second - wholeSec) * 1000);
+    return new Date(year, month - 1, day, hour, minute, wholeSec, ms).getTime() / 1000;
 }
 
 /**
- * MathPad date format: YYYYMMDD.HHMMSS or YYMMDD.HHMMSS
+ * Parse duration text (H:MM:SS or H:MM:SS.mmm) to seconds.
+ * Returns null if text doesn't match a duration pattern.
  */
-function parseDate(dateNum) {
-    const intPart = Math.floor(dateNum);
-    const fracPart = dateNum - intPart;
-
-    let year, month, day;
-    if (intPart >= 10000000) {
-        // YYYYMMDD format
-        year = Math.floor(intPart / 10000);
-        month = Math.floor((intPart % 10000) / 100);
-        day = intPart % 100;
-    } else {
-        // YYMMDD format (assume 1900s or 2000s)
-        const yy = Math.floor(intPart / 10000);
-        year = yy >= 50 ? 1900 + yy : 2000 + yy;
-        month = Math.floor((intPart % 10000) / 100);
-        day = intPart % 100;
-    }
-
-    let hour = 0, minute = 0, second = 0;
-    if (fracPart > 0) {
-        const timePart = Math.round(fracPart * 1000000);
-        hour = Math.floor(timePart / 10000);
-        minute = Math.floor((timePart % 10000) / 100);
-        second = timePart % 100;
-    }
-
-    return { year, month, day, hour, minute, second };
+function parseDurationText(text) {
+    const m = text.trim().match(/^(-?)(\d+):(\d{2}):(\d{2}(?:\.\d+)?)$/);
+    if (!m) return null;
+    const sign = m[1] === '-' ? -1 : 1;
+    const h = parseInt(m[2]), min = parseInt(m[3]), sec = parseFloat(m[4]);
+    return sign * (h * 3600 + min * 60 + sec);
 }
 
-function formatDate(year, month, day, hour = 0, minute = 0, second = 0) {
-    const intPart = year * 10000 + month * 100 + day;
-    if (hour === 0 && minute === 0 && second === 0) {
-        return intPart;
+/**
+ * Format epoch seconds as MM-DD-YYYY, with optional HH:MM[:SS[.mmm]] time.
+ * includeTime: true = always show time, false = date only
+ */
+function formatDateValue(epochSeconds, includeTime) {
+    const d = new Date(epochSeconds * 1000);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    let result = `${mm}-${dd}-${yyyy}`;
+    if (includeTime) {
+        const hh = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        result += ` ${hh}:${min}:${ss}`;
     }
-    const fracPart = (hour * 10000 + minute * 100 + second) / 1000000;
-    return intPart + fracPart;
+    return result;
+}
+
+/**
+ * Format seconds as duration: H:MM:SS or H:MM:SS.mmm
+ * fractional: true = show milliseconds if present
+ */
+function formatDuration(seconds, fractional) {
+    const neg = seconds < 0;
+    let total = Math.abs(seconds);
+    const h = Math.floor(total / 3600);
+    total -= h * 3600;
+    const m = Math.floor(total / 60);
+    total -= m * 60;
+    const s = Math.floor(total);
+    const ms = Math.round((total - s) * 1000);
+    let result = `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    if (fractional && ms) {
+        result += `.${String(ms).padStart(3, '0')}`;
+    }
+    return neg ? '-' + result : result;
 }
 
 /**
@@ -321,10 +322,10 @@ const builtinArgCounts = {
     cos: [1, 1], acos: [1, 1], cosh: [1, 1], acosh: [1, 1],
     tan: [1, 1], atan: [1, 2], tanh: [1, 1], atanh: [1, 1],
     radians: [1, 1], degrees: [1, 1],
-    now: [0, 0], days: [2, 2], jdays: [1, 1], date: [1, 1], jdate: [1, 1],
+    now: [0, 0], days: [2, 2], date: [3, 6],
     year: [1, 1], month: [1, 1], day: [1, 1], weekday: [1, 1],
     hour: [1, 1], minute: [1, 1], second: [1, 1],
-    hours: [1, 1], hms: [1, 1],
+    hours: [1, 1], timepart: [1, 1],
     if: [2, 3], rand: [0, 2], mod: [2, 2],
     isclose: [3, 3], modisclose: [4, 4], places: [0, 0],
     min: [1], max: [1], avg: [1], choose: [2],
@@ -404,69 +405,43 @@ const builtinFunctions = {
     radians: (args) => args[0] * Math.PI / 180,
     degrees: (args) => args[0] * 180 / Math.PI,
 
-    // Date/Time functions
-    now: (args) => {
-        const d = new Date();
-        return formatDate(d.getFullYear(), d.getMonth() + 1, d.getDate(),
-                          d.getHours(), d.getMinutes(), d.getSeconds());
-    },
-
-    days: (args) => {
-        // Days between two dates
-        const d1 = parseDate(args[0]);
-        const d2 = parseDate(args[1]);
-        const j1 = dateToJulian(d1.year, d1.month, d1.day);
-        const j2 = dateToJulian(d2.year, d2.month, d2.day);
-        return j2 - j1;
-    },
-
-    jdays: (args) => {
-        // Julian day number from date
-        const d = parseDate(args[0]);
-        return dateToJulian(d.year, d.month, d.day);
-    },
+    // Date/Time functions — all dates are epoch seconds
+    now: (args) => Date.now() / 1000,
 
     date: (args) => {
-        // Date from Julian day number
-        const { year, month, day } = julianToDate(Math.round(args[0]));
-        return formatDate(year, month, day);
+        // Date(year, month, day [, hour, minute, second]) → epoch seconds
+        const year = args[0], month = args[1], day = args[2];
+        const hour = args.length > 3 ? args[3] : 0;
+        const minute = args.length > 4 ? args[4] : 0;
+        const second = args.length > 5 ? args[5] : 0;
+        return new Date(year, month - 1, day, hour, minute, second).getTime() / 1000;
     },
 
-    jdate: (args) => {
-        // Same as date
-        const { year, month, day } = julianToDate(Math.round(args[0]));
-        return formatDate(year, month, day);
-    },
+    days: (args) => (args[1] - args[0]) / 86400,
 
-    year: (args) => parseDate(args[0]).year,
-    month: (args) => parseDate(args[0]).month,
-    day: (args) => parseDate(args[0]).day,
+    year: (args) => new Date(args[0] * 1000).getFullYear(),
+    month: (args) => new Date(args[0] * 1000).getMonth() + 1,
+    day: (args) => new Date(args[0] * 1000).getDate(),
 
     weekday: (args) => {
-        const d = parseDate(args[0]);
-        const jd = dateToJulian(d.year, d.month, d.day);
-        return ((jd + 1) % 7) + 1; // 1=Sunday, 7=Saturday
+        const d = new Date(args[0] * 1000);
+        return d.getDay() + 1; // 1=Sunday, 7=Saturday
     },
 
-    hour: (args) => parseDate(args[0]).hour,
-    minute: (args) => parseDate(args[0]).minute,
-    second: (args) => parseDate(args[0]).second,
+    hour: (args) => new Date(args[0] * 1000).getHours(),
+    minute: (args) => new Date(args[0] * 1000).getMinutes(),
+    second: (args) => new Date(args[0] * 1000).getSeconds(),
 
     hours: (args) => {
-        // Convert HMS to decimal hours
-        const d = parseDate(args[0]);
-        return d.hour + d.minute / 60 + d.second / 3600;
+        // Decimal hours from epoch seconds
+        const d = new Date(args[0] * 1000);
+        return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
     },
 
-    hms: (args) => {
-        // Convert decimal hours to HMS format (0.HHMMSS)
-        let h = args[0];
-        const hours = Math.floor(h);
-        h = (h - hours) * 60;
-        const minutes = Math.floor(h);
-        h = (h - minutes) * 60;
-        const seconds = Math.round(h);
-        return (hours * 10000 + minutes * 100 + seconds) / 1000000;
+    timepart: (args) => {
+        // Seconds since midnight (local time) for a given epoch seconds value
+        const d = new Date(args[0] * 1000);
+        return args[0] - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000;
     },
 
     // Control functions
@@ -871,8 +846,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        EvalContext, EvalError, evaluate, formatNumber, addCommaGrouping, formatMoney, formatPercent, formatDegrees, toFixed, checkBalance, modNormalize, modCheckBalance,
-        builtinFunctions, factorial, gamma,
-        dateToJulian, julianToDate, parseDate, formatDate
+        EvalContext, EvalError, evaluate, formatNumber, addCommaGrouping, formatMoney, formatPercent, formatDegrees, parseDateText, formatDateValue, parseDurationText, formatDuration, toFixed, checkBalance, modNormalize, modCheckBalance,
+        builtinFunctions, factorial, gamma
     };
 }

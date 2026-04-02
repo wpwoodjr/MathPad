@@ -744,6 +744,7 @@ function solveRecord(text, context, record, parserTokens) {
     const bodyDefinitions = [];
     for (const decl of declarations) {
         if (decl.valueTokens && decl.valueTokens.length > 0 &&
+            decl.value === null &&
             decl.declaration.type !== VarType.OUTPUT) {
             try {
                 const exprText = tokensToText(decl.valueTokens).trim();
@@ -1204,38 +1205,21 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         errors.push(`Line ${tableDef.startLine}: Grid requires at least 2 iterators (use x<- 0..10)`);
         return emptyResult();
     }
-    // Determine grid axes from OUTPUT order (not iterator declaration order)
-    // First iterator output = rows, second = columns, first non-iterator output = cell
-    const iterMap = new Map(evaledIterators.map(it => [it.name, it]));
-    const iterNames = new Set(iterMap.keys());
-    let iter1 = null, iter2 = null, cellVar = null;
-    let iter1Label = '', iter2Label = '';
-    let iter1Format = null, iter2Format = null;
-    let iter1FullPrec = false, iter2FullPrec = false;
+    // Iterator declaration order determines axes: first = rows, second = columns
+    // Output declaration order determines display: first = row headers, second = col headers, third = cell value
+    const iter1 = evaledIterators[0];
+    const iter2 = evaledIterators[1];
 
-    for (const col of columns) {
-        if (!col.ast && iterMap.has(col.name)) {
-            if (!iter1) {
-                iter1 = iterMap.get(col.name);
-                iter1Label = col.header || iter1.header;
-                iter1Format = col.format;
-                iter1FullPrec = col.fullPrecision;
-            } else if (!iter2) {
-                iter2 = iterMap.get(col.name);
-                iter2Label = col.header || iter2.header;
-                iter2Format = col.format;
-                iter2FullPrec = col.fullPrecision;
-            }
-        } else if (!cellVar && (col.ast || !iterNames.has(col.name))) {
-            cellVar = col;
-        }
-    }
+    const rowHeaderCol = columns.length > 0 ? columns[0] : null;
+    const colHeaderCol = columns.length > 1 ? columns[1] : null;
+    const cellVar = columns.length > 2 ? columns[2] : null;
 
-    // Fallback if iterators not found in outputs
-    if (!iter1) iter1 = evaledIterators[0];
-    if (!iter2) iter2 = evaledIterators[1];
-    if (!iter1Label) iter1Label = iter1.header;
-    if (!iter2Label) iter2Label = iter2.header;
+    const iter1Label = rowHeaderCol ? rowHeaderCol.header || iter1.header : iter1.header;
+    const iter2Label = colHeaderCol ? colHeaderCol.header || iter2.header : iter2.header;
+    const iter1Format = rowHeaderCol ? rowHeaderCol.format : null;
+    const iter2Format = colHeaderCol ? colHeaderCol.format : null;
+    const iter1FullPrec = rowHeaderCol ? rowHeaderCol.fullPrecision : false;
+    const iter2FullPrec = colHeaderCol ? colHeaderCol.fullPrecision : false;
 
     // Build value arrays
     const rowValues = [];
@@ -1251,23 +1235,45 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         colValues.push(v); if (colValues.length > 10000) break;
     }
 
+    // Helper: get output value from a column spec after cell evaluation
+    function getColValue(col) {
+        if (!col) return undefined;
+        if (col.ast) {
+            try { return evaluate(col.ast, context); } catch (e) { return undefined; }
+        }
+        return context.getVariable(col.name);
+    }
+
     const grid = [];
-    for (const rowVal of rowValues) {
+    const formattedRowValues = [];
+    const formattedColValues = [];
+    for (let r = 0; r < rowValues.length; r++) {
         const gridRow = [];
-        for (const colVal of colValues) {
+        for (let c = 0; c < colValues.length; c++) {
             context.preSolveValues = new Map();
             const badVars = evaluateCell([
-                { name: iter1.name, value: rowVal },
-                { name: iter2.name, value: colVal }
+                { name: iter1.name, value: rowValues[r] },
+                { name: iter2.name, value: colValues[c] }
             ]);
 
+            // Row headers: use first output value from first column
+            if (c === 0) {
+                const v = rowHeaderCol ? getColValue(rowHeaderCol) : undefined;
+                formattedRowValues.push(v !== undefined
+                    ? formatVariableValue(v, iter1Format, iter1FullPrec, formatOpts)
+                    : formatVariableValue(rowValues[r], iter1Format, iter1FullPrec, formatOpts));
+            }
+            // Column headers: use second output value from first row
+            if (r === 0) {
+                const v = colHeaderCol ? getColValue(colHeaderCol) : undefined;
+                formattedColValues.push(v !== undefined
+                    ? formatVariableValue(v, iter2Format, iter2FullPrec, formatOpts)
+                    : formatVariableValue(colValues[c], iter2Format, iter2FullPrec, formatOpts));
+            }
+
+            // Cell value: third output
             if (cellVar && !badVars.has(cellVar.name)) {
-                let value;
-                if (cellVar.ast) {
-                    try { value = evaluate(cellVar.ast, context); } catch (e) { }
-                } else {
-                    value = context.getVariable(cellVar.name);
-                }
+                const value = getColValue(cellVar);
                 if (value !== undefined) {
                     gridRow.push(formatVariableValue(value, cellVar.format, cellVar.fullPrecision, formatOpts));
                 } else { gridRow.push(''); }
@@ -1279,8 +1285,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     return {
         type: 'grid', title: expandedTitle,
         iter1Label, iter2Label,
-        rowValues: rowValues.map(v => formatVariableValue(v, iter1Format, iter1FullPrec, formatOpts)),
-        colValues: colValues.map(v => formatVariableValue(v, iter2Format, iter2FullPrec, formatOpts)),
+        rowValues: formattedRowValues,
+        colValues: formattedColValues,
         cellHeader: cellVar ? cellVar.header : '',
         grid, fontSize,
         startLine: tableDef.startLine, endLine: tableDef.endLine, errors

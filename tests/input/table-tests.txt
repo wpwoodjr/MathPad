@@ -690,8 +690,8 @@ table("v Amortization Schedule for \years\ year(s) at \rate%\") = {
 
 
 grid("v Payment for \pv$\ loan at various rates and loan lengths") = {
-  years: 5..30..5
   rate: rate-0.5%..rate+1.5%..0.0625%
+  years: 5..30..5
   pmt<-
   rate%->
   years->

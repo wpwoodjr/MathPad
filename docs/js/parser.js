@@ -650,9 +650,55 @@ class Tokenizer {
                 continue;
             }
 
-            // Format suffixes: $ (money), % (percent), ° (degrees), # (base)
-            if (ch === '$' || ch === '%' || ch === '°' || ch === '#') {
-                // For $, %, and °, check if followed by a declaration marker — merge into one token
+            // Format suffixes: $ (money), % (percent), ° (degrees), @d (date), @t (duration), # (base)
+            if (ch === '$' || ch === '%' || ch === '°' || ch === '#' || (ch === '@' && (this.peek(1) === 'd' || this.peek(1) === 't'))) {
+                // @d (date) and @t (duration) — two-char prefixes
+                if (ch === '@' && (this.peek(1) === 'd' || this.peek(1) === 't')) {
+                    const prefix = '@' + this.peek(1);
+                    const format = this.peek(1) === 'd' ? 'date' : 'duration';
+                    const p2 = this.peek(2);
+                    if (p2 === '-' && this.peek(3) === '>') {
+                        const type = this.peek(4) === '>' ? TokenType.ARROW_FULL : TokenType.ARROW_RIGHT;
+                        const marker = type === TokenType.ARROW_FULL ? '->>' : '->';
+                        this.advance(2 + marker.length);
+                        const token = this.makeToken(type, prefix + marker, startLine, startCol);
+                        token.format = format;
+                        pushToken(token);
+                        continue;
+                    }
+                    if (p2 === '<' && this.peek(3) === '<' && this.peek(4) === '-') {
+                        this.advance(5);
+                        const token = this.makeToken(TokenType.ARROW_LEFT_FULL, prefix + '<<-', startLine, startCol);
+                        token.format = format;
+                        pushToken(token);
+                        continue;
+                    }
+                    if (p2 === '<' && this.peek(3) === '-') {
+                        this.advance(4);
+                        const token = this.makeToken(TokenType.ARROW_LEFT, prefix + '<-', startLine, startCol);
+                        token.format = format;
+                        pushToken(token);
+                        continue;
+                    }
+                    if (p2 === ':') {
+                        let type, marker;
+                        if (this.peek(3) === '>' && this.peek(4) === '>') {
+                            type = TokenType.ARROW_PERSIST_FULL; marker = ':>>';
+                        } else if (this.peek(3) === '>') {
+                            type = TokenType.ARROW_PERSIST; marker = ':>';
+                        } else if (this.peek(3) === ':') {
+                            type = TokenType.DOUBLE_COLON; marker = '::';
+                        } else {
+                            type = TokenType.COLON; marker = ':';
+                        }
+                        this.advance(2 + marker.length);
+                        const token = this.makeToken(type, prefix + marker, startLine, startCol);
+                        token.format = format;
+                        pushToken(token);
+                        continue;
+                    }
+                }
+                // For $, %, °, check if followed by a declaration marker — merge into one token
                 if (ch === '$' || ch === '%' || ch === '°') {
                     const format = ch === '$' ? 'money' : ch === '%' ? 'percent' : 'degrees';
                     const next = this.peek(1);

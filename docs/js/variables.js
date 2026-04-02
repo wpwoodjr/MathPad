@@ -210,6 +210,29 @@ function findVariablesInExpression(node) {
 }
 
 /**
+ * Parse literal value from tokens: date text, numeric literal, or negative literal.
+ * Returns the numeric value, or null if not a literal.
+ */
+function parseLiteralValue(valueTokens, format) {
+    if (!valueTokens || valueTokens.length === 0) return null;
+    if (format === 'date') {
+        const dateVal = parseDateText(tokensToText(valueTokens));
+        if (dateVal !== null) return dateVal;
+    }
+    if (format === 'duration') {
+        const durVal = parseDurationText(tokensToText(valueTokens));
+        if (durVal !== null) return durVal;
+    }
+    try {
+        const ast = parseTokens(valueTokens);
+        if (ast && ast.type === NodeType.NUMBER) return ast.value;
+        if (ast && ast.type === NodeType.UNARY_OP && ast.op === '-' &&
+            ast.operand && ast.operand.type === NodeType.NUMBER) return -ast.operand.value;
+    } catch (e) { }
+    return null;
+}
+
+/**
  * Parse all variable declarations from text (simple parse, no evaluation)
  * Returns array of { name, declaration, lineIndex, value, valueText }
  */
@@ -223,22 +246,7 @@ function parseAllVariables(text, allTokens, skipLines) {
 
         const decl = parseVariableLine(lines[i], lineTokens);
         if (decl) {
-            // Parse numeric literals only (no expression evaluation)
-            // Expressions stay as valueTokens for the solve phase
-            let value = null;
-            if (decl.valueTokens && decl.valueTokens.length > 0) {
-                try {
-                    const ast = parseTokens(decl.valueTokens);
-                    if (ast && ast.type === NodeType.NUMBER) {
-                        value = ast.value;
-                    } else if (ast && ast.type === NodeType.UNARY_OP && ast.op === '-' &&
-                               ast.operand && ast.operand.type === NodeType.NUMBER) {
-                        value = -ast.operand.value;
-                    }
-                } catch (e) {
-                    // Not a simple literal - leave for solve phase
-                }
-            }
+            let value = parseLiteralValue(decl.valueTokens, decl.format);
 
             declarations.push({
                 name: decl.name,
@@ -313,11 +321,14 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
 
             const valueTokens = decl.valueTokens;
 
+            let value = parseLiteralValue(valueTokens, decl.format);
+            if (value !== null) context.setVariable(name, value);
+
             declarations.push({
                 name: name,
                 declaration: decl,
                 lineIndex: i,
-                value: null,
+                value: value,
                 valueTokens: valueTokens,
                 markerEndCol: decl.markerEndCol
             });
@@ -457,6 +468,16 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
             return formatted + '°';
         }
         return formatDegrees(degrees, places);
+    }
+
+    // Handle date format: fullPrecision (->>) includes time, regular (->) date only
+    if (varFormat === 'date') {
+        return formatDateValue(value, fullPrecision);
+    }
+
+    // Handle duration format: fullPrecision (->>) includes fractional seconds
+    if (varFormat === 'duration') {
+        return formatDuration(value, fullPrecision);
     }
 
     // Regular number formatting

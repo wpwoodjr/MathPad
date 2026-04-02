@@ -182,8 +182,8 @@ table("> Amortization Schedule for \\years\\ year(s) at \\rate%\\") = {
 ---
 
 grid("v Payment for \\pv$\\ loan at various rates and loan lengths") = {
-  years: 5..30..5
   rate: rate-0.5%..rate+0.5%..0.0625%
+  years: 5..30..5
   pmt<-
   rate%->
   years->
@@ -361,7 +361,10 @@ G: 6.67430e-11 "gravitational constant"
 h: 6.62607015e-34 "Planck constant"
 kB: 1.380649e-23 "Boltzmann constant"
 NA: 6.02214076e23 "Avogadro number"
-golden: 1.61803398874989 "golden ratio"`,
+golden: 1.61803398874989 "golden ratio"
+
+secsPerHour: 3600
+secsPerDay: 86400`,
                 category: 'Reference',
                 places: 2,
                 stripZeros: true,

@@ -57,6 +57,10 @@ function loadModules() {
     global.formatMoney = evaluator.formatMoney;
     global.formatPercent = evaluator.formatPercent;
     global.formatDegrees = evaluator.formatDegrees;
+    global.parseDateText = evaluator.parseDateText;
+    global.formatDateValue = evaluator.formatDateValue;
+    global.parseDurationText = evaluator.parseDurationText;
+    global.formatDuration = evaluator.formatDuration;
     global.toFixed = evaluator.toFixed;
     global.builtinFunctions = evaluator.builtinFunctions;
     global.checkBalance = evaluator.checkBalance;

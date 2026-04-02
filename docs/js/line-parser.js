@@ -213,9 +213,12 @@ class LineParser {
             const mPrec = MARKER_PRECEDENCE[getMarkerString(m.token)];
             const bestPrec = MARKER_PRECEDENCE[getMarkerString(best.token)];
 
-            if (mPrec > bestPrec) {
+            // Formatted markers (e.g. @:) always beat unformatted ones at same precedence
+            const mFmt = m.token.format ? 1 : 0;
+            const bestFmt = best.token.format ? 1 : 0;
+            if (mPrec > bestPrec || (mPrec === bestPrec && mFmt > bestFmt)) {
                 best = m;
-            } else if (mPrec === bestPrec) {
+            } else if (mPrec === bestPrec && mFmt === bestFmt) {
                 // Arrows: leftmost wins (keep best if it's already left)
                 // Colons: rightmost wins
                 if (mPrec < 2 && m.index > best.index) {
@@ -381,8 +384,12 @@ class LineParser {
         }
 
         // For non-output markers (: :: <-), all tokens are value (no unit comment split)
+        // Date/duration formats also keep all tokens (colons in values aren't comments)
         if (markerToken.type !== TokenType.ARROW_RIGHT && markerToken.type !== TokenType.ARROW_FULL &&
             markerToken.type !== TokenType.ARROW_PERSIST && markerToken.type !== TokenType.ARROW_PERSIST_FULL) {
+            return { valueTokens: afterTokens, unitComment: null };
+        }
+        if (markerToken.format === 'date' || markerToken.format === 'duration') {
             return { valueTokens: afterTokens, unitComment: null };
         }
 
