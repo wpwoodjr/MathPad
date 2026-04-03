@@ -278,6 +278,11 @@ class VariablesPanel {
 
         // Align all value inputs/outputs by setting name elements to the same width
         this.alignNameWidths();
+
+        // Auto-size value fields that overflow
+        for (const input of this.container.querySelectorAll('.variable-value-input, .variable-value-readonly')) {
+            this.autoSizeInput(input);
+        }
     }
 
     /**
@@ -418,6 +423,9 @@ class VariablesPanel {
                     e.target.blur();
                 }
             });
+            valueElement.addEventListener('input', (e) => {
+                this.autoSizeInput(e.target);
+            });
             this.inputElements.set(info.lineIndex, valueElement);
         } else {
             valueElement = document.createElement('input');
@@ -501,6 +509,7 @@ class VariablesPanel {
             const oldValue = valueElement.tagName === 'INPUT' ? valueElement.value : valueElement.textContent;
             if (valueElement.tagName === 'INPUT') {
                 valueElement.value = newValue;
+                this.autoSizeInput(valueElement);
             } else {
                 valueElement.textContent = newValue;
             }
@@ -614,6 +623,27 @@ class VariablesPanel {
 
         // For regular numbers, preserve the input exactly as typed
         return text;
+    }
+
+    /**
+     * Auto-size an input element to fit its content when wider than default max-width
+     */
+    autoSizeInput(input) {
+        if (!input.value) { input.style.maxWidth = ''; return; }
+        // Measure text width using a hidden span
+        if (!this._measureSpan) {
+            this._measureSpan = document.createElement('span');
+            this._measureSpan.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;';
+            document.body.appendChild(this._measureSpan);
+        }
+        const style = getComputedStyle(input);
+        this._measureSpan.style.font = style.font;
+        this._measureSpan.textContent = input.value;
+        const textWidth = this._measureSpan.offsetWidth;
+        const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) +
+                         parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+        const needed = textWidth + padding + 4;
+        input.style.maxWidth = needed > 140 ? needed + 'px' : '';
     }
 
     /**
@@ -922,7 +952,6 @@ class VariablesPanel {
                 // Set sticky left offset for row values (after the row label column)
                 const rowLabel = wrapper.querySelector('.mathpad-grid-row-label');
                 if (rowLabel) {
-                    // Row values stick right after the row label, both offset by container padding
                     const rowValueLeft = rowLabel.offsetWidth - 8;
                     wrapper.querySelectorAll('.grid-row-value').forEach(th => {
                         th.style.left = rowValueLeft + 'px';
@@ -967,12 +996,8 @@ class VariablesPanel {
         // Header row 1: empty + empty + iter2Label spanning columns
         const thead = document.createElement('thead');
         const headerRow1 = document.createElement('tr');
-        const h1Empty1 = document.createElement('th');
-        h1Empty1.className = 'grid-sticky-left';
-        headerRow1.appendChild(h1Empty1); // x label column
-        const h1Empty2 = document.createElement('th');
-        h1Empty2.className = 'grid-sticky-left';
-        headerRow1.appendChild(h1Empty2); // row values column
+        headerRow1.appendChild(document.createElement('th')); // x label column
+        headerRow1.appendChild(document.createElement('th')); // row values column
         const iter2Th = document.createElement('th');
         iter2Th.textContent = table.iter2Label;
         iter2Th.colSpan = numCols;
@@ -980,12 +1005,12 @@ class VariablesPanel {
         headerRow1.appendChild(iter2Th);
         thead.appendChild(headerRow1);
 
-        // Header row 2: empty + empty + column values
+        // Header row 2: cell header label (spanning 2 cols) + column values
         const headerRow2 = document.createElement('tr');
         const cellHeaderTh = document.createElement('th');
         cellHeaderTh.textContent = table.cellHeader || '';
         cellHeaderTh.colSpan = 2;
-        cellHeaderTh.className = 'mathpad-grid-label grid-sticky-left';
+        cellHeaderTh.className = 'mathpad-grid-label';
         cellHeaderTh.style.textAlign = 'right';
         headerRow2.appendChild(cellHeaderTh);
         for (let c = 0; c < table.colValues.length; c++) {
