@@ -195,27 +195,7 @@ class Tokenizer {
         const startPos = this.pos;
         let value = '';
 
-        // Check for 0x/0b/0o prefix literals before consuming digits
-        if (this.peek() === '0' && this.peek(1) && /[xXbBoO]/.test(this.peek(1))) {
-            const prefix = this.peek(1).toLowerCase();
-            this.advance(2); // 0x, 0b, or 0o
-            let digits = '';
-            const digitTest = prefix === 'x' ? this.isHexDigit
-                            : prefix === 'b' ? (ch) => ch === '0' || ch === '1'
-                            : (ch) => ch && /[0-7]/.test(ch);
-            while (digitTest.call(this, this.peek())) {
-                digits += this.advance();
-            }
-            if (!digits) {
-                const token = this.makeToken(TokenType.ERROR, `Invalid 0${prefix} literal`, startLine, startCol);
-                token.length = 2; // 0x, 0b, or 0o
-                token.raw = this.text.substring(startPos, this.pos);
-                return token;
-            }
-            const base = prefix === 'x' ? 16 : prefix === 'b' ? 2 : 8;
-            const raw = '0' + this.text[this.pos - digits.length - 1] + digits;
-            return this.makeToken(TokenType.NUMBER, { value: parseInt(digits, base), base, raw }, startLine, startCol);
-        }
+
 
         // Decimal number (possibly floating point with scientific notation)
         // Allow commas as digit grouping

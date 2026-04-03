@@ -186,15 +186,6 @@ function runAllTests() {
                 ['ff#16', 'number']
             ]
         },
-        // Hex literals
-        {
-            name: 'hex literal (0xFF)',
-            line: 'x: 0xFF',
-            assertions: [
-                ['x', 'variable-def'],
-                ['0xFF', 'number']
-            ]
-        },
         // Money format
         {
             name: 'money literal ($100)',
