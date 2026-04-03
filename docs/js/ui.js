@@ -20,7 +20,7 @@ const UIState = {
     openTabs: [],            // List of open tab record IDs
     visitHistory: [],        // Recently visited record IDs (most recent last)
     editors: new Map(),      // Map of recordId -> editor info
-    collapsedCategories: new Set() // Collapsed category names in sidebar
+    collapsedCategories: new Set() // Collapsed category names in sidebar (loaded from data.settings)
 };
 
 /**
@@ -65,6 +65,11 @@ function initUI(data) {
     UI.statusBar = document.getElementById('status-bar');
 
     // Render initial UI
+    // Restore collapsed categories from settings
+    if (data.settings && data.settings.collapsedCategories) {
+        UI.collapsedCategories = new Set(data.settings.collapsedCategories);
+    }
+
     renderSidebar();
     renderDetailsPanel();
 
@@ -203,6 +208,8 @@ function toggleCategory(category) {
     } else {
         UI.collapsedCategories.add(category);
     }
+    UI.data.settings.collapsedCategories = [...UI.collapsedCategories];
+    debouncedSave(UI.data);
     renderSidebar();
 }
 
