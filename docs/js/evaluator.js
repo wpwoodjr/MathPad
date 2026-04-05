@@ -527,7 +527,8 @@ const builtinFunctions = {
 
     // Reserved keywords — not callable, but included so they can't be overridden as function defs
     table: null,
-    grid: null
+    grid: null,
+    tablegraph: null
 };
 
 /**

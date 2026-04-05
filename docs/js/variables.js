@@ -367,14 +367,18 @@ function getInlineEvalFormat(exprTokens, record, variables = null) {
     let base = 10;
     let baseName = null;
 
-    // Detect trailing format suffix from tokens: FORMATTER($/%/°) or FORMATTER(#)+NUMBER
+    // Detect trailing format suffix from tokens: FORMATTER($/%/°), @d, @t, or FORMATTER(#)+NUMBER
     const lastTok = exprTokens.length > 0 ? exprTokens[exprTokens.length - 1] : null;
+    const prevTok = exprTokens.length > 1 ? exprTokens[exprTokens.length - 2] : null;
     const formatMap = { '$': 'money', '%': 'percent', '°': 'degrees' };
-    if (lastTok && lastTok.type === TokenType.FORMATTER && formatMap[lastTok.value]) {
+    // Check for @d or @t (FORMATTER('@') + IDENTIFIER('d'|'t'))
+    if (lastTok && lastTok.type === TokenType.IDENTIFIER && (lastTok.value === 'd' || lastTok.value === 't') &&
+        prevTok && prevTok.type === TokenType.FORMATTER && prevTok.value === '@') {
+        varFormat = lastTok.value === 'd' ? 'date' : 'duration';
+    } else if (lastTok && lastTok.type === TokenType.FORMATTER && formatMap[lastTok.value]) {
         varFormat = formatMap[lastTok.value];
     } else if (exprTokens.length >= 2 && lastTok && lastTok.type === TokenType.NUMBER &&
-               exprTokens[exprTokens.length - 2].type === TokenType.FORMATTER &&
-               exprTokens[exprTokens.length - 2].value === '#') {
+               prevTok && prevTok.type === TokenType.FORMATTER && prevTok.value === '#') {
         base = lastTok.value.value;
     }
 
@@ -1105,7 +1109,7 @@ function findTableDefinitions(text, allTokens) {
         const tableIdx = tokens.findIndex(t => t.type === TokenType.IDENTIFIER);
         if (tableIdx < 0) return;
         const keyword = tokens[tableIdx].value.toLowerCase();
-        if (keyword !== 'table' && keyword !== 'grid') return;
+        if (keyword !== 'table' && keyword !== 'grid' && keyword !== 'tablegraph') return;
         if (tableIdx + 1 >= tokens.length || tokens[tableIdx + 1].type !== TokenType.LPAREN) return;
 
         // Find RPAREN
@@ -1170,11 +1174,14 @@ function expandInlineExprs(text, context, record) {
             // Strip format suffix tokens before parsing expression
             let exprTokens = tokens;
             const last = tokens[tokens.length - 1];
-            if (last && last.type === TokenType.FORMATTER) {
+            const prev = tokens.length >= 2 ? tokens[tokens.length - 2] : null;
+            if (last && last.type === TokenType.IDENTIFIER && (last.value === 'd' || last.value === 't') &&
+                prev && prev.type === TokenType.FORMATTER && prev.value === '@') {
+                exprTokens = tokens.slice(0, -2); // strip @d or @t
+            } else if (last && last.type === TokenType.FORMATTER) {
                 exprTokens = tokens.slice(0, -1);
-            } else if (tokens.length >= 2 && last && last.type === TokenType.NUMBER &&
-                       tokens[tokens.length - 2].type === TokenType.FORMATTER &&
-                       tokens[tokens.length - 2].value === '#') {
+            } else if (last && last.type === TokenType.NUMBER &&
+                       prev && prev.type === TokenType.FORMATTER && prev.value === '#') {
                 exprTokens = tokens.slice(0, -2);
             }
             const ast = parseTokens(exprTokens);

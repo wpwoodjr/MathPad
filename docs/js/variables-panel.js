@@ -830,18 +830,18 @@ class VariablesPanel {
         titleEl.textContent = displayTitle;
         titleEl.style.fontSize = (table.fontSize || 14) + 'px';
 
-        // Hide table if collapsed
+        // Hide table/graph if collapsed
         if (collapsed) {
             setTimeout(() => {
-                const tableEl = wrapper.querySelector('.mathpad-table');
-                if (tableEl) tableEl.style.display = 'none';
+                const contentEl = wrapper.querySelector('.mathpad-table, .mathpad-graph');
+                if (contentEl) contentEl.style.display = 'none';
             }, 0);
         }
 
         titleEl.addEventListener('click', () => {
             const isCollapsed = titleEl.classList.toggle('collapsed');
-            const tableEl = wrapper.querySelector('.mathpad-table');
-            if (tableEl) tableEl.style.display = isCollapsed ? 'none' : '';
+            const contentEl = wrapper.querySelector('.mathpad-table, .mathpad-graph');
+            if (contentEl) contentEl.style.display = isCollapsed ? 'none' : '';
 
             // Update title prefix in source text using startLine
             if (this.editor && table.startLine != null) {
@@ -850,7 +850,7 @@ class VariablesPanel {
                 const lineIdx = table.startLine - 1; // startLine is 1-based
                 const line = lines[lineIdx];
                 if (line) {
-                    const match = line.match(/^((?:table|grid)\s*\(\s*")(.*)("\s*[;)])/i);
+                    const match = line.match(/^((?:table|grid|tablegraph)\s*\(\s*")(.*)("\s*[;)])/i);
                     if (match) {
                         // Strip existing v/> prefix from source title
                         let srcTitle = match[2];
@@ -880,6 +880,10 @@ class VariablesPanel {
         if (!tables || tables.length === 0) return;
 
         for (const table of tables) {
+            if (table.type === 'graph') {
+                this._renderGraph(table);
+                continue;
+            }
             if (table.type === 'grid') {
                 this._renderTable2(table);
                 continue;
@@ -969,6 +973,210 @@ class VariablesPanel {
                 }
             }
         });
+    }
+
+    /**
+     * Render an SVG line graph from tableGraph data
+     */
+    _renderGraph(table) {
+        if (!table.rawRows || table.rawRows.length === 0 || table.columns.length < 2) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'variable-row variable-table-container';
+        wrapper.dataset.lineIndex = table.startLine - 1;
+        wrapper.dataset.type = 'table';
+
+        // Title
+        const titleEl = this._createTableTitle(table, wrapper);
+        if (titleEl) wrapper.appendChild(titleEl);
+
+        // Extract x and y data from first two columns
+        const xCol = 0, yCol = 1;
+        const points = [];
+        for (const row of table.rawRows) {
+            const x = row[xCol], y = row[yCol];
+            if (x != null && y != null && isFinite(x) && isFinite(y)) {
+                points.push({ x, y });
+            }
+        }
+        if (points.length === 0) { this.insertRowInOrder(wrapper, table.startLine - 1); return; }
+
+        // Tick formatters using column format specifiers
+        const xFmt = (v) => {
+            const col = table.columns[xCol];
+            return col.format ? formatVariableValue(v, col.format, false, table.formatOpts || {}) : this._formatTickLabel(v);
+        };
+        const yFmt = (v) => {
+            const col = table.columns[yCol];
+            return col.format ? formatVariableValue(v, col.format, false, table.formatOpts || {}) : this._formatTickLabel(v);
+        };
+
+        // Graph dimensions
+        const width = 500, height = 300;
+        const margin = { top: 20, right: 20, bottom: 45, left: 60 };
+        const plotW = width - margin.left - margin.right;
+        const plotH = height - margin.top - margin.bottom;
+
+        // Data range
+        let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+        for (const p of points) {
+            if (p.x < xMin) xMin = p.x; if (p.x > xMax) xMax = p.x;
+            if (p.y < yMin) yMin = p.y; if (p.y > yMax) yMax = p.y;
+        }
+        // Add padding to y range
+        const yPad = (yMax - yMin) * 0.05 || 1;
+        yMin -= yPad; yMax += yPad;
+
+        const sx = (x) => margin.left + (x - xMin) / (xMax - xMin) * plotW;
+        const sy = (y) => margin.top + (1 - (y - yMin) / (yMax - yMin)) * plotH;
+
+        // Build SVG
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.setAttribute('class', 'mathpad-graph');
+        svg.style.width = '100%';
+        svg.style.maxWidth = width + 'px';
+
+        // Grid lines and axes
+        const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() || '#444';
+        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
+        const lineColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() || '#4fc1ff';
+
+        // Y-axis ticks
+        const yTicks = this._niceTicks(yMin, yMax, 8, table.columns[yCol].format);
+        for (const tick of yTicks) {
+            const y = sy(tick);
+            // Grid line
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
+            line.setAttribute('y1', y); line.setAttribute('y2', y);
+            line.setAttribute('stroke', gridColor); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+            // Label
+            const label = document.createElementNS(ns, 'text');
+            label.setAttribute('x', margin.left - 5); label.setAttribute('y', y + 4);
+            label.setAttribute('text-anchor', 'end'); label.setAttribute('fill', textColor);
+            label.setAttribute('font-size', '11');
+            label.textContent = yFmt(tick);
+            svg.appendChild(label);
+        }
+
+        // X-axis ticks
+        const xTicks = this._niceTicks(xMin, xMax, 8, table.columns[xCol].format);
+        for (const tick of xTicks) {
+            const x = sx(tick);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', x); line.setAttribute('x2', x);
+            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
+            line.setAttribute('stroke', gridColor); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+            const label = document.createElementNS(ns, 'text');
+            label.setAttribute('x', x); label.setAttribute('y', margin.top + plotH + 15);
+            label.setAttribute('text-anchor', 'middle'); label.setAttribute('fill', textColor);
+            label.setAttribute('font-size', '11');
+            label.textContent = xFmt(tick);
+            svg.appendChild(label);
+        }
+
+        // Zero lines (if in range)
+        if (yMin <= 0 && yMax >= 0) {
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
+            line.setAttribute('y1', sy(0)); line.setAttribute('y2', sy(0));
+            line.setAttribute('stroke', textColor); line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
+        }
+        if (xMin <= 0 && xMax >= 0) {
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', sx(0)); line.setAttribute('x2', sx(0));
+            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
+            line.setAttribute('stroke', textColor); line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
+        }
+
+        // Plot border
+        const border = document.createElementNS(ns, 'rect');
+        border.setAttribute('x', margin.left); border.setAttribute('y', margin.top);
+        border.setAttribute('width', plotW); border.setAttribute('height', plotH);
+        border.setAttribute('fill', 'none'); border.setAttribute('stroke', gridColor);
+        svg.appendChild(border);
+
+        // Data line
+        let pathD = '';
+        for (let i = 0; i < points.length; i++) {
+            const px = sx(points[i].x), py = sy(points[i].y);
+            pathD += (i === 0 ? 'M' : 'L') + px.toFixed(2) + ',' + py.toFixed(2);
+        }
+        const path = document.createElementNS(ns, 'path');
+        path.setAttribute('d', pathD);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', lineColor);
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(path);
+
+        // Axis labels
+        const xLabel = table.columns[xCol].header || table.columns[xCol].name;
+        const yLabel = table.columns[yCol].header || table.columns[yCol].name;
+        if (xLabel) {
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', margin.left + plotW / 2); text.setAttribute('y', height - 5);
+            text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', textColor);
+            text.setAttribute('font-size', '12');
+            text.textContent = xLabel;
+            svg.appendChild(text);
+        }
+        if (yLabel) {
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', 12); text.setAttribute('y', margin.top + plotH / 2);
+            text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', textColor);
+            text.setAttribute('font-size', '12');
+            text.setAttribute('transform', `rotate(-90, 12, ${margin.top + plotH / 2})`);
+            text.textContent = yLabel;
+            svg.appendChild(text);
+        }
+
+        wrapper.appendChild(svg);
+        this.insertRowInOrder(wrapper, table.startLine - 1);
+        this._setStickyHeaderOffsets(wrapper);
+    }
+
+    /**
+     * Generate nice tick values for an axis
+     */
+    _niceTicks(min, max, count, format) {
+        const range = max - min;
+        if (range === 0) return [min];
+
+        let step;
+        if (format === 'duration') {
+            // Use time-friendly intervals
+            const timeSteps = [1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600,
+                7200, 10800, 21600, 43200, 86400];
+            const rough = range / count;
+            step = timeSteps.find(s => s >= rough) || rough;
+        } else {
+            const rough = range / count;
+            const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+            const norm = rough / mag;
+            step = norm < 1.5 ? mag : norm < 3 ? 2 * mag : norm < 7 ? 5 * mag : 10 * mag;
+        }
+        const start = Math.ceil(min / step) * step;
+        const ticks = [];
+        for (let v = start; v <= max + step * 0.01; v += step) {
+            ticks.push(Math.round(v / step) * step); // avoid FP drift
+        }
+        return ticks;
+    }
+
+    /**
+     * Format a tick label (strip trailing zeros)
+     */
+    _formatTickLabel(value) {
+        if (Number.isInteger(value)) return String(value);
+        const s = value.toPrecision(6).replace(/\.?0+$/, '');
+        return s;
     }
 
     /**

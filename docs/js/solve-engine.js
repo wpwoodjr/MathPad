@@ -1153,8 +1153,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         return badVars;
     }
 
-    // ==================== TABLE (columnar) ====================
-    if (tableDef.keyword === 'table') {
+    // ==================== TABLE and TABLEGRAPH (columnar) ====================
+    if (tableDef.keyword === 'table' || tableDef.keyword === 'tablegraph') {
         const iter = evaledIterators[0];
         if (!iter) {
             errors.push(`Line ${tableDef.startLine}: Table has no iterator (use x<- 0..10)`);
@@ -1162,6 +1162,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         }
 
         const rows = [];
+        const rawRows = [];
         let prevValues = new Map();
         const maxRows = 10000;
 
@@ -1173,10 +1174,11 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
             const badVars = evaluateCell([{ name: iter.name, value: val }]);
 
-            // Collect output values
+            // Collect output values (formatted and raw)
             const row = [];
+            const rawRow = [];
             for (const col of columns) {
-                if (badVars.has(col.name)) { row.push(''); continue; }
+                if (badVars.has(col.name)) { row.push(''); rawRow.push(null); continue; }
                 let value;
                 if (col.ast) {
                     try { value = evaluate(col.ast, context); } catch (e) { }
@@ -1185,9 +1187,11 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                 }
                 if (value !== undefined) {
                     row.push(formatVariableValue(value, col.format, col.fullPrecision, formatOpts));
-                } else { row.push(''); }
+                    rawRow.push(value);
+                } else { row.push(''); rawRow.push(null); }
             }
             rows.push(row);
+            rawRows.push(rawRow);
 
             // Capture for next row's pre-solve
             prevValues = new Map();
@@ -1201,7 +1205,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             prevValues.set(iter.name, val);
         }
 
-        return { type: 'table', title: expandedTitle, columns, rows, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+        const type = tableDef.keyword === 'tablegraph' ? 'graph' : 'table';
+        return { type, title: expandedTitle, columns, rows, rawRows, formatOpts, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
     }
 
     // ==================== GRID (2D cell values) ====================
