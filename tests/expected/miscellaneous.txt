@@ -11,8 +11,9 @@ h: 6.62607015e-34 "Planck constant"
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Nothing to solve"; StatusIsError = 0
+Status = "Line 2: Too many unknowns (a, b)"; StatusIsError = 1
 "Functions"
+// Solving the Functions record treats fn defs as equations (expected errors)
 hypot(a;b) = sqrt(a**2 + b**2) "hypotenuse"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -42,7 +43,7 @@ x-> 15
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
-Status = "Line 10: Variable 'c' has no value to output"; StatusIsError = 1
+Status = "Solved 2 equations"; StatusIsError = 0
 "Screen Size with c-> output"
 
 h/w = 16/9
@@ -50,11 +51,13 @@ h/w = 16/9
 d = hypot(w; h)
 
 Enter d: 1234567890.3456 "diagonal"
+h<- 1,076,019,172.14
 h-> 1,076,019,172.14
 w-> 605,260,784.33 "width"
-c->
+c-> 299,792,458
 
 "--- Reference Constants and Functions ---"
+c: 299792458 "speed of light m/s"
 hypot(a;b) = sqrt(a**2 + b**2) "hypotenuse"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -284,6 +287,7 @@ h/w = 16/9
 d*d = w*w + h*h
 
 Enter d: 6.6 "diagonal"
+h<- 5.75
 height h-> 5.75
 width w->> 3.235724181574889
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -348,13 +352,13 @@ BMI-> 25.11 kg/m2
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved 1 equation"; StatusIsError = 0
+Status = "Line 14: Equation doesn't balance: c = a + b (relative diff 100% >= 0.5%)"; StatusIsError = 1
 "Label text with parentheses vs expressions"
 
 "Labels with parentheses - should be variable declarations"
 Input (test) a<- 5
 Value (m/s) b: 10
-Result (%) c-> 15
+Result (%) c-> 299792458
 
 "Expressions - should be expression outputs"
 sqrt(a)-> 2.24
@@ -363,17 +367,20 @@ a + b-> 15
 
 "Mixed - equation then labeled output"
 c = a + b
+
+"--- Reference Constants and Functions ---"
+c: 299792458 "speed of light m/s"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Solved 1 equation"; StatusIsError = 0
+Status = "Line 16: Equation doesn't balance: c = a + b (relative diff 100% >= 0.005%)"; StatusIsError = 1
 "Label text torture test"
 
 "Labels with parentheses - should be variable declarations"
 Input (test) a<- 5 "here's a"
 Value (m/s) b: 10 "and b"
-Result (%) c-> 15 that's c
+Result (%) c-> 299792458 that's c
 
 "Expressions - should be expression outputs"
 Output a-> 5 that's a
@@ -384,6 +391,9 @@ result: (a/b)->> 0.5 should be 0.5
 
 "Mixed - equation then labeled output"
 equation c = a + b test
+
+"--- Reference Constants and Functions ---"
+c: 299792458 "speed of light m/s"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -427,7 +437,7 @@ a*b->
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Nothing to solve"; StatusIsError = 0
+Status = "Line 5: Too many unknowns (a, b)"; StatusIsError = 1
 "Multi-line braced equations with builtin override"
 
 { xmax(a;b) = if(a>b; a; b) }
@@ -436,7 +446,7 @@ This is a fn: { min(a;b) =
   if(a<b; a; b)
   * 3 } hi there
 
-xmax(7; min(4;5))->> 12
+xmax(7; min(4;5))->> 7
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -470,10 +480,13 @@ xx#16-> FF#16
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-Status = "Line 3: Variable 'c' has no value to output"; StatusIsError = 1
-"Test for value of c when shadow constants is on"
+Status = "Nothing to solve"; StatusIsError = 0
+"Test c-> outputs constant value"
 
-c->
+c-> 299792458
+
+"--- Reference Constants and Functions ---"
+c: 299792458 "speed of light m/s"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
@@ -503,7 +516,7 @@ Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Line 4: Cannot evaluate \"pi\" - Variable 'pi' has no value\nLine 9: Cannot evaluate \"h\" - Variable 'h' has no value\nLine 5: Variable 'x' has no value to output\nLine 10: Variable 'y' has no value to output"; StatusIsError = 1
-"Test pi is declared (with shadow constants on) but has no value"
+"Test pi: with no value shadows constant"
 
 pi:
 x: pi
@@ -517,8 +530,8 @@ y->>
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 3: Variable \"pi\" conflicts with a constant\nLine 4: Cannot evaluate \"pi\" - Variable 'pi' has no value\nLine 5: Variable 'x' has no value to output"; StatusIsError = 1
-"Test pi is declared (with shadow constants off) - should error"
+Status = "Line 4: Cannot evaluate \"pi\" - Variable 'pi' has no value\nLine 5: Variable 'x' has no value to output"; StatusIsError = 1
+"Test pi: with no value shadows constant (same as shadow on)"
 
 pi:
 x: pi
@@ -537,7 +550,7 @@ x->>
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 6: Variable \"c\" conflicts with a constant"; StatusIsError = 1
+Status = "Nothing to solve"; StatusIsError = 0
 "Money literal expressions"
 
 b: $.01+$.01

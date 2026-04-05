@@ -523,7 +523,11 @@ const builtinFunctions = {
     tau: (args) => 2 * Math.PI,
 
     // Perigon (full rotation): 360 in degrees mode, 2π in radians mode
-    perigon: (args, context) => context.degreesMode ? 360 : 2 * Math.PI
+    perigon: (args, context) => context.degreesMode ? 360 : 2 * Math.PI,
+
+    // Reserved keywords — not callable, but included so they can't be overridden as function defs
+    table: null,
+    grid: null
 };
 
 /**

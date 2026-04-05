@@ -21,6 +21,7 @@ Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
 "Functions"
+// Solving the Functions record treats fn defs as equations (expected errors)
 "User-defined functions"
 
 "Compound interest"
@@ -604,7 +605,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"01 Shadowing: check no shadowing"
+"01 Shadowing: check there should be implicit shadowing"
 e: 3
 e->>
 

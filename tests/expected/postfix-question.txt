@@ -1,7 +1,7 @@
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 1: Variable \"pi\" conflicts with a constant\nLine 2: Variable \"e\" conflicts with a constant\nLine 3: Variable \"c\" conflicts with a constant\nLine 4: Variable \"h\" conflicts with a constant"; StatusIsError = 1
+Status = "Nothing to solve"; StatusIsError = 0
 "Constants"
 pi: 3.14159265358979
 e: 2.71828182845905
@@ -181,7 +181,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Nothing to solve"; StatusIsError = 0
-"~? tests for constants, shadow constants off"
+"~? tests for constants"
 
 pi-> 3.1416
 pi~-> 3.1416
@@ -194,7 +194,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
 Status = "Line 7: Variable 'e' has no value\nLine 8: Variable 'e' has no pre-solve value\nLine 11: Variable 'e' has no pre-solve value"; StatusIsError = 1
-"~? tests for constants, shadow constants on"
+"~? tests for constants (same behavior regardless of shadow setting)"
 
 pi+0-> 3.1416
 pi~-> 3.1416

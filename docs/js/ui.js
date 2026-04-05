@@ -367,14 +367,14 @@ function getReferenceInfo() {
 
 /**
  * Update reference info on all editors
- * Call this when Constants or Functions records are modified, or when shadowConstants changes
+ * Call this when Constants or Functions records are modified
  */
 function updateAllEditorsReferenceInfo() {
     const { constants, functions, parsedConstants, parsedFunctions } = getReferenceInfo();
     for (const [id, { editor }] of UI.editors) {
         const record = UI.data.records.find(r => r.id === id);
-        const shadowConstants = (record && record.shadowConstants) || false;
-        editor.setReferenceInfo(constants, functions, shadowConstants, parsedConstants, parsedFunctions);
+        const isFnRecord = record && isReferenceRecord(record, 'Functions');
+        editor.setReferenceInfo(constants, isFnRecord ? null : functions, parsedConstants, isFnRecord ? null : parsedFunctions);
     }
 }
 
@@ -518,8 +518,10 @@ function createEditorForRecord(record) {
     variablesManager.updateFromText(record.text);
 
     // Set reference info for highlighting
+    // Functions record doesn't load its own functions as references (they're definitions, not builtins)
     const { constants, functions, parsedConstants, parsedFunctions } = getReferenceInfo();
-    editor.setReferenceInfo(constants, functions, record.shadowConstants || false, parsedConstants, parsedFunctions);
+    const isFnRecord = isReferenceRecord(record, 'Functions');
+    editor.setReferenceInfo(constants, isFnRecord ? null : functions, parsedConstants, isFnRecord ? null : parsedFunctions);
 
     // Update undo/redo button states when stacks change
     editor.onUndoStateChange((canUndo, canRedo) => {
@@ -757,14 +759,6 @@ function renderDetailsPanel() {
             </label>
         </div>
 
-        <div class="detail-group checkbox">
-            <label>
-                <input type="checkbox" id="detail-shadow" ${record.shadowConstants ? 'checked' : ''}
-                       onchange="updateRecordDetail('shadowConstants', this.checked)">
-                Shadow constants
-            </label>
-        </div>
-
         <div class="details-actions">
             <button onclick="duplicateCurrentRecord()" class="btn-secondary">Duplicate</button>
             <button onclick="deleteCurrentRecord()" class="btn-danger">Delete</button>
@@ -813,15 +807,6 @@ function updateRecordDetail(field, value) {
         renderSidebar();
         renderDetailsPanel();
         renderSettingsModal();
-    }
-
-    // Update editor highlighting when shadowConstants changes
-    if (field === 'shadowConstants') {
-        const editorInfo = UI.editors.get(record.id);
-        if (editorInfo) {
-            const { constants, functions, parsedConstants, parsedFunctions } = getReferenceInfo();
-            editorInfo.editor.setReferenceInfo(constants, functions, value, parsedConstants, parsedFunctions);
-        }
     }
 
     // Re-tokenize when places changes (affects ° literal snapping via modClose)
@@ -1120,14 +1105,6 @@ function renderSettingsModal() {
                 <input type="checkbox" ${record.degreesMode ? 'checked' : ''}
                        onchange="updateRecordDetail('degreesMode', this.checked)">
                 Degrees mode (vs radians)
-            </label>
-        </div>
-
-        <div class="detail-group checkbox">
-            <label>
-                <input type="checkbox" ${record.shadowConstants ? 'checked' : ''}
-                       onchange="updateRecordDetail('shadowConstants', this.checked)">
-                Shadow constants
             </label>
         </div>
 

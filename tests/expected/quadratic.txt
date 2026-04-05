@@ -28,9 +28,8 @@ x2-> 2
 Category = "Math"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 10: Variable \"c\" conflicts with a constant"; StatusIsError = 1
-"Quadratic without shadow"
-"Should error because c conflicts with constant"
+Status = "Solved 3 equations"; StatusIsError = 0
+"Quadratic - c silently overrides constant"
 
 disc = b**2 - 4*a*c
 x1 = (-b + sqrt(disc)) / (2*a)

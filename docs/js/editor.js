@@ -5,8 +5,6 @@
 // Built-in function names (case-insensitive) for syntax highlighting
 // Derived from evaluator's builtinFunctions to avoid duplicate source of truth
 const editorBuiltinFunctions = new Set(Object.keys(builtinFunctions));
-editorBuiltinFunctions.add('table');
-editorBuiltinFunctions.add('grid');
 
 /**
  * Convert parser tokens to editor highlight tokens
@@ -15,10 +13,9 @@ editorBuiltinFunctions.add('grid');
  * @param {Object} options - Optional settings
  * @param {Set} options.referenceConstants - Constants from Reference section (highlighted as builtin)
  * @param {Set} options.referenceFunctions - Functions from Reference section (highlighted as builtin)
- * @param {boolean} options.shadowConstants - If true, reference constants with any marker are shadowed
  */
 function tokenizeMathPad(text, options = {}) {
-    const { referenceConstants = new Set(), referenceFunctions = new Set(), shadowConstants = false } = options;
+    const { referenceConstants = new Set(), referenceFunctions = new Set() } = options;
 
     // Strip the reference section first so definitions there aren't treated as local
     const strippedText = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
@@ -30,8 +27,9 @@ function tokenizeMathPad(text, options = {}) {
     // Flatten for sequential position-based operations (highlight loop, comment region detection)
     const flatTokens = parserTokens.flat();
 
-    // Find user-defined functions (reuse full-text tokens; maxLine bounds to strippedText)
-    const parsedFunctions = parseFunctionsRecord(strippedText, parserTokens);
+    // Find user-defined functions — can't override builtins or reference functions
+    const knownFns = new Set([...editorBuiltinFunctions, ...referenceFunctions]);
+    const parsedFunctions = parseFunctionsRecord(strippedText, parserTokens, knownFns);
     const userDefinedFunctions = new Set(parsedFunctions.keys());
 
     // Build map of line number → Set of param names for function definitions
@@ -65,7 +63,7 @@ function tokenizeMathPad(text, options = {}) {
         quotedCommentRegions.some(r => start < r.end && end > r.start);
 
     // Single pass: detect shadow variables AND find label regions (reuses full-text tokens, no re-tokenization)
-    const { localVariables, labelRegions } = analyzeLines(text, strippedText, referenceConstants, shadowConstants, parserTokens);  // parserTokens is Token[][]
+    const { localVariables, labelRegions } = analyzeLines(text, strippedText, referenceConstants, parserTokens);
 
     // Filter label regions that overlap with quoted comments
     const commentRegions = labelRegions.filter(
@@ -122,7 +120,8 @@ function tokenizeMathPad(text, options = {}) {
                 const next = flatTokens[ti + 1];
                 const nextToken = (next && next.type !== TokenType.EOF && next.line === token.line) ? next : null;
                 const fnParams = functionParamLines.get(token.line);
-                highlightType = getIdentifierHighlightType(token.value, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants, referenceFunctions, localVariables, fnParams);
+                const inRefSection = tokenStart >= strippedText.length;
+                highlightType = getIdentifierHighlightType(token.value, tokenStart, nextToken, prevHighlightType, userDefinedFunctions, referenceConstants, referenceFunctions, inRefSection ? new Set() : localVariables, fnParams);
                 break;
             }
             case TokenType.OPERATOR:
@@ -200,11 +199,10 @@ function tokenizeMathPad(text, options = {}) {
  * @param {string} text - Full text to analyze
  * @param {string} strippedText - Text with reference section removed (for shadow detection bounds)
  * @param {Set} referenceConstants - Constants from Reference section
- * @param {boolean} shadowConstants - If true, output markers also shadow constants
  * @param {Token[][]} tokensByLine - Per-line token arrays from the tokenizer
  * @returns {{ localVariables: Set, labelRegions: Array }}
  */
-function analyzeLines(text, strippedText, referenceConstants, shadowConstants, tokensByLine) {
+function analyzeLines(text, strippedText, referenceConstants, tokensByLine) {
     const lines = text.split('\n');
     const strippedLength = strippedText.length;
     const localVariables = new Set();  // variable names that shadow constants
@@ -261,8 +259,7 @@ function analyzeLines(text, strippedText, referenceConstants, shadowConstants, t
         if (!inReferenceSection && result && result.kind === 'declaration') {
             const decl = result;
             const isDefMarker = decl.marker === ':' || decl.marker === '<-' || decl.marker === '::';
-            const isOutMarker = decl.marker === '->' || decl.marker === '->>' || decl.marker === ':>' || decl.marker === ':>>';
-            if (isDefMarker || (shadowConstants && isOutMarker && referenceConstants.has(decl.name))) {
+            if (isDefMarker) {
                 localVariables.add(decl.name);
             }
         }
@@ -493,9 +490,9 @@ function getIdentifierHighlightType(name, tokenStart, nextToken, prevHighlightTy
     const nameLower = name.toLowerCase();
 
     // Check if a local variable or function parameter shadows a constant
-    // Shadow applies to entire record (not position-dependent)
+    // Inside function bodies (fnParams is set), only params shadow — not local variables
     function isShadowed(varName) {
-        if (fnParams && fnParams.has(varName)) return true;
+        if (fnParams) return fnParams.has(varName);
         return localVariables.has(varName);
     }
 
@@ -853,10 +850,9 @@ class SimpleEditor {
      * @param {Set|Array} constants - Names of constants from Reference section
      * @param {Set|Array} functions - Names of functions from Reference section
      */
-    setReferenceInfo(constants, functions, shadowConstants = false, parsedConstants = null, parsedFunctions = null) {
+    setReferenceInfo(constants, functions, parsedConstants = null, parsedFunctions = null) {
         this.referenceConstants = new Set(constants || []);
         this.referenceFunctions = new Set(Array.from(functions || []).map(n => n.toLowerCase()));
-        this.shadowConstants = shadowConstants;
         this.parsedConstants = parsedConstants;
         this.parsedFunctions = parsedFunctions;
         this.updateHighlighting();
@@ -1109,8 +1105,7 @@ class SimpleEditor {
         const text = this.textarea.value;
         const { tokens, parserTokens } = tokenizeMathPad(text, {
             referenceConstants: this.referenceConstants,
-            referenceFunctions: this.referenceFunctions,
-            shadowConstants: this.shadowConstants
+            referenceFunctions: this.referenceFunctions
         });
         this.parserTokens = parserTokens;
 

@@ -352,7 +352,6 @@ w: 200      "watts"`,
 
 --Variables--
 "*Constants defined here are available in all records"
-" (if 'Shadow constants' is set for the record, you can redefine a constant)"
 
 pi: 3.141592653589793
 e: 2.71828182845905

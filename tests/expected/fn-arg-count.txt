@@ -8,8 +8,9 @@ Status = "Nothing to solve"; StatusIsError = 0
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Nothing to solve"; StatusIsError = 0
+Status = "Line 3: Too many unknowns (pv, rate, n)\nLine 4: Too many unknowns (pv, rate, n, fv)"; StatusIsError = 1
 "Functions"
+// Solving the Functions record treats fn defs as equations (expected errors)
 "Reference Constants and Functions"
 compound(pv; rate; n) = pv * (1 + rate)**n
 pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)

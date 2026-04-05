@@ -13,6 +13,7 @@ Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
 "Functions"
+// Solving the Functions record treats fn defs as equations (expected errors)
 "User-defined functions"
 hypot(a;b) = sqrt(a**2 + b**2)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -26,6 +27,7 @@ w/h = 9/16
 d = sqrt(w*w + h*h)
 
 d: 6.3
+h<-
 w->
 h->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -64,7 +66,7 @@ Category = "Unfiled"; Secret = 0
 Places = 14; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Input and output variables cleared"; StatusIsError = 0
-"04 No shadow e - conflict error but output works"
+"04 e: silently overrides constant e"
 
 e: 3
 e->>
@@ -80,6 +82,7 @@ h/w = 16/9
 d = hypot(w; h)
 
 d = 6.3
+h<-
 h->
 w->
 e->
@@ -93,27 +96,28 @@ h/w = 16/9
 d = hypot(w; h)
 
 d: 6.4 "diagonal"
+h<-
 h->
 w-> "width"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"test h-> with shadow constants on"
+"test h-> outputs constant value (no shadow)"
 
 h->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"test h: with no value and shadow constants on"
+"test h: with no value shadows constant"
 
 h:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"test a: e where e-> shadows the constant (a has no value)"
+"test a: e where e-> outputs constant value"
 
 a: e
 a->
@@ -140,7 +144,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 1
 Status = "Input and output variables cleared"; StatusIsError = 0
-"shadow c+c-> before and after c->"
+"c+c-> and c-> output constant values"
 
 c+c->
 c->
@@ -171,3 +175,44 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
   abs(a-b)/max(abs(a); abs(b)) }
 a: 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Function and constant shadowing with h (Planck constant)"
+
+h/w = 16/9
+d = sqrt(w*w + h*h)
+d->
+w->
+h->
+
+w->
+h(x) = x/2
+h(4)->
+
+x: h
+h(x) = h/2
+x->
+h->
+
+// h:3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"fn and constant overriding and constant visibility"
+
+cos(x) = 0.5
+x->
+
+e:1
+pow3(x;y) = e**(y * ln(x))
+pow3(2;4)->
+
+pow4(x;y;e) = e**(y * ln(x))
+pow4(2;4;e)->
+
+pow4(w;y;e) = e**(y * ln(x))
+
+pow3(2;z) = 16
+z->

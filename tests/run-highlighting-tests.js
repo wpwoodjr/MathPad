@@ -292,9 +292,9 @@ function runAllTests() {
         // User-defined function definition
         {
             name: 'user-defined function definition',
-            line: 'mod(a; b) = a + b',
+            line: 'mymod(a; b) = a + b',
             assertions: [
-                ['mod', 'function'],
+                ['mymod', 'function'],
                 ['(', 'paren'],
                 ['a', 'variable'],
                 [';', 'punctuation'],
@@ -306,10 +306,10 @@ function runAllTests() {
         // User-defined function call (with context)
         {
             name: 'user-defined function call',
-            line: 'mod(3; 4)->',
-            context: 'mod(a; b) = a + b',
+            line: 'mymod(3; 4)->',
+            context: 'mymod(a; b) = a + b',
             assertions: [
-                ['mod', 'function'],
+                ['mymod', 'function'],
                 ['(', 'paren'],
                 ['3', 'number'],
                 [';', 'punctuation'],
@@ -318,14 +318,14 @@ function runAllTests() {
                 ['->', 'punctuation']
             ]
         },
-        // User-defined function shadows builtin - with label text (no output value)
+        // User-defined function with label text (no output value)
         {
-            name: 'user-defined function with labels (so mod(a; b)-> the value of a+b)',
-            line: 'so mod(a; b)-> the value of a+b',
-            context: 'mod(a; b) = a + b',
+            name: 'user-defined function with labels (so mymod(a; b)-> the value of a+b)',
+            line: 'so mymod(a; b)-> the value of a+b',
+            context: 'mymod(a; b) = a + b',
             assertions: [
                 ['so ', 'comment'],           // label text before
-                ['mod', 'function'],          // user-defined, not builtin
+                ['mymod', 'function'],
                 ['(', 'paren'],
                 ['a', 'variable'],
                 [';', 'punctuation'],
@@ -335,14 +335,14 @@ function runAllTests() {
                 ['the value of a+b', 'comment']  // label text after
             ]
         },
-        // User-defined function shadows builtin - with label text and output value
+        // User-defined function with label text and output value
         {
-            name: 'user-defined function with labels (so mod(a; b)-> 8 the value of a+b)',
-            line: 'so mod(a; b)-> 8 the value of a+b',
-            context: 'mod(a; b) = a + b\nEnter a: 5 "a"\nEnter b: 3 "b"',
+            name: 'user-defined function with labels (so mymod(a; b)-> 8 the value of a+b)',
+            line: 'so mymod(a; b)-> 8 the value of a+b',
+            context: 'mymod(a; b) = a + b\nEnter a: 5 "a"\nEnter b: 3 "b"',
             assertions: [
                 ['so ', 'comment'],           // label text before
-                ['mod', 'function'],          // user-defined, not builtin
+                ['mymod', 'function'],
                 ['(', 'paren'],
                 ['a', 'variable'],
                 [';', 'punctuation'],
@@ -370,9 +370,9 @@ function runAllTests() {
                 ['**', 'operator'],
             ]
         },
-        // Function definition with ref constant shadowed by local variable declaration
+        // Function body sees constant, not local variable (e:3 doesn't affect fn body)
         {
-            name: 'fn def with locally shadowed ref constant (e:3 then pow2(x;y) = e**...)',
+            name: 'fn body sees constant not local var (e:3 then pow2(x;y) = e**...)',
             line: 'pow2(x;y) = e**(y * ln(x;2))',
             context: 'e:3',
             options: { referenceConstants: new Set(['e']) },
@@ -384,7 +384,7 @@ function runAllTests() {
                 ['y', 'variable'],
                 [')', 'paren'],
                 ['=', 'operator'],
-                ['e', 'variable'],
+                ['e', 'builtin'],
                 ['**', 'operator'],
             ]
         },
@@ -742,14 +742,14 @@ function runAllTests() {
                 [')', 'paren']
             ]
         },
-        // Local function overrides reference function
+        // Reference function can't be overridden locally — stays builtin
         {
-            name: 'local function overrides reference (hypot defined locally)',
+            name: 'reference function not overridden locally (hypot stays builtin)',
             line: 'hypot(3; 4)->',
             context: 'hypot(a; b) = sqrt(a**2 + b**2)',
             options: { referenceFunctions: new Set(['hypot']) },
             assertions: [
-                ['hypot', 'function'],  // local, not builtin
+                ['hypot', 'builtin'],
                 ['(', 'paren'],
                 ['3', 'number']
             ]
@@ -789,13 +789,13 @@ function runAllTests() {
                 ['3.1416', 'number']
             ]
         },
-        // With shadowConstants=true, output marker DOES shadow reference constant
+        // Output marker never shadows — constant stays builtin
         {
-            name: 'shadowConstants=true: output marker shadows reference (pi->)',
+            name: 'output marker does not shadow reference (pi->)',
             line: 'pi-> 3.1416',
-            options: { referenceConstants: new Set(['pi']), shadowConstants: true },
+            options: { referenceConstants: new Set(['pi']) },
             assertions: [
-                ['pi', 'variable-def'],  // shadowed because shadowConstants is on
+                ['pi', 'builtin'],
                 ['->', 'punctuation'],
                 ['3.1416', 'number']
             ]
@@ -888,12 +888,12 @@ function runAllTests() {
             ]
         },
         {
-            name: 'constant is variable-def on shadow line (c-> after a: c)',
+            name: 'constant stays builtin on output line (c-> after a: c)',
             line: 'c->',
             context: 'a: c',
-            options: { referenceConstants: new Set(['c']), shadowConstants: true },
+            options: { referenceConstants: new Set(['c']) },
             assertions: [
-                ['c', 'variable-def']  // shadowed here
+                ['c', 'builtin']  // output markers never shadow
             ]
         },
         // Comparison operator with output marker

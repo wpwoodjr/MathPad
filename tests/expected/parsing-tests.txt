@@ -1,7 +1,7 @@
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 1: Variable \"c\" conflicts with a constant"; StatusIsError = 1
+Status = "Nothing to solve"; StatusIsError = 0
 "Constants"
 c: 3*10**8
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

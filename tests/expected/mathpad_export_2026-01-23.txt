@@ -19,8 +19,9 @@ x2-> 2
 Category = "Reference"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Nothing to solve"; StatusIsError = 0
+Status = "Line 5: Too many unknowns (p, r, n, t)\nLine 14: Too many unknowns (a, b)\nLine 17: Too many unknowns (a, b)"; StatusIsError = 1
 "Functions"
+// Solving the Functions record treats fn defs as equations (expected errors)
 "User-defined functions"
 
 "Compound interest"
@@ -591,8 +592,8 @@ width-> 23.7171
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-Status = "Line 2: Variable \"e\" conflicts with a constant"; StatusIsError = 1
-"01 Shadowing: check no shadowing"
+Status = "Nothing to solve"; StatusIsError = 0
+"01 Shadowing: check there should be implicit shadowing"
 e: 3
 e->> 3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

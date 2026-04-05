@@ -289,18 +289,9 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
             const name = decl.name;
             const isOutput = decl.type === VarType.OUTPUT;
 
-            // Check if shadowing a constant
-            if (context.constants.has(name)) {
-                if (record.shadowConstants) {
-                    // Shadow the constant
-                    context.shadowConstant(name);
-                } else if (!isOutput) {
-                    // Input declarations conflict with constants (unless shadowConstants enabled)
-                    // Shadow the constant and report error, but continue processing so value is used
-                    context.shadowConstant(name);
-                    errors.push(`Line ${i + 1}: Variable "${name}" conflicts with a constant`);
-                }
-                // Output declarations can output constant values without conflict
+            // Input declarations silently override constants (like user functions override builtins)
+            if (context.constants.has(name) && !isOutput) {
+                context.shadowConstant(name);
             }
 
             // Check for duplicate input declarations
@@ -887,7 +878,7 @@ function parseConstantsRecord(text, allTokens) {
  * Returns a map of function name -> { params: [], bodyText: string }
  * Walks the token stream directly — no line splitting, no comment stripping.
  */
-function parseFunctionsRecord(text, allTokens) {
+function parseFunctionsRecord(text, allTokens, knownFunctions) {
     if (!allTokens) allTokens = new Tokenizer(text).tokenize();
     const functions = new Map();
     const lineOffsets = computeLineOffsets(text);
@@ -958,7 +949,8 @@ function parseFunctionsRecord(text, allTokens) {
         if (rparenIdx + 2 >= tokens.length) return;
 
         const name = tokens[0].value.toLowerCase();
-        if (functions.has(name)) return;  // don't redefine
+        if (functions.has(name)) return;  // don't redefine within same record
+        if (knownFunctions && knownFunctions.has(name)) return;  // can't override known functions
 
         // Extract params from tokens between LPAREN and RPAREN
         const params = [];
@@ -1027,16 +1019,21 @@ function createEvalContext(record, parsedConstants, parsedFunctions, localText =
         }
     }
 
-    // Also load functions defined in the current record (overrides Functions record)
+    // Also load functions defined in the current record (can't override builtins or reference functions)
     // These are local functions, not from the Functions record, so don't track them
     if (localText) {
         // Strip any existing references section before parsing local functions
         // This prevents function definitions in the references section from being treated as local
         const strippedText = localText.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
-        const localFunctions = parseFunctionsRecord(strippedText, allTokens);
+        // Block builtins from being parsed as local function defs
+        const builtinNames = typeof builtinFunctions !== 'undefined'
+            ? new Set(Object.keys(builtinFunctions)) : null;
+        const localFunctions = parseFunctionsRecord(strippedText, allTokens, builtinNames);
         // Store function definition line numbers so equation finder can skip them
         const fnDefLines = new Set();
         for (const [name, { params, bodyText, sourceText, startLine, endLine }] of localFunctions) {
+            // Skip if this would override a reference function — treat as equation
+            if (context.getUserFunction(name)) continue;
             for (let l = startLine; l <= endLine; l++) fnDefLines.add(l);
             try {
                 const bodyAST = parseExpression(bodyText);

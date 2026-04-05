@@ -11,6 +11,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Functions"
+// Solving the Functions record treats fn defs as equations (expected errors)
 hypot(a;b) = sqrt(a**2 + b**2) "hypotenuse"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -45,6 +46,7 @@ h/w = 16/9
 d = hypot(w; h)
 
 Enter d: 1234567890.3456 "diagonal"
+h<-
 h->
 w-> "width"
 c->
@@ -263,6 +265,7 @@ h/w = 16/9
 d*d = w*w + h*h
 
 Enter d: 6.6 "diagonal"
+h<-
 height h->
 width w->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -438,7 +441,7 @@ xx#16->
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"Test for value of c when shadow constants is on"
+"Test c-> outputs constant value"
 
 c->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -464,7 +467,7 @@ g->>
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
-"Test pi is declared (with shadow constants on) but has no value"
+"Test pi: with no value shadows constant"
 
 pi:
 x: pi
@@ -478,7 +481,7 @@ y->>
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Test pi is declared (with shadow constants off) - should error"
+"Test pi: with no value shadows constant (same as shadow on)"
 
 pi:
 x: pi

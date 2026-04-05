@@ -249,6 +249,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     const maxIterations = 50;
     let iterations = 0;
     let changed = true;
+    const erroredEquations = new Set();
     const unsolvedEquations = new Map(); // line → [unknown names]
 
     while (changed && iterations++ < maxIterations) {
@@ -428,7 +429,10 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                         unsolvedEquations.delete(eq.startLine);
                     }
                 } catch (e) {
-                    if (sweep > 0) errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
+                    if (sweep > 0) {
+                        errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
+                        erroredEquations.add(eq.startLine);
+                    }
                 }
             }
         }
@@ -466,6 +470,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     for (const eq of equations) {
         try {
             if (!eq.leftAST || !eq.rightAST) continue;
+            if (erroredEquations.has(eq.startLine)) continue;
 
             const unknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
 
