@@ -1608,6 +1608,13 @@ body.sidebar-resizing * {
     box-shadow: -8px 0 0 0 var(--bg-secondary);
 }
 
+.mathpad-graph .graph-text { fill: var(--text-primary); }
+.mathpad-graph .graph-grid { stroke: var(--text-muted); }
+.mathpad-graph .graph-subgrid { stroke: var(--border-color); }
+.mathpad-graph .graph-zero { stroke: var(--text-primary); }
+.mathpad-graph .graph-border { stroke: var(--text-muted); }
+.mathpad-graph .graph-line { stroke: var(--accent-primary); }
+
 .mathpad-grid-row-label-text {
     writing-mode: vertical-lr;
     transform: rotate(180deg);

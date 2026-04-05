@@ -1033,8 +1033,7 @@ class VariablesPanel {
         svg.style.width = '100%';
         svg.style.maxWidth = width + 'px';
 
-        const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
-        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#d4d4d4';
+        // Colors via CSS classes (graph-text, graph-grid, graph-subgrid) for theme switching
 
         // Determine axis formats from columns
         const xFormat = table.columns.length > 0 ? table.columns[0].format : null;
@@ -1046,16 +1045,26 @@ class VariablesPanel {
 
         // Y-axis ticks
         const yTicks = this._niceTicks(yMin, yMax, 8, yFormat);
+
+        // Secondary grid lines (between primary ticks)
+        for (let i = 0; i < yTicks.length - 1; i++) {
+            const mid = sy((yTicks[i] + yTicks[i + 1]) / 2);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
+            line.setAttribute('y1', mid); line.setAttribute('y2', mid);
+            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+        }
         for (const tick of yTicks) {
             const y = sy(tick);
             const line = document.createElementNS(ns, 'line');
             line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
             line.setAttribute('y1', y); line.setAttribute('y2', y);
-            line.setAttribute('stroke', gridColor); line.setAttribute('stroke-width', '0.5');
+            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
             svg.appendChild(line);
             const label = document.createElementNS(ns, 'text');
             label.setAttribute('x', margin.left - 5); label.setAttribute('y', y + 4);
-            label.setAttribute('text-anchor', 'end'); label.setAttribute('fill', textColor);
+            label.setAttribute('text-anchor', 'end'); label.setAttribute('class', 'graph-text');
             label.setAttribute('font-size', '11');
             label.textContent = yFmt(tick);
             svg.appendChild(label);
@@ -1063,16 +1072,24 @@ class VariablesPanel {
 
         // X-axis ticks
         const xTicks = this._niceTicks(xMin, xMax, 8, xFormat);
+        for (let i = 0; i < xTicks.length - 1; i++) {
+            const mid = sx((xTicks[i] + xTicks[i + 1]) / 2);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', mid); line.setAttribute('x2', mid);
+            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
+            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+        }
         for (const tick of xTicks) {
             const x = sx(tick);
             const line = document.createElementNS(ns, 'line');
             line.setAttribute('x1', x); line.setAttribute('x2', x);
             line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-            line.setAttribute('stroke', gridColor); line.setAttribute('stroke-width', '0.5');
+            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
             svg.appendChild(line);
             const label = document.createElementNS(ns, 'text');
             label.setAttribute('x', x); label.setAttribute('y', margin.top + plotH + 15);
-            label.setAttribute('text-anchor', 'middle'); label.setAttribute('fill', textColor);
+            label.setAttribute('text-anchor', 'middle'); label.setAttribute('class', 'graph-text');
             label.setAttribute('font-size', '11');
             label.textContent = xFmt(tick);
             svg.appendChild(label);
@@ -1082,7 +1099,7 @@ class VariablesPanel {
         const border = document.createElementNS(ns, 'rect');
         border.setAttribute('x', margin.left); border.setAttribute('y', margin.top);
         border.setAttribute('width', plotW); border.setAttribute('height', plotH);
-        border.setAttribute('fill', 'none'); border.setAttribute('stroke', gridColor);
+        border.setAttribute('fill', 'none'); border.setAttribute('class', 'graph-border');
         svg.appendChild(border);
 
         // Data lines — one per column
@@ -1113,7 +1130,7 @@ class VariablesPanel {
         if (xLabel) {
             const text = document.createElementNS(ns, 'text');
             text.setAttribute('x', margin.left + plotW / 2); text.setAttribute('y', height - 5);
-            text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', textColor);
+            text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'graph-text');
             text.setAttribute('font-size', '12');
             text.textContent = xLabel;
             svg.appendChild(text);
@@ -1121,7 +1138,7 @@ class VariablesPanel {
         if (yLabel) {
             const text = document.createElementNS(ns, 'text');
             text.setAttribute('x', 12); text.setAttribute('y', margin.top + plotH / 2);
-            text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', textColor);
+            text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'graph-text');
             text.setAttribute('font-size', '12');
             text.setAttribute('transform', `rotate(-90, 12, ${margin.top + plotH / 2})`);
             text.textContent = yLabel;
@@ -1135,7 +1152,7 @@ class VariablesPanel {
         if (legendTitle) {
             const text = document.createElementNS(ns, 'text');
             text.setAttribute('x', legendX); text.setAttribute('y', legendY);
-            text.setAttribute('fill', textColor); text.setAttribute('font-size', '11');
+            text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '11');
             text.setAttribute('font-weight', 'bold');
             text.textContent = legendTitle;
             svg.appendChild(text);
@@ -1150,7 +1167,7 @@ class VariablesPanel {
             svg.appendChild(line);
             const text = document.createElementNS(ns, 'text');
             text.setAttribute('x', legendX + 20); text.setAttribute('y', legendY);
-            text.setAttribute('fill', textColor); text.setAttribute('font-size', '10');
+            text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '10');
             text.textContent = table.colValues[c] || String(c);
             svg.appendChild(text);
             legendY += 14;
@@ -1225,24 +1242,31 @@ class VariablesPanel {
         svg.style.maxWidth = width + 'px';
 
         // Grid lines and axes
-        const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
-        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#d4d4d4';
-        const lineColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() || '#4fc1ff';
+        // Colors via CSS classes (graph-text, graph-grid, graph-subgrid) for theme switching
+        // Data line color via CSS class (graph-line) for theme switching
 
         // Y-axis ticks
         const yTicks = this._niceTicks(yMin, yMax, 8, table.columns[yCol].format);
+        for (let i = 0; i < yTicks.length - 1; i++) {
+            const mid = sy((yTicks[i] + yTicks[i + 1]) / 2);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
+            line.setAttribute('y1', mid); line.setAttribute('y2', mid);
+            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+        }
         for (const tick of yTicks) {
             const y = sy(tick);
             // Grid line
             const line = document.createElementNS(ns, 'line');
             line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
             line.setAttribute('y1', y); line.setAttribute('y2', y);
-            line.setAttribute('stroke', gridColor); line.setAttribute('stroke-width', '0.5');
+            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
             svg.appendChild(line);
             // Label
             const label = document.createElementNS(ns, 'text');
             label.setAttribute('x', margin.left - 5); label.setAttribute('y', y + 4);
-            label.setAttribute('text-anchor', 'end'); label.setAttribute('fill', textColor);
+            label.setAttribute('text-anchor', 'end'); label.setAttribute('class', 'graph-text');
             label.setAttribute('font-size', '11');
             label.textContent = yFmt(tick);
             svg.appendChild(label);
@@ -1250,16 +1274,24 @@ class VariablesPanel {
 
         // X-axis ticks
         const xTicks = this._niceTicks(xMin, xMax, 8, table.columns[xCol].format);
+        for (let i = 0; i < xTicks.length - 1; i++) {
+            const mid = sx((xTicks[i] + xTicks[i + 1]) / 2);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', mid); line.setAttribute('x2', mid);
+            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
+            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+        }
         for (const tick of xTicks) {
             const x = sx(tick);
             const line = document.createElementNS(ns, 'line');
             line.setAttribute('x1', x); line.setAttribute('x2', x);
             line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-            line.setAttribute('stroke', gridColor); line.setAttribute('stroke-width', '0.5');
+            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
             svg.appendChild(line);
             const label = document.createElementNS(ns, 'text');
             label.setAttribute('x', x); label.setAttribute('y', margin.top + plotH + 15);
-            label.setAttribute('text-anchor', 'middle'); label.setAttribute('fill', textColor);
+            label.setAttribute('text-anchor', 'middle'); label.setAttribute('class', 'graph-text');
             label.setAttribute('font-size', '11');
             label.textContent = xFmt(tick);
             svg.appendChild(label);
@@ -1270,14 +1302,14 @@ class VariablesPanel {
             const line = document.createElementNS(ns, 'line');
             line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
             line.setAttribute('y1', sy(0)); line.setAttribute('y2', sy(0));
-            line.setAttribute('stroke', textColor); line.setAttribute('stroke-width', '1');
+            line.setAttribute('class', 'graph-zero'); line.setAttribute('stroke-width', '1');
             svg.appendChild(line);
         }
         if (xMin <= 0 && xMax >= 0) {
             const line = document.createElementNS(ns, 'line');
             line.setAttribute('x1', sx(0)); line.setAttribute('x2', sx(0));
             line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-            line.setAttribute('stroke', textColor); line.setAttribute('stroke-width', '1');
+            line.setAttribute('class', 'graph-zero'); line.setAttribute('stroke-width', '1');
             svg.appendChild(line);
         }
 
@@ -1285,7 +1317,7 @@ class VariablesPanel {
         const border = document.createElementNS(ns, 'rect');
         border.setAttribute('x', margin.left); border.setAttribute('y', margin.top);
         border.setAttribute('width', plotW); border.setAttribute('height', plotH);
-        border.setAttribute('fill', 'none'); border.setAttribute('stroke', gridColor);
+        border.setAttribute('fill', 'none'); border.setAttribute('class', 'graph-border');
         svg.appendChild(border);
 
         // Data line
@@ -1297,7 +1329,7 @@ class VariablesPanel {
         const path = document.createElementNS(ns, 'path');
         path.setAttribute('d', pathD);
         path.setAttribute('fill', 'none');
-        path.setAttribute('stroke', lineColor);
+        path.setAttribute('class', 'graph-line');
         path.setAttribute('stroke-width', '2');
         path.setAttribute('stroke-linejoin', 'round');
         svg.appendChild(path);
@@ -1308,7 +1340,7 @@ class VariablesPanel {
         if (xLabel) {
             const text = document.createElementNS(ns, 'text');
             text.setAttribute('x', margin.left + plotW / 2); text.setAttribute('y', height - 5);
-            text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', textColor);
+            text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'graph-text');
             text.setAttribute('font-size', '12');
             text.textContent = xLabel;
             svg.appendChild(text);
@@ -1316,7 +1348,7 @@ class VariablesPanel {
         if (yLabel) {
             const text = document.createElementNS(ns, 'text');
             text.setAttribute('x', 12); text.setAttribute('y', margin.top + plotH / 2);
-            text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', textColor);
+            text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'graph-text');
             text.setAttribute('font-size', '12');
             text.setAttribute('transform', `rotate(-90, 12, ${margin.top + plotH / 2})`);
             text.textContent = yLabel;
