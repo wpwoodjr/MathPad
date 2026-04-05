@@ -1089,8 +1089,13 @@ class VariablesPanel {
         const xFmt = (v) => xFormat ? formatVariableValue(v, xFormat, false, table.formatOpts || {}) : this._formatTickLabel(v);
         const yFmt = (v) => yFormat ? formatVariableValue(v, yFormat, false, table.formatOpts || {}) : this._formatTickLabel(v);
 
-        // Y-axis ticks
+        // Y-axis ticks — adjust left margin for label width
         const yTicks = this._niceTicks(yMin, yMax, 8, yFormat);
+        const maxYLabel = Math.max(...yTicks.map(t => yFmt(t).length));
+        const neededLeft = maxYLabel * 7 + 15; // ~7px per char + padding
+        if (neededLeft > margin.left) {
+            margin.left = neededLeft;
+        }
 
         // Secondary grid lines (between primary ticks)
         for (let i = 0; i < yTicks.length - 1; i++) {
@@ -1235,7 +1240,7 @@ class VariablesPanel {
         // Graph dimensions
         const width = 550, height = 360;
         const margin = { top: 20, right: 20, bottom: 45, left: 60 };
-        const plotW = width - margin.left - margin.right;
+        let plotW = width - margin.left - margin.right;
         const plotH = height - margin.top - margin.bottom;
 
         // Data range
@@ -1263,8 +1268,14 @@ class VariablesPanel {
         // Colors via CSS classes (graph-text, graph-grid, graph-subgrid) for theme switching
         // Data line color via CSS class (graph-line) for theme switching
 
-        // Y-axis ticks
+        // Y-axis ticks — adjust left margin for label width
         const yTicks = this._niceTicks(yMin, yMax, 8, table.columns[yCol].format);
+        const maxYLabel = Math.max(...yTicks.map(t => yFmt(t).length));
+        const neededLeft = maxYLabel * 7 + 15;
+        if (neededLeft > margin.left) {
+            margin.left = neededLeft;
+            plotW = width - margin.left - margin.right;
+        }
         for (let i = 0; i < yTicks.length - 1; i++) {
             const mid = sy((yTicks[i] + yTicks[i + 1]) / 2);
             const line = document.createElementNS(ns, 'line');
