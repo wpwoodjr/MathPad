@@ -1016,22 +1016,68 @@ class VariablesPanel {
         const yPad = (yMax - yMin) * 0.05 || 1;
         yMin -= yPad; yMax += yPad;
 
-        // Graph dimensions — extra space for legend
-        const width = 600, height = 300;
-        const legendWidth = 100;
-        const margin = { top: 20, right: legendWidth + 20, bottom: 45, left: 60 };
+        // Graph dimensions — legend above plot area
+        const width = 550;
+        let height = 384;
+        const legendHeight = 28;
+        const margin = { top: legendHeight + 5, right: 20, bottom: 45, left: 60 };
         const plotW = width - margin.left - margin.right;
-        const plotH = height - margin.top - margin.bottom;
+        let plotH = height - margin.top - margin.bottom;
 
         const sx = (x) => margin.left + (x - xMin) / (xMax - xMin) * plotW;
         const sy = (y) => margin.top + (1 - (y - yMin) / (yMax - yMin)) * plotH;
 
         const ns = 'http://www.w3.org/2000/svg';
         const svg = document.createElementNS(ns, 'svg');
-        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
         svg.setAttribute('class', 'mathpad-graph');
         svg.style.width = '100%';
         svg.style.maxWidth = width + 'px';
+
+        // Legend (horizontal, above plot — wraps to next line if too wide)
+        const legendTitle = table.iter2Label || '';
+        let legendX = margin.left;
+        let legendY = 20;
+        const legendLineHeight = 16;
+        const legendMaxX = width - margin.right;
+        if (legendTitle) {
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', legendX); text.setAttribute('y', legendY);
+            text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '11');
+            text.setAttribute('font-weight', 'bold');
+            text.textContent = legendTitle + ':';
+            svg.appendChild(text);
+            legendX += legendTitle.length * 7 + 10;
+        }
+        const legendIndent = legendX; // first key position — wrap lines align here
+        for (let c = 0; c < numCols; c++) {
+            const label = table.colValues[c] || String(c);
+            const itemWidth = label.length * 6 + 25;
+            if (legendX + itemWidth > legendMaxX && legendX > legendIndent) {
+                legendX = legendIndent;
+                legendY += legendLineHeight;
+            }
+            const color = colors[c % colors.length];
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', legendX); line.setAttribute('x2', legendX + 12);
+            line.setAttribute('y1', legendY - 4); line.setAttribute('y2', legendY - 4);
+            line.setAttribute('stroke', color); line.setAttribute('stroke-width', '2');
+            svg.appendChild(line);
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', legendX + 16); text.setAttribute('y', legendY);
+            text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '10');
+            text.textContent = label;
+            svg.appendChild(text);
+            legendX += itemWidth;
+        }
+        // Adjust layout if legend wrapped to multiple lines
+        const legendRows = Math.ceil((legendY - 20) / legendLineHeight) + 1;
+        if (legendRows > 1) {
+            const extraHeight = (legendRows - 1) * legendLineHeight;
+            margin.top += extraHeight;
+            height += extraHeight;
+            plotH = height - margin.top - margin.bottom;
+        }
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
         // Colors via CSS classes (graph-text, graph-grid, graph-subgrid) for theme switching
 
@@ -1145,34 +1191,6 @@ class VariablesPanel {
             svg.appendChild(text);
         }
 
-        // Legend
-        const legendX = margin.left + plotW + 15;
-        let legendY = margin.top + 5;
-        const legendTitle = table.iter2Label || '';
-        if (legendTitle) {
-            const text = document.createElementNS(ns, 'text');
-            text.setAttribute('x', legendX); text.setAttribute('y', legendY);
-            text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '11');
-            text.setAttribute('font-weight', 'bold');
-            text.textContent = legendTitle;
-            svg.appendChild(text);
-            legendY += 16;
-        }
-        for (let c = 0; c < numCols; c++) {
-            const color = colors[c % colors.length];
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', legendX); line.setAttribute('x2', legendX + 15);
-            line.setAttribute('y1', legendY - 4); line.setAttribute('y2', legendY - 4);
-            line.setAttribute('stroke', color); line.setAttribute('stroke-width', '2');
-            svg.appendChild(line);
-            const text = document.createElementNS(ns, 'text');
-            text.setAttribute('x', legendX + 20); text.setAttribute('y', legendY);
-            text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '10');
-            text.textContent = table.colValues[c] || String(c);
-            svg.appendChild(text);
-            legendY += 14;
-        }
-
         wrapper.appendChild(svg);
         this.insertRowInOrder(wrapper, table.startLine - 1);
         this._setStickyHeaderOffsets(wrapper);
@@ -1215,7 +1233,7 @@ class VariablesPanel {
         };
 
         // Graph dimensions
-        const width = 500, height = 300;
+        const width = 550, height = 360;
         const margin = { top: 20, right: 20, bottom: 45, left: 60 };
         const plotW = width - margin.left - margin.right;
         const plotH = height - margin.top - margin.bottom;
