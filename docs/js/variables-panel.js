@@ -1033,6 +1033,16 @@ class VariablesPanel {
         svg.style.width = '100%';
         svg.style.maxWidth = width + 'px';
 
+        // Determine axis formats and adjust left margin for y-axis label width
+        const xFormat = table.columns.length > 0 ? table.columns[0].format : null;
+        const yFormat = table.columns.length > 2 ? table.columns[2].format : null;
+        const xFmt = (v) => xFormat ? formatVariableValue(v, xFormat, false, table.formatOpts || {}) : this._formatTickLabel(v);
+        const yFmt = (v) => yFormat ? formatVariableValue(v, yFormat, false, table.formatOpts || {}) : this._formatTickLabel(v);
+        const yTicks = this._niceTicks(yMin, yMax, 8, yFormat);
+        const maxYLabel = Math.max(...yTicks.map(t => yFmt(t).length));
+        const neededLeft = maxYLabel * 7 + 15;
+        if (neededLeft > margin.left) margin.left = neededLeft;
+
         // Legend (horizontal, above plot — wraps to next line if too wide)
         const legendTitle = table.iter2Label || '';
         let legendX = margin.left;
@@ -1078,24 +1088,6 @@ class VariablesPanel {
             plotH = height - margin.top - margin.bottom;
         }
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-
-        // Colors via CSS classes (graph-text, graph-grid, graph-subgrid) for theme switching
-
-        // Determine axis formats from columns
-        const xFormat = table.columns.length > 0 ? table.columns[0].format : null;
-        const yFormat = table.columns.length > 2 ? table.columns[2].format : null;
-        const colFormat = table.columns.length > 1 ? table.columns[1].format : null;
-
-        const xFmt = (v) => xFormat ? formatVariableValue(v, xFormat, false, table.formatOpts || {}) : this._formatTickLabel(v);
-        const yFmt = (v) => yFormat ? formatVariableValue(v, yFormat, false, table.formatOpts || {}) : this._formatTickLabel(v);
-
-        // Y-axis ticks — adjust left margin for label width
-        const yTicks = this._niceTicks(yMin, yMax, 8, yFormat);
-        const maxYLabel = Math.max(...yTicks.map(t => yFmt(t).length));
-        const neededLeft = maxYLabel * 7 + 15; // ~7px per char + padding
-        if (neededLeft > margin.left) {
-            margin.left = neededLeft;
-        }
 
         // Secondary grid lines (between primary ticks)
         for (let i = 0; i < yTicks.length - 1; i++) {
@@ -1216,40 +1208,46 @@ class VariablesPanel {
         const titleEl = this._createTableTitle(table, wrapper);
         if (titleEl) wrapper.appendChild(titleEl);
 
-        // Extract x and y data from first two columns
-        const xCol = 0, yCol = 1;
-        const points = [];
-        for (const row of table.rawRows) {
-            const x = row[xCol], y = row[yCol];
-            if (x != null && y != null && isFinite(x) && isFinite(y)) {
-                points.push({ x, y });
-            }
-        }
-        if (points.length === 0) { this.insertRowInOrder(wrapper, table.startLine - 1); return; }
+        // X from first column, Y from all remaining columns
+        const xCol = 0;
+        const yCols = [];
+        for (let c = 1; c < table.columns.length; c++) yCols.push(c);
+        if (yCols.length === 0) { this.insertRowInOrder(wrapper, table.startLine - 1); return; }
+        const multiLine = yCols.length > 1;
 
-        // Tick formatters using column format specifiers
+        // Color palette for multiple lines
+        const colors = ['#4fc1ff', '#ff6b6b', '#51cf66', '#ffd43b', '#cc5de8', '#ff922b', '#20c997',
+                         '#748ffc', '#f783ac', '#a9e34b', '#66d9e8', '#e599f7'];
+
+        // Tick formatters
         const xFmt = (v) => {
             const col = table.columns[xCol];
             return col.format ? formatVariableValue(v, col.format, false, table.formatOpts || {}) : this._formatTickLabel(v);
         };
         const yFmt = (v) => {
-            const col = table.columns[yCol];
+            const col = table.columns[yCols[0]];
             return col.format ? formatVariableValue(v, col.format, false, table.formatOpts || {}) : this._formatTickLabel(v);
         };
 
         // Graph dimensions
-        const width = 550, height = 360;
-        const margin = { top: 20, right: 20, bottom: 45, left: 60 };
+        const width = 550;
+        let height = multiLine ? 384 : 360;
+        const legendHeight = multiLine ? 28 : 0;
+        const margin = { top: legendHeight + (multiLine ? 5 : 20), right: 20, bottom: 45, left: 60 };
         let plotW = width - margin.left - margin.right;
-        const plotH = height - margin.top - margin.bottom;
+        let plotH = height - margin.top - margin.bottom;
 
-        // Data range
+        // Data range across all y columns
         let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
-        for (const p of points) {
-            if (p.x < xMin) xMin = p.x; if (p.x > xMax) xMax = p.x;
-            if (p.y < yMin) yMin = p.y; if (p.y > yMax) yMax = p.y;
+        for (const row of table.rawRows) {
+            const x = row[xCol];
+            if (x != null && isFinite(x)) { if (x < xMin) xMin = x; if (x > xMax) xMax = x; }
+            for (const yc of yCols) {
+                const y = row[yc];
+                if (y != null && isFinite(y)) { if (y < yMin) yMin = y; if (y > yMax) yMax = y; }
+            }
         }
-        // Add padding to y range
+        if (!isFinite(xMin) || !isFinite(yMin)) { this.insertRowInOrder(wrapper, table.startLine - 1); return; }
         const yPad = (yMax - yMin) * 0.05 || 1;
         yMin -= yPad; yMax += yPad;
 
@@ -1259,23 +1257,57 @@ class VariablesPanel {
         // Build SVG
         const ns = 'http://www.w3.org/2000/svg';
         const svg = document.createElementNS(ns, 'svg');
-        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
         svg.setAttribute('class', 'mathpad-graph');
         svg.style.width = '100%';
         svg.style.maxWidth = width + 'px';
 
-        // Grid lines and axes
-        // Colors via CSS classes (graph-text, graph-grid, graph-subgrid) for theme switching
-        // Data line color via CSS class (graph-line) for theme switching
-
-        // Y-axis ticks — adjust left margin for label width
-        const yTicks = this._niceTicks(yMin, yMax, 8, table.columns[yCol].format);
+        // Pre-compute y-axis margin from tick label width
+        const yTicks = this._niceTicks(yMin, yMax, 8, table.columns[yCols[0]].format);
         const maxYLabel = Math.max(...yTicks.map(t => yFmt(t).length));
         const neededLeft = maxYLabel * 7 + 15;
         if (neededLeft > margin.left) {
             margin.left = neededLeft;
             plotW = width - margin.left - margin.right;
         }
+
+        // Legend for multi-line graphs
+        if (multiLine) {
+            let legendX = margin.left;
+            let legendY = 20;
+            const legendLineHeight = 16;
+            const legendMaxX = width - margin.right;
+            for (let i = 0; i < yCols.length; i++) {
+                const col = table.columns[yCols[i]];
+                const label = col.header || col.name;
+                const itemWidth = label.length * 6 + 25;
+                if (legendX + itemWidth > legendMaxX && legendX > margin.left) {
+                    legendX = margin.left;
+                    legendY += legendLineHeight;
+                }
+                const color = colors[i % colors.length];
+                const line = document.createElementNS(ns, 'line');
+                line.setAttribute('x1', legendX); line.setAttribute('x2', legendX + 12);
+                line.setAttribute('y1', legendY - 4); line.setAttribute('y2', legendY - 4);
+                line.setAttribute('stroke', color); line.setAttribute('stroke-width', '2');
+                svg.appendChild(line);
+                const text = document.createElementNS(ns, 'text');
+                text.setAttribute('x', legendX + 16); text.setAttribute('y', legendY);
+                text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '10');
+                text.textContent = label;
+                svg.appendChild(text);
+                legendX += itemWidth;
+            }
+            const legendRows = Math.ceil((legendY - 20) / legendLineHeight) + 1;
+            if (legendRows > 1) {
+                const extraHeight = (legendRows - 1) * legendLineHeight;
+                margin.top += extraHeight;
+                height += extraHeight;
+                plotH = height - margin.top - margin.bottom;
+            }
+        }
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+        // Secondary grid lines (between primary ticks)
         for (let i = 0; i < yTicks.length - 1; i++) {
             const mid = sy((yTicks[i] + yTicks[i + 1]) / 2);
             const line = document.createElementNS(ns, 'line');
@@ -1349,23 +1381,36 @@ class VariablesPanel {
         border.setAttribute('fill', 'none'); border.setAttribute('class', 'graph-border');
         svg.appendChild(border);
 
-        // Data line
-        let pathD = '';
-        for (let i = 0; i < points.length; i++) {
-            const px = sx(points[i].x), py = sy(points[i].y);
-            pathD += (i === 0 ? 'M' : 'L') + px.toFixed(2) + ',' + py.toFixed(2);
+        // Data lines — one per y column
+        for (let yi = 0; yi < yCols.length; yi++) {
+            const yc = yCols[yi];
+            let pathD = '';
+            let started = false;
+            for (const row of table.rawRows) {
+                const x = row[xCol], y = row[yc];
+                if (x == null || y == null || !isFinite(x) || !isFinite(y)) { started = false; continue; }
+                const px = sx(x), py = sy(y);
+                pathD += (started ? 'L' : 'M') + px.toFixed(2) + ',' + py.toFixed(2);
+                started = true;
+            }
+            if (pathD) {
+                const path = document.createElementNS(ns, 'path');
+                path.setAttribute('d', pathD);
+                path.setAttribute('fill', 'none');
+                if (multiLine) {
+                    path.setAttribute('stroke', colors[yi % colors.length]);
+                } else {
+                    path.setAttribute('class', 'graph-line');
+                }
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('stroke-linejoin', 'round');
+                svg.appendChild(path);
+            }
         }
-        const path = document.createElementNS(ns, 'path');
-        path.setAttribute('d', pathD);
-        path.setAttribute('fill', 'none');
-        path.setAttribute('class', 'graph-line');
-        path.setAttribute('stroke-width', '2');
-        path.setAttribute('stroke-linejoin', 'round');
-        svg.appendChild(path);
 
         // Axis labels
         const xLabel = table.columns[xCol].header || table.columns[xCol].name;
-        const yLabel = table.columns[yCol].header || table.columns[yCol].name;
+        const yLabel = multiLine ? '' : (table.columns[yCols[0]].header || table.columns[yCols[0]].name);
         if (xLabel) {
             const text = document.createElementNS(ns, 'text');
             text.setAttribute('x', margin.left + plotW / 2); text.setAttribute('y', height - 5);
