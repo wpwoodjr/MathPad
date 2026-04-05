@@ -225,7 +225,7 @@ function analyzeLines(text, strippedText, referenceConstants, tokensByLine) {
             insideBrace = true;
             // Check if this is a table definition opening
             const firstTok = tokensByLine[i] && tokensByLine[i].find(t => t.type !== TokenType.EOF && t.type !== TokenType.COMMENT);
-            if (firstTok && firstTok.type === TokenType.IDENTIFIER && ['table', 'grid'].includes(firstTok.value.toLowerCase())) {
+            if (firstTok && firstTok.type === TokenType.IDENTIFIER && ['table', 'grid', 'tablegraph', 'gridgraph'].includes(firstTok.value.toLowerCase())) {
                 insideTableBrace = true;
             }
         } else if (closeBraces > openBraces) {
@@ -389,7 +389,7 @@ function findEquationLabelRegions(line, lineTokens) {
     const lbrace = lineTokens.find(t => t.type === TokenType.LBRACE);
     if (lbrace) {
         const firstTok = lineTokens.find(t => t.type !== TokenType.EOF && t.type !== TokenType.COMMENT);
-        const isTable = firstTok && firstTok.type === TokenType.IDENTIFIER && ['table', 'grid'].includes(firstTok.value.toLowerCase());
+        const isTable = firstTok && firstTok.type === TokenType.IDENTIFIER && ['table', 'grid', 'tablegraph', 'gridgraph'].includes(firstTok.value.toLowerCase());
         if (!isTable) {
             const bracePos = lbrace.col - 1;
             if (bracePos > 0) {

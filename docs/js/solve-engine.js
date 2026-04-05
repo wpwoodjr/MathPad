@@ -876,7 +876,7 @@ function solveRecord(text, context, record, parserTokens) {
  */
 function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) {
     const errors = [];
-    const isGrid = tableDef.keyword === 'grid';
+    const isGrid = tableDef.keyword === 'grid' || tableDef.keyword === 'gridgraph';
     const emptyResult = () => isGrid
         ? { type: 'grid', title: tableDef.title, iter1Label: '', iter2Label: '', rowValues: [], colValues: [], cellHeader: '', grid: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors }
         : { type: 'table', title: tableDef.title, columns: [], rows: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
@@ -1253,11 +1253,16 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         return context.getVariable(col.name);
     }
 
+    const isGridGraph = tableDef.keyword === 'gridgraph';
     const grid = [];
+    const rawGrid = [];
+    const rawRowHeaderValues = [];
+    const rawColHeaderValues = [];
     const formattedRowValues = [];
     const formattedColValues = [];
     for (let r = 0; r < rowValues.length; r++) {
         const gridRow = [];
+        const rawGridRow = [];
         for (let c = 0; c < colValues.length; c++) {
             context.preSolveValues = new Map();
             const badVars = evaluateCell([
@@ -1268,16 +1273,16 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             // Row headers: use first output value from first column
             if (c === 0) {
                 const v = rowHeaderCol ? getColValue(rowHeaderCol) : undefined;
-                formattedRowValues.push(v !== undefined
-                    ? formatVariableValue(v, iter1Format, iter1FullPrec, formatOpts)
-                    : formatVariableValue(rowValues[r], iter1Format, iter1FullPrec, formatOpts));
+                const rawV = v !== undefined ? v : rowValues[r];
+                rawRowHeaderValues.push(rawV);
+                formattedRowValues.push(formatVariableValue(rawV, iter1Format, iter1FullPrec, formatOpts));
             }
             // Column headers: use second output value from first row
             if (r === 0) {
                 const v = colHeaderCol ? getColValue(colHeaderCol) : undefined;
-                formattedColValues.push(v !== undefined
-                    ? formatVariableValue(v, iter2Format, iter2FullPrec, formatOpts)
-                    : formatVariableValue(colValues[c], iter2Format, iter2FullPrec, formatOpts));
+                const rawV = v !== undefined ? v : colValues[c];
+                rawColHeaderValues.push(rawV);
+                formattedColValues.push(formatVariableValue(rawV, iter2Format, iter2FullPrec, formatOpts));
             }
 
             // Cell value: third output
@@ -1285,17 +1290,22 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                 const value = getColValue(cellVar);
                 if (value !== undefined) {
                     gridRow.push(formatVariableValue(value, cellVar.format, cellVar.fullPrecision, formatOpts));
-                } else { gridRow.push(''); }
-            } else { gridRow.push(''); }
+                    rawGridRow.push(value);
+                } else { gridRow.push(''); rawGridRow.push(null); }
+            } else { gridRow.push(''); rawGridRow.push(null); }
         }
         grid.push(gridRow);
+        rawGrid.push(rawGridRow);
     }
 
+    const type = isGridGraph ? 'gridGraph' : 'grid';
     return {
-        type: 'grid', title: expandedTitle,
+        type, title: expandedTitle,
         iter1Label, iter2Label,
         rowValues: formattedRowValues,
         colValues: formattedColValues,
+        rawRowHeaderValues, rawColHeaderValues, rawGrid,
+        columns, formatOpts,
         cellHeader: cellVar ? cellVar.header : '',
         grid, fontSize,
         startLine: tableDef.startLine, endLine: tableDef.endLine, errors

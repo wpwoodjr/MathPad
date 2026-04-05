@@ -850,7 +850,7 @@ class VariablesPanel {
                 const lineIdx = table.startLine - 1; // startLine is 1-based
                 const line = lines[lineIdx];
                 if (line) {
-                    const match = line.match(/^((?:table|grid|tablegraph)\s*\(\s*")(.*)("\s*[;)])/i);
+                    const match = line.match(/^((?:table|grid|tablegraph|gridgraph)\s*\(\s*")(.*)("\s*[;)])/i);
                     if (match) {
                         // Strip existing v/> prefix from source title
                         let srcTitle = match[2];
@@ -882,6 +882,10 @@ class VariablesPanel {
         for (const table of tables) {
             if (table.type === 'graph') {
                 this._renderGraph(table);
+                continue;
+            }
+            if (table.type === 'gridGraph') {
+                this._renderGridGraph(table);
                 continue;
             }
             if (table.type === 'grid') {
@@ -976,6 +980,188 @@ class VariablesPanel {
     }
 
     /**
+     * Render an SVG multi-line graph from gridGraph data.
+     * X-axis: row header values (first output), lines: one per column (second output), Y-axis: cell values (third output)
+     */
+    _renderGridGraph(table) {
+        if (!table.rawGrid || table.rawGrid.length === 0 || table.rawColHeaderValues.length === 0) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'variable-row variable-table-container';
+        wrapper.dataset.lineIndex = table.startLine - 1;
+        wrapper.dataset.type = 'table';
+
+        const titleEl = this._createTableTitle(table, wrapper);
+        if (titleEl) wrapper.appendChild(titleEl);
+
+        const numRows = table.rawGrid.length;
+        const numCols = table.rawColHeaderValues.length;
+        const xValues = table.rawRowHeaderValues;
+
+        // Color palette
+        const colors = ['#4fc1ff', '#ff6b6b', '#51cf66', '#ffd43b', '#cc5de8', '#ff922b', '#20c997',
+                         '#748ffc', '#f783ac', '#a9e34b', '#66d9e8', '#e599f7'];
+
+        // Compute data range
+        let yMin = Infinity, yMax = -Infinity, xMin = Infinity, xMax = -Infinity;
+        for (let r = 0; r < numRows; r++) {
+            const x = xValues[r];
+            if (x != null && isFinite(x)) { if (x < xMin) xMin = x; if (x > xMax) xMax = x; }
+            for (let c = 0; c < numCols; c++) {
+                const y = table.rawGrid[r][c];
+                if (y != null && isFinite(y)) { if (y < yMin) yMin = y; if (y > yMax) yMax = y; }
+            }
+        }
+        if (!isFinite(xMin) || !isFinite(yMin)) { this.insertRowInOrder(wrapper, table.startLine - 1); return; }
+        const yPad = (yMax - yMin) * 0.05 || 1;
+        yMin -= yPad; yMax += yPad;
+
+        // Graph dimensions — extra space for legend
+        const width = 600, height = 300;
+        const legendWidth = 100;
+        const margin = { top: 20, right: legendWidth + 20, bottom: 45, left: 60 };
+        const plotW = width - margin.left - margin.right;
+        const plotH = height - margin.top - margin.bottom;
+
+        const sx = (x) => margin.left + (x - xMin) / (xMax - xMin) * plotW;
+        const sy = (y) => margin.top + (1 - (y - yMin) / (yMax - yMin)) * plotH;
+
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.setAttribute('class', 'mathpad-graph');
+        svg.style.width = '100%';
+        svg.style.maxWidth = width + 'px';
+
+        const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
+        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#d4d4d4';
+
+        // Determine axis formats from columns
+        const xFormat = table.columns.length > 0 ? table.columns[0].format : null;
+        const yFormat = table.columns.length > 2 ? table.columns[2].format : null;
+        const colFormat = table.columns.length > 1 ? table.columns[1].format : null;
+
+        const xFmt = (v) => xFormat ? formatVariableValue(v, xFormat, false, table.formatOpts || {}) : this._formatTickLabel(v);
+        const yFmt = (v) => yFormat ? formatVariableValue(v, yFormat, false, table.formatOpts || {}) : this._formatTickLabel(v);
+
+        // Y-axis ticks
+        const yTicks = this._niceTicks(yMin, yMax, 8, yFormat);
+        for (const tick of yTicks) {
+            const y = sy(tick);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
+            line.setAttribute('y1', y); line.setAttribute('y2', y);
+            line.setAttribute('stroke', gridColor); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+            const label = document.createElementNS(ns, 'text');
+            label.setAttribute('x', margin.left - 5); label.setAttribute('y', y + 4);
+            label.setAttribute('text-anchor', 'end'); label.setAttribute('fill', textColor);
+            label.setAttribute('font-size', '11');
+            label.textContent = yFmt(tick);
+            svg.appendChild(label);
+        }
+
+        // X-axis ticks
+        const xTicks = this._niceTicks(xMin, xMax, 8, xFormat);
+        for (const tick of xTicks) {
+            const x = sx(tick);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', x); line.setAttribute('x2', x);
+            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
+            line.setAttribute('stroke', gridColor); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+            const label = document.createElementNS(ns, 'text');
+            label.setAttribute('x', x); label.setAttribute('y', margin.top + plotH + 15);
+            label.setAttribute('text-anchor', 'middle'); label.setAttribute('fill', textColor);
+            label.setAttribute('font-size', '11');
+            label.textContent = xFmt(tick);
+            svg.appendChild(label);
+        }
+
+        // Plot border
+        const border = document.createElementNS(ns, 'rect');
+        border.setAttribute('x', margin.left); border.setAttribute('y', margin.top);
+        border.setAttribute('width', plotW); border.setAttribute('height', plotH);
+        border.setAttribute('fill', 'none'); border.setAttribute('stroke', gridColor);
+        svg.appendChild(border);
+
+        // Data lines — one per column
+        for (let c = 0; c < numCols; c++) {
+            let pathD = '';
+            let started = false;
+            for (let r = 0; r < numRows; r++) {
+                const x = xValues[r], y = table.rawGrid[r][c];
+                if (x == null || y == null || !isFinite(x) || !isFinite(y)) { started = false; continue; }
+                const px = sx(x), py = sy(y);
+                pathD += (started ? 'L' : 'M') + px.toFixed(2) + ',' + py.toFixed(2);
+                started = true;
+            }
+            if (pathD) {
+                const path = document.createElementNS(ns, 'path');
+                path.setAttribute('d', pathD);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', colors[c % colors.length]);
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('stroke-linejoin', 'round');
+                svg.appendChild(path);
+            }
+        }
+
+        // Axis labels
+        const xLabel = table.iter1Label || '';
+        const yLabel = table.cellHeader || '';
+        if (xLabel) {
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', margin.left + plotW / 2); text.setAttribute('y', height - 5);
+            text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', textColor);
+            text.setAttribute('font-size', '12');
+            text.textContent = xLabel;
+            svg.appendChild(text);
+        }
+        if (yLabel) {
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', 12); text.setAttribute('y', margin.top + plotH / 2);
+            text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', textColor);
+            text.setAttribute('font-size', '12');
+            text.setAttribute('transform', `rotate(-90, 12, ${margin.top + plotH / 2})`);
+            text.textContent = yLabel;
+            svg.appendChild(text);
+        }
+
+        // Legend
+        const legendX = margin.left + plotW + 15;
+        let legendY = margin.top + 5;
+        const legendTitle = table.iter2Label || '';
+        if (legendTitle) {
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', legendX); text.setAttribute('y', legendY);
+            text.setAttribute('fill', textColor); text.setAttribute('font-size', '11');
+            text.setAttribute('font-weight', 'bold');
+            text.textContent = legendTitle;
+            svg.appendChild(text);
+            legendY += 16;
+        }
+        for (let c = 0; c < numCols; c++) {
+            const color = colors[c % colors.length];
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', legendX); line.setAttribute('x2', legendX + 15);
+            line.setAttribute('y1', legendY - 4); line.setAttribute('y2', legendY - 4);
+            line.setAttribute('stroke', color); line.setAttribute('stroke-width', '2');
+            svg.appendChild(line);
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', legendX + 20); text.setAttribute('y', legendY);
+            text.setAttribute('fill', textColor); text.setAttribute('font-size', '10');
+            text.textContent = table.colValues[c] || String(c);
+            svg.appendChild(text);
+            legendY += 14;
+        }
+
+        wrapper.appendChild(svg);
+        this.insertRowInOrder(wrapper, table.startLine - 1);
+        this._setStickyHeaderOffsets(wrapper);
+    }
+
+    /**
      * Render an SVG line graph from tableGraph data
      */
     _renderGraph(table) {
@@ -1039,8 +1225,8 @@ class VariablesPanel {
         svg.style.maxWidth = width + 'px';
 
         // Grid lines and axes
-        const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() || '#444';
-        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
+        const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
+        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#d4d4d4';
         const lineColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() || '#4fc1ff';
 
         // Y-axis ticks
