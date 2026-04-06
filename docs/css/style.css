@@ -1120,7 +1120,7 @@ button {
         height: calc(100dvh - var(--header-height)); /* Dynamic viewport height */
         z-index: 100;
         transition: left 0.3s ease;
-        width: var(--sidebar-width);
+        width: 260px !important;
     }
 
     .sidebar.open {

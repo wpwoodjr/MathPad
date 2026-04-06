@@ -1034,11 +1034,11 @@ class VariablesPanel {
         svg.style.maxWidth = width + 'px';
 
         // Determine axis formats and adjust left margin for y-axis label width
-        const xFormat = table.columns.length > 0 ? table.columns[0].format : null;
-        const yFormat = table.columns.length > 2 ? table.columns[2].format : null;
-        const xFmt = (v) => xFormat ? formatVariableValue(v, xFormat, false, table.formatOpts || {}) : this._formatTickLabel(v);
-        const yFmt = (v) => yFormat ? formatVariableValue(v, yFormat, false, table.formatOpts || {}) : this._formatTickLabel(v);
-        const yTicks = this._niceTicks(yMin, yMax, 8, yFormat);
+        const xCol0 = table.columns.length > 0 ? table.columns[0] : {};
+        const yCol0 = table.columns.length > 2 ? table.columns[2] : {};
+        const xFmt = (v) => xCol0.format ? formatVariableValue(v, xCol0.format, xCol0.fullPrecision, table.formatOpts || {}) : this._formatTickLabel(v);
+        const yFmt = (v) => yCol0.format ? formatVariableValue(v, yCol0.format, yCol0.fullPrecision, table.formatOpts || {}) : this._formatTickLabel(v);
+        const yTicks = this._niceTicks(yMin, yMax, 8, yCol0.format);
         const maxYLabel = Math.max(...yTicks.map(t => yFmt(t).length));
         const neededLeft = maxYLabel * 7 + 15;
         if (neededLeft > margin.left) margin.left = neededLeft;
@@ -1089,61 +1089,8 @@ class VariablesPanel {
         }
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
-        // Secondary grid lines (between primary ticks)
-        for (let i = 0; i < yTicks.length - 1; i++) {
-            const mid = sy((yTicks[i] + yTicks[i + 1]) / 2);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
-            line.setAttribute('y1', mid); line.setAttribute('y2', mid);
-            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
-            svg.appendChild(line);
-        }
-        for (const tick of yTicks) {
-            const y = sy(tick);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
-            line.setAttribute('y1', y); line.setAttribute('y2', y);
-            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
-            svg.appendChild(line);
-            const label = document.createElementNS(ns, 'text');
-            label.setAttribute('x', margin.left - 5); label.setAttribute('y', y + 4);
-            label.setAttribute('text-anchor', 'end'); label.setAttribute('class', 'graph-text');
-            label.setAttribute('font-size', '11');
-            label.textContent = yFmt(tick);
-            svg.appendChild(label);
-        }
-
-        // X-axis ticks
-        const xTicks = this._niceTicks(xMin, xMax, 8, xFormat);
-        for (let i = 0; i < xTicks.length - 1; i++) {
-            const mid = sx((xTicks[i] + xTicks[i + 1]) / 2);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', mid); line.setAttribute('x2', mid);
-            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
-            svg.appendChild(line);
-        }
-        for (const tick of xTicks) {
-            const x = sx(tick);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', x); line.setAttribute('x2', x);
-            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
-            svg.appendChild(line);
-            const label = document.createElementNS(ns, 'text');
-            label.setAttribute('x', x); label.setAttribute('y', margin.top + plotH + 15);
-            label.setAttribute('text-anchor', 'middle'); label.setAttribute('class', 'graph-text');
-            label.setAttribute('font-size', '11');
-            label.textContent = xFmt(tick);
-            svg.appendChild(label);
-        }
-
-        // Plot border
-        const border = document.createElementNS(ns, 'rect');
-        border.setAttribute('x', margin.left); border.setAttribute('y', margin.top);
-        border.setAttribute('width', plotW); border.setAttribute('height', plotH);
-        border.setAttribute('fill', 'none'); border.setAttribute('class', 'graph-border');
-        svg.appendChild(border);
+        const xTicks = this._niceTicks(xMin, xMax, 8, xCol0.format);
+        this._drawGraphAxes({ svg, ns, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines: true });
 
         // Data lines — one per column
         for (let c = 0; c < numCols; c++) {
@@ -1222,11 +1169,11 @@ class VariablesPanel {
         // Tick formatters
         const xFmt = (v) => {
             const col = table.columns[xCol];
-            return col.format ? formatVariableValue(v, col.format, false, table.formatOpts || {}) : this._formatTickLabel(v);
+            return col.format ? formatVariableValue(v, col.format, col.fullPrecision, table.formatOpts || {}) : this._formatTickLabel(v);
         };
         const yFmt = (v) => {
             const col = table.columns[yCols[0]];
-            return col.format ? formatVariableValue(v, col.format, false, table.formatOpts || {}) : this._formatTickLabel(v);
+            return col.format ? formatVariableValue(v, col.format, col.fullPrecision, table.formatOpts || {}) : this._formatTickLabel(v);
         };
 
         // Graph dimensions
@@ -1307,79 +1254,8 @@ class VariablesPanel {
         }
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
-        // Secondary grid lines (between primary ticks)
-        for (let i = 0; i < yTicks.length - 1; i++) {
-            const mid = sy((yTicks[i] + yTicks[i + 1]) / 2);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
-            line.setAttribute('y1', mid); line.setAttribute('y2', mid);
-            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
-            svg.appendChild(line);
-        }
-        for (const tick of yTicks) {
-            const y = sy(tick);
-            // Grid line
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
-            line.setAttribute('y1', y); line.setAttribute('y2', y);
-            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
-            svg.appendChild(line);
-            // Label
-            const label = document.createElementNS(ns, 'text');
-            label.setAttribute('x', margin.left - 5); label.setAttribute('y', y + 4);
-            label.setAttribute('text-anchor', 'end'); label.setAttribute('class', 'graph-text');
-            label.setAttribute('font-size', '11');
-            label.textContent = yFmt(tick);
-            svg.appendChild(label);
-        }
-
-        // X-axis ticks
         const xTicks = this._niceTicks(xMin, xMax, 8, table.columns[xCol].format);
-        for (let i = 0; i < xTicks.length - 1; i++) {
-            const mid = sx((xTicks[i] + xTicks[i + 1]) / 2);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', mid); line.setAttribute('x2', mid);
-            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
-            svg.appendChild(line);
-        }
-        for (const tick of xTicks) {
-            const x = sx(tick);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', x); line.setAttribute('x2', x);
-            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
-            svg.appendChild(line);
-            const label = document.createElementNS(ns, 'text');
-            label.setAttribute('x', x); label.setAttribute('y', margin.top + plotH + 15);
-            label.setAttribute('text-anchor', 'middle'); label.setAttribute('class', 'graph-text');
-            label.setAttribute('font-size', '11');
-            label.textContent = xFmt(tick);
-            svg.appendChild(label);
-        }
-
-        // Zero lines (if in range)
-        if (yMin <= 0 && yMax >= 0) {
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
-            line.setAttribute('y1', sy(0)); line.setAttribute('y2', sy(0));
-            line.setAttribute('class', 'graph-zero'); line.setAttribute('stroke-width', '1');
-            svg.appendChild(line);
-        }
-        if (xMin <= 0 && xMax >= 0) {
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', sx(0)); line.setAttribute('x2', sx(0));
-            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-            line.setAttribute('class', 'graph-zero'); line.setAttribute('stroke-width', '1');
-            svg.appendChild(line);
-        }
-
-        // Plot border
-        const border = document.createElementNS(ns, 'rect');
-        border.setAttribute('x', margin.left); border.setAttribute('y', margin.top);
-        border.setAttribute('width', plotW); border.setAttribute('height', plotH);
-        border.setAttribute('fill', 'none'); border.setAttribute('class', 'graph-border');
-        svg.appendChild(border);
+        this._drawGraphAxes({ svg, ns, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines: true });
 
         // Data lines — one per y column
         for (let yi = 0; yi < yCols.length; yi++) {
@@ -1437,6 +1313,95 @@ class VariablesPanel {
     /**
      * Generate nice tick values for an axis
      */
+    /**
+     * Draw axes, grid lines, tick labels, and border for a graph.
+     * @param {object} opts - { svg, ns, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines }
+     */
+    _drawGraphAxes(opts) {
+        const { svg, ns, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines } = opts;
+
+        // Y-axis secondary grid
+        for (let i = 0; i < yTicks.length - 1; i++) {
+            const mid = sy((yTicks[i] + yTicks[i + 1]) / 2);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
+            line.setAttribute('y1', mid); line.setAttribute('y2', mid);
+            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+        }
+        // Y-axis primary grid + labels
+        for (const tick of yTicks) {
+            const y = sy(tick);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
+            line.setAttribute('y1', y); line.setAttribute('y2', y);
+            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+            const label = document.createElementNS(ns, 'text');
+            label.setAttribute('x', margin.left - 5); label.setAttribute('y', y + 4);
+            label.setAttribute('text-anchor', 'end'); label.setAttribute('class', 'graph-text');
+            label.setAttribute('font-size', '11');
+            label.textContent = yFmt(tick);
+            svg.appendChild(label);
+        }
+
+        // X-axis: skip labels if they'd overlap
+        const maxXLabelLen = Math.max(...xTicks.map(t => xFmt(t).length));
+        const xLabelWidth = maxXLabelLen * 7;
+        const xLabelSkip = Math.max(1, Math.ceil(xLabelWidth * xTicks.length / plotW));
+        // Secondary grid
+        for (let i = 0; i < xTicks.length - 1; i++) {
+            const mid = sx((xTicks[i] + xTicks[i + 1]) / 2);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', mid); line.setAttribute('x2', mid);
+            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
+            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+        }
+        // Primary grid + labels
+        for (let ti = 0; ti < xTicks.length; ti++) {
+            const x = sx(xTicks[ti]);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', x); line.setAttribute('x2', x);
+            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
+            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
+            svg.appendChild(line);
+            if (ti % xLabelSkip === 0) {
+                const label = document.createElementNS(ns, 'text');
+                label.setAttribute('x', x); label.setAttribute('y', margin.top + plotH + 15);
+                label.setAttribute('text-anchor', 'middle'); label.setAttribute('class', 'graph-text');
+                label.setAttribute('font-size', '11');
+                label.textContent = xFmt(xTicks[ti]);
+                svg.appendChild(label);
+            }
+        }
+
+        // Zero lines
+        if (showZeroLines) {
+            if (yMin <= 0 && yMax >= 0) {
+                const line = document.createElementNS(ns, 'line');
+                line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
+                line.setAttribute('y1', sy(0)); line.setAttribute('y2', sy(0));
+                line.setAttribute('class', 'graph-zero'); line.setAttribute('stroke-width', '1');
+                svg.appendChild(line);
+            }
+            if (xMin <= 0 && xMax >= 0) {
+                const line = document.createElementNS(ns, 'line');
+                line.setAttribute('x1', sx(0)); line.setAttribute('x2', sx(0));
+                line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
+                line.setAttribute('class', 'graph-zero'); line.setAttribute('stroke-width', '1');
+                svg.appendChild(line);
+            }
+        }
+
+        // Plot border
+        const border = document.createElementNS(ns, 'rect');
+        border.setAttribute('x', margin.left); border.setAttribute('y', margin.top);
+        border.setAttribute('width', plotW); border.setAttribute('height', plotH);
+        border.setAttribute('fill', 'none'); border.setAttribute('class', 'graph-border');
+        svg.appendChild(border);
+    }
+
     _niceTicks(min, max, count, format) {
         const range = max - min;
         if (range === 0) return [min];
