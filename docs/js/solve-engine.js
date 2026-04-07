@@ -466,10 +466,17 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
     // Check equation consistency (reuses precomputed equations)
     // First-wins ordering: a variable's status is set by the first equation it appears in
-    const equationVarStatus = new Map(); // var name → 'solved' | 'unsolved'
+    // Check equation balance and build highlighting status
+    const equationVarStatus = new Map();
+    let firstFailedEq = null;
+    const definitionDeps = new Map(); // undeclared var → RHS vars (for highlighting expansion)
     for (const eq of equations) {
         try {
             if (!eq.leftAST || !eq.rightAST) continue;
+            // Track undeclared-var definitions for highlighting expansion
+            if (eq.leftAST.type === 'VARIABLE' && !variables.has(eq.leftAST.name)) {
+                definitionDeps.set(eq.leftAST.name, findVariablesInAST(eq.rightAST));
+            }
             if (erroredEquations.has(eq.startLine)) continue;
 
             const unknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
@@ -495,18 +502,52 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                             : parseFloat(toFixed(result.difference, result.tolPlaces));
                         errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (absolute diff ${diff} >= ${result.tolerance})`);
                     }
-                }
-
-                // Only track status for equations where all variables are declared (user-visible)
-                if ([...eq.allVars].every(v => variables.has(v))) {
-                    const status = balanced ? 'solved' : 'unsolved';
-                    for (const v of eq.allVars) {
-                        if (!equationVarStatus.has(v)) equationVarStatus.set(v, status);
-                    }
+                    if (!firstFailedEq) firstFailedEq = eq;
                 }
             }
         } catch (e) {
             errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
+        }
+    }
+
+    // Expand undeclared vars through definition substitutions
+    function expandVars(allVars) {
+        const expanded = new Set();
+        for (const v of allVars) {
+            if (definitionDeps.has(v)) {
+                for (const dep of definitionDeps.get(v)) expanded.add(dep);
+            } else {
+                expanded.add(v);
+            }
+        }
+        return expanded;
+    }
+
+    // Apply highlighting: all balanced → all green.
+    // Any failure → orange on failing eq's expanded vars, except vars balanced earlier. No green.
+    if (firstFailedEq) {
+        // Collect declared vars from real equations (not undeclared definitions) that balanced before the failure
+        const priorBalanced = new Set();
+        for (const eq of equations) {
+            if (eq === firstFailedEq) break;
+            if (!eq.leftAST || !eq.rightAST) continue;
+            if (erroredEquations.has(eq.startLine)) continue;
+            if (definitionDeps.has(eq.leftAST.name)) continue; // skip undeclared-var definitions
+            for (const v of expandVars(eq.allVars)) {
+                if (variables.has(v)) priorBalanced.add(v);
+            }
+        }
+        for (const v of expandVars(firstFailedEq.allVars)) {
+            if (variables.has(v) && !priorBalanced.has(v)) {
+                equationVarStatus.set(v, 'unsolved');
+            }
+        }
+    } else {
+        for (const eq of equations) {
+            if (!eq.leftAST || !eq.rightAST) continue;
+            for (const v of expandVars(eq.allVars)) {
+                if (variables.has(v)) equationVarStatus.set(v, 'solved');
+            }
         }
     }
 

@@ -731,9 +731,9 @@ class VariablesPanel {
     setErrors(errors, equationVarStatus) {
         this.clearErrors();
 
-        // Mark rows based on equation status (first-equation-wins ordering from solver)
-        // Skip output variables — they're computed results, not user-editable inputs
-        if (equationVarStatus) {
+        // Apply green/orange highlighting unless there are non-balance errors (red)
+        const hasHardErrors = errors && errors.some(e => !e.includes("doesn't balance"));
+        if (!hasHardErrors && equationVarStatus) {
             for (const decl of this.declarations.values()) {
                 if (decl.declaration && decl.declaration.type === VarType.OUTPUT) continue;
                 const status = equationVarStatus.get(decl.name);
