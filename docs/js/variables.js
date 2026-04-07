@@ -607,24 +607,32 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
 
         if (inBrace) {
             if (rbraceTok) {
-                // Multi-line brace ends — extract ALL content as single substring
-                const rawContent = text.substring(
-                    tokenOffset(lineOffsets, braceStartTok) + 1,
-                    tokenOffset(lineOffsets, rbraceTok)
-                );
-                const normalizedContent = rawContent.replace(/\s+/g, ' ').trim();
-                // Split on °= or = for pre-parsed sides (regex fallback for multi-line)
-                const eqMatch = normalizedContent.match(/^(.+?)(°?=)(.+)$/);
+                // Multi-line brace ends — find = or °= token across body lines
+                const braceStartLine = braceStartTok.line - 1; // 0-based
+                const braceEndLine = lineNum - 1; // 0-based (line with })
+                let eqTok = null;
+                for (let li = braceStartLine; li <= braceEndLine; li++) {
+                    if (li >= allTokens.length) break;
+                    const tok = allTokens[li].find(t =>
+                        t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '°=') &&
+                        t.col > (li === braceStartLine ? braceStartTok.col : 0) &&
+                        (li < braceEndLine || t.col < rbraceTok.col)
+                    );
+                    if (tok) { eqTok = tok; break; }
+                }
+                const braceStart = tokenOffset(lineOffsets, braceStartTok) + 1;
+                const braceEnd = tokenOffset(lineOffsets, rbraceTok);
+                const content = text.substring(braceStart, braceEnd).replace(/\s+/g, ' ').trim();
                 equations.push({
-                    text: normalizedContent,
-                    leftText: eqMatch ? eqMatch[1].trim() : null,
-                    rightText: eqMatch ? eqMatch[3].trim() : null,
+                    text: content,
+                    leftText: eqTok ? text.substring(braceStart, tokenOffset(lineOffsets, eqTok)).trim() : null,
+                    rightText: eqTok ? text.substring(tokenOffset(lineOffsets, eqTok) + eqTok.value.length, braceEnd).trim() : null,
                     startLine: braceStartTok.line - 1,
                     endLine: lineNum - 1,
                     isBraced: true,
                     startCol: braceStartTok.col - 1,
                     endCol: rbraceTok.col,
-                    modN: eqMatch && eqMatch[2] === '°=' ? true : null
+                    modN: eqTok && eqTok.value === '°=' ? true : null
                 });
                 inBrace = false;
             }
