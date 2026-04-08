@@ -602,13 +602,17 @@ class SimpleEditor {
         this.textarea.addEventListener('scroll', () => this.onUserScroll());
         this.textarea.addEventListener('keydown', (e) => this.onKeyDown(e));
 
-        // Update line numbers on resize (affects wrapping)
-        this.resizeObserver = new ResizeObserver(() => this.updateLineNumbers());
+        // Update line numbers and scroll padding on resize (affects wrapping)
+        this.resizeObserver = new ResizeObserver(() => {
+            this.updateLineNumbers();
+            this.updateScrollPadding();
+        });
         this.resizeObserver.observe(this.editorArea);
 
         // Initial render
         this.updateHighlighting();
         this.updateLineNumbers();
+        this.updateScrollPadding();
 
         // Push initial state so first undo returns to it
         this.saveInitialState();
@@ -1187,6 +1191,18 @@ class SimpleEditor {
         }
         this.lineNumbers.innerHTML = html;
         this.lineNumbers.scrollTop = this.textarea.scrollTop;
+    }
+
+    /**
+     * Set scroll-past-end padding based on actual editor area height
+     */
+    updateScrollPadding() {
+        const h = this.editorArea.clientHeight;
+        if (h <= 0) return;
+        const pad = Math.max(0, h - this.getLineHeight()) + 'px';
+        this.textarea.style.paddingBottom = pad;
+        this.highlightLayer.style.paddingBottom = pad;
+        this.lineNumbers.style.paddingBottom = pad;
     }
 
     onChange(callback) {

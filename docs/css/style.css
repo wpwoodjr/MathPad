@@ -563,7 +563,6 @@ button {
 .line-numbers {
     width: 50px;
     padding: 8px 0;
-    padding-bottom: 100vh;
     background-color: var(--bg-secondary);
     border-right: 1px solid var(--border-color);
     text-align: right;
@@ -593,7 +592,6 @@ button {
     right: 0;
     bottom: 0;
     padding: 8px;
-    padding-bottom: 100vh;
     overflow: auto;
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -612,7 +610,6 @@ button {
     right: 0;
     bottom: 0;
     padding: 8px;
-    padding-bottom: 100vh;
     border: none;
     outline: none;
     resize: none;
