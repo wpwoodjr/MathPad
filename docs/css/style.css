@@ -727,7 +727,8 @@ button {
 }
 
 .detail-group select,
-.detail-group input[type="number"] {
+.detail-group input[type="number"],
+.detail-group input[type="text"] {
     width: 100%;
     padding: 6px 8px;
     background-color: var(--bg-tertiary);

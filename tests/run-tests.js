@@ -55,6 +55,7 @@ function loadModules() {
     global.formatNumber = evaluator.formatNumber;
     global.addCommaGrouping = evaluator.addCommaGrouping;
     global.formatMoney = evaluator.formatMoney;
+    global.currencyPlaces = evaluator.currencyPlaces;
     global.formatPercent = evaluator.formatPercent;
     global.formatDegrees = evaluator.formatDegrees;
     global.parseDateText = evaluator.parseDateText;

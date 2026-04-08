@@ -22,7 +22,8 @@ const DEFAULT_SETTINGS_RECORD = {
     groupDigits: true,
     format: 'float',
     degreesMode: false,
-    shadowConstants: false
+    shadowConstants: false,
+    currencySymbol: '$'
 };
 
 /**
@@ -597,7 +598,7 @@ function exportToText(data, options = {}) {
         const selectedFlag = isSelected ? '; Selected = 1' : '';
         lines.push(`Category = "${record.category || 'Unfiled'}"; Secret = ${record.secret ? 1 : 0}${selectedFlag}`);
         lines.push(`Places = ${record.places != null ? record.places : 4}; StripZeros = ${record.stripZeros !== false ? 1 : 0}`);
-        lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}; ShadowConstants = ${record.shadowConstants ? 1 : 0}`);
+        lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}; ShadowConstants = ${record.shadowConstants ? 1 : 0}${record.currencySymbol && record.currencySymbol !== '$' ? `; CurrencySymbol = "${record.currencySymbol}"` : ''}`);
         if (record.status) {
             // Escape quotes and newlines in status message
             const escapedStatus = record.status.replace(/"/g, '\\"').replace(/\n/g, '\\n');
@@ -649,6 +650,7 @@ function importFromText(text, existingData = null, options = {}) {
         let groupDigits = false;
         let degreesMode = false;
         let shadowConstants = false;
+        let currencySymbol = '$';
         let status = '';
         let statusIsError = false;
         let contentStart = 0;
@@ -677,7 +679,7 @@ function importFromText(text, existingData = null, options = {}) {
             }
 
             // Format, GroupDigits, DegreesMode, ShadowConstants line (later fields optional)
-            const formatMatch = line.match(/Format\s*=\s*"([^"]*)"\s*;\s*GroupDigits\s*=\s*(\d+)(?:\s*;\s*DegreesMode\s*=\s*(\d+))?(?:\s*;\s*ShadowConstants\s*=\s*(\d+))?/i);
+            const formatMatch = line.match(/Format\s*=\s*"([^"]*)"\s*;\s*GroupDigits\s*=\s*(\d+)(?:\s*;\s*DegreesMode\s*=\s*(\d+))?(?:\s*;\s*ShadowConstants\s*=\s*(\d+))?(?:\s*;\s*CurrencySymbol\s*=\s*"([^"]*)")?/i);
             if (formatMatch) {
                 format = formatMatch[1];
                 groupDigits = formatMatch[2] === '1';
@@ -686,6 +688,9 @@ function importFromText(text, existingData = null, options = {}) {
                 }
                 if (formatMatch[4] !== undefined) {
                     shadowConstants = formatMatch[4] === '1';
+                }
+                if (formatMatch[5] !== undefined) {
+                    currencySymbol = formatMatch[5];
                 }
                 contentStart = i + 1;
                 continue;
@@ -743,6 +748,7 @@ function importFromText(text, existingData = null, options = {}) {
             format: format,
             degreesMode: degreesMode,
             shadowConstants: shadowConstants,
+            currencySymbol: currencySymbol,
             status: status,
             statusIsError: statusIsError
         });
@@ -842,6 +848,7 @@ function createRecord(data) {
         format: ds.format,
         degreesMode: ds.degreesMode,
         shadowConstants: ds.shadowConstants,
+        currencySymbol: ds.currencySymbol || '$',
         status: '',
         statusIsError: false
     };

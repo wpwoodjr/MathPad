@@ -1497,6 +1497,16 @@ function runAllTests() {
                 ['x', 'variable-def'],
                 ['°:>', 'punctuation']
             ]
+        },
+        // Euro currency literal in expression output
+        {
+            name: 'euro currency literal in output (4 $-> €4.00)',
+            line: '4 $-> €4.00',
+            assertions: [
+                ['4', 'number'],
+                ['$->', 'punctuation'],
+                ['€4.00', 'number']
+            ]
         }
     ];
 

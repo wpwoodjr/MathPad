@@ -812,10 +812,15 @@ function addCommaGrouping(numStr) {
 /**
  * Format value as money: $1,234.56 with exactly 2 decimal places, comma grouping
  */
-function formatMoney(value) {
+// Currency decimal places: ¥ and ₩ use 0, most others use 2
+const currencyPlaces = { '¥': 0, '₩': 0 };
+
+function formatMoney(value, symbol) {
+    symbol = symbol || '$';
+    const places = currencyPlaces[symbol] != null ? currencyPlaces[symbol] : 2;
     const absValue = Math.abs(value);
-    const result = addCommaGrouping(toFixed(absValue, 2));
-    return value < 0 ? '-$' + result : '$' + result;
+    const result = addCommaGrouping(toFixed(absValue, places));
+    return value < 0 ? '-' + symbol + result : symbol + result;
 }
 
 /**
@@ -913,6 +918,6 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         EvalContext, EvalError, evaluate, formatNumber, addCommaGrouping, formatMoney, formatPercent, formatDegrees, parseDateText, formatDateValue, parseDurationText, formatDuration, toFixed, checkBalance, modNormalize, modCheckBalance,
-        builtinFunctions, factorial, gamma
+        builtinFunctions, factorial, gamma, currencyPlaces
     };
 }

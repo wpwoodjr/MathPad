@@ -739,6 +739,13 @@ function renderDetailsPanel() {
             </select>
         </div>
 
+        <div class="detail-group">
+            <label>Currency</label>
+            <select id="detail-currency" onchange="updateRecordDetail('currencySymbol', this.value)">
+                ${['$', '€', '£', '¥', '₹'].map(s => `<option value="${s}" ${(record.currencySymbol || '$') === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+        </div>
+
         <div class="detail-group checkbox">
             <label>
                 <input type="checkbox" id="detail-strip" ${record.stripZeros ? 'checked' : ''}
@@ -1085,6 +1092,13 @@ function renderSettingsModal() {
             <label>Format</label>
             <select onchange="updateRecordDetail('format', this.value)">
                 ${formatOptions}
+            </select>
+        </div>
+
+        <div class="detail-group">
+            <label>Currency</label>
+            <select onchange="updateRecordDetail('currencySymbol', this.value)">
+                ${['$', '€', '£', '¥', '₹'].map(s => `<option value="${s}" ${(record.currencySymbol || '$') === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
         </div>
 

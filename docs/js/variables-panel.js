@@ -595,13 +595,12 @@ class VariablesPanel {
         let text = inputText.trim();
 
         // Handle money variables
-        if (varFormat === 'money' || text.includes('$')) {
-            // Normalize: strip $ and commas, then re-add with proper formatting
-            let num = text.replace(/[$,]/g, '').trim();
+        if (varFormat === 'money' || /[$€£¥₹]/.test(text)) {
+            const sym = this.record.currencySymbol || '$';
+            let num = text.replace(/[$€£¥₹,]/g, '').trim();
             const negative = num.startsWith('-');
             if (negative) num = num.substring(1).trim();
-            // Add commas to integer part
-            return (negative ? '-$' : '$') + addCommaGrouping(num);
+            return (negative ? '-' + sym : sym) + addCommaGrouping(num);
         }
 
         // Handle percentage variables
@@ -679,9 +678,9 @@ class VariablesPanel {
 
         let multiplier = 1;
 
-        // Handle money format: $1,234.56 or -$1,234.56
-        if (text.includes('$')) {
-            text = text.replace(/[$,]/g, '');
+        // Handle money format: $1,234.56 or -€1,234.56 etc.
+        if (/[$€£¥₹,]/.test(text)) {
+            text = text.replace(/[$€£¥₹,]/g, '');
         }
 
         // Handle percentage format: 7.5%

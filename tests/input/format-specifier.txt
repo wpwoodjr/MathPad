@@ -146,3 +146,14 @@ a: -1.00000000025
 b = a*2
 b->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0; CurrencySymbol = "¥"
+Yen currency (0 decimal places)
+pmt$: ¥55.678
+pmt$->
+pmt$->>
+p2$: ¥56
+p2$->
+p2$->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

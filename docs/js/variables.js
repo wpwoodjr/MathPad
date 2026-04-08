@@ -426,6 +426,7 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
     const stripZeros = format.stripZeros !== false;
     const numberFormat = format.numberFormat || 'float';
     const base = format.base || 10;
+    const currencySymbol = format.currencySymbol || '$';
     const groupDigits = format.groupDigits || false;
 
     // Handle money format
@@ -433,16 +434,19 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
         if (fullPrecision) {
             const absValue = Math.abs(value);
             let formatted = formatNumber(absValue, places, stripZeros, numberFormat, 10, groupDigits, null);
-            // Ensure at least 2 decimal places for money
+            // Ensure at least currency's decimal places
+            const minPlaces = (typeof currencyPlaces !== 'undefined' && currencyPlaces[currencySymbol] != null) ? currencyPlaces[currencySymbol] : 2;
             const dot = formatted.indexOf('.');
-            if (dot === -1) {
-                formatted += '.00';
-            } else if (formatted.length - dot - 1 < 2) {
-                formatted += '0'.repeat(2 - (formatted.length - dot - 1));
+            if (minPlaces > 0) {
+                if (dot === -1) {
+                    formatted += '.' + '0'.repeat(minPlaces);
+                } else if (formatted.length - dot - 1 < minPlaces) {
+                    formatted += '0'.repeat(minPlaces - (formatted.length - dot - 1));
+                }
             }
-            return value < 0 ? '-$' + formatted : '$' + formatted;
+            return value < 0 ? '-' + currencySymbol + formatted : currencySymbol + formatted;
         }
-        return formatMoney(value);
+        return formatMoney(value, currencySymbol);
     }
 
     // Handle percent format
