@@ -407,6 +407,7 @@ class VariablesPanel {
             // Update formula pane on blur (when user is done typing), not during typing
             valueElement.addEventListener('blur', (e) => {
                 this.handleValueChange(info.lineIndex, e.target.value);
+                if (this.blurCallback) this.blurCallback();
             });
             valueElement.addEventListener('focus', (e) => {
                 // Track this as the focused variable (for clear exclusion)
@@ -711,6 +712,13 @@ class VariablesPanel {
      */
     onSolve(callback) {
         this.solveCallback = callback;
+    }
+
+    /**
+     * Register a callback for input field blur (quick solve)
+     */
+    onBlur(callback) {
+        this.blurCallback = callback;
     }
 
     /**

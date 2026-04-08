@@ -756,7 +756,7 @@ function appendReferencesSection(text, context) {
 /**
  * Main solve function - orchestrates discovery, solving, and formatting
  */
-function solveRecord(text, context, record, parserTokens) {
+function solveRecord(text, context, record, parserTokens, skipTables = false) {
     // Remove any existing references section before solving
     text = removeReferencesSection(text);
 
@@ -887,15 +887,17 @@ function solveRecord(text, context, record, parserTokens) {
 
     // Pass 4: Evaluate tables (after all normal solving is complete)
     const tables = [];
-    const savedVars = new Map(context.variables);
-    for (const td of tableDefs) {
-        // Restore outer context so tables don't leak state to each other
-        context.variables = new Map(savedVars);
-        const tableResult = evaluateTable(td, context, record, outerEquations, preSolveVars);
-        errors.push(...tableResult.errors);
-        tables.push(tableResult);
+    if (!skipTables) {
+        const savedVars = new Map(context.variables);
+        for (const td of tableDefs) {
+            // Restore outer context so tables don't leak state to each other
+            context.variables = new Map(savedVars);
+            const tableResult = evaluateTable(td, context, record, outerEquations, preSolveVars);
+            errors.push(...tableResult.errors);
+            tables.push(tableResult);
+        }
+        context.variables = savedVars;
     }
-    context.variables = savedVars;
 
     // Pass 5: Append references section showing used constants and functions
     // Skip for reference records (Constants, Functions, Default Settings)

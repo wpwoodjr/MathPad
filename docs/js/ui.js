@@ -502,6 +502,10 @@ function createEditorForRecord(record) {
         handleSolve(undoable);
     });
 
+    variablesManager.onBlur(() => {
+        handleSolve(true, true); // undoable=true, quickSolve=true
+    });
+
     // Save scroll position when user scrolls
     editor.onScrollChange((scrollTop) => {
         record.scrollTop = scrollTop;
@@ -1474,7 +1478,7 @@ function handleReset() {
 /**
  * Handle solve
  */
-function handleSolve(undoable = true) {
+function handleSolve(undoable = true, quickSolve = false) {
     if (!UI.currentRecordId) {
         setStatus('No record selected', true);
         return;
@@ -1507,7 +1511,9 @@ function handleSolve(undoable = true) {
             text, parserTokens);
 
         // Solve the record (captures pre-solve values and clears outputs internally)
-        const result = solveRecord(text, context, record, parserTokens);
+        // Quick solve skips tables when equations don't balance
+        const skipTables = quickSolve; // first pass: always skip tables for quick solve
+        const result = solveRecord(text, context, record, parserTokens, skipTables);
         text = result.text;
 
         // Re-solve formatted output for idempotent results and rounding error detection
@@ -1515,6 +1521,7 @@ function handleSolve(undoable = true) {
         let equationVarStatus = result.equationVarStatus;
         let tables = result.tables || [];
         if (result.solved > 0 && errors.length === 0) {
+            // For quick solve: all balanced — run full re-solve with tables
             const verifyTokens = new Tokenizer(text).tokenize();
             const verifyContext = createEvalContext(record,
                 editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
