@@ -401,6 +401,7 @@ function getInlineEvalFormat(exprTokens, record, variables = null) {
         stripZeros: record.stripZeros !== false,
         groupDigits: record.groupDigits || false,
         numberFormat: record.format || 'float',
+        currencySymbol: record.currencySymbol || '$',
         varFormat: varFormat,
         base: base
     };

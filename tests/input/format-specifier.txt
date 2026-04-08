@@ -156,6 +156,11 @@ pmt$->>
 p2$: ¥56
 p2$->
 p2$->>
+Inline eval with yen currency
+table("Yen price: \pmt$\") = {
+  x: 1..2
+  x->
+}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -167,4 +172,9 @@ pmt$->>
 p2$: 1234₽
 p2$->
 p2$->>
+Inline eval with ruble currency
+table("Ruble price: \pmt$\") = {
+  x: 1..2
+  x->
+}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
