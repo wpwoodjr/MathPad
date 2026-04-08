@@ -611,7 +611,7 @@ class Tokenizer {
             }
 
             // Money literal: currency symbol + digits (e.g., $100, €1,234.56, £.01)
-            if ('$€£¥₹'.includes(ch) && (this.isDigit(this.peek(1)) || (this.peek(1) === '.' && this.isDigit(this.peek(2))))) {
+            if ('$€£¥₹₩₱₺₴₫₡'.includes(ch) && (this.isDigit(this.peek(1)) || (this.peek(1) === '.' && this.isDigit(this.peek(2))))) {
                 this.advance(); // consume currency symbol
                 const numToken = this.tokenizeNumber();
                 numToken.value.raw = ch + numToken.value.raw;

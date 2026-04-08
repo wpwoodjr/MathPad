@@ -813,7 +813,7 @@ function addCommaGrouping(numStr) {
  * Format value as money: $1,234.56 with exactly 2 decimal places, comma grouping
  */
 // Currency decimal places: ¥ and ₩ use 0, most others use 2
-const currencyPlaces = { '¥': 0, '₩': 0 };
+const currencyPlaces = { '¥': 0, '₩': 0, '₫': 0 };
 
 function formatMoney(value, symbol) {
     symbol = symbol || '$';
