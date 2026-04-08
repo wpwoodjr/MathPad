@@ -157,3 +157,14 @@ p2$: ¥56
 p2$->
 p2$->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0; CurrencySymbol = "₽"
+Ruble suffix currency (symbol after number)
+pmt$: 55.678₽
+pmt$->
+pmt$->>
+p2$: 1234₽
+p2$->
+p2$->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

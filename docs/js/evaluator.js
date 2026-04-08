@@ -814,12 +814,17 @@ function addCommaGrouping(numStr) {
  */
 // Currency decimal places: ¥ and ₩ use 0, most others use 2
 const currencyPlaces = { '¥': 0, '₩': 0, '₫': 0 };
+// Suffix currencies: symbol goes after the number (e.g., 1,234₽)
+const suffixCurrencies = '₽₸₼₾৳';
 
 function formatMoney(value, symbol) {
     symbol = symbol || '$';
     const places = currencyPlaces[symbol] != null ? currencyPlaces[symbol] : 2;
     const absValue = Math.abs(value);
     const result = addCommaGrouping(toFixed(absValue, places));
+    if (suffixCurrencies.includes(symbol)) {
+        return value < 0 ? '-' + result + symbol : result + symbol;
+    }
     return value < 0 ? '-' + symbol + result : symbol + result;
 }
 
@@ -918,6 +923,6 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         EvalContext, EvalError, evaluate, formatNumber, addCommaGrouping, formatMoney, formatPercent, formatDegrees, parseDateText, formatDateValue, parseDurationText, formatDuration, toFixed, checkBalance, modNormalize, modCheckBalance,
-        builtinFunctions, factorial, gamma, currencyPlaces
+        builtinFunctions, factorial, gamma, currencyPlaces, suffixCurrencies
     };
 }

@@ -1507,6 +1507,16 @@ function runAllTests() {
                 ['$->', 'punctuation'],
                 ['€4.00', 'number']
             ]
+        },
+        // Suffix currency literal in expression output
+        {
+            name: 'suffix currency literal in output (100₽ $-> 100.00₽)',
+            line: '100₽ $-> 100.00₽',
+            assertions: [
+                ['100₽', 'number'],
+                ['$->', 'punctuation'],
+                ['100.00₽', 'number']
+            ]
         }
     ];
 

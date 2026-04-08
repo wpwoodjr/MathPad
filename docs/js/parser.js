@@ -271,6 +271,12 @@ class Tokenizer {
             return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw }, startLine, startCol);
         }
 
+        // Suffix currency literal: 100₽, 100₸, etc. — value stays as-is
+        if (this.peek() && '₽₸₼₾৳'.includes(this.peek())) {
+            raw += this.advance();
+            return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw }, startLine, startCol);
+        }
+
         return this.makeToken(TokenType.NUMBER, { value: parseFloat(value), base: 10, raw }, startLine, startCol);
     }
 

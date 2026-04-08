@@ -444,6 +444,10 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
                     formatted += '0'.repeat(minPlaces - (formatted.length - dot - 1));
                 }
             }
+            const isSuffix = typeof suffixCurrencies !== 'undefined' && suffixCurrencies.includes(currencySymbol);
+            if (isSuffix) {
+                return value < 0 ? '-' + formatted + currencySymbol : formatted + currencySymbol;
+            }
             return value < 0 ? '-' + currencySymbol + formatted : currencySymbol + formatted;
         }
         return formatMoney(value, currencySymbol);
