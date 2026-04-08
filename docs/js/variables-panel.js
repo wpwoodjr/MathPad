@@ -622,6 +622,17 @@ class VariablesPanel {
             return text + '°';
         }
 
+        // Handle date variables — reformat to full locale date
+        if (varFormat === 'date') {
+            return formatDateValue(parsedValue, text.includes(':'));
+        }
+
+        // Handle duration variables — format as H:MM:SS
+        if (varFormat === 'duration') {
+            if (text.includes(':')) return text; // already colon format
+            return formatDuration(parsedValue, false);
+        }
+
         // For regular numbers, preserve the input exactly as typed
         return text;
     }
@@ -687,6 +698,18 @@ class VariablesPanel {
         // Handle degrees format: strip ° suffix
         if (text.endsWith('°')) {
             text = text.slice(0, -1);
+        }
+
+        // Handle date format
+        if (varFormat === 'date') {
+            const dateVal = parseDateText(text);
+            if (dateVal !== null) return dateVal;
+        }
+
+        // Handle duration format
+        if (varFormat === 'duration') {
+            const durVal = parseDurationText(text);
+            if (durVal !== null) return durVal;
         }
 
         // Remove any remaining commas

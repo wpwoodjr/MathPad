@@ -91,3 +91,24 @@ grid("hours grid test") = {
 6:30:00	65	130	195	260	325	390	455
 7:00:00	70	140	210	280	350	420	490
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Nothing to solve"; StatusIsError = 0
+Dates 4 - flexible duration input
+
+a@t: 2
+a@t-> 2:00:00
+
+b@t: 2.5
+b@t-> 2:30:00
+
+c@t: 2:30
+c@t-> 2:30:00
+
+d@t: 2:30:15
+d@t-> 2:30:15
+
+e@t: 2:30:15.5
+e@t->> 2:30:15.500
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

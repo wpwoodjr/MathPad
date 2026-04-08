@@ -66,3 +66,22 @@ grid("hours grid test") = {
   Speed speed->
   Distance dist->
 }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Dates 4 - flexible duration input
+
+a@t: 2
+a@t->
+
+b@t: 2.5
+b@t->
+
+c@t: 2:30
+c@t->
+
+d@t: 2:30:15
+d@t->
+
+e@t: 2:30:15.5
+e@t->>

@@ -222,7 +222,17 @@ const _dateLocale = (() => {
  * Returns null if text doesn't match.
  */
 function parseDateText(text) {
-    const m = text.trim().match(/^(\d{1,4})[\/\-.](\d{1,4})[\/\-.](\d{1,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?)?$/);
+    // Try 3-part date (M/D/Y or locale equivalent)
+    let m = text.trim().match(/^(\d{1,4})[\/\-.](\d{1,4})[\/\-.](\d{1,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?)?$/);
+    // Try 2-part date (M/D — use current year)
+    if (!m) {
+        m = text.trim().match(/^(\d{1,2})[\/\-.](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?)?$/);
+        if (m) {
+            // Insert current year as third group, shift time groups
+            const yr = String(new Date().getFullYear());
+            m = [m[0], m[1], m[2], yr, m[3], m[4], m[5]];
+        }
+    }
     if (!m) return null;
     let month, day, year;
     if (_dateLocale.order === 'dmy') {
@@ -232,6 +242,8 @@ function parseDateText(text) {
     } else { // mdy
         month = parseInt(m[1]); day = parseInt(m[2]); year = parseInt(m[3]);
     }
+    // 2-digit year: assume current century
+    if (year < 100) year += Math.floor(new Date().getFullYear() / 100) * 100;
     const hour = m[4] ? parseInt(m[4]) : 0;
     const minute = m[5] ? parseInt(m[5]) : 0;
     const second = m[6] ? parseFloat(m[6]) : 0;
@@ -241,15 +253,28 @@ function parseDateText(text) {
 }
 
 /**
- * Parse duration text (H:MM:SS or H:MM:SS.mmm) to seconds.
- * Returns null if text doesn't match a duration pattern.
+ * Parse duration text to seconds. Accepts:
+ *   H:MM:SS[.mmm], H:MM, or plain number (hours)
+ * Returns null if text doesn't match.
  */
 function parseDurationText(text) {
-    const m = text.trim().match(/^(-?)(\d+):(\d{2}):(\d{2}(?:\.\d+)?)$/);
-    if (!m) return null;
-    const sign = m[1] === '-' ? -1 : 1;
-    const h = parseInt(m[2]), min = parseInt(m[3]), sec = parseFloat(m[4]);
-    return sign * (h * 3600 + min * 60 + sec);
+    const t = text.trim();
+    // H:MM:SS[.mmm]
+    const m3 = t.match(/^(-?)(\d+):(\d{2}):(\d{2}(?:\.\d+)?)$/);
+    if (m3) {
+        const sign = m3[1] === '-' ? -1 : 1;
+        return sign * (parseInt(m3[2]) * 3600 + parseInt(m3[3]) * 60 + parseFloat(m3[4]));
+    }
+    // H:MM
+    const m2 = t.match(/^(-?)(\d+):(\d{2})$/);
+    if (m2) {
+        const sign = m2[1] === '-' ? -1 : 1;
+        return sign * (parseInt(m2[2]) * 3600 + parseInt(m2[3]) * 60);
+    }
+    // Plain number (hours)
+    const num = Number(t);
+    if (!isNaN(num) && t !== '') return num * 3600;
+    return null;
 }
 
 /**
