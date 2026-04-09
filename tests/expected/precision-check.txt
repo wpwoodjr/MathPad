@@ -54,19 +54,19 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 Status = "Line 15: Variable 'd' has no value to output"; StatusIsError = 1
-"Test 3c: Cascade at places=3 — b shifts by last digit on re-solve"
-"test fails at d-> so we can see first solve value of b"
+"Test 3c: Cascade at places=3 with unrelated error — re-solve still runs"
+"d-> has no value but cascade still happens; values match Test 3b"
 a * a = 2
 a<- 1.414
-b[0:100]-> 11.892
+b[0:100]-> 11.891
 b * b = a * 100
 
 relDiff(x; y) = abs(x - y)/max(x; y)
-relDiff(a*a;2)->> 2.220446049250313e-16
+relDiff(a*a;2)->> 0.000302
 relDiff(b*b; a*100)->> 0
-b*b->> 141.421356237309482
+b*b->> 141.400000000000006
 11.892*11.892->> 141.419663999999983
-a*a->> 2
+a*a->> 1.999396
 
 d->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

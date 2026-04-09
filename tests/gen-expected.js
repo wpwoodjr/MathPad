@@ -24,19 +24,16 @@ const parsedFunctions = functionsRecord ? parseFunctionsRecord(functionsRecord.t
 for (const record of data.records) {
     const allTokens = new Tokenizer(record.text).tokenize();
     const context = createEvalContext(record, parsedConstants, parsedFunctions, record.text, allTokens);
-    const result = solveRecord(record.text, context, record, allTokens);
+    const result = solveRecord(record.text, context, record, allTokens, true);
     record.text = result.text;
 
-    // Re-solve formatted output for idempotent results and rounding error detection
-    let errors = result.errors;
-    if (result.solved > 0 && (!errors || errors.length === 0)) {
-        const verifyTokens = new Tokenizer(record.text).tokenize();
-        const verifyContext = createEvalContext(record, parsedConstants, parsedFunctions, record.text, verifyTokens);
-        verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
-        const verifyResult = solveRecord(record.text, verifyContext, record, verifyTokens);
-        record.text = verifyResult.text;
-        errors = verifyResult.errors;
-    }
+    // Re-solve formatted output: idempotency check, rounding detection, table evaluation
+    const verifyTokens = new Tokenizer(record.text).tokenize();
+    const verifyContext = createEvalContext(record, parsedConstants, parsedFunctions, record.text, verifyTokens);
+    verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
+    const verifyResult = solveRecord(record.text, verifyContext, record, verifyTokens);
+    record.text = verifyResult.text;
+    let errors = verifyResult.errors;
 
     if (errors && errors.length > 0) {
         record.status = errors.join('\n');

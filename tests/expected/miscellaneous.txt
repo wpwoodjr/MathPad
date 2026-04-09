@@ -304,7 +304,7 @@ d*d = w*w + h*h
 Enter d: 6.6 "diagonal"
 h<- 5.75
 height h-> 5.75
-width w->> 3.235724181574889
+width w->> 3.234375
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1

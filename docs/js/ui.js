@@ -503,7 +503,7 @@ function createEditorForRecord(record) {
     });
 
     variablesManager.onBlur(() => {
-        handleSolve(true, true); // undoable=true, quickSolve=true
+        handleSolve(true);
     });
 
     // Save scroll position when user scrolls
@@ -1492,7 +1492,7 @@ function handleReset() {
 /**
  * Handle solve
  */
-function handleSolve(undoable = true, quickSolve = false) {
+function handleSolve(undoable = true) {
     if (!UI.currentRecordId) {
         setStatus('No record selected', true);
         return;
@@ -1525,28 +1525,22 @@ function handleSolve(undoable = true, quickSolve = false) {
             text, parserTokens);
 
         // Solve the record (captures pre-solve values and clears outputs internally)
-        // Quick solve skips tables when equations don't balance
-        const skipTables = quickSolve; // first pass: always skip tables for quick solve
-        const result = solveRecord(text, context, record, parserTokens, skipTables);
+        // First pass always skips tables — re-solve below computes them once
+        const result = solveRecord(text, context, record, parserTokens, true);
         text = result.text;
 
-        // Re-solve formatted output for idempotent results and rounding error detection
-        let errors = result.errors;
-        let equationVarStatus = result.equationVarStatus;
-        let tables = result.tables || [];
-        if (result.solved > 0 && errors.length === 0) {
-            // For quick solve: all balanced — run full re-solve with tables
-            const verifyTokens = new Tokenizer(text).tokenize();
-            const verifyContext = createEvalContext(record,
-                editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
-                text, verifyTokens);
-            verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
-            const verifyResult = solveRecord(text, verifyContext, record, verifyTokens);
-            text = verifyResult.text;
-            errors = verifyResult.errors;
-            equationVarStatus = verifyResult.equationVarStatus;
-            tables = verifyResult.tables || [];
-        }
+        // Re-solve formatted output: idempotency check, rounding detection, table evaluation,
+        // and a second chance when the first solve filled in cleared variables with balance errors
+        const verifyTokens = new Tokenizer(text).tokenize();
+        const verifyContext = createEvalContext(record,
+            editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
+            text, verifyTokens);
+        verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
+        const verifyResult = solveRecord(text, verifyContext, record, verifyTokens);
+        text = verifyResult.text;
+        let errors = verifyResult.errors;
+        let equationVarStatus = verifyResult.equationVarStatus;
+        let tables = verifyResult.tables || [];
 
         // Enable flash before setValue so onChange's updateFromText highlights changed values
         editorInfo.variablesManager.enableFlash();

@@ -49,8 +49,8 @@ a*a->>
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Test 3c: Cascade at places=3 — b shifts by last digit on re-solve"
-"test fails at d-> so we can see first solve value of b"
+"Test 3c: Cascade at places=3 with unrelated error — re-solve still runs"
+"d-> has no value but cascade still happens; values match Test 3b"
 a * a = 2
 a<-
 b[0:100]->

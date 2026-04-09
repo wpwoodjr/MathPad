@@ -1640,3 +1640,44 @@ table("Dup decls") = {
 2	4
 3	9
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Status = "Line 5: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative diff 0.14% >= 0.005%)"; StatusIsError = 1
+"Cleared declared var available to tables via preSolveVars"
+// When cmg is cleared and solved, tables that don't redeclare cmg
+// should still see the solved cmg value via preSolveVars (not be empty)
+
+smg = drift*cos(cmg - set) + sqrt(ws**2 - drift**2*sin(cmg - set)**2)
+cmg °= atan(ws*sin(cts) + drift*sin(set); ws*cos(cts) + drift*cos(set))
+ws = speed*cos(leeway)
+cts = hdg + leeway
+
+--Variables--
+smg: 10.63
+cmg °:: 0.013209688973825°
+speed: 10
+cts °: 3.5°
+drift: 0.90
+set °: 317.5°
+leeway: 0
+
+table("smg and speed") = {
+  cnt: 1.3..1.3
+  smg<-
+  speed<-
+
+  cnt->
+  smg->
+  cmg °->
+  speed->
+  cts °->
+  drift->
+  set °->
+}
+
+"--- Table Outputs ---"
+"smg and speed"
+"cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
+1.3	10.6449	0.0132°	10	3.5°	0.9	317.5°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
