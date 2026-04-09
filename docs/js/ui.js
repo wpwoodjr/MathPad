@@ -1648,6 +1648,7 @@ function handleClearInput() {
 
     // Always clear error highlights and table data
     editorInfo.variablesManager.clearErrors();
+    editorInfo.variablesManager.clearLastEdited();
     editorInfo.variablesManager.setTableData(null);
 
     setStatus('Cleared');

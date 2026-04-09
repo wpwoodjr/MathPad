@@ -474,7 +474,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         try {
             if (!eq.leftAST || !eq.rightAST) continue;
             // Track undeclared-var definitions for highlighting expansion
-            if (eq.leftAST.type === 'VARIABLE' && !variables.has(eq.leftAST.name)) {
+            if (eq.leftAST.type === 'VARIABLE' && !variables.has(eq.leftAST.name) && !definitionDeps.has(eq.leftAST.name)) {
                 definitionDeps.set(eq.leftAST.name, findVariablesInAST(eq.rightAST));
             }
             if (erroredEquations.has(eq.startLine)) continue;

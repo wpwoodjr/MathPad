@@ -35,6 +35,7 @@ class VariablesPanel {
         this.solveCallback = null;
         this.inputElements = new Map();
         this.lastEditedVar = null; // Track most recently edited variable name
+        this.hasClearedInput = false; // True if user cleared an input since last solve/clear
         this.errorLines = new Set(); // Lines with errors
         this.flashChanges = false;
         this._oldDisplayValues = null;
@@ -407,7 +408,8 @@ class VariablesPanel {
             // Update formula pane on blur (when user is done typing), not during typing
             valueElement.addEventListener('blur', (e) => {
                 this.handleValueChange(info.lineIndex, e.target.value);
-                if (this.blurCallback) this.blurCallback();
+                if (!e.target.value.trim()) this.hasClearedInput = true;
+                if (this.blurCallback && !this.hasClearedInput) this.blurCallback();
             });
             valueElement.addEventListener('focus', (e) => {
                 // Track this as the focused variable (for clear exclusion)
@@ -821,6 +823,7 @@ class VariablesPanel {
      */
     clearLastEdited() {
         this.lastEditedVar = null;
+        this.hasClearedInput = false;
     }
 
     /**
