@@ -364,7 +364,9 @@ class VariablesPanel {
 
         // Variable name label (includes format suffix, limits, and marker)
         const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : decl.format === 'degrees' ? '°' : decl.format === 'date' ? '@d' : decl.format === 'duration' ? '@t' : decl.base && decl.base !== 10 ? `#${decl.base}` : '';
-        const limitsStr = decl.limits ? `[${tokensToText(decl.limits.lowTokens).trim()}:${tokensToText(decl.limits.highTokens).trim()}]` : '';
+        const limitsStr = decl.limits
+            ? `[${tokensToText(decl.limits.lowTokens).trim()}:${tokensToText(decl.limits.highTokens).trim()}${decl.limits.stepTokens ? ':' + tokensToText(decl.limits.stepTokens).trim() : ''}]`
+            : '';
         const nameLabel = document.createElement('span');
         nameLabel.className = 'variable-name';
         const displayName = (decl.label && decl.label.trim()) ? decl.label.trim() : info.name + limitsStr;

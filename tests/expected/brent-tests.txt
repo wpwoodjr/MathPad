@@ -411,3 +411,22 @@ table("> test fine grid") = {
 11	0.191
 12	11.994
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Status = "Solved 3 equations"; StatusIsError = 0
+"Limits with chained deferred dependencies"
+"y² = z² = 16 each have roots ±4. z's limits [y:0] depend on y, y's"
+"limits [-x:0] depend on x. Iterative loop defers y and z until their"
+"limit dependencies are solved, then evaluates limits and finds the"
+"negative roots. Without deferral, y and z would silently use no limits"
+"and find +4."
+
+y*y = 16
+z*z = 16
+x*x = 100
+
+--Variables--
+z[y:0]<- -4
+y[-x:0]<- -4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -154,7 +154,10 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
                 limits.step = evaluate(stepAST, context);
             }
         } catch (e) {
-            // Ignore limit parsing errors
+            // Limits can't evaluate yet — defer this variable.
+            // Iterative loop will retry once dependencies are solved.
+            // If still unevaluable after convergence, end-of-solve validation reports it.
+            return { solved: false, limitsDeferred: true };
         }
     }
 
@@ -461,6 +464,32 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     for (const [line, unknowns] of unsolvedEquations) {
         if (!unknowns.some(v => solveFailures.has(v))) {
             errors.push(`Line ${line + 1}: Too many unknowns (${unknowns.join(', ')})`);
+        }
+    }
+
+    // Validate limit expressions for all declared variables (catches undefined references
+    // even when the variable wasn't actually solved via Brent's)
+    for (const decl of declarations) {
+        if (!decl.declaration.limits) continue;
+        try {
+            const lowAST = parseTokens(decl.declaration.limits.lowTokens);
+            evaluate(lowAST, context);
+        } catch (e) {
+            errors.push(`Line ${decl.lineIndex + 1}: Invalid lower limit for '${decl.name}' - ${e.message}`);
+        }
+        try {
+            const highAST = parseTokens(decl.declaration.limits.highTokens);
+            evaluate(highAST, context);
+        } catch (e) {
+            errors.push(`Line ${decl.lineIndex + 1}: Invalid upper limit for '${decl.name}' - ${e.message}`);
+        }
+        if (decl.declaration.limits.stepTokens) {
+            try {
+                const stepAST = parseTokens(decl.declaration.limits.stepTokens);
+                evaluate(stepAST, context);
+            } catch (e) {
+                errors.push(`Line ${decl.lineIndex + 1}: Invalid step for '${decl.name}' - ${e.message}`);
+            }
         }
     }
 
