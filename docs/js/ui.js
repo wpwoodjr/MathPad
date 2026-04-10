@@ -428,6 +428,11 @@ function createEditorForRecord(record) {
     const editor = createEditor(formulasPanel, {
         value: initialText
     });
+    // Seed lastUserEditAt from record so the initial undo state has the right modifiedAt
+    editor.lastUserEditAt = record.modified ?? null;
+    if (editor.undoStack.length > 0) {
+        editor.undoStack[0].modifiedAt = editor.lastUserEditAt;
+    }
 
     // Create VariablesPanel manager
     const variablesManager = new VariablesPanel(
@@ -439,11 +444,21 @@ function createEditorForRecord(record) {
     // Set up bidirectional sync
     let syncFromVariables = false;
 
-    editor.onChange((value, metadata, undoRedo, userInput) => {
+    editor.onChange((value, metadata, undoRedo, userInput, modifiedAt) => {
         record.text = value;
-        // Track modification time only for actual user typing (not solve/clear/programmatic)
+        // Track modification time:
+        //   - direct user input (typing, Tab, Ctrl+/) → now
+        //   - undo/redo → restored state's modifiedAt
+        //   - solve/clear/programmatic → no change
+        let modifiedChanged = false;
         if (userInput) {
             record.modified = Date.now();
+            modifiedChanged = true;
+        } else if (undoRedo) {
+            record.modified = modifiedAt ?? null;
+            modifiedChanged = true;
+        }
+        if (modifiedChanged) {
             const modEl = document.getElementById('detail-modified');
             if (modEl) {
                 const newText = formatRecordDate(record.modified);

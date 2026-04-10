@@ -559,6 +559,10 @@ class SimpleEditor {
         this.redoStack = [];
         this.maxUndoHistory = 100;
         this.undoDebounceTimer = null;
+        // Tracks the timestamp of the last user textarea edit. Stored on each undo
+        // state so undo/redo can restore the corresponding modified time.
+        // Programmatic pushes (solve, etc.) inherit this value unchanged.
+        this.lastUserEditAt = null;
 
         this.element = document.createElement('div');
         this.element.className = 'simple-editor';
@@ -625,7 +629,8 @@ class SimpleEditor {
         this.undoStack.push({
             value: this.textarea.value,
             cursorStart: this.textarea.selectionStart,
-            cursorEnd: this.textarea.selectionEnd
+            cursorEnd: this.textarea.selectionEnd,
+            modifiedAt: this.lastUserEditAt
         });
     }
 
@@ -673,7 +678,8 @@ class SimpleEditor {
             cursorStart: this.textarea.selectionStart,
             cursorEnd: this.textarea.selectionEnd,
             beforeCursorStart: before ? before.start : this.textarea.selectionStart,
-            beforeCursorEnd: before ? before.end : this.textarea.selectionEnd
+            beforeCursorEnd: before ? before.end : this.textarea.selectionEnd,
+            modifiedAt: this.lastUserEditAt
         });
         if (this.undoStack.length > this.maxUndoHistory) {
             this.undoStack.shift();
@@ -720,7 +726,9 @@ class SimpleEditor {
         this.highlightLayer.scrollTop = scrollTop;
         this.lineNumbers.scrollTop = scrollTop;
 
-        this.notifyChange(state.metadata, true);
+        // Restore lastUserEditAt to the restored state's modifiedAt
+        this.lastUserEditAt = state.modifiedAt ?? null;
+        this.notifyChange(state.metadata, true, false, this.lastUserEditAt);
         this.notifyUndoState();
 
         return true;
@@ -751,7 +759,9 @@ class SimpleEditor {
         this.highlightLayer.scrollTop = scrollTop;
         this.lineNumbers.scrollTop = scrollTop;
 
-        this.notifyChange(state.metadata, true);
+        // Restore lastUserEditAt to the restored state's modifiedAt
+        this.lastUserEditAt = state.modifiedAt ?? null;
+        this.notifyChange(state.metadata, true, false, this.lastUserEditAt);
         this.notifyUndoState();
 
         return true;
@@ -816,10 +826,12 @@ class SimpleEditor {
 
         if (undoable && changed) {
             // Push new state as current top of stack
+            // Inherit lastUserEditAt — programmatic changes don't update modified time
             this.undoStack.push({
                 value,
                 cursorStart: this.textarea.selectionStart,
-                cursorEnd: this.textarea.selectionEnd
+                cursorEnd: this.textarea.selectionEnd,
+                modifiedAt: this.lastUserEditAt
             });
             if (this.undoStack.length > this.maxUndoHistory) {
                 this.undoStack.shift();
@@ -874,10 +886,11 @@ class SimpleEditor {
     }
 
     onInput() {
+        this.lastUserEditAt = Date.now();
         this.saveToHistory();
         this.updateHighlighting();
         this.updateLineNumbers();
-        this.notifyChange(undefined, false, true);
+        this.notifyChange(undefined, false, true, this.lastUserEditAt);
     }
 
     onScroll() {
@@ -959,13 +972,17 @@ class SimpleEditor {
         ta.selectionStart = newCursor;
         ta.selectionEnd = newCursor;
 
+        // Mark this as a user edit
+        this.lastUserEditAt = Date.now();
+
         // Push new state as current top of stack
         this.undoStack.push({
             value: newValue,
             cursorStart: newCursor,
             cursorEnd: newCursor,
             beforeCursorStart,
-            beforeCursorEnd
+            beforeCursorEnd,
+            modifiedAt: this.lastUserEditAt
         });
         if (this.undoStack.length > this.maxUndoHistory) {
             this.undoStack.shift();
@@ -973,7 +990,7 @@ class SimpleEditor {
 
         this.updateHighlighting();
         this.updateLineNumbers();
-        this.notifyChange(undefined, false, true);
+        this.notifyChange(undefined, false, true, this.lastUserEditAt);
         this.notifyUndoState();
     }
 
@@ -1213,9 +1230,9 @@ class SimpleEditor {
         this.changeListeners.push(callback);
     }
 
-    notifyChange(metadata, undoRedo = false, userInput = false) {
+    notifyChange(metadata, undoRedo = false, userInput = false, modifiedAt) {
         for (const listener of this.changeListeners) {
-            listener(this.getValue(), metadata, undoRedo, userInput);
+            listener(this.getValue(), metadata, undoRedo, userInput, modifiedAt);
         }
     }
 
