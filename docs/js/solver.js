@@ -196,12 +196,13 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null) {
     // Generate evaluation points: uniform grid for limits, logarithmic for no limits
     let testPoints;
     if (hasLimits) {
-        const step = limits.step || (limits.high - limits.low) / 50;
-        const numPoints = Math.min(Math.ceil((limits.high - limits.low) / step), 10000);
+        // Auto-swap so order doesn't matter
+        let low = Math.min(limits.low, limits.high);
+        let high = Math.max(limits.low, limits.high);
+        const step = Math.abs(limits.step) || (high - low) / 50;
+        const numPoints = Math.min(Math.ceil((high - low) / step), 10000);
         testPoints = [];
         // Nudge endpoints if they evaluate to NaN (e.g. singularity at 0)
-        let low = limits.low;
-        let high = limits.high;
         if (isNaN(safeEval(f, low))) low += step / 10000;
         if (isNaN(safeEval(f, high))) high -= step / 10000;
         for (let i = 0; i <= numPoints; i++) {

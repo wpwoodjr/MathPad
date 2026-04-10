@@ -145,10 +145,22 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
         try {
             const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
             const highAST = parseTokens(varInfo.declaration.limits.highTokens);
-            limits = {
-                low: evaluate(lowAST, context),
-                high: evaluate(highAST, context)
-            };
+            let low = evaluate(lowAST, context);
+            let high = evaluate(highAST, context);
+            // For angular variables (° format) with wraparound (low > high after mod),
+            // shift the search range to span the arc going from low through 0 to high.
+            // E.g., degrees [350:10] → [350:370], radians [6.1:0.1] → [6.1:6.38].
+            const isAngular = varInfo.declaration.format === 'degrees';
+            if (isAngular) {
+                const M = context.degreesMode ? 360 : 2 * Math.PI;
+                const modM = (x) => ((x % M) + M) % M;
+                if (modM(low) > modM(high)) {
+                    const arcLen = modM(high - low);
+                    low = modM(low);
+                    high = low + arcLen;
+                }
+            }
+            limits = { low, high };
             if (varInfo.declaration.limits.stepTokens) {
                 const stepAST = parseTokens(varInfo.declaration.limits.stepTokens);
                 limits.step = evaluate(stepAST, context);
@@ -307,27 +319,46 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 continue;
             }
             try {
-                const value = evaluate(chosen.ast, context);
+                let value = evaluate(chosen.ast, context);
                 const varInfo = variables.get(varName);
 
                 // Check limits if defined
                 if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
+                    let limitFailed = false;
                     try {
                         const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
                         const highAST = parseTokens(varInfo.declaration.limits.highTokens);
-                        const low = evaluate(lowAST, context);
-                        const high = evaluate(highAST, context);
-                        if (value < low || value > high) {
+                        let low = evaluate(lowAST, context);
+                        let high = evaluate(highAST, context);
+                        const isAngular = varInfo.declaration.format === 'degrees';
+                        // Auto-swap numeric limits so order doesn't matter
+                        if (!isAngular && low > high) [low, high] = [high, low];
+                        let inRange;
+                        if (isAngular) {
+                            // Mod-aware angular comparison: handle wraparound
+                            const M = context.degreesMode ? 360 : 2 * Math.PI;
+                            const modM = (x) => ((x % M) + M) % M;
+                            const v = modM(value), l = modM(low), h = modM(high);
+                            inRange = (l <= h) ? (v >= l && v <= h) : (v >= l || v <= h);
+                            // Normalize stored value into the limit range so display is consistent
+                            if (inRange) {
+                                value = v >= l ? low + (v - l) : low + (v + M - l);
+                            }
+                        } else {
+                            inRange = value >= low && value <= high;
+                        }
+                        if (!inRange) {
                             solveFailures.set(varName, {
                                 error: `Computed value ${value} is outside limits [${low}, ${high}]`,
                                 line: chosen.sourceLine
                             });
                             if (debugSolve) console.log(`    ${varName}: outside limits [${low}, ${high}]`);
-                            continue;
+                            limitFailed = true;
                         }
                     } catch (e) {
                         // Ignore limit evaluation errors
                     }
+                    if (limitFailed) continue;
                 }
 
                 context.setVariable(varName, value);
