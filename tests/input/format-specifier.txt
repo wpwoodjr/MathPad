@@ -1,5 +1,6 @@
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
 Money format on expression output
 3+4$->
 Expression with percent format

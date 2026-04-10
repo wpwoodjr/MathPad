@@ -490,7 +490,7 @@ cmg °= atan(ws*sin(cts) + drift*sin(set); ws*cos(cts) + drift*cos(set))
 ws = speed*cos(leeway)
 
 --Variables--
-cmg[Radians(327.8):Radians(5.5)] °:: 6.28303895622045°
+cmg[Radians(327.8):Radians(5.5)] °:: 6.28303895622045
 speed: 11.1
 cts: Radians(5.5)
 drift: 2
@@ -531,8 +531,8 @@ Status = "Solved 4 equations"; StatusIsError = 0
 0.1 = sin(w)
 
 --Variables--
-x[Radians(350):Radians(370)] °->> 6.383352728341146°
-y[Radians(350):Radians(10)] °->> 6.383352728341146°
-z[Radians(10):Radians(370)] °->> 3.041425232428234°
-w[Radians(10):Radians(350)] °->> 3.041425232428234°
+x[Radians(350):Radians(370)] °->> 0.10016742116156
+y[Radians(350):Radians(10)] °->> 0.10016742116156
+z[Radians(10):Radians(370)] °->> 3.041425232428234
+w[Radians(10):Radians(350)] °->> 3.041425232428234
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -630,7 +630,8 @@ function formatOutput(text, declarations, context, computedValues, record, solve
         stripZeros: record.stripZeros !== false,
         groupDigits: record.groupDigits || false,
         format: record.format || 'float',
-        currencySymbol: record.currencySymbol || '$'
+        currencySymbol: record.currencySymbol || '$',
+        degreesMode: record.degreesMode
     };
 
     // Fill empty variable declarations with computed values (or constants)
@@ -671,7 +672,8 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                     numberFormat: format.format,
                     base: decl.base,
                     groupDigits: format.groupDigits,
-                    currencySymbol: format.currencySymbol || '$'
+                    currencySymbol: format.currencySymbol || '$',
+                    degreesMode: format.degreesMode
                 });
             } catch (e) {
                 errors.push(`Line ${info.lineIndex + 1}: ${e.message}`);
@@ -1169,7 +1171,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         stripZeros: record.stripZeros !== false,
         numberFormat: record.format || 'float',
         groupDigits: record.groupDigits || false,
-        currencySymbol: record.currencySymbol || '$'
+        currencySymbol: record.currencySymbol || '$',
+        degreesMode: record.degreesMode
     };
 
     // Build variables map with limits from declarations

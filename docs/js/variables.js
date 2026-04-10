@@ -464,14 +464,16 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
         return formatPercent(value, places);
     }
 
-    // Handle degrees format
+    // Handle degrees format (mode-aware: degrees mode uses ° + mod 360, radians mode uses mod 2π no symbol)
     if (varFormat === 'degrees') {
-        const degrees = value - 360 * Math.floor(value / 360);
+        const degreesMode = format.degreesMode !== false;
+        const M = degreesMode ? 360 : 2 * Math.PI;
+        const normalized = value - M * Math.floor(value / M);
         if (fullPrecision) {
-            const formatted = formatNumber(degrees, places, stripZeros, numberFormat, 10, false, null);
-            return formatted + '°';
+            const formatted = formatNumber(normalized, places, stripZeros, numberFormat, 10, false, null);
+            return degreesMode ? formatted + '°' : formatted;
         }
-        return formatDegrees(degrees, places);
+        return formatDegrees(normalized, places, degreesMode);
     }
 
     // Handle date format: fullPrecision (->>) includes time, regular (->) date only

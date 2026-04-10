@@ -840,10 +840,11 @@ function formatPercent(value, places) {
 /**
  * Format value as degrees: mod 360, strip trailing zeros, append °
  */
-function formatDegrees(value, places) {
-    const degrees = value - 360 * Math.floor(value / 360);
-    const formatted = toFixed(degrees, places).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
-    return formatted + '°';
+function formatDegrees(value, places, degreesMode = true) {
+    const M = degreesMode ? 360 : 2 * Math.PI;
+    const normalized = value - M * Math.floor(value / M);
+    const formatted = toFixed(normalized, places).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+    return degreesMode ? formatted + '°' : formatted;
 }
 
 /**
