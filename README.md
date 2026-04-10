@@ -29,7 +29,8 @@ Or open `docs/index.html` locally in a browser. No build step required.
 
 - **Syntax-highlighted editor** with line numbers and real-time token coloring
 - **Variables panel** — structured view of all variables with editable inputs, equation balance highlighting (green/orange/red), and flash animation on value changes
-- **Undo/redo** — full undo history with Ctrl+Z / Ctrl+Y, restores solve results and status
+- **Undo/redo** — full undo history with Ctrl+Z / Ctrl+Y, restores solve results, status, and per-state modification time. Tab indent / Shift+Tab outdent / Ctrl+/ comment toggle, all undoable.
+- **Created/Modified tracking** — record creation and last-edit timestamps shown in the details panel. Modified updates only on direct typing (not solve, clear, or vars panel input).
 - **Split-pane layout** — resizable variables panel above the formulas editor
 - **Resizable sidebar** — drag to adjust sidebar width, persisted across sessions
 - **Multiple tabs** — work on several records simultaneously
@@ -39,9 +40,10 @@ Or open `docs/index.html` locally in a browser. No build step required.
 
 - Configurable decimal places, trailing zero stripping, comma grouping
 - Scientific and engineering notation
-- **Money format** (`price$:`) — displays as `$1,234.56`
+- **Money format** (`price$:`) — displays as `$1,234.56`. Configurable currency symbol per record (`$`, `€`, `£`, `¥`, `₹`, `₩`, `₱`, `₺`, `₴`, `₫`, `₡`, `₽`, `₸`, `₼`, `₾`, `৳`); suffix currencies show the symbol after the number.
 - **Percent format** (`rate%:`) — stores as decimal, displays with `%`
-- **Degrees format** (`angle°:`) — displays mod 360 with `°` suffix
+- **Angular format** (`angle°:`) — mode-aware: degrees mode displays mod 360 with `°` suffix; radians mode displays mod 2π with no symbol
+- **Date/duration formats** (`@d`, `@t`) — locale-aware date display, H:MM:SS duration display
 - **Numeric bases** (`hex#16:`) — bases 2 through 36
 - **Inline evaluation** (`\expr\`) — evaluates expression in table/grid titles for display
 
@@ -57,7 +59,9 @@ Or open `docs/index.html` locally in a browser. No build step required.
 | `var->>` | Output — full precision |
 | `var:>` | Persistent output — recomputed on Solve, kept on Clear |
 | `var:>>` | Persistent output — full precision |
-| `var[lo:hi]:` | Constrain search range for root-finding |
+| `var[lo:hi]:` | Constrain search range for root-finding (auto-swap if reversed) |
+| `var[lo:hi:step]:` | With explicit step for Brent's grid search |
+| `cmg[a:b]°:` | Angular limits — mod-aware wraparound (e.g. `[327.8:5.5]` = arc through 0°) |
 | `x~` | Pre-solve value (value before this solve started) |
 | `x~?` | 1 if variable has a pre-solve value, 0 otherwise |
 

@@ -131,10 +131,15 @@
         <tr><td><code>var:&gt;</code></td><td>Output</td><td>Persistent output &mdash; recomputed on Solve, kept on Clear</td></tr>
         <tr><td><code>var:&gt;&gt;</code></td><td>Output</td><td>Persistent output, full precision</td></tr>
         <tr><td><code>var[lo:hi]:</code></td><td>Input</td><td>Constrain root-finding search range</td></tr>
+        <tr><td><code>var[lo:hi:step]:</code></td><td>Input</td><td>With explicit step for Brent's grid scan</td></tr>
     </table>
 
     <div class="note">
         <strong>Full precision</strong> markers (<code>::</code>, <code>&lt;&lt;-</code>, <code>-&gt;&gt;</code>, <code>:&gt;&gt;</code>) store and display values with maximum precision instead of rounding to the record's decimal places setting.
+    </div>
+
+    <div class="note">
+        <strong>Limits</strong> are auto-swapped if reversed (<code>[50:0]</code> = <code>[0:50]</code>). Limit expressions can reference other variables (<code>y[0:x*2]&lt;-</code>); the solver defers a variable until its limit dependencies are solved. For angular variables (<code>°</code> format), <code>[low:high]</code> with <code>low &gt; high</code> mod 360 is treated as the arc through 0&deg; — e.g., <code>cmg[327.8:5.5]°</code> is the 37.7° arc through 0.
     </div>
 
     <h3>Input vs Output</h3>
@@ -178,9 +183,9 @@ a**2 + b**2 = c**2</pre>
     <p>Add a format prefix before the marker to control display:</p>
     <table>
         <tr><th>Prefix</th><th>Example</th><th>Display</th></tr>
-        <tr><td><code>$</code></td><td><code>price $: 1234.5</code></td><td><code>$1,234.50</code> (always 2 decimals, comma grouping)</td></tr>
+        <tr><td><code>$</code></td><td><code>price $: 1234.5</code></td><td><code>$1,234.50</code> (always 2 decimals, comma grouping). The currency symbol is configurable in record settings.</td></tr>
         <tr><td><code>%</code></td><td><code>rate %&lt- 7.5%</code></td><td><code>7.5%</code> (stored as 0.075)</td></tr>
-        <tr><td><code>&deg;</code></td><td><code>angle &deg;: 400</code></td><td><code>40&deg;</code> (mod 360 on output)</td></tr>
+        <tr><td><code>&deg;</code></td><td><code>angle &deg;: 400</code></td><td><code>40&deg;</code> (degrees mode: mod 360 with <code>°</code>; radians mode: mod 2&pi; without symbol)</td></tr>
         <tr><td><code>@d</code></td><td><code>when @d: 4/1/2026</code></td><td><code>04/01/2026</code> (date, locale format)</td></tr>
         <tr><td><code>@t</code></td><td><code>dur @t: 1:30:00</code></td><td><code>1:30:00</code> (duration H:MM:SS)</td></tr>
         <tr><td><code>#16</code></td><td><code>hex #16-> 255</code></td><td><code>FF</code> (bases 2-36)</td></tr>
@@ -410,8 +415,11 @@ x: 42    "the answer"</pre>
         <tr><td><code>Ctrl+Enter</code></td><td>Solve current record</td></tr>
         <tr><td><code>Ctrl+Z</code></td><td>Undo</td></tr>
         <tr><td><code>Ctrl+Y</code> / <code>Ctrl+Shift+Z</code></td><td>Redo</td></tr>
-        <tr><td><code>Tab</code> / <code>Shift+Tab</code></td><td>Cycle through variable inputs</td></tr>
-        <tr><td><code>Escape</code></td><td>Revert edited variable value</td></tr>
+        <tr><td><code>Tab</code> (in formulas)</td><td>Indent line by 2 spaces (or selection)</td></tr>
+        <tr><td><code>Shift+Tab</code> (in formulas)</td><td>Outdent line by 2 spaces</td></tr>
+        <tr><td><code>Ctrl+/</code> (in formulas)</td><td>Toggle <code>//</code> line comment on selection</td></tr>
+        <tr><td><code>Tab</code> / <code>Shift+Tab</code> (in vars panel)</td><td>Cycle through variable inputs</td></tr>
+        <tr><td><code>Escape</code></td><td>Revert edited variable value or unfocus formulas</td></tr>
     </table>
 
     <h2 id="settings">Record Settings</h2>
@@ -421,10 +429,12 @@ x: 42    "the answer"</pre>
         <tr><td>Category</td><td>Organize records into collapsible groups in the sidebar</td></tr>
         <tr><td>Decimal Places</td><td>Number of decimal places for output (default 2)</td></tr>
         <tr><td>Format</td><td>Float, Scientific, or Engineering notation</td></tr>
+        <tr><td>Currency</td><td>Symbol for <code>$</code> format (<code>$ € £ ¥ ₹ ₩ ₱ ₺ ₴ ₫ ₡ ₽ ₸ ₼ ₾ ৳</code>)</td></tr>
         <tr><td>Strip Zeros</td><td>Remove trailing zeros from output</td></tr>
         <tr><td>Group Digits</td><td>Add comma separators (1,234,567)</td></tr>
-        <tr><td>Degrees Mode</td><td>Trig functions use degrees instead of radians</td></tr>
+        <tr><td>Degrees Mode</td><td>Trig functions use degrees instead of radians; <code>°</code> format displays mod 360 with <code>°</code> suffix (radians mode displays mod 2&pi; without symbol)</td></tr>
     </table>
+    <p>The settings panel also shows the record's <strong>Created</strong> and <strong>Modified</strong> timestamps. Modified updates only when you edit the formulas text directly &mdash; not when you solve, clear, or change variable values in the variables panel.</p>
 
     <h2 id="example">Example: Loan Calculator</h2>
     <pre>"Loan calculator"

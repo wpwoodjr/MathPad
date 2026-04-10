@@ -106,11 +106,25 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     Limits are applied during solving to constrain Brent's search range. Examples:
         x[0:1E2]::
         vname[lowlimit:highlimit]->
+        x[0:10:0.5]->                           explicit step for Brent's grid scan
     Limits may be combined with formats:
         x[0.0:0.2]%:
     A variable may be solved more than once with different limits:
         x[0:1]->
         x[-1:0]->
+    Order doesn't matter for numeric limits — auto-swap normalizes [50:0] to [0:50].
+    For angular variables (° format), [low:high] with low > high (mod M) is treated
+    as the arc through 0:
+        cmg[327.8:5.5]°::                       arc through 0° (37.7° wide)
+    Brent's shifts the search range to span this arc; the substitution path uses
+    mod-aware comparison and normalizes the value into the user's range.
+    M = 360 in degrees mode, 2π in radians mode.
+
+    Limits may reference other variables:
+        y[0:x*2]<-                              x can be a known input or solved variable
+    If the limit expression depends on a variable that hasn't been solved yet,
+    the solve attempt is deferred and retried after the dependency is solved.
+    Undefined references in limits are reported at end-of-solve.
 
 ## Pre-solve values
     x~      strictly returns value before this solve started
@@ -142,6 +156,36 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     "Constants" — variables available to all records
     "Functions" — user-defined functions: f(x;y) = expr
     "Default Settings" — template for new record settings
+
+## Record Created/Modified Timestamps
+    record.created and record.modified are Unix ms timestamps shown in the details panel.
+
+    Created:
+        - Set by createRecord() and record duplication via Date.now()
+        - Backfilled with sentinel Date.UTC(2026, 3, 1, 3, 14, 15, 926) for legacy records
+          (loadData / reloadUIWithData / handleImport call backfillRecordTimestamps)
+
+    Modified:
+        - Updates ONLY on direct user input to the textarea (typing, Tab indent, Ctrl+/ comment)
+        - Does NOT update on solve, clear, vars panel input, or programmatic changes
+        - New records and duplicates start with modified=null (displays as "—")
+        - Driven by the userInput parameter on editor.notifyChange:
+            notifyChange(metadata, undoRedo, userInput, modifiedAt)
+        - userInput=true is passed by onInput (typing) and replaceRange (Tab/Ctrl+/)
+        - userInput=false (default) for setValue (solve, clear, vars panel, programmatic)
+
+    Per-undo-state preservation:
+        - Each undo state stores a modifiedAt field
+        - Editor tracks lastUserEditAt; updated only on userInput=true
+        - Programmatic state pushes (setValue) inherit lastUserEditAt unchanged
+        - Undo/redo pops a state, restores its modifiedAt to lastUserEditAt, and passes
+          modifiedAt to notifyChange. The listener applies it to record.modified.
+        - Initial state seeded from record.modified at editor construction time
+
+    Persistence:
+        - localStorage and Drive: automatic via JSON
+        - Export/import: optional Created = "ISO8601"; Modified = "ISO8601" line
+        - Import leaves fields undefined when not in source (so test roundtrips don't add the line)
 
 ## solveEquations iterative loop
     solveEquations(context, declarations, record, equations, bodyDefinitions)
@@ -187,6 +231,25 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
             Brent's root-finding for 1-unknown equations
             Break-on-solve: after solving one equation, restart loop so [1] and [3]
                 can evaluate with the new value before a second Brent's step
+            Limit deferral: if a variable's limit expression depends on a variable
+                not yet solved, return { solved: false, limitsDeferred: true } and
+                retry on a later iteration (avoids running Brent's unconstrained)
+
+    ## Re-solve pass (always runs)
+    After the first solve, formatOutput writes solved values back into the text.
+    A second solveRecord pass then runs on the formatted text:
+        - First pass always passes skipTables=true (saves duplicate work)
+        - Re-solve runs unconditionally and computes tables
+        - Re-solve catches rounding errors (rounded values may not satisfy tight tolerances)
+        - Re-solve gives a second chance when first solve filled in cleared variables
+          but had balance errors (the formatted text may now be self-consistent)
+    Both run-tests.js and gen-expected.js use the same flow.
+
+    ## End-of-solve limit validation
+    After the iterative loop, validate every declared variable's limit expressions
+    (low, high, step). Report undefined references separately as errors. This catches
+    bugs where a variable has a value (so the per-attempt limit check doesn't run)
+    but its limit expressions are broken.
 
 ## Definition evaluation order
     discoverVariables parses literal values (numbers, dates, durations) directly via parseLiteralValue()

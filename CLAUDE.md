@@ -44,9 +44,11 @@ node tests/gen-expected.js TESTNAME
 
 ### Editor
 - Syntax-highlighted formulas editor with line numbers
-- Undo/redo stack with metadata caching (errors, highlights, status restored on undo)
+- Undo/redo stack with metadata caching (errors, highlights, status, modifiedAt restored on undo)
 - Stack-top-is-current model: `setValue(text, undoable)` pushes or mutates top
 - Global Ctrl+Z / Ctrl+Y keybindings routed to active editor
+- Tab indent / Shift+Tab outdent / Ctrl+/ comment toggle, all undoable with cursor restoration
+- `notifyChange(metadata, undoRedo, userInput, modifiedAt)` — listener receives `(value, metadata, undoRedo, userInput, modifiedAt)`. `userInput=true` only for direct typing/Tab/Ctrl+/ (not setValue).
 
 ### Variables Panel
 - Displays parsed variable declarations with editable value inputs
@@ -67,8 +69,15 @@ node tests/gen-expected.js TESTNAME
 - **Two-sweep equation solving**: Sweep 0 tries natural 1-unknown equations (no subs), skipping variables in the sweep sub list; sweep 1 applies sweep subs to reduce unknowns
 - **Sweep subs**: Variables with no value, no limits — declaring a variable (e.g. `adjTemp->>`) to peek doesn't change solve behavior
 - **Break-on-solve**: After Brent's solves one equation, restarts so definitions can evaluate with the new value before a second Brent's step picks an inconsistent root
+- **Always re-solve**: First pass skips tables; re-solve runs unconditionally and computes them. Re-solve also gives a second chance when the first solve filled in cleared variables but had balance errors. Same logic in `run-tests.js` and `gen-expected.js`.
 - Results inserted back into text preserving comments and formatting
 - Error reporting with line numbers shown in status bar
+
+### Variable Limits
+- **Auto-swap numeric**: `[50:0]` is treated as `[0:50]` — order doesn't matter. Brent's uses `Math.min/max`; substitution path swaps for non-angular vars.
+- **Mod-aware wraparound for `°` variables**: `cmg[327.8:5.5]` is treated as the angular arc through 0°. Brent's shifts search range; substitution path uses mod-aware comparison and normalizes the value into the user's limit range. Modulus is 360 (degrees mode) or 2π (radians mode).
+- **Limit deferral**: when a limit expression depends on a not-yet-solved variable, the solve attempt returns `{ solved: false, limitsDeferred: true }` instead of running unconstrained. The iterative loop retries on subsequent passes.
+- **End-of-solve validation**: catches undefined references in limit expressions even when the variable has a value (which would otherwise bypass the per-attempt check).
 
 ### Tables and Grids
 - **`table("Title") = { body }`** — columnar output iterating 1+ variables over a range
@@ -90,9 +99,9 @@ node tests/gen-expected.js TESTNAME
 
 ### Number Formatting
 - Decimal places, strip trailing zeros, comma grouping, scientific/engineering notation
-- `$` suffix → money format ($1,234.56, always 2 decimals)
+- `$` suffix → money format ($1,234.56, always 2 decimals or `currencyPlaces[symbol]`). Configurable currency symbol per-record (`currencySymbol`); suffix currencies (`₽₸₼₾৳`) display the symbol after the number.
 - `%` suffix → percent format (×100, follows record's places setting)
-- `°` suffix → degrees format (mod 360, follows record's places setting)
+- `°` suffix → angular format (**mode-aware**): degrees mode displays mod 360 with `°` suffix; radians mode displays mod 2π without symbol. `formatDegrees(value, places, degreesMode)`.
 - `@d` suffix → date format (locale-aware MM/DD/YYYY or DD/MM/YYYY); `@d->>` includes time
 - `@t` suffix → duration format (H:MM:SS); `@t->>` includes fractional seconds
 - `@d:` and `@t:` parse date/duration text as input values
@@ -177,9 +186,19 @@ All modules use global scope (no ES modules, no build system). Test files use `r
   stripZeros: boolean, groupDigits: boolean,
   format: 'float' | 'sci' | 'eng',
   degreesMode: boolean,    // false = radians
-  shadowConstants: boolean // output markers shadow reference constants
+  shadowConstants: boolean,// output markers shadow reference constants
+  currencySymbol: string,  // currency symbol for $ format (default '$')
+  created: number | null,  // Unix ms; sentinel default for legacy records
+  modified: number | null  // Unix ms; null until first textarea edit
 }
 ```
+
+**Created/Modified tracking** (shown in details panel):
+- `created` is set on `createRecord` and duplication; backfilled from sentinel `Date.UTC(2026, 3, 1, 3, 14, 15, 926)` (April 1, 2026 03:14:15.926 UTC) for legacy records via `backfillRecordTimestamps()` in `loadData`/`reloadUIWithData`/`handleImport`
+- `modified` updates only on **direct user input to the textarea** (typing, Tab, Ctrl+/) — driven by `userInput` arg in `notifyChange`. Solve, clear, vars panel input, and other programmatic changes do NOT update it.
+- **Per-undo-state `modifiedAt`**: each undo state stores the modified time at push time. Editor tracks `lastUserEditAt`; programmatic pushes inherit unchanged. Undo/redo restores `record.modified` from the popped state, so undoing across a solve preserves the user's actual last-edit time.
+- New records and duplicates start with `modified = null` (displays as "—")
+- Persisted to localStorage and Drive via JSON; export/import as `Created = "ISO8601"; Modified = "ISO8601"` line
 
 **Variable Declaration** (from `LineParser.parse()`):
 ```javascript
