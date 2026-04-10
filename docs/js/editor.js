@@ -874,12 +874,10 @@ class SimpleEditor {
     }
 
     onInput() {
-        this.isUserInput = true;
         this.saveToHistory();
         this.updateHighlighting();
         this.updateLineNumbers();
-        this.notifyChange();
-        this.isUserInput = false;
+        this.notifyChange(undefined, false, true);
     }
 
     onScroll() {
@@ -948,6 +946,10 @@ class SimpleEditor {
         const newValue = value.substring(0, from) + text + value.substring(to);
         if (newValue === value) return;
 
+        // Capture cursor position BEFORE the edit so undo restores it
+        const beforeCursorStart = ta.selectionStart;
+        const beforeCursorEnd = ta.selectionEnd;
+
         // Flush pending state, then push new state
         this.saveToHistoryNow();
         this.redoStack = [];
@@ -961,7 +963,9 @@ class SimpleEditor {
         this.undoStack.push({
             value: newValue,
             cursorStart: newCursor,
-            cursorEnd: newCursor
+            cursorEnd: newCursor,
+            beforeCursorStart,
+            beforeCursorEnd
         });
         if (this.undoStack.length > this.maxUndoHistory) {
             this.undoStack.shift();
@@ -969,7 +973,7 @@ class SimpleEditor {
 
         this.updateHighlighting();
         this.updateLineNumbers();
-        this.notifyChange();
+        this.notifyChange(undefined, false, true);
         this.notifyUndoState();
     }
 
@@ -1209,9 +1213,9 @@ class SimpleEditor {
         this.changeListeners.push(callback);
     }
 
-    notifyChange(metadata, undoRedo = false) {
+    notifyChange(metadata, undoRedo = false, userInput = false) {
         for (const listener of this.changeListeners) {
-            listener(this.getValue(), metadata, undoRedo);
+            listener(this.getValue(), metadata, undoRedo, userInput);
         }
     }
 

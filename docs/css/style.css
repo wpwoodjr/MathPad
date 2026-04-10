@@ -796,6 +796,17 @@ button {
     cursor: pointer;
 }
 
+.detail-info {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 12px;
+    line-height: 1.5;
+}
+
+.detail-info-label {
+    color: var(--text-secondary);
+}
+
 .details-actions {
     margin-top: 24px;
     display: flex;

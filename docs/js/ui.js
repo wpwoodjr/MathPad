@@ -439,8 +439,17 @@ function createEditorForRecord(record) {
     // Set up bidirectional sync
     let syncFromVariables = false;
 
-    editor.onChange((value, metadata, undoRedo) => {
+    editor.onChange((value, metadata, undoRedo, userInput) => {
         record.text = value;
+        // Track modification time only for actual user typing (not solve/clear/programmatic)
+        if (userInput) {
+            record.modified = Date.now();
+            const modEl = document.getElementById('detail-modified');
+            if (modEl) {
+                const newText = formatRecordDate(record.modified);
+                if (modEl.textContent !== newText) modEl.textContent = newText;
+            }
+        }
         debouncedSave(UI.data);
 
         // Update title if first comment changed
@@ -464,7 +473,7 @@ function createEditorForRecord(record) {
                 }
             }
             // Strip stale sections and clear solve state only on user keyboard input
-            if (editor.isUserInput) {
+            if (userInput) {
                 variablesManager.clearErrors();
                 let stripped = value;
                 stripped = stripped.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
@@ -770,11 +779,26 @@ function renderDetailsPanel() {
             </label>
         </div>
 
+        <div class="detail-group detail-info">
+            <div><span class="detail-info-label">Created:</span> ${formatRecordDate(record.created)}</div>
+            <div><span class="detail-info-label">Modified:</span> <span id="detail-modified">${formatRecordDate(record.modified)}</span></div>
+        </div>
+
         <div class="details-actions">
             <button onclick="duplicateCurrentRecord()" class="btn-secondary">Duplicate</button>
             <button onclick="deleteCurrentRecord()" class="btn-danger">Delete</button>
         </div>
     `;
+}
+
+/**
+ * Format a record's timestamp for display in details panel.
+ * Returns "—" for missing timestamps (legacy records).
+ */
+function formatRecordDate(ts) {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 /**
@@ -952,7 +976,9 @@ function duplicateCurrentRecord() {
         ...record,
         id: generateId(),
         title: newTitle,
-        text: newText
+        text: newText,
+        created: Date.now(),
+        modified: null
     };
 
     UI.data.records.push(newRecord);
@@ -1399,6 +1425,7 @@ async function handleFileSelect(e) {
         setStatus('Importing...', false, false);
         const text = await readTextFile(file);
         UI.data = importFromText(text, UI.data, { clearExisting: true });
+        backfillRecordTimestamps(UI.data);
         saveData(UI.data);
 
         // Clear all editors since records may have changed
@@ -1809,6 +1836,9 @@ function reloadUIWithData(newData) {
     UI.editors.clear();
     UI.openTabs = [];
     UI.currentRecordId = null;
+
+    // Backfill missing timestamps with sentinel default
+    backfillRecordTimestamps(newData);
 
     // Replace data
     UI.data = newData;

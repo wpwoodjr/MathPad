@@ -456,6 +456,23 @@ function generateId() {
 /**
  * Load data from localStorage
  */
+// Sentinel timestamp for legacy records that don't have a real creation date
+// (April 1, 2026 03:14:15.926 UTC — pi-themed placeholder)
+const DEFAULT_RECORD_TIMESTAMP = Date.UTC(2026, 3, 1, 3, 14, 15, 926);
+
+/**
+ * Backfill missing created timestamps with the sentinel default.
+ * Used for legacy records that predate timestamp tracking.
+ * Modified is left blank if not set.
+ */
+function backfillRecordTimestamps(data) {
+    if (!data || !data.records) return data;
+    for (const record of data.records) {
+        if (record.created == null) record.created = DEFAULT_RECORD_TIMESTAMP;
+    }
+    return data;
+}
+
 function loadData() {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -463,11 +480,11 @@ function loadData() {
             const data = JSON.parse(stored);
             // Migrate data if needed
             if (!data.version || data.version < STORAGE_VERSION) {
-                return migrateData(data);
+                return backfillRecordTimestamps(migrateData(data));
             }
             // Ensure Default Settings exists even for current version
             ensureDefaultSettingsRecord(data);
-            return data;
+            return backfillRecordTimestamps(data);
         }
     } catch (e) {
         console.error('Error loading data from localStorage:', e);
@@ -604,6 +621,11 @@ function exportToText(data, options = {}) {
             const escapedStatus = record.status.replace(/"/g, '\\"').replace(/\n/g, '\\n');
             lines.push(`Status = "${escapedStatus}"; StatusIsError = ${record.statusIsError ? 1 : 0}`);
         }
+        if (record.created || record.modified) {
+            const c = record.created ? new Date(record.created).toISOString() : '';
+            const m = record.modified ? new Date(record.modified).toISOString() : '';
+            lines.push(`Created = "${c}"; Modified = "${m}"`);
+        }
 
         // Reference records have their title stripped on import, so add it back
         if (record.title && isReferenceTitle(record.title)) {
@@ -653,10 +675,12 @@ function importFromText(text, existingData = null, options = {}) {
         let currencySymbol = '$';
         let status = '';
         let statusIsError = false;
+        let created = null;
+        let modified = null;
         let contentStart = 0;
 
         // Parse metadata lines
-        for (let i = 0; i < Math.min(4, lines.length); i++) {
+        for (let i = 0; i < Math.min(5, lines.length); i++) {
             const line = lines[i].trim();
 
             // Category, Secret, and optional Selected flag
@@ -705,6 +729,21 @@ function importFromText(text, existingData = null, options = {}) {
                 contentStart = i + 1;
                 continue;
             }
+
+            // Created/Modified timestamps (ISO format)
+            const datesMatch = line.match(/Created\s*=\s*"([^"]*)"\s*;\s*Modified\s*=\s*"([^"]*)"/i);
+            if (datesMatch) {
+                if (datesMatch[1]) {
+                    const t = Date.parse(datesMatch[1]);
+                    if (!isNaN(t)) created = t;
+                }
+                if (datesMatch[2]) {
+                    const t = Date.parse(datesMatch[2]);
+                    if (!isNaN(t)) modified = t;
+                }
+                contentStart = i + 1;
+                continue;
+            }
         }
 
         // Rest is content
@@ -737,7 +776,7 @@ function importFromText(text, existingData = null, options = {}) {
         if (selected) {
             selectedRecordIndex = records.length;
         }
-        records.push({
+        const recordObj = {
             id: recordId,
             title: title,
             text: textContent,
@@ -751,7 +790,10 @@ function importFromText(text, existingData = null, options = {}) {
             currencySymbol: currencySymbol,
             status: status,
             statusIsError: statusIsError
-        });
+        };
+        if (created != null) recordObj.created = created;
+        if (modified != null) recordObj.modified = modified;
+        records.push(recordObj);
     }
 
     // Get the selected record ID if one was marked
@@ -850,7 +892,9 @@ function createRecord(data) {
         shadowConstants: ds.shadowConstants,
         currencySymbol: ds.currencySymbol || '$',
         status: '',
-        statusIsError: false
+        statusIsError: false,
+        created: Date.now(),
+        modified: null
     };
 }
 
