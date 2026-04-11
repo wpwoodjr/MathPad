@@ -1128,7 +1128,7 @@ function findTableDefinitions(text, allTokens) {
         const tableIdx = tokens.findIndex(t => t.type === TokenType.IDENTIFIER);
         if (tableIdx < 0) return;
         const keyword = tokens[tableIdx].value.toLowerCase();
-        if (keyword !== 'table' && keyword !== 'grid' && keyword !== 'tablegraph' && keyword !== 'gridgraph') return;
+        if (keyword !== 'table' && keyword !== 'grid' && keyword !== 'tablegraph' && keyword !== 'gridgraph' && keyword !== 'vectordraw') return;
         if (tableIdx + 1 >= tokens.length || tokens[tableIdx + 1].type !== TokenType.LPAREN) return;
 
         // Find RPAREN

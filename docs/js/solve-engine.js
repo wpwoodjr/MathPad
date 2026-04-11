@@ -1262,6 +1262,52 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         return badVars;
     }
 
+    // ==================== VECTORDRAW (polar vector diagram) ====================
+    if (tableDef.keyword === 'vectordraw') {
+        // Each vector is 4 columns: start_dir, start_mag, end_dir, end_mag
+        if (columns.length === 0 || columns.length % 4 !== 0) {
+            errors.push(`Line ${tableDef.startLine}: vectorDraw requires multiples of 4 outputs (start_dir, start_mag, end_dir, end_mag per vector)`);
+            return emptyResult();
+        }
+        // Solve once (no iteration yet)
+        evaluateCell([]);
+        // Helper to evaluate a column
+        function getColValue(col) {
+            if (col.ast) {
+                try { return evaluate(col.ast, context); } catch (e) { return undefined; }
+            }
+            return context.getVariable(col.name);
+        }
+        // Group columns into vectors of 4
+        const vectors = [];
+        for (let i = 0; i < columns.length; i += 4) {
+            const sdCol = columns[i], smCol = columns[i + 1];
+            const edCol = columns[i + 2], emCol = columns[i + 3];
+            const startDir = getColValue(sdCol);
+            const startMag = getColValue(smCol);
+            const endDir = getColValue(edCol);
+            const endMag = getColValue(emCol);
+            // Label preference: end-direction column's label, then end-mag's label
+            const dirLabel = (edCol.header && edCol.header !== edCol.name) ? edCol.header : null;
+            const magLabel = (emCol.header && emCol.header !== emCol.name) ? emCol.header : null;
+            vectors.push({
+                startDir, startMag, endDir, endMag,
+                dirName: edCol.name, dirLabel,
+                magName: emCol.name, magLabel
+            });
+        }
+        return {
+            type: 'vectorDraw',
+            title: expandedTitle,
+            vectors,
+            formatOpts,
+            fontSize,
+            startLine: tableDef.startLine,
+            endLine: tableDef.endLine,
+            errors
+        };
+    }
+
     // ==================== TABLE and TABLEGRAPH (columnar) ====================
     if (tableDef.keyword === 'table' || tableDef.keyword === 'tablegraph') {
         const iter = evaledIterators[0];

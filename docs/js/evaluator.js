@@ -554,7 +554,8 @@ const builtinFunctions = {
     table: null,
     grid: null,
     tablegraph: null,
-    gridgraph: null
+    gridgraph: null,
+    vectordraw: null
 };
 
 /**

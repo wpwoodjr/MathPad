@@ -924,6 +924,10 @@ class VariablesPanel {
                 this._renderGridGraph(table);
                 continue;
             }
+            if (table.type === 'vectorDraw') {
+                this._renderVectorDraw(table);
+                continue;
+            }
             if (table.type === 'grid') {
                 this._renderTable2(table);
                 continue;
@@ -1338,6 +1342,186 @@ class VariablesPanel {
             text.setAttribute('font-size', '12');
             text.setAttribute('transform', `rotate(-90, 12, ${margin.top + plotH / 2})`);
             text.textContent = yLabel;
+            svg.appendChild(text);
+        }
+
+        wrapper.appendChild(svg);
+        this.insertRowInOrder(wrapper, table.startLine - 1);
+        this._setStickyHeaderOffsets(wrapper);
+    }
+
+    /**
+     * Render a vectorDraw block: SVG diagram of vectors in polar coords with arrowheads.
+     * Each vector has start (dir, mag) and end (dir, mag) — both polar from origin.
+     */
+    _renderVectorDraw(table) {
+        if (!table.vectors || table.vectors.length === 0) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'variable-row variable-table-container';
+        wrapper.dataset.lineIndex = table.startLine - 1;
+        wrapper.dataset.type = 'table';
+
+        const titleEl = this._createTableTitle(table, wrapper);
+        if (titleEl) wrapper.appendChild(titleEl);
+
+        const colors = ['#4ade80', '#60a5fa', '#fb923c', '#f472b6', '#a78bfa', '#facc15', '#34d399'];
+
+        // Convert each vector's start/end polar (degrees mode aware) to Cartesian (y-down for SVG)
+        // Polar with bearing convention: angle measured CW from north, so (sin θ, -cos θ)
+        const degreesMode = table.formatOpts && table.formatOpts.degreesMode !== false;
+        const toRad = (angle) => degreesMode ? angle * Math.PI / 180 : angle;
+        const polarToXY = (dir, mag) => {
+            if (dir == null || mag == null || !isFinite(dir) || !isFinite(mag)) return null;
+            const r = toRad(dir);
+            return { x: Math.sin(r) * mag, y: -Math.cos(r) * mag };
+        };
+
+        // Each vector has: start point in absolute polar, end as relative displacement in polar
+        const segs = [];
+        let minX = 0, maxX = 0, minY = 0, maxY = 0;
+        for (let i = 0; i < table.vectors.length; i++) {
+            const v = table.vectors[i];
+            const start = polarToXY(v.startDir, v.startMag);
+            const disp = polarToXY(v.endDir, v.endMag);
+            if (!start || !disp) {
+                segs.push(null);
+                continue;
+            }
+            const end = { x: start.x + disp.x, y: start.y + disp.y };
+            segs.push({ start, end, color: colors[i % colors.length], vector: v });
+            for (const p of [start, end]) {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.y > maxY) maxY = p.y;
+            }
+        }
+        // Always include origin in viewport
+        minX = Math.min(minX, 0); maxX = Math.max(maxX, 0);
+        minY = Math.min(minY, 0); maxY = Math.max(maxY, 0);
+
+        // SVG layout
+        const width = 550;
+        const margin = { top: 30, right: 20, bottom: 20, left: 20 };
+        // Legend
+        const legendLineHeight = 18;
+        const legendH = table.vectors.length * legendLineHeight + 16;
+        const plotH = 360;
+        const height = margin.top + plotH + legendH + margin.bottom;
+        const plotW = width - margin.left - margin.right;
+
+        const spanX = (maxX - minX) || 1;
+        const spanY = (maxY - minY) || 1;
+        const pad = 30;
+        const scale = Math.min((plotW - 2 * pad) / spanX, (plotH - 2 * pad) / spanY);
+        const offX = margin.left + pad + ((plotW - 2 * pad) - spanX * scale) / 2 - minX * scale;
+        const offY = margin.top + pad + ((plotH - 2 * pad) - spanY * scale) / 2 - minY * scale;
+        const tx = (x) => offX + x * scale;
+        const ty = (y) => offY + y * scale;
+
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('class', 'mathpad-graph');
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.style.width = '100%';
+        svg.style.maxWidth = width + 'px';
+
+        // Arrowhead markers — unique IDs via global counter to avoid DOM collisions
+        // across multiple vectorDraws (when switching records the old SVG stays in
+        // a hidden editor container; identical marker IDs would clash).
+        if (!VariablesPanel._vdArrowCounter) VariablesPanel._vdArrowCounter = 0;
+        const markerPrefix = `vd-arrow-${++VariablesPanel._vdArrowCounter}`;
+        const defs = document.createElementNS(ns, 'defs');
+        for (let i = 0; i < segs.length; i++) {
+            const seg = segs[i];
+            if (!seg) continue;
+            const marker = document.createElementNS(ns, 'marker');
+            marker.setAttribute('id', `${markerPrefix}-${i}`);
+            marker.setAttribute('markerWidth', '7');
+            marker.setAttribute('markerHeight', '5');
+            marker.setAttribute('refX', '6');
+            marker.setAttribute('refY', '2.5');
+            marker.setAttribute('orient', 'auto');
+            const poly = document.createElementNS(ns, 'polygon');
+            poly.setAttribute('points', '0 0, 7 2.5, 0 5');
+            poly.setAttribute('fill', seg.color);
+            marker.appendChild(poly);
+            defs.appendChild(marker);
+        }
+        svg.appendChild(defs);
+
+        // Origin dot
+        const originDot = document.createElementNS(ns, 'circle');
+        originDot.setAttribute('cx', tx(0));
+        originDot.setAttribute('cy', ty(0));
+        originDot.setAttribute('r', '3');
+        originDot.setAttribute('class', 'graph-text');
+        originDot.setAttribute('fill', 'currentColor');
+        svg.appendChild(originDot);
+
+        // Draw each vector line + arrowhead. Shorten end slightly so the arrow tip lands at the actual endpoint.
+        function shortenEnd(x1, y1, x2, y2, amount) {
+            const dx = x2 - x1, dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len < amount) return { x: x2, y: y2 };
+            const f = (len - amount) / len;
+            return { x: x1 + dx * f, y: y1 + dy * f };
+        }
+
+        for (let i = 0; i < segs.length; i++) {
+            const seg = segs[i];
+            if (!seg) continue;
+            const x1 = tx(seg.start.x), y1 = ty(seg.start.y);
+            const x2 = tx(seg.end.x), y2 = ty(seg.end.y);
+            const sEnd = shortenEnd(x1, y1, x2, y2, 4);
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', x1.toFixed(1));
+            line.setAttribute('y1', y1.toFixed(1));
+            line.setAttribute('x2', sEnd.x.toFixed(1));
+            line.setAttribute('y2', sEnd.y.toFixed(1));
+            line.setAttribute('stroke', seg.color);
+            line.setAttribute('stroke-width', '2.5');
+            line.setAttribute('marker-end', `url(#${markerPrefix}-${i})`);
+            svg.appendChild(line);
+        }
+
+        // Legend below the plot
+        const fmtVal = (val, format) => {
+            if (val == null || !isFinite(val)) return '—';
+            if (format) return formatVariableValue(val, format, false, table.formatOpts || {});
+            return this._formatTickLabel(val);
+        };
+        const legendTop = margin.top + plotH + 8;
+        for (let i = 0; i < table.vectors.length; i++) {
+            const v = table.vectors[i];
+            const seg = segs[i];
+            const color = colors[i % colors.length];
+            const y = legendTop + i * legendLineHeight + 12;
+            // Color swatch line
+            const swatch = document.createElementNS(ns, 'line');
+            swatch.setAttribute('x1', margin.left + 4);
+            swatch.setAttribute('x2', margin.left + 24);
+            swatch.setAttribute('y1', y - 4);
+            swatch.setAttribute('y2', y - 4);
+            swatch.setAttribute('stroke', color);
+            swatch.setAttribute('stroke-width', '3');
+            svg.appendChild(swatch);
+            // Label text
+            const dirLabel = v.dirLabel || v.dirName;
+            const magLabel = v.magLabel || v.magName;
+            // Find the original column to know its format for formatting the value
+            const dirFmt = degreesMode ? 'degrees' : null;
+            const dirText = fmtVal(v.endDir, dirFmt);
+            const magText = fmtVal(v.endMag, null);
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', margin.left + 30);
+            text.setAttribute('y', y);
+            text.setAttribute('class', 'graph-text');
+            text.setAttribute('font-size', '12');
+            text.setAttribute('fill', color);
+            text.setAttribute('font-weight', 'bold');
+            text.textContent = `${dirLabel} = ${dirText}, ${magLabel} = ${magText}`;
             svg.appendChild(text);
         }
 
