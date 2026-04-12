@@ -1,6 +1,6 @@
 Category = "Unfiled"; Secret = 0
 Places = 14; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
 "Mod boundary snap - result near divisor should snap to 0"
 
@@ -18,7 +18,7 @@ mod(d; 360)->> 359.5
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "mod() builtin - positive a, positive n"
 
@@ -36,7 +36,7 @@ mod(0; 360)->> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "mod() builtin - negative a, positive n"
 
@@ -51,7 +51,7 @@ mod(-720; 360)->> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 26: Equation doesn't balance: i °= j (relative diff 2.8% >= 0.5%)\nLine 31: Equation doesn't balance: k °= l (relative diff 2.8% >= 0.5%)\nLine 36: Equation doesn't balance: m °= n (relative diff 2.8% >= 0.5%)\nLine 41: Equation doesn't balance: o °= p (relative diff 1.1% >= 0.5%)"; StatusIsError = 1
 "Degree equality operator (°=) — mod-aware balance check"
 
@@ -97,7 +97,7 @@ o °= p
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "°= with Brent's solver — solve for unknown"
 
@@ -111,7 +111,7 @@ y °= 0.01
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
 "°= in braced equations"
 
@@ -121,7 +121,7 @@ b: 0.01
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
 "modIsClose as logical operator in expressions"
 
@@ -149,7 +149,7 @@ modIsClose(359.99; 0.01; perigon(); places()) && modIsClose(45; 405; perigon(); 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 16: Equation doesn't balance: e °= f (relative diff 15.9% >= 0.5%)"; StatusIsError = 1
 "°= in radians mode (mod 2*pi)"
 
@@ -180,7 +180,7 @@ modIsClose(1; 2; perigon(); places())-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
 "°= with mod-aware Brent's — wrapping past 360°"
 
@@ -193,7 +193,7 @@ x + 20 °= y
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
 "°= with mod-aware Brent's — atan discontinuity"
 
@@ -206,7 +206,7 @@ a °= atan(b; -1)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
 "°= definition — with limits"
 
@@ -217,7 +217,7 @@ y °= 365 + a
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
 "°= definition — without limits"
 
@@ -228,7 +228,7 @@ y °= 365 + a
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
 "°= definition — non-standard limits"
 
@@ -239,7 +239,7 @@ y °= 5 + a
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "°= substitution system — two °= equations"
 
@@ -254,7 +254,7 @@ drift: 7
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "°= substitution system — wrap-around values"
 
@@ -270,7 +270,7 @@ drift: 20
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 7 equations"; StatusIsError = 0
 "°= mod-aware Brent's — combined cases"
 
@@ -300,7 +300,7 @@ drift: 20
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
 "°= residual check — wide limits reject wrapping discontinuity"
 
@@ -310,7 +310,7 @@ v °= 360 + 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 6 equations"; StatusIsError = 0
 "°= mod-aware Brent's — radians mode"
 

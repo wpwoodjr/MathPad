@@ -1,13 +1,13 @@
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Constants"
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Too many unknowns (pv, rate, n)\nLine 4: Too many unknowns (pv, rate, n, fv)"; StatusIsError = 1
 "Functions"
 // Solving the Functions record treats fn defs as equations (expected errors)
@@ -17,7 +17,7 @@ pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: compound() requires 3 arguments, got 0\nLine 5: pmt() requires 4 arguments, got 0\nLine 10: f() requires 1 argument, got 0\nLine 11: f() requires 1 argument, got 2\nLine 14: sqrt() requires 1 argument, got 0\nLine 15: sqrt() requires 1 argument, got 2\nLine 17: rand() requires at most 2 arguments, got 3\nLine 21: if() requires at least 2 arguments, got 0\nLine 22: if() requires at most 3 arguments, got 4\nLine 23: sum() requires 4 arguments: sum(expr; var; start; end)\nLine 24: prod() requires 4 arguments: prod(expr; var; start; end)\nLine 25: min() requires at least 1 argument, got 0\nLine 26: max() requires at least 1 argument, got 0\nLine 27: avg() requires at least 1 argument, got 0"; StatusIsError = 1
 "Test fn args too many or too few"
 

@@ -1,6 +1,6 @@
 Category = "Math"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
 "Quadratic equation solver"
 "ax^2 + bx + c = 0"
@@ -18,7 +18,7 @@ x2-> 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Reference"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 5: Too many unknowns (p, r, n, t)\nLine 14: Too many unknowns (a, b)\nLine 17: Too many unknowns (a, b)"; StatusIsError = 1
 "Functions"
 // Solving the Functions record treats fn defs as equations (expected errors)
@@ -41,7 +41,7 @@ disc(a;b;c) = b**2 - 4*a*c
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Reference"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Constants"
 "Physical and mathematical constants"
@@ -56,7 +56,7 @@ golden: 1.61803398874989 "golden ratio"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "01 Solver: ratio defined as variable"
 
@@ -71,7 +71,7 @@ Status = "Solved 2 equations"; StatusIsError = 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "Time Value of Money"
 
@@ -90,7 +90,7 @@ mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "02 Solver: mint on LHS"
 
@@ -109,7 +109,7 @@ mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "03 Solver: mint on RHS"
 
@@ -130,7 +130,7 @@ yint / 12 = mint
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
 "04 Solver: ratio defined as equation"
 
@@ -145,7 +145,7 @@ Status = "Solved 3 equations"; StatusIsError = 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "05 Solver: Circular dependency detected: height → height → width"
   height = width * 16/9
@@ -156,7 +156,7 @@ width-> 23.7171
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "06 Solver: precision error if mint-> vs mint->>"
 
@@ -177,7 +177,7 @@ mint-> 0.01
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "01 Formula Pane: wrapping lines"
 "long line: skdj skdjskd skds djskd sjkd sjdks djks djskd sjkd sjkd sjdks djksd js hi there this is a test"
@@ -201,7 +201,7 @@ mint->> 0.00625
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 6 equations"; StatusIsError = 0
 "07 Solver: Check all widths get solved"
 
@@ -225,7 +225,7 @@ width5-> 23.7171
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
 "08 Solver: Solved with errors: Variable 'height' has no value to output"
 
@@ -240,7 +240,7 @@ Status = "Solved 3 equations"; StatusIsError = 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "01 Formatting"
 
@@ -258,7 +258,7 @@ z%->> 6.724999999999999%
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Equation doesn't balance: y=x+1 (absolute diff 2 >= 5e-14)"; StatusIsError = 1
 "01 Error: Solved with errors: Equation doesn't balance: x=y+1 (1 != 3)"
 
@@ -271,7 +271,7 @@ y-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "09 Solver: Solved with errors: Equation doesn't balance: (height + margin) / width = 16/9 (0.4824172960000001 ≠ 1.7777777777777777)"
 
@@ -284,7 +284,7 @@ width-> 23.7171
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "01 Variables Pane: Only shows a$-> in Variables pane, not a$->> - need better display"
 
@@ -294,7 +294,7 @@ a$->> $10.994
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "02 Variables Pane: x is not populated in variables pane"
 
@@ -311,7 +311,7 @@ Status = "Solved 2 equations"; StatusIsError = 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 22: Variable 'x4' has no value to output"; StatusIsError = 1
 "01 Parsing: Check parsing phase for constant evals"
 
@@ -353,7 +353,7 @@ pi: 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 6: Cannot evaluate \"xyzzy\" - Undefined variable: xyzzy"; StatusIsError = 1
 "03 Variables Pane: d not updating properly in Variables pane. updates on refresh of web page but not when typing the value in the formula pane"
 
@@ -364,7 +364,7 @@ d: xyzzy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "01 Constants: Value of pi is not updating after return from editing Constants record"
 "will only update on refresh"
@@ -379,7 +379,7 @@ pi: 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "04 Variables Pane: Value of d in Variables pane is not updating properly"
 "when changing d:, d-> in variables pane does not update - as designed? Yes"
@@ -389,7 +389,7 @@ d-> 455
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "02 Parsing: no error for x: dd if dd is defined after x"
 
@@ -398,7 +398,7 @@ dd: 5
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "05 Variables Pane: Should see all 3 outputs in Variables panel.  -> and ->> outputs not editable, x: is"
 "Variables panel should show name of variable and marker (:, <-, ->>, etc)"
@@ -411,7 +411,7 @@ y: 8
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 6: Variable \"x\" is already defined\nLine 7: Variable \"x\" is already defined"; StatusIsError = 1
 "03 Parsing: A variable can't be defined more than once, x:: 34 and x<- are errors (see arch.md)"
 
@@ -423,7 +423,7 @@ x<-
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "10 Solver: clear pmt, then solve, then solve again, get:"
 "Solved with errors: Equation doesn't balance: mint = yint / 12 (0.005104166726620151 ≠ 0.005104166666666667)"
@@ -444,7 +444,7 @@ mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "04 Parsing: LHS="
 
@@ -453,7 +453,7 @@ y*8= 360
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "06 Variables Pane: Updates to x: in the variables panel doesn't update formula"
 
@@ -463,7 +463,7 @@ x->> 8.717797887081348
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "07 Variables Pane: Moving and deleting lines in the formulas panel does not update the variables panel correctly"
 "after deleting the y: 3 line, the variables panel shows dd: 5 and y: 5"
@@ -474,7 +474,7 @@ dd-> 5
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "08 Variables Pane: Variables pane not properly formatted for ->"
 "not showing as 4 decimal places for g-> as expected per record default"
@@ -493,7 +493,7 @@ h: 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Variable 'a' has no value to output\nLine 6: Variable 'b' has no value to output"; StatusIsError = 1
 "11 Solver: a and b have no value to output - should be error?"
 
@@ -504,7 +504,7 @@ b->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "06 Parsing: Check rates are handled properly"
 
@@ -526,7 +526,7 @@ rate4%-> 7.5%
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "09 Variables Pane: b not being cleared when clear it in variables pane"
 
@@ -535,7 +535,7 @@ b-> 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "12 Solver: yint is not calculated when solving"
 
@@ -554,7 +554,7 @@ mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "13 Solver: Solved with errors: Variable 'height' has no value to output"
 
@@ -567,7 +567,7 @@ width-> 23.7171
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "14 Solver: Solved with errors: Equation doesn't balance: height / width = 16/9 (3.4485002817314917e-7 ≠ 1.7777777777777777)"
 
@@ -579,7 +579,7 @@ width-> 23.7171
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "15 Solver: Solved with errors: Equation doesn't balance: height / width = 16/9 (3.4485002817314917e-7 ≠ 1.7777777777777777) (copy)"
 
@@ -591,7 +591,7 @@ width-> 23.7171
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "01 Shadowing: check there should be implicit shadowing"
 e: 3
@@ -599,7 +599,7 @@ e->> 3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Default Settings"
 "New Record"
@@ -608,7 +608,7 @@ Status = "Nothing to solve"; StatusIsError = 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "02 Shadowing: check there is shadowing"
 e: 3
@@ -616,7 +616,7 @@ e->> 3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "01 Todo"
 
@@ -630,7 +630,7 @@ y*8= 360
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 1; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 1; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
 "01 Deg/Rad: degrees"
 
@@ -639,7 +639,7 @@ a->> 0.707106781186548
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "02 Deg/Rad: radians"
 

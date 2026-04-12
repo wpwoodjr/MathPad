@@ -1,6 +1,6 @@
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 5 equations"; StatusIsError = 0
 "Course Heading (copy) (copy)"
 
@@ -37,7 +37,7 @@ speedMadeGood-> Infinity   "knots"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "Course to Steer"
 

@@ -1,6 +1,6 @@
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 5 equations"; StatusIsError = 0
 "Test 1: Singularity at speedMadeGood=0 with wide range [0:1000]"
 "Tests binary search near singularity (speedMadeGood in denominator)"
@@ -22,7 +22,7 @@ currentHeadingOffBow: 34
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 5 equations"; StatusIsError = 0
 "Test 2: Root at boundary with head-on current [0:10]"
 "Tests near-zero detection at grid endpoint (smg essentially 0)"
@@ -44,7 +44,7 @@ currentHeadingOffBow: 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 5 equations"; StatusIsError = 0
 "Test 3: Singularity at speedMadeGood=0 with narrow range [0:100]"
 "Tests that normal bracket detection still works near singularity"
@@ -66,7 +66,7 @@ currentHeadingOffBow: 34
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test 4: Large known values extend search range beyond default 1e8"
 "Tests that solver finds root at ~3.7e34 using knownScale hint"
@@ -78,7 +78,7 @@ w-> 3.7272e+34
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 7: Equation doesn't balance: sin(180-normalizedCHOB)/boatSp... (relative diff 123.536% >= 0.005%)"; StatusIsError = 1
 "Test 5: Course heading with inconsistent inputs"
 "Input course: 8.1 constrains correction via extracted definition; sin equations don't balance"
@@ -104,7 +104,7 @@ speedMadeGood-> 9.635
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 7: Could not find a root for 'x'"; StatusIsError = 1
 "Test 6: Tautology rejection - f(x)=0 for all x should not find a root"
 "Near-tangent detection must skip when best test point is already at zero"
@@ -116,7 +116,7 @@ x<-
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test 7: Near-tangent root detection finds root in narrow band"
 "Near-double-root quadratic: barely dips below zero between log points 1 and 10"
@@ -128,7 +128,7 @@ x-> 4.9
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 4 equations"; StatusIsError = 0
 "Test 8: Near-tangent in navigation - solve smg via quadratic with substituted set"
 "Quadratic smg equation has narrow sign change after set substitution"
@@ -170,7 +170,7 @@ hdg °-> 316.03°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test 9: Pole at lower limit - root between singularity and first grid point"
 "1/y = 1000 has root at y=0.001, pole at y=0 (the lower limit)"
@@ -182,7 +182,7 @@ y[0:1]-> 0.001
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "Fifth degree polynomial"
 
@@ -243,7 +243,7 @@ grid "test variable limit solving"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "x with input decl is nominal value"
 
@@ -275,7 +275,7 @@ x:: 0.780455192719996
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Loan calculator with cmpndsYr table"
 
@@ -413,7 +413,7 @@ table "> test fine grid"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
 "Limits with chained deferred dependencies"
 "y² = z² = 16 each have roots ±4. z's limits [y:0] depend on y, y's"
@@ -432,7 +432,7 @@ y[-x:0]<- -4
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Numeric limits auto-swap: Brent's path with reversed limits and step"
 "x*x = 9 needs Brent's. Limits [0:-5:-1] are reversed (high<low) with"
@@ -445,7 +445,7 @@ x[0:-5:-1]-> -3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Numeric limits auto-swap: substitution path with reversed limits"
 "x = 25 is a definition equation. Limits [50:0] are reversed."
@@ -459,7 +459,7 @@ x[50:0]<- 25
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "Degrees-aware limits with wraparound through 0°"
 "cmg has limits [327.8..5.5] which wrap through 0°. atan2 returns -0.008°."
@@ -479,7 +479,7 @@ leeway: 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "Mod-aware limits with wraparound through 0 (radians mode)"
 "Same as the degrees test, but with limits in radians and degreesMode=0."
@@ -499,7 +499,7 @@ leeway: 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 4 equations"; StatusIsError = 0
 "Brent's degrees-aware wraparound"
 "sin = 0.1 has roots at 5.74° and 174.26° (mod 360°)."
@@ -519,7 +519,7 @@ w[10:350] °->> 174.260829522733218°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
 "Brent's mod-aware wraparound in radians mode"
 "Same as degrees test, but with limits in radians and degreesMode=0."

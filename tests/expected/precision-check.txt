@@ -1,6 +1,6 @@
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Equation doesn't balance: a * a = 2 (relative diff 50% >= 0.5%)"; StatusIsError = 1
 "Test 1: Rounded <- value causes balance error at places=0"
 "a*a=2 solves a=1.414, rounds to 1, re-solve 1*1≠2"
@@ -9,7 +9,7 @@ a<- 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test 2: Same equation at places=4 — no precision warning"
 a * a = 2
@@ -17,7 +17,7 @@ a<- 1.4142
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Equation doesn't balance: a * a = 2 (relative diff 50% >= 0.5%)"; StatusIsError = 1
 "Test 3: Cascade — b re-solves with rounded a"
 "a=1.414→1, b=sqrt(1.414*100)≈12; re-solve: a=1, b=sqrt(100)=10"
@@ -35,7 +35,7 @@ a*a->> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "Test 3b: Cascade at places=3 — b shifts by last digit on re-solve"
 a * a = 2
@@ -52,7 +52,7 @@ a*a->> 1.999396
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 15: Variable 'd' has no value to output"; StatusIsError = 1
 "Test 3c: Cascade at places=3 with unrelated error — re-solve still runs"
 "d-> has no value but cascade still happens; values match Test 3b"
@@ -72,7 +72,7 @@ d->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test 5: Stale values preserved across re-solve — counter increments once"
 "d=sqrt(a) triggers Brent's so re-solve runs; solveCount~ should not double-increment"
@@ -84,7 +84,7 @@ solveCount:> 6
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 6: Amortization step-through — stale values advance one payment"
 "pmt equation triggers Brent's so re-solve runs; balance~ should not double-step"
@@ -111,7 +111,7 @@ principal$:> $0.00
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test 4: Output marker (->) re-solves fine — no false warning"
 a * a = 2
@@ -119,7 +119,7 @@ a-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test 7: b~? returns 0 on re-solve even though b<- gets filled by Brent's"
 a * a + b * b = 25
@@ -129,7 +129,7 @@ b~?-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Loan calculator"
 

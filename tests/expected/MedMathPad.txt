@@ -1,6 +1,6 @@
 Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "A-a Gradient"
 A-a Gradient
@@ -20,7 +20,7 @@ AaDO2-> 708 mm Hg
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Anion Gap"
 Anion Gap
@@ -37,7 +37,7 @@ AnionGap-> -2 mEq/L
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 1; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
 "BSA/BMI (metric)"
 BSA/BMI (metric)
@@ -58,7 +58,7 @@ BMI-> 25.8 kg/m2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 1; StripZeros = 0
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "BSA/BMI"
 BSA/BMI
@@ -76,7 +76,7 @@ BMI-> 25.7 kg/m2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Drug doses"; Secret = 0
 Places = 1; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
 "Drips"
 Drips
@@ -106,7 +106,7 @@ epinephrine-> 6.6 mg/100cc of fluid
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Drug doses"; Secret = 0; Selected = 1
 Places = 1; StripZeros = 0
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 16 equations"; StatusIsError = 0
 "Emergency meds"
 Emergency meds
@@ -167,7 +167,7 @@ Fosphenytoin-> 1400.0 mg 	(IV or IM)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 2; StripZeros = 0
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "FENa"
 FENa
@@ -185,7 +185,7 @@ FENa-> 89.29
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Free Water Deficit"
 Free Water Deficit 
@@ -202,7 +202,7 @@ FWD-> 10800 cc free water deficit
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 0
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Glasgow Coma Scale"
 Glasgow Coma Scale
@@ -236,7 +236,7 @@ GCS-> 11
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 7 equations"; StatusIsError = 0
 "Isotonic Dehydration"
 Isotonic Dehydration
@@ -265,7 +265,7 @@ maint-> 121 cc/hr
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
 "Maintenance Fluids"
 Maintenance Fluids
@@ -288,7 +288,7 @@ rate-> 66 cc/hr
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 1; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Na Deficit"
 Na Deficit
@@ -305,7 +305,7 @@ NaDeficit-> 90 mEq/L
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
 "Peak Flows"
 Peak Flows
@@ -334,7 +334,7 @@ YellowZone-> 234 @50-80% Pred
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 1; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Plasma Osmolality"
 Plasma Osmolality
@@ -351,7 +351,7 @@ osmolality-> 27 mOsm/L
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Schwartz Equation (CrCl)"
 Schwartz Equation (CrCl)
@@ -375,7 +375,7 @@ CrCl-> 120
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Serum Na Corrected"
 Serum Na Corrected
@@ -392,7 +392,7 @@ NaCorrected-> 27 mEq/L
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Medical Calc"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
 "WBC Indices"
 WBC Indices
@@ -416,7 +416,7 @@ IT-> 0.39
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 1; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Default Settings"
 "New Record"

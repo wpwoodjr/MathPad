@@ -1,6 +1,6 @@
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Constants"
 pi: 3.14159265358979
@@ -8,14 +8,14 @@ e: 2.71828182845905
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Functions"
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "1. Find current (drift, set)"
 // Solved - same-vector pair
@@ -55,7 +55,7 @@ set[0:360]-> 210.0017
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "2. Find ground track (smg, cmg)"
 // Solved - same-vector pair
@@ -89,7 +89,7 @@ set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "3. Find boat velocity (speed, cts)"
 // Solved - same-vector pair
@@ -123,7 +123,7 @@ set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "4. Course to steer (find smg, cts)"
 // Solved - quadratic + definition
@@ -157,7 +157,7 @@ set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "5. Find smg, speed"
 // Solved - Brent's for magnitude
@@ -191,7 +191,7 @@ set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "6. Find smg, drift"
 // Solved - Brent's for magnitude
@@ -225,7 +225,7 @@ set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "7. Find smg, set"
 // Solved - Brent's for magnitude
@@ -259,7 +259,7 @@ set[0:360]-> 209.9996
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "8. Find cmg, cts"
 // Solved - Brent's finds intended root
@@ -293,7 +293,7 @@ set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "9. Find cmg, speed"
 // Solved - Brent's for magnitude
@@ -327,7 +327,7 @@ set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "10. Find cmg, drift"
 // Solved - Brent's for magnitude
@@ -361,7 +361,7 @@ set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "11. Find cmg, set"
 // Solved - alternate valid triangle
@@ -395,7 +395,7 @@ set[0:360]-> 114.8272
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "12. Find cts, drift"
 // Solved - Brent's for magnitude
@@ -429,7 +429,7 @@ set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "13. Find speed, drift"
 // Solved - law of sines
@@ -463,7 +463,7 @@ set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "14. Find cts, set"
 // Solved - alternate valid triangle (Brent's finds set, definition evaluates cts)
@@ -497,7 +497,7 @@ set[0:360]-> 121.9963
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "15. Find speed, set"
 // Solved - Brent's finds set (natural 1-unknown), definition evaluates speed
@@ -531,7 +531,7 @@ set[0:360]-> 209.9993
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 14: Equation doesn't balance: set = mod(atan(smg*sin(cmg) - ... (absolute diff 359.9888 >= 5e-14)"; StatusIsError = 1
 "16. Re-solve with rounded values (places=3) - mod 360 balance error"
 // Re-solve test: first solve produced these rounded values
@@ -569,7 +569,7 @@ set[0:360] °<- 0°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 "17. Re-solve with °= degree equality"
 
@@ -605,7 +605,7 @@ set[0:360] °<- 0°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 6: Unknown function: modClose\nLine 9: Unknown function: modClose"; StatusIsError = 1
 "18. Removed modClose should error in balance check"
 
@@ -637,7 +637,7 @@ set[0:360] °<- 0°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 5: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative diff 11.9% >= 0.5%)\nLine 6: Equation doesn't balance: cts °= atan(smg*sin(cmg) - dri... (relative diff 0.6% >= 0.5%)\nLine 8: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - w... (relative diff 8.5% >= 0.5%)\nLine 9: Equation doesn't balance: set °= atan(smg*sin(cmg) - ws*... (relative diff 2.7% >= 0.5%)"; StatusIsError = 1
 "19. °= balance check at places=0 (regular = fails on set equation)"
 
@@ -662,7 +662,7 @@ set[0:360] °<- 0°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 6: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative diff 11.9% >= 0.5%)\nLine 7: Equation doesn't balance: cts °= atan(smg*sin(cmg) - dri... (relative diff 0.6% >= 0.5%)\nLine 9: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - w... (relative diff 8.5% >= 0.5%)\nLine 10: Equation doesn't balance: set °= atan(smg*sin(cmg) - ws*... (relative diff 2.7% >= 0.5%)"; StatusIsError = 1
 "20. °= re-solve with rounded <- values (neighborhood normalization)"
 "Pre-baked rounded values from test 19"
@@ -688,7 +688,7 @@ set[0:360] °<- 0°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
 "Navigation test"
 

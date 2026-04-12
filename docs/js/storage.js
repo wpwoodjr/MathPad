@@ -22,7 +22,6 @@ const DEFAULT_SETTINGS_RECORD = {
     groupDigits: true,
     format: 'float',
     degreesMode: false,
-    shadowConstants: false,
     currencySymbol: '$'
 };
 
@@ -133,7 +132,7 @@ totFFees $->
                 groupDigits: true,
                 format: 'float',
                 degreesMode: false,
-                shadowConstants: false
+
             },
             {
                 id: generateId(),
@@ -197,7 +196,7 @@ grid("v Payment for \\pv$\\ loan at various rates and loan lengths") = {
                 groupDigits: false,
                 format: 'float',
                 degreesMode: false,
-                shadowConstants: false
+
             },
             {
                 id: generateId(),
@@ -228,7 +227,7 @@ x2 = (-b - sqrt(disc)) / (2*a)
                 groupDigits: false,
                 format: 'float',
                 degreesMode: false,
-                shadowConstants: true
+
             },
             {
                 id: generateId(),
@@ -257,7 +256,7 @@ x2 = (-b - sqrt(disc)) / (2*a)
                 groupDigits: false,
                 format: 'float',
                 degreesMode: false,
-                shadowConstants: true
+
             },
             {
                 id: generateId(),
@@ -300,7 +299,7 @@ tableGraph("f(x) showing roots") = {
                 groupDigits: false,
                 format: 'float',
                 degreesMode: false,
-                shadowConstants: true
+
             },
             {
                 id: generateId(),
@@ -320,7 +319,7 @@ w: 200      "watts"`,
                 groupDigits: true,
                 format: 'float',
                 degreesMode: false,
-                shadowConstants: false
+
             },
             {
                 id: generateId(),
@@ -351,7 +350,7 @@ w: 200      "watts"`,
                 groupDigits: false,
                 format: 'float',
                 degreesMode: false,
-                shadowConstants: false
+
             },
             {
                 id: generateId(),
@@ -378,7 +377,7 @@ secsPerDay: 86400`,
                 groupDigits: false,
                 format: 'float',
                 degreesMode: false,
-                shadowConstants: true
+
             },
             {
                 id: generateId(),
@@ -417,7 +416,7 @@ disc(a;b;c) = b**2 - 4*a*c`,
                 groupDigits: false,
                 format: 'float',
                 degreesMode: false,
-                shadowConstants: false
+
             },
             { id: generateId(), ...DEFAULT_SETTINGS_RECORD }
         ],
@@ -615,7 +614,7 @@ function exportToText(data, options = {}) {
         const selectedFlag = isSelected ? '; Selected = 1' : '';
         lines.push(`Category = "${record.category || 'Unfiled'}"; Secret = ${record.secret ? 1 : 0}${selectedFlag}`);
         lines.push(`Places = ${record.places != null ? record.places : 4}; StripZeros = ${record.stripZeros !== false ? 1 : 0}`);
-        lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}; ShadowConstants = ${record.shadowConstants ? 1 : 0}${record.currencySymbol && record.currencySymbol !== '$' ? `; CurrencySymbol = "${record.currencySymbol}"` : ''}`);
+        lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}${record.currencySymbol && record.currencySymbol !== '$' ? `; CurrencySymbol = "${record.currencySymbol}"` : ''}`);
         if (record.status) {
             // Escape quotes and newlines in status message
             const escapedStatus = record.status.replace(/"/g, '\\"').replace(/\n/g, '\\n');
@@ -671,7 +670,6 @@ function importFromText(text, existingData = null, options = {}) {
         let format = 'float';
         let groupDigits = false;
         let degreesMode = false;
-        let shadowConstants = false;
         let currencySymbol = '$';
         let status = '';
         let statusIsError = false;
@@ -702,7 +700,7 @@ function importFromText(text, existingData = null, options = {}) {
                 continue;
             }
 
-            // Format, GroupDigits, DegreesMode, ShadowConstants line (later fields optional)
+            // Format, GroupDigits, DegreesMode line (later fields optional; ShadowConstants accepted but ignored)
             const formatMatch = line.match(/Format\s*=\s*"([^"]*)"\s*;\s*GroupDigits\s*=\s*(\d+)(?:\s*;\s*DegreesMode\s*=\s*(\d+))?(?:\s*;\s*ShadowConstants\s*=\s*(\d+))?(?:\s*;\s*CurrencySymbol\s*=\s*"([^"]*)")?/i);
             if (formatMatch) {
                 format = formatMatch[1];
@@ -710,9 +708,7 @@ function importFromText(text, existingData = null, options = {}) {
                 if (formatMatch[3] !== undefined) {
                     degreesMode = formatMatch[3] === '1';
                 }
-                if (formatMatch[4] !== undefined) {
-                    shadowConstants = formatMatch[4] === '1';
-                }
+                // formatMatch[4] is ShadowConstants — accepted for backwards compatibility, ignored
                 if (formatMatch[5] !== undefined) {
                     currencySymbol = formatMatch[5];
                 }
@@ -786,7 +782,6 @@ function importFromText(text, existingData = null, options = {}) {
             groupDigits: groupDigits,
             format: format,
             degreesMode: degreesMode,
-            shadowConstants: shadowConstants,
             currencySymbol: currencySymbol,
             status: status,
             statusIsError: statusIsError
@@ -889,7 +884,6 @@ function createRecord(data) {
         groupDigits: ds.groupDigits,
         format: ds.format,
         degreesMode: ds.degreesMode,
-        shadowConstants: ds.shadowConstants,
         currencySymbol: ds.currencySymbol || '$',
         status: '',
         statusIsError: false,

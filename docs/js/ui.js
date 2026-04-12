@@ -2,14 +2,6 @@
  * MathPad UI - User interface components and event handling
  */
 
-// true when pop-up keyboard is detected
-let _keyboardIsShowing = false;
-
-// Debug log to status bar — remove when done
-function _debugLog(msg) {
-    const el = document.getElementById('status-text');
-    if (el) el.textContent = msg;
-}
 
 /**
  * Application state (separate from DOM references)
@@ -1272,134 +1264,6 @@ function setupEventListeners() {
         }
     });
 
-    // Mobile keyboard handling: shrink entire app to fit above keyboard
-    if (window.visualViewport) {
-        let vpHeightAtFocus = 0;
-        let panelFocusTime = 0;
-
-        // After keyboard resize, ensure the textarea / input scrolls to show the caret
-        // (iOS doesn't auto-scroll to the cursor on focus)
-        function ensureActiveCaretVisible() {
-            const active = document.activeElement;
-            if (active && active.tagName === 'TEXTAREA') {
-                const info = UI.editors.get(UI.currentRecordId);
-                if (info && info.editor && info.editor.textarea === active) {
-                    info.editor.ensureCaretVisible();
-                }
-            } else if (active && active.tagName === 'INPUT') {
-                active.scrollIntoView({ block: 'center' });
-            }
-        }
-
-        // Expand the focused panel (vars or formulas) for the keyboard
-        // If proportional, scale divider to maintain same ratio as fullscreen
-        function adjustPanelForFocus(active, proportional) {
-            const info = UI.editors.get(UI.currentRecordId);
-            if (!info) return;
-
-            const variablesPanel = info.container.querySelector('.variables-panel');
-            const formulasPanel = info.container.querySelector('.formulas-panel');
-            if (!variablesPanel || !formulasPanel || !info.container.contains(active)) return;
-
-            if (proportional) {
-                const record = findRecord(UI.data, UI.currentRecordId);
-                const savedH = record && record.dividerHeight;
-                if (savedH) {
-                    // Calculate what percentage the divider was at fullscreen
-                    const fullContainerH = vpHeightAtFocus - variablesPanel.offsetTop
-                        - document.querySelector('.status-bar').offsetHeight;
-                    const ratio = savedH / fullContainerH;
-                    const kbContainerH = info.container.offsetHeight;
-                    variablesPanel.style.height = Math.round(ratio * kbContainerH) + 'px';
-                    return;
-                }
-            }
-
-            const varsHeaderH = variablesPanel.querySelector('.variables-header').offsetHeight;
-            if (variablesPanel.contains(active)) {
-                const dividerH = info.container.querySelector('.panel-divider').offsetHeight;
-                const fmtHeaderH = formulasPanel.querySelector('.formulas-header').offsetHeight;
-                const maxH = info.container.offsetHeight - dividerH - fmtHeaderH;
-                variablesPanel.style.height = Math.max(varsHeaderH, maxH) + 'px';
-            } else if (formulasPanel.contains(active)) {
-                variablesPanel.style.height = varsHeaderH + 'px';
-            }
-        }
-
-        // Track focusin on panel inputs — gates keyboard detection in VP resize
-        document.addEventListener('focusin', (e) => {
-            if (_keyboardIsShowing) return;
-
-            const info = UI.editors.get(UI.currentRecordId);
-            if (!info) return;
-            const variablesPanel = info.container.querySelector('.variables-panel');
-            const formulasPanel = info.container.querySelector('.formulas-panel');
-            if (!variablesPanel || !formulasPanel) return;
-            if (!variablesPanel.contains(e.target) && !formulasPanel.contains(e.target)) return;
-
-            panelFocusTime = Date.now();
-            // avoid Chrome bug on iOS where it has stale window.visualViewport.height
-            // vpHeightAtFocus = window.visualViewport.height;
-            vpHeightAtFocus = window.innerHeight;
-        });
-
-        // VP resize: detect keyboard and handle dismiss
-        let kbdTimeout2 = null;
-        window.visualViewport.addEventListener('resize', () => {
-            return;
-            const recentPanelFocus = (Date.now() - panelFocusTime) < 1000;
-            if (kbdTimeout2) clearTimeout(kbdTimeout2);
-            kbdTimeout2 = setTimeout(() => {
-                kbdTimeout2 = null;
-                const vpHeight = window.visualViewport.height;
-                const vpScale = window.visualViewport.scale;
-                _debugLog(vpScale.toFixed(3) + " " + (vpHeight/vpHeightAtFocus).toFixed(2));
-                const kbDetected = vpScale === 1 && (recentPanelFocus || _keyboardIsShowing) && vpHeight < vpHeightAtFocus * 0.85;
-                const appContainer = document.querySelector('.app-container');
-                if (!appContainer) return;
-
-                if (kbDetected) {
-                    _keyboardIsShowing = true;
-                    const _info = UI.editors.get(UI.currentRecordId);
-                    const _varsPanel = _info && _info.container.querySelector('.variables-panel');
-                    if (vpHeight < vpHeightAtFocus * 0.60) {
-                        // Reclaim header/tabs space since they'll be scrolled off
-                        const extraH = _varsPanel
-                            ? _varsPanel.getBoundingClientRect().top - appContainer.getBoundingClientRect().top
-                            : 0;
-                        appContainer.style.height = (vpHeight + extraH) + 'px';
-                        // allow user to switch panels without panel adjustment
-                        if (recentPanelFocus) {
-                            adjustPanelForFocus(document.activeElement);
-                            ensureActiveCaretVisible();
-                        }
-                        if (_varsPanel) _varsPanel.querySelector('.variables-header').scrollIntoView(true);
-                    } else {
-                        // on taller devices show whole app with both panels proportionally sized
-                        appContainer.style.height = vpHeight + 'px';
-                        if (recentPanelFocus) {
-                            adjustPanelForFocus(document.activeElement, true);
-                            ensureActiveCaretVisible();
-                        }
-                        // -1px tricks the browser into actually scrolling (0px is a no-op)
-                        appContainer.style.scrollMarginTop = '-1px';
-                        appContainer.scrollIntoView(true);
-                    }
-                } else if (_keyboardIsShowing) {
-                    // Keyboard dismissed
-                    appContainer.style.removeProperty('height');
-                    _keyboardIsShowing = false;
-                    restoreDividerHeight(UI.currentRecordId);
-                    // -1px tricks the browser into actually scrolling (0px is a no-op)
-                    appContainer.style.scrollMarginTop = '-1px';
-                    appContainer.scrollIntoView(true);
-                    // Blur so next tap triggers focusin for keyboard detection
-                    if (document.activeElement) document.activeElement.blur();
-                }
-            }, 100);
-        });
-    }
-
     // Clamp divider and re-align variable name widths on window resize
     let kbdTimeout = null;
     window.addEventListener('resize', () => {
@@ -1407,7 +1271,7 @@ function setupEventListeners() {
         if (kbdTimeout) clearTimeout(kbdTimeout);
         kbdTimeout = setTimeout(() => {
             kbdTimeout = null;
-            if (!_keyboardIsShowing) restoreDividerHeight(UI.currentRecordId);
+            restoreDividerHeight(UI.currentRecordId);
             const editorInfo = UI.editors.get(UI.currentRecordId);
             if (editorInfo) editorInfo.variablesManager.alignNameWidths();
         }, 100);
@@ -1775,7 +1639,7 @@ function setupPanelResizer(divider, topPanel, bottomPanel) {
 
         // Save divider position to current record
         const record = findRecord(UI.data, UI.currentRecordId);
-        if (record && !_keyboardIsShowing) {
+        if (record) {
             record.dividerHeight = topPanel.offsetHeight;
             debouncedSave(UI.data);
         }

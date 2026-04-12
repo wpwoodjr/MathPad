@@ -1,6 +1,6 @@
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 30: Unexpected token after expression: FORMATTER '%'"; StatusIsError = 1
 Money format on expression output
 3+4$-> $7.00
@@ -134,7 +134,7 @@ nan%-> NaN
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
 Trailing zero stripping at places=0
 x: 10%
@@ -144,7 +144,7 @@ y °-> 110°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 Full precision with places=2
 a: -1.00000000025
@@ -153,7 +153,7 @@ b->> -2.0000000005
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0; CurrencySymbol = "¥"
+Format = "float"; GroupDigits = 0; DegreesMode = 0; CurrencySymbol = "¥"
 Status = "Nothing to solve"; StatusIsError = 0
 Yen currency (0 decimal places)
 pmt$: ¥55.678
@@ -176,7 +176,7 @@ table "Yen price: ¥56"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0; CurrencySymbol = "₽"
+Format = "float"; GroupDigits = 0; DegreesMode = 0; CurrencySymbol = "₽"
 Status = "Nothing to solve"; StatusIsError = 0
 Ruble suffix currency (symbol after number)
 pmt$: 55.678₽

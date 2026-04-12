@@ -800,11 +800,11 @@ function runAllTests() {
                 ['3.1416', 'number']
             ]
         },
-        // With shadowConstants=true, reference constant in expression (not a marker) stays builtin
+        // Reference constant in expression (not a marker) stays builtin
         {
-            name: 'shadowConstants=true: reference constant in expression stays builtin',
+            name: 'reference constant in expression stays builtin',
             line: 'x: pi + 1',
-            options: { referenceConstants: new Set(['pi']), shadowConstants: true },
+            options: { referenceConstants: new Set(['pi']) },
             assertions: [
                 ['x', 'variable-def'],
                 [':', 'punctuation'],
@@ -813,12 +813,12 @@ function runAllTests() {
                 ['1', 'number']
             ]
         },
-        // Expression output with reference constant — stays builtin regardless of shadowConstants
+        // Expression output with reference constant — stays builtin
         // (expression outputs don't create local variables, they just evaluate expressions)
         {
             name: 'reference constant in expression output stays builtin (c+c->)',
             line: 'c+c-> 599,584,916',
-            options: { referenceConstants: new Set(['c']), shadowConstants: false },
+            options: { referenceConstants: new Set(['c']) },
             assertions: [
                 ['c', 'builtin'],
                 ['+', 'operator'],
@@ -827,9 +827,9 @@ function runAllTests() {
             ]
         },
         {
-            name: 'shadowConstants=true: expression output does not shadow reference (c+c->)',
+            name: 'expression output does not shadow reference (c+c->)',
             line: 'c+c->',
-            options: { referenceConstants: new Set(['c']), shadowConstants: true },
+            options: { referenceConstants: new Set(['c']) },
             assertions: [
                 ['c', 'builtin'],
                 ['+', 'operator'],
@@ -880,7 +880,7 @@ function runAllTests() {
             name: 'constant is builtin when not shadowed (a: c without c->)',
             line: 'a: c',
             context: '',
-            options: { referenceConstants: new Set(['c']), shadowConstants: true },
+            options: { referenceConstants: new Set(['c']) },
             assertions: [
                 ['a', 'variable-def'],
                 [':', 'punctuation'],

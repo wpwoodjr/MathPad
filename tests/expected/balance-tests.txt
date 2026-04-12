@@ -1,6 +1,6 @@
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 1: Small diff, tight relative tolerance (places=6) - not equal"
 
@@ -11,7 +11,7 @@ isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 2: Small diff, looser relative tolerance (places=4) - equal"
 
@@ -22,7 +22,7 @@ isClose(a; b; places)-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 3: Identical values - equal"
 
@@ -33,7 +33,7 @@ isClose(a; b; places)-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 4: Small values, 10% relative error - not equal"
 
@@ -44,7 +44,7 @@ isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 4b: Small values, 10% relative error, places=0 (exceeds 5% tolerance) - not equal"
 
@@ -55,7 +55,7 @@ isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 4c: Small values, 10% relative error, places=1 (exceeds 0.5% tolerance) - not equal"
 
@@ -66,7 +66,7 @@ isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 5: Small values, 50% relative error - not equal"
 
@@ -77,7 +77,7 @@ isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 6: Near-zero values, 50% relative error - not equal"
 
@@ -88,7 +88,7 @@ isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 7: Near-zero values, opposite signs - not equal"
 
@@ -99,7 +99,7 @@ isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 8: Floating point noise vs literal zero (within cap 5e-14) - equal"
 
@@ -110,7 +110,7 @@ isClose(a; b; places)-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 8b: Noise vs zero, places=12 (within cap 5e-14) - equal"
 
@@ -121,7 +121,7 @@ isClose(a; b; places)-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 8c: Noise vs zero, places=14 (exceeds tolerance 5e-16) - not equal"
 
@@ -132,7 +132,7 @@ isClose(a; b; places)-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 13; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test 9: Polynomial f(x)=0 at places=13 (noise just within tolerance) - balances"
 
@@ -150,7 +150,7 @@ x-> 0.78045519272
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 5; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test 10: TVM at places=5 ($ rounding error within tolerance) - balances"
 
@@ -168,7 +168,7 @@ mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 7; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Equation doesn't balance: pmt = -pv * mint / (1 - (1 + m... (relative diff 0.00001% >= 0.000005%)"; StatusIsError = 1
 "Test 10b: TVM at places=7 ($ rounding error exceeds tolerance) - doesn't balance"
 
@@ -186,7 +186,7 @@ mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 7; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Equation doesn't balance: pmt = -pv * mint / (1 - (1 + m... (relative diff 0.00001% >= 0.000005%)"; StatusIsError = 1
 "Test 10c: TVM at places=7 (re-solve detects $ rounding error)"
 
@@ -204,7 +204,7 @@ mint = yint / 12
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 12: Equation doesn't balance: f(x; c5; c4; c3; c2; c1; c0) =... (absolute diff 3.6e-15 >= 5e-16)"; StatusIsError = 1
 "Test 9b: Polynomial f(x)=0 at places=15 (noise exceeds tolerance) - doesn't balance"
 
@@ -222,7 +222,7 @@ x-> 0.780455192719996
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
 "Balance Test places = 2"
 
@@ -232,7 +232,7 @@ a = b
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 5: Equation doesn't balance: a = b (relative diff 0.5% >= 0.05%)"; StatusIsError = 1
 "Balance Test places = 3"
 

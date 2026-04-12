@@ -1,6 +1,6 @@
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Constants"
 pi: 3.14159265358979
@@ -10,7 +10,7 @@ h: 6.62607015e-34
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 1: ~? on variable with value returns 1"
 
@@ -19,7 +19,7 @@ y~?-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 2: ~? on declared but empty variable returns 0"
 
@@ -28,7 +28,7 @@ y~?-> 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 3: if(y~?; y; default) with empty y uses default"
 
@@ -38,7 +38,7 @@ z-> 4
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 4: if(y~?; y; default) with y=5 uses y"
 
@@ -48,7 +48,7 @@ z-> 5
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 5: z~ keeps its previous output value"
 
@@ -58,7 +58,7 @@ z-> 35
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Cannot evaluate \"if(y2~?; y2; 4)\" - Undefined variable: y2\nLine 4: Variable 'z' has no value to output"; StatusIsError = 1
 "Test 6: Undeclared variable errors"
 
@@ -67,7 +67,7 @@ z->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Test 7: Solve counter using ~ pre-solve fallback"
 
@@ -76,7 +76,7 @@ numSolves-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "Count number of solves using ~? and ~"
 
@@ -85,7 +85,7 @@ solveCount:> 1 Use :> to persist across clears
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Cannot evaluate \"y~\" - Variable 'y' has no pre-solve value\nLine 5: Variable 'z' has no value to output"; StatusIsError = 1
 "Test 9: x~ on variable with no stale value errors"
 
@@ -95,7 +95,7 @@ z->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Cannot evaluate \"if(abc~?; 1; 2)\" - Undefined variable: abc\nLine 4: Variable 'z' has no value to output"; StatusIsError = 1
 "Test 10: x~? on undefined variable errors"
 
@@ -104,7 +104,7 @@ z->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Variable 'w' has no value to output"; StatusIsError = 1
 "Test 11: x~? sees pre-solve values including outputs"
 
@@ -114,7 +114,7 @@ r-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test 12: x~ in equation is idempotent — x = x~ + 1 increments once"
 
@@ -123,7 +123,7 @@ x-> 18
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 11: Variable 'b' has no pre-solve value\nLine 21: Variable 'd2' has no pre-solve value\nLine 44: Undefined variable: out3\nLine 45: Undefined variable: out3\nLine 48: Variable 'out4' has no pre-solve value\nLine 35: Variable 'out2' has no value to output"; StatusIsError = 1
 "~? tests"
 a = 2*b
@@ -179,7 +179,7 @@ pi~?-> 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
 "~? tests for constants"
 
@@ -192,7 +192,7 @@ pi: 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
-Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 7: Variable 'e' has no value\nLine 8: Variable 'e' has no pre-solve value\nLine 11: Variable 'e' has no pre-solve value"; StatusIsError = 1
 "~? tests for constants (same behavior regardless of shadow setting)"
 
