@@ -229,6 +229,12 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
                 If variable has no value: skip (don't Brent's a bare definition)
                 Otherwise fall through to Brent's (e.g. user set x:5, solve x=a+b for a)
             Brent's root-finding for 1-unknown equations
+            tryBracket helper: unified singularity/pole rejection for all bracket paths
+                (main scan, near-tangent detection, expandFromGuess fallback)
+                Rejects: non-finite fRoot, mod-wrap discontinuities (|fRoot| > modN/4),
+                singularities (|fRoot| > max endpoint — pole, not real root)
+            expandFromGuess skipped for mod-aware (°=) equations: trig arg reduction
+                loses precision at large magnitudes, producing garbage "roots"
             Break-on-solve: after solving one equation, restart loop so [1] and [3]
                 can evaluate with the new value before a second Brent's step
             Limit deferral: if a variable's limit expression depends on a variable
@@ -258,11 +264,12 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     solveEquations handles expression definitions in its iterative loop via [1]
     preSolveVars updated with resolved bodyDefinition values after solve (for table access)
 
-## Tables and Grids
+## Tables, Grids, and Vector Diagrams
     ### Syntax
         table("Title") = { body }       columnar output, 1+ iterators
         table("Title"; fontSize) = { body }   optional font size
         grid("Title") = { body }        2D cell grid, 2+ iterators
+        vectorDraw("Title") = { body }  SVG polar vector diagram
     ### Body declarations
         x<- 0..10          iterator (range, step defaults to 1 or -1)
         x: 0..10..2        iterator with explicit step
@@ -291,8 +298,24 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     ### Equation pre-parsing (preParseEquations)
         Equation ASTs (leftAST, rightAST, allVars) parsed once onto equation objects
         Reused by: solveEquationInContext, buildSubstitutionMap, balance checks, per-cell evaluation
+    ### vectorDraw
+        Each vector is 4 outputs: start_dir °->, start_mag ->, end_dir °->, end_mag ->
+        Start pair is absolute polar from origin; end pair is relative displacement
+        Labels on end pair identify vector in legend
+        Bearing convention: north up, angles clockwise (sin θ, -cos θ)
+        Degrees/radians mode aware; degrees-format values normalized mod M at capture
+        Single solve (no iteration); balance check suppresses bad values
+        Unique SVG marker IDs via global counter (avoids cross-record DOM collisions)
+    ### Solve status indicator
+        When not all rows/cells/unknowns solve, title shows "(n/m solved)"
+        Per-row (table), per-cell (grid), per-unknown (vectorDraw)
+        Requires both: no badVars AND unknown has value in context
+        Hidden when everything solves (solveInfo is null)
     ### Rendering (variables-panel.js)
         setTableData() renders table results in variables panel
         _renderTable2() renders 2D grids with row/col/header hover highlighting
+        _renderVectorDraw() renders SVG vector diagrams with arrowheads and legend
         Collapsible titles (click to toggle)
         Table output text section ("--- Table Outputs ---") appended for copy/export
+        Text output prefixed with keyword (e.g., table "Title", grid "Title", vectordraw "Title")
+        Legend values use formatVariableValue (respects places, stripZeros, groupDigits)

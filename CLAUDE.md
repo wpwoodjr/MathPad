@@ -79,23 +79,26 @@ node tests/gen-expected.js TESTNAME
 - **Limit deferral**: when a limit expression depends on a not-yet-solved variable, the solve attempt returns `{ solved: false, limitsDeferred: true }` instead of running unconstrained. The iterative loop retries on subsequent passes.
 - **End-of-solve validation**: catches undefined references in limit expressions even when the variable has a value (which would otherwise bypass the per-attempt check).
 
-### Tables and Grids
+### Tables, Grids, and vectorDraw
 - **`table("Title") = { body }`** — columnar output iterating 1+ variables over a range
 - **`grid("Title") = { body }`** — 2D cell grid iterating 2+ variables
+- **`vectorDraw("Title") = { body }`** — polar vector diagram with start/end direction+magnitude
 - Body declarations: iterators (`x<- 0..10` or `x: 0..10..2`), unknowns (`z<-`), definitions (`v: 10`), outputs (`Label z->`)
 - `..` range syntax (`DOT_DOT` token) for iterator bounds with optional step
 - Tables/grids inherit outer equations when body has none; body equations override if present
 - Each row/cell solved fresh using unified `solveEquations` pipeline
 - Pre-solve context reset per row (user declarations only, no equation-computed intermediates)
 - Per-cell error suppression (bad cells empty, good cells show values)
-- Per-cell balance checking: equations containing unknowns verified after each solve
+- Per-cell balance checking: equations containing unknowns verified after each solve (tables, grids, and vectorDraw)
 - Unused variable warnings with actual line numbers
 - Grid axes: iterator declaration order (first = rows, second = columns)
 - Grid outputs: declaration order (first = row headers, second = col headers, third = cell value)
 - Grid header values computed from output variable after solving (enables formatted headers like `hours@t->`)
 - Grid hover: row + column + header highlighting
 - Collapsible titles; optional font size parameter: `table("Title"; 12) = { ... }`
-- Table output text section (`"--- Table Outputs ---"`) appended for copy/export
+- **Solve status indicator**: when table/grid/vectorDraw doesn't fully solve, shows "(n/m solved)" after title (85% font size, 70% opacity); hidden when everything solves. Tracks per-row (table), per-cell (grid), or per-unknown (vectorDraw) success.
+- Table output text section (`"--- Table Outputs ---"`) appended for copy/export; includes vectorDraw blocks with per-vector header+value pairs
+- All table result objects include `keyword` field for text output type prefix (e.g., `table "Title"`, `grid "Title"`, `vectordraw "Title"`)
 
 ### Number Formatting
 - Decimal places, strip trailing zeros, comma grouping, scientific/engineering notation
@@ -319,7 +322,7 @@ App loads → localStorage (instant) → check Drive metadata
 
 **Modifying solving behavior**: Edit `solveRecord()` in `solve-engine.js`. `solveEquations(context, declarations, record, equations, bodyDefinitions)` takes equations and optional body definitions as parameters, enabling reuse by both the main solver and table/grid per-row evaluation. Body definitions (`:` declarations) are evaluated in the iterative loop alongside equations, handling out-of-order deps and equation-dependent definitions.
 
-**Adding a table/grid feature**: Table detection is in `findTableDefinitions()` (variables.js), evaluation in `evaluateTable()` (solve-engine.js), rendering in `setTableData()` / `_renderTable2()` (variables-panel.js), styling in style.css (`.mathpad-table`, `.mathpad-grid`)
+**Adding a table/grid/vectorDraw feature**: Table detection is in `findTableDefinitions()` (variables.js), evaluation in `evaluateTable()` (solve-engine.js), rendering in `setTableData()` / `_renderTable2()` (variables-panel.js), styling in style.css (`.mathpad-table`, `.mathpad-grid`)
 
 **Algebraic substitution** (`deriveSubstitution` in `solver.js`): Derives substitutions to reduce multi-unknown equations to single-unknown for Brent's. Uses recursive `tryIsolateVariable` to peel off binary operations one level at a time via `invertOperation`, handling arbitrary-depth nesting (e.g., `a*b/D = C` → `a = C*D/b`). Subsumes additive patterns (`var*B + C = D`), nested products/quotients, and `**` (power) inversion.
 

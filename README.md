@@ -23,6 +23,7 @@ Or open `docs/index.html` locally in a browser. No build step required.
 - **Global Constants** — define constants in a "Constants" record, available to all other records
 - **Google Drive Sync** — sign in with Google to sync records across devices with automatic conflict detection
 - **Tables and Grids** — iterate variables over ranges to produce columnar tables or 2D grids, with per-cell equation solving
+- **Vector Diagrams** — `vectorDraw` renders SVG polar vector diagrams with bearing convention, legend, and per-vector solving
 - **Import/Export** — compatible with original PalmOS MathPad export format
 
 ### Editor
@@ -104,9 +105,9 @@ When a system has multiple unknowns, the solver derives algebraic substitutions 
 
 Subtraction (`-`), commuted forms (`C + var * B`), and swapped sides (`D = var * B + C`) all work. Substitutions chain across equations in the system.
 
-### Tables and Grids
+### Tables, Grids, and Vector Diagrams
 
-Use `table` for columnar output and `grid` for 2D cell grids:
+Use `table` for columnar output, `grid` for 2D cell grids, and `vectorDraw` for polar vector diagrams:
 
 ```
 table("Distance vs Time") = {
@@ -135,6 +136,22 @@ grid("Multiplication") = {
 - `Label z->` — output column with optional label
 
 Tables inherit outer equations when the body has none; body equations override if any are present. Tables also inherit all outer values, however a value may be overridden by a declaration in the table.  Each row/cell is solved independently. Optional font size: `table("Title"; 12) = { ... }`.
+
+**Vector Diagrams:**
+
+```
+vectorDraw("Wind Triangle") = {
+  "equations..."
+  tc °->            "start direction (bearing)"
+  start_mag ->      "start magnitude"
+  Label end_dir °-> "end direction, labels vector in legend"
+  end_mag ->        "end magnitude (relative displacement)"
+}
+```
+
+Each vector is defined by four outputs: start direction (`°->`) and magnitude (`->`) give the absolute polar position from the origin; end direction (`°->`) and magnitude (`->`) give the relative displacement. Labels on the end pair identify the vector in the legend. Uses bearing convention (north up, clockwise), respects degrees/radians mode, and formats legend values using the record's places, strip zeros, and group digits settings.
+
+When a table, grid, or vector diagram doesn't fully solve, its title shows `(n/m solved)` to indicate partial results.
 
 ### Keyboard Shortcuts
 

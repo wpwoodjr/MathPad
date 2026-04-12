@@ -100,7 +100,7 @@
             <li><a href="#variables-panel">Variables Panel</a></li>
             <li><a href="#comments">Comments</a></li>
             <li><a href="#pre-solve">Pre-solve Values</a></li>
-            <li><a href="#tables-grids">Tables and Grids</a></li>
+            <li><a href="#tables-grids">Tables, Grids, and Vector Diagrams</a></li>
             <li><a href="#import-export">Import / Export</a></li>
             <li><a href="#google-drive">Google Drive Sync</a></li>
             <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
@@ -343,8 +343,8 @@ x: 42    "the answer"</pre>
     </table>
     <p class="example">Example: counter: if(counter~?; counter~ + 1; 0) &mdash; increments each time you solve</p>
 
-    <h2 id="tables-grids">Tables and Grids</h2>
-    <p>Use <code>table</code> to iterate a variable over a range and display results in columns. Use <code>grid</code> for 2D cell grids with two iterators.</p>
+    <h2 id="tables-grids">Tables, Grids, and Vector Diagrams</h2>
+    <p>Use <code>table</code> to iterate a variable over a range and display results in columns. Use <code>grid</code> for 2D cell grids with two iterators. Use <code>vectorDraw</code> to render SVG polar vector diagrams.</p>
 
     <h3>Table (Columnar Output)</h3>
     <pre>table("Distance vs Time") = {
@@ -390,6 +390,21 @@ x: 42    "the answer"</pre>
     <div class="note">
         <strong>Grid hover:</strong> Hovering over a grid cell highlights the row, column, and header for easy reading.
     </div>
+
+    <h3>Vector Diagrams</h3>
+    <p>Use <code>vectorDraw</code> to render SVG polar vector diagrams. Each vector is defined by four outputs: a start direction and magnitude (absolute polar position from the origin) and an end direction and magnitude (relative displacement).</p>
+    <pre>vectorDraw("Wind Triangle") = {
+  "equations..."
+  tc °-&gt;          "start direction (bearing)"
+  start_mag -&gt;    "start magnitude"
+  Label end_dir °-&gt;   "end direction (bearing, labels the vector in the legend)"
+  end_mag -&gt;      "end magnitude (relative displacement)"
+}</pre>
+    <p>Labels on the end direction/magnitude pair identify the vector in the legend. Vectors use bearing convention (north up, clockwise) and respect the record's degrees/radians mode. Collapsible titles and optional font size work just like tables.</p>
+    <p>The legend and all vector outputs respect the record's decimal places, strip zeros, and group digits settings.</p>
+
+    <h3>Solve Status Indicator</h3>
+    <p>When a table, grid, or vector diagram doesn't fully solve, its title shows <code>(n/m solved)</code> indicating how many rows, cells, or unknowns were successfully solved. This indicator is hidden when everything solves.</p>
 
     <h2 id="import-export">Import / Export</h2>
     <ul>
