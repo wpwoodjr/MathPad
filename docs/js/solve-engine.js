@@ -1288,6 +1288,9 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         }
         // Solve once (no iteration yet) — use balance check to suppress bad values
         const badVars = evaluateCell([]);
+        // Count unknowns that actually have a value and passed balance check
+        const solvedCount = unknowns.filter(u => !badVars.has(u.name) && context.hasVariable(u.name)).length;
+        const solveInfo = solvedCount < unknowns.length ? { solved: solvedCount, total: unknowns.length } : null;
         // Helper to evaluate a column. If the column is in 'degrees' format,
         // normalize the value into [0, M) so large wraparound values (or bogus
         // solver results far outside the principal range) don't cause
@@ -1345,6 +1348,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             vectors,
             formatOpts,
             fontSize,
+            solveInfo,
             startLine: tableDef.startLine,
             endLine: tableDef.endLine,
             errors
@@ -1363,6 +1367,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         const rawRows = [];
         let prevValues = new Map();
         const maxRows = 10000;
+        let goodRows = 0, totalRows = 0;
 
         for (let rowCount = 0; ; rowCount++) {
             const val = iter.start + rowCount * iter.step;
@@ -1371,6 +1376,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
             context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
             const badVars = evaluateCell([{ name: iter.name, value: val }]);
+            totalRows++;
+            if (badVars.size === 0 && unknowns.every(u => context.hasVariable(u.name))) goodRows++;
 
             // Collect output values (formatted and raw)
             const row = [];
@@ -1404,7 +1411,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         }
 
         const type = tableDef.keyword === 'tablegraph' ? 'graph' : 'table';
-        return { type, keyword, title: expandedTitle, columns, rows, rawRows, formatOpts, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+        const solveInfo = goodRows < totalRows ? { solved: goodRows, total: totalRows } : null;
+        return { type, keyword, title: expandedTitle, columns, rows, rawRows, formatOpts, fontSize, solveInfo, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
     }
 
     // ==================== GRID (2D cell values) ====================
@@ -1458,6 +1466,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     const rawColHeaderValues = [];
     const formattedRowValues = [];
     const formattedColValues = [];
+    let goodCells = 0, totalCells = 0;
     for (let r = 0; r < rowValues.length; r++) {
         const gridRow = [];
         const rawGridRow = [];
@@ -1483,6 +1492,10 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                 formattedColValues.push(formatVariableValue(rawV, iter2Format, iter2FullPrec, formatOpts));
             }
 
+            // Track solve success per cell
+            totalCells++;
+            if (badVars.size === 0 && unknowns.every(u => context.hasVariable(u.name))) goodCells++;
+
             // Cell value: third output
             if (cellVar && !badVars.has(cellVar.name)) {
                 const value = getColValue(cellVar);
@@ -1497,8 +1510,9 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     }
 
     const type = isGridGraph ? 'gridGraph' : 'grid';
+    const solveInfo = goodCells < totalCells ? { solved: goodCells, total: totalCells } : null;
     return {
-        type, keyword, title: expandedTitle,
+        type, keyword, title: expandedTitle, solveInfo,
         iter1Label, iter2Label,
         rowValues: formattedRowValues,
         colValues: formattedColValues,

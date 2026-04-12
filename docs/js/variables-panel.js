@@ -864,6 +864,12 @@ class VariablesPanel {
         const titleEl = document.createElement('div');
         titleEl.className = 'mathpad-table-title' + (collapsed ? ' collapsed' : '');
         titleEl.textContent = displayTitle;
+        if (table.solveInfo) {
+            const indicator = document.createElement('span');
+            indicator.className = 'table-solve-info';
+            indicator.textContent = ` (${table.solveInfo.solved}/${table.solveInfo.total} solved)`;
+            titleEl.appendChild(indicator);
+        }
         titleEl.style.fontSize = (table.fontSize || 14) + 'px';
 
         // Hide table/graph if collapsed

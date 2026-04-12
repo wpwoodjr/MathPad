@@ -1537,6 +1537,12 @@ body.sidebar-resizing * {
     content: '▸ ';
 }
 
+.table-solve-info {
+    font-weight: normal;
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+
 .variable-table-container {
     display: block;
     padding: 4px 8px;
