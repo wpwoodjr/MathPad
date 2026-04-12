@@ -74,7 +74,7 @@ grid("hours grid test") = {
 }
 
 "--- Table Outputs ---"
-"hours grid test"
+grid "hours grid test"
 "Hours"	"Speed"	"Distance"
 	10	20	30	40	50	60	70
 1:00:00	10	20	30	40	50	60	70

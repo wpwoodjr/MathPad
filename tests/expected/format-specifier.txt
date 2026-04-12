@@ -169,7 +169,7 @@ table("Yen price: \pmt$\") = {
 }
 
 "--- Table Outputs ---"
-"Yen price: ¥56"
+table "Yen price: ¥56"
 "x"
 1
 2
@@ -192,7 +192,7 @@ table("Ruble price: \pmt$\") = {
 }
 
 "--- Table Outputs ---"
-"Ruble price: 55.68₽"
+table "Ruble price: 55.68₽"
 "x"
 1
 2

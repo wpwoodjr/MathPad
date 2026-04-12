@@ -228,6 +228,26 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null) {
         .map(x => ({ x, fx: safeEval(f, x) }))
         .filter(v => !isNaN(v.fx));
 
+    // Helper: run Brent's on a bracket and reject singularities / mod wraps.
+    // Returns the accepted root or null.
+    function tryBracket(lo, hi, floLim, fhiLim) {
+        try {
+            const root = brent(f, lo, hi);
+            if (!isFinite(root)) return null;
+            const fRoot = safeEval(f, root);
+            if (!isFinite(fRoot)) return null;
+            // Reject wrapping discontinuities for mod-aware equations
+            if (modN && Math.abs(fRoot) > modN / 4) return null;
+            // Reject singularities: |f(root)| should be small relative to endpoints
+            // (a true root has fRoot ≈ 0; a pole has fRoot huge)
+            const maxEndpoint = Math.max(Math.abs(floLim), Math.abs(fhiLim));
+            if (isFinite(maxEndpoint) && Math.abs(fRoot) > maxEndpoint) return null;
+            return root;
+        } catch (e) {
+            return null;
+        }
+    }
+
     // Find all brackets (and near-zeros) and solve each
     const roots = [];
     const hasNonZero = values.some(v => v.fx !== 0);
@@ -237,21 +257,8 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null) {
             roots.push(values[i].x);
         }
         if (i < values.length - 1 && values[i].fx * values[i + 1].fx < 0) {
-            try {
-                const root = brent(f, values[i].x, values[i + 1].x);
-                if (isFinite(root)) {
-                    const fRoot = safeEval(f, root);
-                    if (!isFinite(fRoot)) continue;
-                    // Reject wrapping discontinuities for mod-aware equations
-                    if (modN && Math.abs(fRoot) > modN / 4) continue;
-                    // Reject singularities (f(root) shouldn't exceed finite bracket endpoints)
-                    const maxEndpoint = Math.max(Math.abs(values[i].fx), Math.abs(values[i + 1].fx));
-                    if (isFinite(maxEndpoint) && Math.abs(fRoot) > maxEndpoint) continue;
-                    roots.push(root);
-                }
-            } catch (e) {
-                // This bracket didn't work, try next
-            }
+            const root = tryBracket(values[i].x, values[i + 1].x, values[i].fx, values[i + 1].fx);
+            if (root !== null) roots.push(root);
         }
     }
 
@@ -275,16 +282,11 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null) {
                     const x = lo + j * step;
                     const fx = safeEval(f, x);
                     if (isFinite(prevFx) && isFinite(fx) && prevFx * fx < 0) {
-                        try {
-                            const root = brent(f, prevX, x);
-                            if (isFinite(root)) {
-                                const fRoot = safeEval(f, root);
-                                if (isFinite(fRoot)) {
-                                    roots.push(root);
-                                    found = true;
-                                }
-                            }
-                        } catch (e) {}
+                        const root = tryBracket(prevX, x, prevFx, fx);
+                        if (root !== null) {
+                            roots.push(root);
+                            found = true;
+                        }
                     }
                     prevX = x;
                     prevFx = fx;
@@ -305,10 +307,22 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null) {
         return roots[0];
     }
 
-    // Fallback for no-limits: expand outward from default guess
-    if (!hasLimits) {
+    // Fallback for no-limits: expand outward from default guess.
+    // Apply the same pole/singularity rejection so wide brackets spanning
+    // a pole don't produce a bogus "root" at the discontinuity.
+    // For mod-aware (°=) equations, skip expandFromGuess entirely: these
+    // equations involve trig functions whose argument reduction loses all
+    // precision at large magnitudes (Math.sin at 1e18 is noise), producing
+    // garbage "roots". The main scan + near-tangent detection already
+    // cover [-1e8, 1e8] which is more than enough for any periodic equation.
+    if (!hasLimits && !modN) {
         const bracket = expandFromGuess(f);
-        if (bracket) return brent(f, bracket[0], bracket[1]);
+        if (bracket) {
+            const fa = safeEval(f, bracket[0]);
+            const fb = safeEval(f, bracket[1]);
+            const root = tryBracket(bracket[0], bracket[1], fa, fb);
+            if (root !== null) return root;
+        }
     }
 
     throw new SolverError(hasLimits

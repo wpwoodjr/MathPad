@@ -70,7 +70,7 @@ table("Temperature test 1") = {
 }
 
 "--- Table Outputs ---"
-"Temperature test 1"
+table "Temperature test 1"
 "MMP"	"Temp"
 160	246.9
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -115,7 +115,7 @@ table("Temperature test 2") = {
 }
 
 "--- Table Outputs ---"
-"Temperature test 2"
+table "Temperature test 2"
 "MMP"	"Temp"
 160	246.9
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -19,7 +19,7 @@ table("Test 1D") = {
 }
 
 "--- Table Outputs ---"
-"Test 1D"
+table "Test 1D"
 "n"	"x"	"sqrt(n)"	"x**2"	"Expr output"	"No clear"
 0	0	0	0	1	NaN
 1	1	1	1	2	1
@@ -44,7 +44,7 @@ table("Equation test") = {
 }
 
 "--- Table Outputs ---"
-"Equation test"
+table "Equation test"
 "x"	"y"
 0	0
 1	1
@@ -70,7 +70,7 @@ table("Balance test") = {
 }
 
 "--- Table Outputs ---"
-"Balance test"
+table "Balance test"
 "x"	"y"
 0	17
 1	17
@@ -97,7 +97,7 @@ grid("2D test") = {
 }
 
 "--- Table Outputs ---"
-"2D test"
+grid "2D test"
 "X Value"	"Y Value"	"Z Value"
 	2	3
 0	0	0
@@ -140,7 +140,7 @@ table("Bad cells") = {
 averagePwr: 125
 
 "--- Table Outputs ---"
-"Bad cells"
+table "Bad cells"
 "Hours"	"User Pwr"	"Max Motor Pwr"
 2	125	
 3	125	
@@ -223,7 +223,7 @@ grid("MMP grid") = {
 }
 
 "--- Table Outputs ---"
-"Hours vs MMP"
+table "Hours vs MMP"
 "Hours"	"User Pwr"	"Max Motor Pwr"
 2	145	
 3	145	
@@ -232,7 +232,7 @@ grid("MMP grid") = {
 6	145	
 7	145	
 
-"User Pwr vs MMP"
+table "User Pwr vs MMP"
 "User Pwr"	"Hours"	"Max Motor Pwr"
 100	6	
 105	6	
@@ -246,7 +246,7 @@ grid("MMP grid") = {
 145	6	
 150	6	
 
-"Hours grid"
+grid "Hours grid"
 "User Pwr"	"Max Motor Pwr"	"Hours"
 	100	110	120	130	140	150	160	170	180	190	200
 100											
@@ -261,7 +261,7 @@ grid("MMP grid") = {
 145											
 150											
 
-"MMP grid"
+grid "MMP grid"
 "User Pwr"	"Hours"	"Max Motor Pwr"
 	2	2.5	3	3.5	4	4.5	5	5.5	6	6.5	7
 100											
@@ -306,14 +306,14 @@ table("1D limits") = {
 }
 
 "--- Table Outputs ---"
-"2D limits"
+grid "2D limits"
 "X Value"	"Y Value"	"Z Value"
 	2	3
 0		
 2		
 4		
 
-"1D limits"
+table "1D limits"
 "x"	"z"
 0	7
 1	8
@@ -352,14 +352,14 @@ table("1D input limits") = {
 }
 
 "--- Table Outputs ---"
-"2D input limits"
+grid "2D input limits"
 "X Value"	"Y Value"	"z"
 	2	3
 0		
 2		
 4		
 
-"1D input limits"
+table "1D input limits"
 "x"	"z"
 0	7
 1	8
@@ -442,7 +442,7 @@ grid("MMP grid 2") = {
 }
 
 "--- Table Outputs ---"
-"Hours vs MMP 2"
+table "Hours vs MMP 2"
 "Hours"	"User Pwr"	"Max Motor Pwr"
 2	145	
 3	145	
@@ -451,7 +451,7 @@ grid("MMP grid 2") = {
 6	145	
 7	145	
 
-"User Pwr vs MMP 2"
+table "User Pwr vs MMP 2"
 "User Pwr"	"Hours"	"Max Motor Pwr"
 100	6	
 105	6	
@@ -465,7 +465,7 @@ grid("MMP grid 2") = {
 145	6	
 150	6	
 
-"Hours grid 2"
+grid "Hours grid 2"
 "User Pwr"	"Max Motor Pwr"	"Hours"
 	100	110	120	130	140	150	160	170	180	190	200
 100											
@@ -480,7 +480,7 @@ grid("MMP grid 2") = {
 145											
 150											
 
-"MMP grid 2"
+grid "MMP grid 2"
 "User Pwr"	"Hours"	"Max Motor Pwr"
 	2	2.5	3	3.5	4	4.5	5	5.5	6	6.5	7
 100											
@@ -513,7 +513,7 @@ table("Unused var") = {
 }
 
 "--- Table Outputs ---"
-"Unused var"
+table "Unused var"
 "x"	"y"
 1	2
 2	4
@@ -564,7 +564,7 @@ table("Inherited eq") = {
 }
 
 "--- Table Outputs ---"
-"Inherited eq"
+table "Inherited eq"
 "Hours"	"User Pwr"	"Max Motor Pwr"
 2	145	192.6
 3	145	164.9
@@ -618,7 +618,7 @@ table("Body eq") = {
 }
 
 "--- Table Outputs ---"
-"Body eq"
+table "Body eq"
 "Hours"	"Max Motor Pwr"
 2	100
 3	150
@@ -671,7 +671,7 @@ table("Temp from inherited eqs") = {
 }
 
 "--- Table Outputs ---"
-"Temp from inherited eqs"
+table "Temp from inherited eqs"
 "MMP"	"Temp"
 120	-141
 140	-25.4
@@ -723,7 +723,7 @@ table("Temp with peek") = {
 }
 
 "--- Table Outputs ---"
-"Temp with peek"
+table "Temp with peek"
 "MMP"	"Temp"
 120	-141
 140	-25.4
@@ -766,7 +766,7 @@ table("Amortization") = {
 }
 
 "--- Table Outputs ---"
-"Amortization"
+table "Amortization"
 "Pmt#"	"Balance"	"Interest"	"Principal"
 0	$100,000.00	$0.00	$0.00
 1	$99,902.81	-$510.42	-$97.19
@@ -799,7 +799,7 @@ grid("Payment vs years and rate") = {
 }
 
 "--- Table Outputs ---"
-"Payment vs years and rate"
+grid "Payment vs years and rate"
 "rate"	"years"	"pmt"
 	15	20	25	30
 4%	-$739.69	-$605.98	-$527.84	-$477.42
@@ -838,7 +838,7 @@ table("Amort for \years\ years at \rate%\") = {
 }
 
 "--- Table Outputs ---"
-"Amort for 30 years at 6.13%"
+table "Amort for 30 years at 6.13%"
 "years"	"x"
 1	1
 2	2
@@ -890,7 +890,7 @@ table("Amortization Schedule for \years\ year(s) at \rate%\") = {
 }
 
 "--- Table Outputs ---"
-"Amortization Schedule for 30 year(s) at 6.13%"
+table "Amortization Schedule for 30 year(s) at 6.13%"
 "Pmt#"	"Year"	"Balance"	"Interest"	"Principal"
 0	0	$100,000.00	$0.00	$0.00
 1	1	$99,748.88	-$557.84	-$251.12
@@ -1130,7 +1130,7 @@ table("test final pass") = {
 }
 
 "--- Table Outputs ---"
-"test final pass"
+table "test final pass"
 "x"	"y"	"r"	"z*7"
 1	3	7	7
 2	3	56	56
@@ -1156,7 +1156,7 @@ table("outer def order") = {
 }
 
 "--- Table Outputs ---"
-"outer def order"
+table "outer def order"
 "x"	"b"	"c"
 1	8	8
 2	8	16
@@ -1216,7 +1216,7 @@ grid("v Payment for \pv$\ loan at various rates and loan lengths") = {
 }
 
 "--- Table Outputs ---"
-"v Amortization Schedule for 30 year(s) at 6.13%"
+table "v Amortization Schedule for 30 year(s) at 6.13%"
 "Pmt#"	"Year"	"Payment"	"Principal"	"Interest"	"Balance"
 0	0	$0.00	$0.00	$0.00	$100,000.00
 1	1	-$607.61	-$97.19	-$510.42	$99,902.81
@@ -1580,7 +1580,7 @@ grid("v Payment for \pv$\ loan at various rates and loan lengths") = {
 359	30	-$607.61	-$601.45	-$6.16	$605.01
 360	30	-$608.10	-$605.01	-$3.09	$0.00
 
-"v Payment for $100,000.00 loan at various rates and loan lengths"
+grid "v Payment for $100,000.00 loan at various rates and loan lengths"
 "rate"	"years"	"pmt"
 	5	10	15	20	25	30
 5.63%	-$1,915.89	-$1,091.47	-$823.73	-$694.97	-$621.57	-$575.66
@@ -1634,7 +1634,7 @@ table("Dup decls") = {
 }
 
 "--- Table Outputs ---"
-"Dup decls"
+table "Dup decls"
 "x"	"y"
 1	1
 2	4
@@ -1677,7 +1677,7 @@ table("smg and speed") = {
 }
 
 "--- Table Outputs ---"
-"smg and speed"
+table "smg and speed"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
 1.3	10.6449	0.0132°	10	3.5°	0.9	317.5°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1697,7 +1697,7 @@ table("Angles in radians") = {
 }
 
 "--- Table Outputs ---"
-"Angles in radians"
+table "Angles in radians"
 "i"	"ang"
 1	2.618
 2	5.236

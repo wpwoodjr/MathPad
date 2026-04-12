@@ -743,16 +743,18 @@ function appendTableOutputsSection(text, tables) {
     if (!tables || tables.length === 0) return text;
 
     // Check if any tables have data
-    const hasTables = tables.some(t =>
-        t.type === 'grid' ? t.grid.length > 0 : (t.rows && t.rows.length > 0)
-    );
+    const hasTables = tables.some(t => {
+        if (t.type === 'grid') return t.grid.length > 0;
+        if (t.type === 'vectorDraw') return t.vectors && t.vectors.length > 0;
+        return t.rows && t.rows.length > 0;
+    });
     if (!hasTables) return text;
 
     const lines = ['"--- Table Outputs ---"'];
 
     for (const table of tables) {
-        // Title line
-        if (table.title) lines.push(`"${table.title}"`);
+        // Title line with table type prefix
+        if (table.title) lines.push(`${table.keyword} "${table.title}"`);
 
         if (table.type === 'grid') {
             if (table.grid.length === 0) continue;
@@ -760,6 +762,17 @@ function appendTableOutputsSection(text, tables) {
             lines.push(`\t${table.colValues.join('\t')}`);
             for (let r = 0; r < table.rowValues.length; r++) {
                 lines.push(`${table.rowValues[r]}\t${table.grid[r].join('\t')}`);
+            }
+        } else if (table.type === 'vectorDraw') {
+            if (!table.vectors || table.vectors.length === 0) continue;
+            // Each vector has its own set of 4 column labels, so emit a header+value
+            // pair per vector. This keeps every label paired with its value even when
+            // different vectors use different column names.
+            for (const v of table.vectors) {
+                if (v.cols) {
+                    lines.push(v.cols.map(c => '"' + (c.header || c.name) + '"').join('\t'));
+                }
+                lines.push((v.formatted || []).join('\t'));
             }
         } else {
             if (!table.rows || table.rows.length === 0) continue;
@@ -984,9 +997,13 @@ function solveRecord(text, context, record, parserTokens, skipTables = false) {
 function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) {
     const errors = [];
     const isGrid = tableDef.keyword === 'grid' || tableDef.keyword === 'gridgraph';
-    const emptyResult = () => isGrid
-        ? { type: 'grid', title: tableDef.title, iter1Label: '', iter2Label: '', rowValues: [], colValues: [], cellHeader: '', grid: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors }
-        : { type: 'table', title: tableDef.title, columns: [], rows: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+    const isVectorDraw = tableDef.keyword === 'vectordraw';
+    const keyword = tableDef.keyword;
+    const emptyResult = () => {
+        if (isGrid) return { type: 'grid', keyword, title: tableDef.title, iter1Label: '', iter2Label: '', rowValues: [], colValues: [], cellHeader: '', grid: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+        if (isVectorDraw) return { type: 'vectorDraw', keyword, title: tableDef.title, vectors: [], formatOpts: null, fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+        return { type: 'table', keyword, title: tableDef.title, columns: [], rows: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+    };
 
     // Evaluate optional font size
     let fontSize = null;
@@ -1269,14 +1286,31 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             errors.push(`Line ${tableDef.startLine}: vectorDraw requires multiples of 4 outputs (start_dir, start_mag, end_dir, end_mag per vector)`);
             return emptyResult();
         }
-        // Solve once (no iteration yet)
-        evaluateCell([]);
-        // Helper to evaluate a column
+        // Solve once (no iteration yet) — use balance check to suppress bad values
+        const badVars = evaluateCell([]);
+        // Helper to evaluate a column. If the column is in 'degrees' format,
+        // normalize the value into [0, M) so large wraparound values (or bogus
+        // solver results far outside the principal range) don't cause
+        // precision loss in Math.sin/cos when the graph is rendered.
+        const angularM = record.degreesMode ? 360 : 2 * Math.PI;
         function getColValue(col) {
+            // Suppress variables that failed balance check
+            if (!col.ast && badVars.has(col.name)) return undefined;
+            let value;
             if (col.ast) {
-                try { return evaluate(col.ast, context); } catch (e) { return undefined; }
+                try { value = evaluate(col.ast, context); } catch (e) { return undefined; }
+            } else {
+                value = context.getVariable(col.name);
             }
-            return context.getVariable(col.name);
+            if (value != null && isFinite(value) && col.format === 'degrees') {
+                value = value - angularM * Math.floor(value / angularM);
+            }
+            return value;
+        }
+        // Format a column's value for text output using its own format specifier
+        function formatColValue(col, value) {
+            if (value == null || !isFinite(value)) return '';
+            return formatVariableValue(value, col.format, !!col.fullPrecision, formatOpts);
         }
         // Group columns into vectors of 4
         const vectors = [];
@@ -1293,11 +1327,20 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             vectors.push({
                 startDir, startMag, endDir, endMag,
                 dirName: edCol.name, dirLabel,
-                magName: emCol.name, magLabel
+                magName: emCol.name, magLabel,
+                // Column info + formatted values for text output
+                cols: [sdCol, smCol, edCol, emCol],
+                formatted: [
+                    formatColValue(sdCol, startDir),
+                    formatColValue(smCol, startMag),
+                    formatColValue(edCol, endDir),
+                    formatColValue(emCol, endMag)
+                ]
             });
         }
         return {
             type: 'vectorDraw',
+            keyword,
             title: expandedTitle,
             vectors,
             formatOpts,
@@ -1361,7 +1404,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         }
 
         const type = tableDef.keyword === 'tablegraph' ? 'graph' : 'table';
-        return { type, title: expandedTitle, columns, rows, rawRows, formatOpts, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+        return { type, keyword, title: expandedTitle, columns, rows, rawRows, formatOpts, fontSize, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
     }
 
     // ==================== GRID (2D cell values) ====================
@@ -1455,7 +1498,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
     const type = isGridGraph ? 'gridGraph' : 'grid';
     return {
-        type, title: expandedTitle,
+        type, keyword, title: expandedTitle,
         iter1Label, iter2Label,
         rowValues: formattedRowValues,
         colValues: formattedColValues,

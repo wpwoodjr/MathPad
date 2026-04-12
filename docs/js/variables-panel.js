@@ -886,7 +886,7 @@ class VariablesPanel {
                 const lineIdx = table.startLine - 1; // startLine is 1-based
                 const line = lines[lineIdx];
                 if (line) {
-                    const match = line.match(/^((?:table|grid|tablegraph|gridgraph)\s*\(\s*")(.*)("\s*[;)])/i);
+                    const match = line.match(/^((?:table|grid|tablegraph|gridgraph|vectordraw)\s*\(\s*")(.*)("\s*[;)])/i);
                     if (match) {
                         // Strip existing v/> prefix from source title
                         let srcTitle = match[2];
@@ -1487,10 +1487,11 @@ class VariablesPanel {
         }
 
         // Legend below the plot
-        const fmtVal = (val, format) => {
+        const fmtOpts = table.formatOpts || {};
+        const fmtVal = (val, col) => {
             if (val == null || !isFinite(val)) return '—';
-            if (format) return formatVariableValue(val, format, false, table.formatOpts || {});
-            return this._formatTickLabel(val);
+            const fmt = col && col.format ? col.format : null;
+            return formatVariableValue(val, fmt, false, fmtOpts);
         };
         const legendTop = margin.top + plotH + 8;
         for (let i = 0; i < table.vectors.length; i++) {
@@ -1507,13 +1508,13 @@ class VariablesPanel {
             swatch.setAttribute('stroke', color);
             swatch.setAttribute('stroke-width', '3');
             svg.appendChild(swatch);
-            // Label text
+            // Label text — use column format info for proper places/degrees/money
             const dirLabel = v.dirLabel || v.dirName;
             const magLabel = v.magLabel || v.magName;
-            // Find the original column to know its format for formatting the value
-            const dirFmt = degreesMode ? 'degrees' : null;
-            const dirText = fmtVal(v.endDir, dirFmt);
-            const magText = fmtVal(v.endMag, null);
+            const edCol = v.cols ? v.cols[2] : null;
+            const emCol = v.cols ? v.cols[3] : null;
+            const dirText = fmtVal(v.endDir, edCol);
+            const magText = fmtVal(v.endMag, emCol);
             const text = document.createElementNS(ns, 'text');
             text.setAttribute('x', margin.left + 30);
             text.setAttribute('y', y);
@@ -1648,12 +1649,12 @@ class VariablesPanel {
     }
 
     /**
-     * Format a tick label (strip trailing zeros)
+     * Format an axis tick label. Tick values are clean round numbers from
+     * _niceTicks; toPrecision just scrubs FP noise (e.g. 0.30000000000000004).
      */
     _formatTickLabel(value) {
         if (Number.isInteger(value)) return String(value);
-        const s = value.toPrecision(6).replace(/\.?0+$/, '');
-        return s;
+        return value.toPrecision(6).replace(/\.?0+$/, '');
     }
 
     /**
