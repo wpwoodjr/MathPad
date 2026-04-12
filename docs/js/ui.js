@@ -514,8 +514,8 @@ function createEditorForRecord(record) {
         }
     });
 
-    variablesManager.onSolve((undoable) => {
-        handleSolve(undoable);
+    variablesManager.onSolve((undoable, traceMode) => {
+        handleSolve(undoable, traceMode);
     });
 
     variablesManager.onBlur(() => {
@@ -1205,8 +1205,22 @@ function setupEventListeners() {
         }
     });
 
-    // Solve button
-    addListener('btn-solve', 'click', handleSolve);
+    // Solve button — Ctrl+click enables solve trace output.
+    // mousedown sets skip flag on active vars panel so the variable-input blur
+    // (fired before click when editing a variable) doesn't trigger a quick-solve
+    // without trace before the ctrl-click trace solve runs.
+    addListener('btn-solve', 'mousedown', (e) => {
+        if (e.ctrlKey) {
+            const info = UI.editors.get(UI.currentRecordId);
+            if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = true;
+        }
+    });
+    addListener('btn-solve', 'click', (e) => {
+        // Clear skip flag set by mousedown in case no blur happened in between
+        const info = UI.editors.get(UI.currentRecordId);
+        if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = false;
+        handleSolve(true, !!(e && e.ctrlKey));
+    });
 
     // Clear Input button
     addListener('btn-clear', 'click', handleClearInput);
@@ -1398,7 +1412,7 @@ function handleReset() {
 /**
  * Handle solve
  */
-function handleSolve(undoable = true) {
+function handleSolve(undoable = true, traceMode = false) {
     if (!UI.currentRecordId) {
         setStatus('No record selected', true);
         return;
@@ -1432,11 +1446,13 @@ function handleSolve(undoable = true) {
 
         // Solve the record (captures pre-solve values and clears outputs internally)
         // First pass always skips tables — re-solve below computes them once
-        const result = solveRecord(text, context, record, parserTokens, true);
+        // Trace flag enables a "--- Solve Trace ---" section for the outer solve
+        const result = solveRecord(text, context, record, parserTokens, true, traceMode);
         text = result.text;
 
         // Re-solve formatted output: idempotency check, rounding detection, table evaluation,
         // and a second chance when the first solve filled in cleared variables with balance errors
+        // (traceMode=false — re-solve strips the trace, we re-append the first-pass trace below)
         const verifyTokens = new Tokenizer(text).tokenize();
         const verifyContext = createEvalContext(record,
             editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
@@ -1444,6 +1460,11 @@ function handleSolve(undoable = true) {
         verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
         const verifyResult = solveRecord(text, verifyContext, record, verifyTokens);
         text = verifyResult.text;
+
+        // Re-append solve trace from first pass (re-solve strips it)
+        if (traceMode && result.trace && result.trace.length > 0) {
+            text = appendTraceSection(text, result.trace);
+        }
         let errors = verifyResult.errors;
         let equationVarStatus = verifyResult.equationVarStatus;
         let tables = verifyResult.tables || [];
@@ -1532,9 +1553,13 @@ function handleClearInput() {
     clearResult = clearVariables(clearResult.text, 'output', clearResult.allTokens);
     text = clearResult.text;
 
-    // Remove table outputs and references sections
+    // Remove table outputs, trace, and references sections
+    const beforeStrip = text;
     text = text.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
-    text = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
+    text = text.replace(/\n*"\*?--- Solve Trace ---"[\s\S]*$/, '');
+    text = text.replace(/\n*"\*?--- Reference Constants and Functions ---"[\s\S]*$/, '');
+    // If anything was stripped, leave a single trailing newline
+    if (text !== beforeStrip) text = text.trimEnd() + '\n';
 
     // Enable flash before setValue so onChange's updateFromText highlights changed values
     editorInfo.variablesManager.enableFlash();

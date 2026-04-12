@@ -1,0 +1,109 @@
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 1: Direct eval via substitution"
+// Shows [2] Substitution map and [3] direct eval
+a + b = c
+b + a = 5
+
+--Variables--
+a: 2
+b->
+c: 5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 2: Brent's with chained definition"
+// Shows sweep 0 natural 1-unknown (quadratic)
+// then break-on-solve restart evaluates y via direct eval
+x**2 + 3*x = 28
+y = x + 1
+
+--Variables--
+x[0:10]->
+y->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 3: Sweep 1 with substituted equation"
+// Shows sweep 1: width → (area / height) substituted into 2*width + height = 20
+// The 'with:' line shows the equation AFTER substitution
+area = width * height
+width * 2 + height = 20
+
+--Variables--
+area: 48
+width->
+height->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 4: Variable discovery — known vs unknown"
+// Shows the 'known:' and 'unknown:' sections in variable discovery
+a: 1
+b: 2
+c: 3
+x + a = b
+y = c - x
+
+--Variables--
+x->
+y->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 5: Input expressions"
+// Shows [1] Input expressions with 'name = expr = value' format
+// r2 depends on the solved r1, so it's deferred until iteration 2
+
+--Variables--
+r1: 2 + 3
+r2: r1 * 10
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 6: Navigation — failure trace with equation shown"
+// Degenerate vector triangle: shows Sweep 1 FAILED on one equation,
+// then succeeds on another. Both attempts appear in the trace with
+// 'from:' / 'with:' equation lines.
+
+--Equations--
+
+// Law of sines (solve for one magnitude given the other)
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+// Solve for smg given cmg (quadratic form)
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+// Solve for smg and cmg from cts (vector addition)
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+
+// Solve for speed and cts from smg/cmg (vector subtraction of current)
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+
+// Solve for drift and set from smg/cmg (vector subtraction of boat)
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+
+
+
+--Variables--
+Ground track
+smg: 1.41
+cmg °: 0°
+
+Boat through water
+speed:
+cts °: 315°
+
+Current
+drift: 1
+set °:

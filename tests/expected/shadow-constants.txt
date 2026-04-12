@@ -44,8 +44,10 @@ d: 6.3
 w-> 3.7272e-34
 h-> 6.6261e-34
 
-"--- Reference Constants and Functions ---"
-h: 6.62607015e-34 "Planck constant"
+
+
+"*--- Reference Constants and Functions ---"
+h->> 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -56,8 +58,10 @@ Status = "Solved 1 equation"; StatusIsError = 0
 x = h * 1e34
 x-> 6.6261
 
-"--- Reference Constants and Functions ---"
-h: 6.62607015e-34 "Planck constant"
+
+
+"*--- Reference Constants and Functions ---"
+h->> 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -93,8 +97,10 @@ h-> 5.4909
 w-> 3.0886
 e-> 2.7183
 
-"--- Reference Constants and Functions ---"
-e: 2.71828182845905
+
+
+"*--- Reference Constants and Functions ---"
+e->> 2.71828182845905
 hypot(a;b) = sqrt(a**2 + b**2)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -111,7 +117,9 @@ h<- 5.5781
 h-> 5.5781
 w-> 3.1377 "width"
 
-"--- Reference Constants and Functions ---"
+
+
+"*--- Reference Constants and Functions ---"
 hypot(a;b) = sqrt(a**2 + b**2)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -122,8 +130,10 @@ Status = "Nothing to solve"; StatusIsError = 0
 
 h-> 6.63e-34
 
-"--- Reference Constants and Functions ---"
-h: 6.62607015e-34 "Planck constant"
+
+
+"*--- Reference Constants and Functions ---"
+h->> 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -143,8 +153,10 @@ a: e
 a-> 2.7183
 e-> 2.7183
 
-"--- Reference Constants and Functions ---"
-e: 2.71828182845905
+
+
+"*--- Reference Constants and Functions ---"
+e->> 2.71828182845905
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -164,8 +176,10 @@ Status = "Nothing to solve"; StatusIsError = 0
 
 c+c-> 599,584,916
 
-"--- Reference Constants and Functions ---"
-c: 299792458
+
+
+"*--- Reference Constants and Functions ---"
+c->> 299792458
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -177,8 +191,10 @@ c+c-> 599,584,916
 c-> 299,792,458
 c+c-> 599,584,916
 
-"--- Reference Constants and Functions ---"
-c: 299792458
+
+
+"*--- Reference Constants and Functions ---"
+c->> 299792458
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -188,8 +204,10 @@ Status = "Nothing to solve"; StatusIsError = 0
 
 c+c-> 599,584,916
 
-"--- Reference Constants and Functions ---"
-c: 299792458
+
+
+"*--- Reference Constants and Functions ---"
+c->> 299792458
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -233,8 +251,10 @@ h-> 6.6261e-34
 
 // h:3
 
-"--- Reference Constants and Functions ---"
-h: 6.62607015e-34 "Planck constant"
+
+
+"*--- Reference Constants and Functions ---"
+h->> 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -257,6 +277,8 @@ pow4(w;y;e) = e**(y * ln(x))
 pow3(2;z) = 16
 z-> 4
 
-"--- Reference Constants and Functions ---"
-e: 2.71828182845905
+
+
+"*--- Reference Constants and Functions ---"
+e->> 2.71828182845905
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

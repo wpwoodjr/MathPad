@@ -21,10 +21,11 @@ const constantsTokens = constantsRecord ? new Tokenizer(constantsRecord.text).to
 const functionsTokens = functionsRecord ? new Tokenizer(functionsRecord.text).tokenize() : null;
 const parsedConstants = constantsRecord ? parseConstantsRecord(constantsRecord.text, constantsTokens) : null;
 const parsedFunctions = functionsRecord ? parseFunctionsRecord(functionsRecord.text, functionsTokens) : null;
+const traceMode = testName === 'trace-tests';
 for (const record of data.records) {
     const allTokens = new Tokenizer(record.text).tokenize();
     const context = createEvalContext(record, parsedConstants, parsedFunctions, record.text, allTokens);
-    const result = solveRecord(record.text, context, record, allTokens, true);
+    const result = solveRecord(record.text, context, record, allTokens, true, traceMode);
     record.text = result.text;
 
     // Re-solve formatted output: idempotency check, rounding detection, table evaluation
@@ -33,6 +34,10 @@ for (const record of data.records) {
     verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
     const verifyResult = solveRecord(record.text, verifyContext, record, verifyTokens);
     record.text = verifyResult.text;
+    // Re-append trace from first pass (re-solve strips it — matches handleSolve in ui.js)
+    if (traceMode && result.trace && result.trace.length > 0) {
+        record.text = appendTraceSection(record.text, result.trace);
+    }
     let errors = verifyResult.errors;
 
     if (errors && errors.length > 0) {

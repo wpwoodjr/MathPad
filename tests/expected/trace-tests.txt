@@ -1,0 +1,317 @@
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 1 equation"; StatusIsError = 0
+"Test 1: Direct eval via substitution"
+// Shows [2] Substitution map and [3] direct eval
+a + b = c
+b + a = 5
+
+--Variables--
+a: 2
+b-> 3
+c: 5
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  known:
+    a = 2
+    c = 5
+  unknown: b
+"
+"*--- Equations (2) ---"
+"  line 3: a + b = c
+  line 4: b + a = 5
+"
+"*========== solveEquations (2 equations, 0 input expressions) =========="
+"*--- Iteration 1 ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 3: b → (c - a)
+    line 4: b → (5 - a)
+  [3] Evaluate fully-known substitutions
+    b = (c - a) = 3
+  [4] Sweep subs: (none)
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test 2: Brent's with chained definition"
+// Shows sweep 0 natural 1-unknown (quadratic)
+// then break-on-solve restart evaluates y via direct eval
+x**2 + 3*x = 28
+y = x + 1
+
+--Variables--
+x[0:10]-> 4
+y-> 5
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  unknown: x, y
+"
+"*--- Equations (2) ---"
+"  line 4: x**2 + 3*x = 28
+  line 5: y = x + 1
+"
+"*========== solveEquations (2 equations, 0 input expressions) =========="
+"*--- Iteration 1 ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 5: y → (x + 1)
+  [3] Evaluate fully-known substitutions
+    y: deferred
+      line 5: unknowns x
+  [4] Sweep subs: y
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+    Sweep 0: Brent's → x = 4
+      from: x**2 + 3*x = 28
+"
+"*--- Iteration 2 ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 5: y → (x + 1)
+  [3] Evaluate fully-known substitutions
+    y = (x + 1) = 5
+  [4] Sweep subs: (none)
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test 3: Sweep 1 with substituted equation"
+// Shows sweep 1: width → (area / height) substituted into 2*width + height = 20
+// The 'with:' line shows the equation AFTER substitution
+area = width * height
+width * 2 + height = 20
+
+--Variables--
+area: 48
+width-> 6
+height-> 8
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  known:
+    area = 48
+  unknown: width, height
+"
+"*--- Equations (2) ---"
+"  line 4: area = width * height
+  line 5: width * 2 + height = 20
+"
+"*========== solveEquations (2 equations, 0 input expressions) =========="
+"*--- Iteration 1 ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 4: width → (area / height)
+    line 5: width → ((20 - height) / 2)
+  [3] Evaluate fully-known substitutions
+    width: deferred
+      line 4: unknowns height
+      line 5: unknowns height
+  [4] Sweep subs: width
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+    Sweep 1: too many unknowns (width, height)
+    Sweep 1: Brent's → height = 8.000000000000005
+      from: width * 2 + height = 20
+      with: width → (area / height)
+"
+"*--- Iteration 2 ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 4: width → (area / height)
+    line 5: width → ((20 - height) / 2)
+  [3] Evaluate fully-known substitutions
+    width = (area / height) = 5.9999999999999964
+  [4] Sweep subs: (none)
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test 4: Variable discovery — known vs unknown"
+// Shows the 'known:' and 'unknown:' sections in variable discovery
+a: 1
+b: 2
+c: 3
+x + a = b
+y = c - x
+
+--Variables--
+x-> 1
+y-> 2
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  known:
+    a = 1
+    b = 2
+    c = 3
+  unknown: x, y
+"
+"*--- Equations (2) ---"
+"  line 6: x + a = b
+  line 7: y = c - x
+"
+"*========== solveEquations (2 equations, 0 input expressions) =========="
+"*--- Iteration 1 ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 6: x → (b - a)
+  [3] Evaluate fully-known substitutions
+    x = (b - a) = 1
+  [4] Sweep subs: (none)
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+"
+"*--- Iteration 2 ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 7: y → (c - x)
+  [3] Evaluate fully-known substitutions
+    y = (c - x) = 2
+  [4] Sweep subs: (none)
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Nothing to solve"; StatusIsError = 0
+"Test 5: Input expressions"
+// Shows [1] Input expressions with 'name = expr = value' format
+// r2 depends on the solved r1, so it's deferred until iteration 2
+
+--Variables--
+r1: 2 + 3
+r2: r1 * 10
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  unknown: r1, r2
+"
+"*========== solveEquations (0 equations, 2 input expressions) =========="
+"*--- Iteration 1 ---"
+"  [1] Input expressions
+    r1 = (2 + 3) = 5
+    r2 = (r1 * 10) = 50
+  [2] Substitution map
+    (none)
+  [3] Evaluate fully-known substitutions
+  [4] Sweep subs: (none)
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"Test 6: Navigation — failure trace with equation shown"
+// Degenerate vector triangle: shows Sweep 1 FAILED on one equation,
+// then succeeds on another. Both attempts appear in the trace with
+// 'from:' / 'with:' equation lines.
+
+--Equations--
+
+// Law of sines (solve for one magnitude given the other)
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+// Solve for smg given cmg (quadratic form)
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+// Solve for smg and cmg from cts (vector addition)
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+
+// Solve for speed and cts from smg/cmg (vector subtraction of current)
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+
+// Solve for drift and set from smg/cmg (vector subtraction of boat)
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+
+
+
+--Variables--
+Ground track
+smg: 1.41
+cmg °: 0°
+
+Boat through water
+speed: 1.0742
+cts °: 315°
+
+Current
+drift: 1
+set °: 49.424°
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  known:
+    smg = 1.41
+    cmg = 0
+    cts = 315
+    drift = 1
+  unknown: speed, set
+"
+"*--- Equations (9) ---"
+"  line 9: speed = smg*sin(cmg - set) / sin(cts - set)
+  line 10: drift = smg*sin(cts - cmg) / sin(cts - set)
+  line 13: smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+  line 16: smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(se
+  line 17 [°=]: cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+  line 20: speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set)
+  line 21 [°=]: cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+  line 24: drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts)
+  line 25 [°=]: set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+"
+"*========== solveEquations (9 equations, 0 input expressions) =========="
+"*--- Iteration 1 ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 9: speed → ((smg * sin((cmg - set))) / sin((cts - set)))
+    line 20: speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
+  [3] Evaluate fully-known substitutions
+    speed: deferred
+      line 9: unknowns set
+      line 20: unknowns set
+  [4] Sweep subs: speed
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+    Sweep 1: FAILED set — Could not find a root
+      from: drift = smg*sin(cts - cmg) / sin(cts - set)
+    Sweep 1: Brent's → set = 49.423975705192845
+      from: smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+      with: speed → ((smg * sin((cmg - set))) / sin((cts - set)))
+"
+"*--- Iteration 2 ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 9: speed → ((smg * sin((cmg - set))) / sin((cts - set)))
+    line 20: speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
+  [3] Evaluate fully-known substitutions
+    speed = ((smg * sin((cmg - set))) / sin((cts - set))) = 1.0741568045762981
+  [4] Sweep subs: (none)
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

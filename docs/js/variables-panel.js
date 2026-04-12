@@ -88,14 +88,17 @@ class VariablesPanel {
      * Shows one row per declaration line and expression output
      */
     updateFromText(text) {
-        // Find where references/table outputs section starts (if present) — excluded from panel
-        let refSectionStart = text.indexOf('"--- Reference Constants and Functions ---"');
+        // Table Outputs section is excluded from the panel.
+        // References and Solve Trace use "*---" label headers and render as
+        // labeled sections in the panel. Trace often comes AFTER Table Outputs,
+        // so we use a range: [tableOutputLineIndex, traceSectionLineIndex) is excluded.
         const tableOutputStart = text.indexOf('"--- Table Outputs ---"');
-        if (tableOutputStart >= 0 && (refSectionStart < 0 || tableOutputStart < refSectionStart)) {
-            refSectionStart = tableOutputStart;
-        }
-        const refSectionLineIndex = refSectionStart >= 0
-            ? text.substring(0, refSectionStart).split('\n').length - 1
+        const tableOutputLineIndex = tableOutputStart >= 0
+            ? text.substring(0, tableOutputStart).split('\n').length - 1
+            : Infinity;
+        const traceMatch = text.match(/"\*?--- Solve Trace ---"/);
+        const traceSectionLineIndex = traceMatch
+            ? text.substring(0, traceMatch.index).split('\n').length - 1
             : Infinity;
 
         // Detect --Variables-- section marker
@@ -151,9 +154,11 @@ class VariablesPanel {
             }
         }
 
-        // Remove reference section items from panel (shown in formulas only)
+        // Remove Table Outputs section items from panel (shown in formulas only).
+        // References and Solve Trace are kept — they're labeled sections.
+        // Trace section after Table Outputs still displays.
         for (const lineIndex of [...newDeclMap.keys()]) {
-            if (lineIndex >= refSectionLineIndex) {
+            if (lineIndex >= tableOutputLineIndex && lineIndex < traceSectionLineIndex) {
                 newDeclMap.delete(lineIndex);
             }
         }
@@ -189,15 +194,13 @@ class VariablesPanel {
             const lines = text.split('\n');
             for (let i = varsSectionLineIndex + 1; i < lines.length; i++) {
                 if (newDeclMap.has(i)) continue; // Already a declaration
-                if (i >= refSectionLineIndex) continue; // In reference section
+                // In Table Outputs section (but not Solve Trace section after it)
+                if (i >= tableOutputLineIndex && i < traceSectionLineIndex) continue;
                 if (consumedLines.has(i)) continue; // Part of a multi-line comment
                 if (tableSkipLines.has(i + 1)) continue; // Inside table definition
 
                 const line = lines[i];
                 const trimmed = line.trim();
-
-                // Skip the reference section marker line
-                if (trimmed.startsWith('"--- Reference')) continue;
 
                 // Skip // comment-only lines
                 if (trimmed.startsWith('//')) continue;
@@ -411,6 +414,9 @@ class VariablesPanel {
             valueElement.addEventListener('blur', (e) => {
                 this.handleValueChange(info.lineIndex, e.target.value);
                 if (!e.target.value.trim()) this.hasClearedInput = true;
+                // Skip the quick-solve blur callback if the user is about to Ctrl+click
+                // the solve button (the click handler will fire a trace solve instead).
+                if (this._skipNextBlurSolve) { this._skipNextBlurSolve = false; return; }
                 if (this.blurCallback && !this.hasClearedInput) this.blurCallback();
             });
             valueElement.addEventListener('focus', (e) => {
@@ -446,8 +452,14 @@ class VariablesPanel {
             solveBtn.className = 'variable-solve-btn';
             solveBtn.textContent = '⟲';
             solveBtn.title = 'Clear and solve';
+            // Ctrl+mousedown sets a flag so the upcoming blur doesn't trigger
+            // a quick-solve before the click handler runs its trace solve.
+            solveBtn.addEventListener('mousedown', (e) => {
+                if (e.ctrlKey) this._skipNextBlurSolve = true;
+            });
             solveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
+                this._skipNextBlurSolve = false; // clear flag set by mousedown
                 // Get current info from declarations (may have been replaced after solve)
                 const currentInfo = this.declarations.get(info.lineIndex) || info;
                 // Clear the value if present, UNLESS user just edited this variable
@@ -461,9 +473,10 @@ class VariablesPanel {
                 // Clear tracking and trigger solve
                 // When cleared: non-undoable so undo collapses clear+solve into one step
                 // When not cleared: undoable so solve gets its own undo entry
+                // Ctrl+click enables the solve trace output
                 this.lastEditedVar = null;
                 if (this.solveCallback) {
-                    this.solveCallback(!cleared);
+                    this.solveCallback(!cleared, !!e.ctrlKey);
                 }
             });
             row.appendChild(solveBtn);

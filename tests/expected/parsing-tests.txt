@@ -13,8 +13,10 @@ Status = "Nothing to solve"; StatusIsError = 0
 
 c-> 300,000,000
 
-"--- Reference Constants and Functions ---"
-c: 300000000
+
+
+"*--- Reference Constants and Functions ---"
+c->> 300000000
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1

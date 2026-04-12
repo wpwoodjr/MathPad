@@ -347,9 +347,11 @@ g->> 6.62607015e-34
             x7: y3
             y3: 2
 
-"--- Reference Constants and Functions ---"
-h: 6.62607015e-34 "Planck constant"
-pi: 3.14159265358979
+
+
+"*--- Reference Constants and Functions ---"
+h->> 6.62607015e-34 "Planck constant"
+pi->> 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -374,8 +376,10 @@ y: d/2
 y-> 1.5708
 d-> 3.1416
 
-"--- Reference Constants and Functions ---"
-pi: 3.14159265358979
+
+
+"*--- Reference Constants and Functions ---"
+pi->> 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -488,8 +492,10 @@ x: g*1e34
 x-> 6.6261
 x->> 6.626070149999999
 
-"--- Reference Constants and Functions ---"
-h: 6.62607015e-34 "Planck constant"
+
+
+"*--- Reference Constants and Functions ---"
+h->> 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -646,6 +652,8 @@ Status = "Nothing to solve"; StatusIsError = 0
 a: cos(pi/4)
 a->> 0.707106781186548
 
-"--- Reference Constants and Functions ---"
-pi: 3.14159265358979
+
+
+"*--- Reference Constants and Functions ---"
+pi->> 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

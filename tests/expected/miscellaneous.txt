@@ -56,8 +56,10 @@ h-> 1,076,019,172.14
 w-> 605,260,784.33 "width"
 c-> 299,792,458
 
-"--- Reference Constants and Functions ---"
-c: 299792458 "speed of light m/s"
+
+
+"*--- Reference Constants and Functions ---"
+c->> 299792458 "speed of light m/s"
 hypot(a;b) = sqrt(a**2 + b**2) "hypotenuse"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -158,8 +160,10 @@ a * b * pi->> 37.699111843077482
 a**2 + b**2-> 25
 fact(9)-> 362880
 
-"--- Reference Constants and Functions ---"
-pi: 3.14159265358979
+
+
+"*--- Reference Constants and Functions ---"
+pi->> 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -383,8 +387,10 @@ a + b-> 15
 "Mixed - equation then labeled output"
 c = a + b
 
-"--- Reference Constants and Functions ---"
-c: 299792458 "speed of light m/s"
+
+
+"*--- Reference Constants and Functions ---"
+c->> 299792458 "speed of light m/s"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -407,8 +413,10 @@ result: (a/b)->> 0.5 should be 0.5
 "Mixed - equation then labeled output"
 equation c = a + b test
 
-"--- Reference Constants and Functions ---"
-c: 299792458 "speed of light m/s"
+
+
+"*--- Reference Constants and Functions ---"
+c->> 299792458 "speed of light m/s"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -500,8 +508,10 @@ Status = "Nothing to solve"; StatusIsError = 0
 
 c-> 299792458
 
-"--- Reference Constants and Functions ---"
-c: 299792458 "speed of light m/s"
+
+
+"*--- Reference Constants and Functions ---"
+c->> 299792458 "speed of light m/s"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
@@ -523,9 +533,11 @@ d->>
 g: H
 g->>
 
-"--- Reference Constants and Functions ---"
-c: 299792458 "speed of light m/s"
-h: 6.62607015e-34 "Planck constant"
+
+
+"*--- Reference Constants and Functions ---"
+c->> 299792458 "speed of light m/s"
+h->> 6.62607015e-34 "Planck constant"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1

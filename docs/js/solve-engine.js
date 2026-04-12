@@ -221,8 +221,12 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
  * @param {Array} equations - Equations to solve (from findEquationsAndOutputs)
  * @returns {{ computedValues: Map, solved: number, errors: Array, solveFailures: Map, equationVarStatus: Map }}
  */
-// Set to true to enable detailed solve logging in the console
-let debugSolve = false;
+// Trace buffer: null = disabled, [] = collecting lines for user-visible output.
+// Set by solveRecord(..., traceMode=true) for the outer solve only.
+let _traceBuffer = null;
+function _trace(msg) {
+    if (_traceBuffer !== null) _traceBuffer.push(msg);
+}
 
 // Simple AST to string for debug logging
 const _astStr = (n) => {
@@ -235,9 +239,8 @@ const _astStr = (n) => {
     return n.type;
 };
 
-let _solvePass = 0;
 function solveEquations(context, declarations, record = {}, equations, bodyDefinitions = []) {
-    if (debugSolve) console.log(`\n========== solveEquations pass ${++_solvePass} (${equations.length} equations, ${bodyDefinitions.length} bodyDefs) ==========`);
+    _trace(`========== solveEquations (${equations.length} equations, ${bodyDefinitions.length} input expressions) ==========`);
     const places = record.places != null ? record.places : 4;
     const errors = [];
     // Report any equation parse errors from preParseEquations
@@ -269,39 +272,41 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
     while (changed && iterations++ < maxIterations) {
         changed = false;
-        if (debugSolve) console.log(`\n=== Iteration ${iterations} ===`);
+        // Remember trace length so we can truncate this iteration if nothing changes
+        const traceStartLen = _traceBuffer !== null ? _traceBuffer.length : 0;
+        _trace(`--- Iteration ${iterations} ---`);
 
-        // ① Evaluate body definitions (: declarations from table body or outer solve).
-        if (debugSolve) console.log(`  --- [1] Body definitions (:defs not yet resolved)${bodyDefinitions.length === 0 ? ' (none)' : ''} ---`);
+        // ① Evaluate input expressions — declarations with expression values that
+        // couldn't evaluate during discovery (e.g. r: rand(), v: pmt*2 where pmt is
+        // equation-solved). In table/grid/vectorDraw bodies these are : defs.
+        _trace(`  [1] Input expressions${bodyDefinitions.length === 0 ? ' (none)' : ''}`);
         for (const { name, ast } of bodyDefinitions) {
             if (!ast || context.hasVariable(name)) continue;
             try {
                 const value = evaluate(ast, context);
                 context.setVariable(name, value);
                 changed = true;
-                if (debugSolve) console.log(`    ${name} = ${value}`);
+                _trace(`    ${name} = ${_astStr(ast)} = ${value}`);
             } catch (e) {
-                if (debugSolve) console.log(`    ${name}: deferred (${e.message})`);
+                _trace(`    ${name}: deferred (${e.message})`);
             }
         }
 
         const substitutions = buildSubstitutionMap(equations, context, errors);
 
-        if (debugSolve) {
-            console.log('  --- [2] Build substitution map ---');
-            if (substitutions.size > 0) {
-                for (const [k, subs] of substitutions) {
-                    for (const s of subs) {
-                        console.log(`    ${k} → ${_astStr(s.ast)} (line:${s.sourceLine + 1})`);
-                    }
+        _trace('  [2] Substitution map');
+        if (substitutions.size > 0) {
+            for (const [k, subs] of substitutions) {
+                for (const s of subs) {
+                    _trace(`    line ${s.sourceLine + 1}: ${k} → ${_astStr(s.ast)}`);
                 }
-            } else {
-                console.log('    (none)');
             }
+        } else {
+            _trace('    (none)');
         }
 
         // [3] Evaluate fully-known substitutions — direct computation before Brent's
-        if (debugSolve) console.log('  --- [3] Evaluate fully-known substitutions ---');
+        _trace('  [3] Evaluate fully-known substitutions');
         for (const [varName, subs] of substitutions) {
             if (context.hasVariable(varName)) continue;
             // Try each sub — use first fully-evaluable one
@@ -312,9 +317,12 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 break;
             }
             if (!chosen) {
-                if (debugSolve) {
-                    const unknowns = [...findVariablesInAST(subs[0].ast)].filter(v => !context.hasVariable(v));
-                    console.log(`    ${varName}: deferred (unknowns: ${unknowns.join(', ')})`);
+                if (_traceBuffer !== null) {
+                    _trace(`    ${varName}: deferred`);
+                    for (const sub of subs) {
+                        const unknowns = [...findVariablesInAST(sub.ast)].filter(v => !context.hasVariable(v));
+                        _trace(`      line ${sub.sourceLine + 1}: unknowns ${unknowns.join(', ')}`);
+                    }
                 }
                 continue;
             }
@@ -352,7 +360,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                                 error: `Computed value ${value} is outside limits [${low}, ${high}]`,
                                 line: chosen.sourceLine
                             });
-                            if (debugSolve) console.log(`    ${varName}: outside limits [${low}, ${high}]`);
+                            _trace(`    ${varName}: outside limits [${low}, ${high}]`);
                             limitFailed = true;
                         }
                     } catch (e) {
@@ -366,9 +374,9 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 unsolvedEquations.delete(chosen.sourceLine);
                 changed = true;
                 solved++;
-                if (debugSolve) console.log(`    ${varName} = ${value}`);
+                _trace(`    ${varName} = ${_astStr(chosen.ast)} = ${value}`);
             } catch (e) {
-                if (debugSolve) console.log(`    ${varName}: eval error (${e.message})`);
+                _trace(`    ${varName}: eval error (${e.message})`);
                 if (!(e instanceof EvalError)) {
                     errors.push(`Line ${chosen.sourceLine + 1}: ${e.message}`);
                 }
@@ -387,12 +395,12 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 definitionSubs.set(varName, subs[0]);
             }
         }
-        if (debugSolve) console.log(`  --- [4] Sweep subs: ${[...definitionSubs.keys()].join(', ') || '(none)'} ---`);
+        _trace(`  [4] Sweep subs: ${[...definitionSubs.keys()].join(', ') || '(none)'}`);
 
         // [5] Equation solving — two sweeps:
         //   Sweep 0: natural 1-unknown only (no subs), skip if unknown is in [4]
         //   Sweep 1: equations reduced to 1 unknown via [4] subs
-        if (debugSolve) console.log('  --- [5] Equation solving (sweep 0: natural, sweep 1: [4] subs) ---');
+        _trace('  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)');
         for (let sweep = 0; sweep < 2 && !changed; sweep++) {
             const sweepSubs = sweep === 0 ? new Map() : definitionSubs;
             for (const eq of equations) {
@@ -407,7 +415,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                             const value = evaluate(ast, context);
                             computedValues.set(`__incomplete_${eq.startLine}`, value);
                             solved++;
-                            if (debugSolve) console.log(`    Incomplete: ${eq.leftText} = ${value}`);
+                            _trace(`    Incomplete: ${eq.leftText} = ${value}`);
                         } catch (e) {
                             // Unknown variables - skip
                         }
@@ -437,6 +445,20 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                     const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
                     const result = solveEquationInContext(eq.startLine, context, variables,
                         sweepSubs, modValue, eq.leftAST, eq.rightAST);
+                    // Build trace "from:"/"with:" lines for this equation attempt
+                    const buildEqTraceLines = () => {
+                        const lines = [`      from: ${eq.text.trim()}`];
+                        // Show only the substitutions actually applied to this equation
+                        if (sweep === 1 && sweepSubs.size > 0 && eq.allVars) {
+                            for (const [varName, sub] of sweepSubs) {
+                                if (eq.allVars.has(varName)) {
+                                    lines.push(`      with: ${varName} → ${_astStr(sub.ast)}`);
+                                }
+                            }
+                        }
+                        return lines;
+                    };
+
                     if (result.solved) {
                         context.setVariable(result.variable, result.value);
                         computedValues.set(result.variable, result.value);
@@ -444,19 +466,25 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                         unsolvedEquations.delete(eq.startLine);
                         solved++;
                         changed = true;
-                        if (debugSolve) console.log(`    Sweep ${sweep}: Brent's → ${result.variable} = ${result.value} (from "${eq.text.substring(0, 50)}")`);
+                        if (_traceBuffer !== null) {
+                            _trace(`    Sweep ${sweep}: Brent's → ${result.variable} = ${result.value}`);
+                            for (const line of buildEqTraceLines()) _trace(line);
+                        }
                         // Restart so Pass 1 can evaluate definitions with the new value,
                         // avoiding a second Brent's step that might pick an inconsistent root
                         break;
                     } else if (result.error && result.variable) {
                         if (sweep > 0) {
                             solveFailures.set(result.variable, { error: result.error, line: eq.startLine });
-                            if (debugSolve) console.log(`    Sweep ${sweep}: FAILED ${result.variable} (${result.error})`);
+                            if (_traceBuffer !== null) {
+                                _trace(`    Sweep ${sweep}: FAILED ${result.variable} — ${result.error}`);
+                                for (const line of buildEqTraceLines()) _trace(line);
+                            }
                         }
                     } else if (result.tooManyUnknowns) {
                         if (sweep > 0) {
                             unsolvedEquations.set(eq.startLine, result.tooManyUnknowns);
-                            if (debugSolve) console.log(`    Sweep ${sweep}: too many unknowns (${result.tooManyUnknowns.join(', ')})`);
+                            _trace(`    Sweep ${sweep}: too many unknowns (${result.tooManyUnknowns.join(', ')})`);
                         }
                     } else {
                         // Equation resolved (all variables known) — clear any previous "too many unknowns"
@@ -469,6 +497,12 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                     }
                 }
             }
+        }
+
+        // If nothing changed this iteration, drop its trace lines — it's the final
+        // "nothing to do" pass that confirms convergence, not useful to display.
+        if (!changed && _traceBuffer !== null) {
+            _traceBuffer.length = traceStartLen;
         }
     }
 
@@ -727,13 +761,48 @@ function formatOutput(text, declarations, context, computedValues, record, solve
 }
 
 /**
- * Remove existing references section from text
+ * Remove existing references, trace, and table outputs sections from text.
+ * All are appended at the end of each solve and should be stripped first.
  */
 function removeReferencesSection(text) {
-    // Remove table outputs section and references section from end
+    const before = text;
     text = text.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
-    text = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
+    text = text.replace(/\n*"\*?--- Solve Trace ---"[\s\S]*$/, '');
+    text = text.replace(/\n*"\*?--- Reference Constants and Functions ---"[\s\S]*$/, '');
+    // If anything was stripped, leave a single trailing newline
+    if (text !== before) text = text.trimEnd() + '\n';
     return text;
+}
+
+/**
+ * Append solve trace section showing the outer-solve decision steps as text.
+ * Headers (---..., ===...) are emitted as "*label" lines that render as
+ * prominent section headers in the variables panel; content lines are
+ * grouped into multi-line quoted comment blocks. Appended at the end of text.
+ */
+function appendTraceSection(text, trace) {
+    if (!trace || trace.length === 0) return text;
+
+    const out = ['"*--- Solve Trace ---"'];
+    let contentBuf = [];
+    const flushContent = () => {
+        if (contentBuf.length > 0) {
+            out.push('"' + contentBuf.join('\n') + '\n"');
+            contentBuf = [];
+        }
+    };
+    const isHeader = (line) => /^(-{3,}|={3,})/.test(line);
+    for (const line of trace) {
+        if (isHeader(line)) {
+            flushContent();
+            out.push(`"*${line}"`);
+        } else {
+            contentBuf.push(line);
+        }
+    }
+    flushContent();
+
+    return text.trimEnd() + '\n\n\n\n' + out.join('\n');
 }
 
 /**
@@ -743,8 +812,9 @@ function appendTableOutputsSection(text, tables) {
     if (!tables || tables.length === 0) return text;
 
     // Check if any tables have data
+    const isGridType = (t) => t.type === 'grid' || t.type === 'gridGraph';
     const hasTables = tables.some(t => {
-        if (t.type === 'grid') return t.grid.length > 0;
+        if (isGridType(t)) return t.grid && t.grid.length > 0;
         if (t.type === 'vectorDraw') return t.vectors && t.vectors.length > 0;
         return t.rows && t.rows.length > 0;
     });
@@ -756,8 +826,8 @@ function appendTableOutputsSection(text, tables) {
         // Title line with table type prefix
         if (table.title) lines.push(`${table.keyword} "${table.title}"`);
 
-        if (table.type === 'grid') {
-            if (table.grid.length === 0) continue;
+        if (isGridType(table)) {
+            if (!table.grid || table.grid.length === 0) continue;
             lines.push(`"${table.iter1Label}"\t"${table.iter2Label}"\t"${table.cellHeader}"`);
             lines.push(`\t${table.colValues.join('\t')}`);
             for (let r = 0; r < table.rowValues.length; r++) {
@@ -800,14 +870,15 @@ function appendReferencesSection(text, context) {
         return text;
     }
 
-    const lines = ['"--- Reference Constants and Functions ---"'];
+    const lines = ['"*--- Reference Constants and Functions ---"'];
 
     // Add used constants (including those shadowed by local declarations)
+    // Use ->> so they appear as full-precision read-only output rows in the panel
     for (const name of [...usedConstants].sort()) {
         const value = context.constants.get(name);
         const comment = context.constantComments.get(name);
         if (value !== undefined) {
-            let line = `${name}: ${value}`;
+            let line = `${name}->> ${value}`;
             if (comment) {
                 line += ` "${comment}"`;
             }
@@ -824,7 +895,7 @@ function appendReferencesSection(text, context) {
     }
 
     if (lines.length > 1) {
-        text = text.trimEnd() + '\n\n' + lines.join('\n');
+        text = text.trimEnd() + '\n\n\n\n' + lines.join('\n');
     }
 
     return text;
@@ -832,9 +903,14 @@ function appendReferencesSection(text, context) {
 
 /**
  * Main solve function - orchestrates discovery, solving, and formatting
+ * @param {boolean} traceMode - If true, collect a user-visible solve trace
  */
-function solveRecord(text, context, record, parserTokens, skipTables = false) {
-    // Remove any existing references section before solving
+function solveRecord(text, context, record, parserTokens, skipTables = false, traceMode = false) {
+    // Set up trace buffer for this solve (outer only — paused during table eval)
+    const prevTraceBuffer = _traceBuffer;
+    if (traceMode) _traceBuffer = [];
+
+    // Remove any existing references, trace, and table outputs sections before solving
     text = removeReferencesSection(text);
 
     let allTokens = parserTokens;
@@ -873,9 +949,38 @@ function solveRecord(text, context, record, parserTokens, skipTables = false) {
     // Save pre-solve variable state for tables (user declarations only)
     const preSolveVars = new Map(context.variables);
 
+    // Trace discovered variables (grouped by whether they have a known value)
+    if (_traceBuffer !== null) {
+        _trace('--- Variable discovery ---');
+        const withValue = [];
+        const unknown = [];
+        for (const decl of declarations) {
+            if (context.hasVariable(decl.name)) {
+                withValue.push(`${decl.name} = ${context.getVariable(decl.name)}`);
+            } else {
+                unknown.push(decl.name);
+            }
+        }
+        if (withValue.length > 0) {
+            _trace('  known:');
+            for (const line of withValue) _trace(`    ${line}`);
+        }
+        if (unknown.length > 0) {
+            _trace(`  unknown: ${unknown.join(', ')}`);
+        }
+    }
+
     // Find equations and expression outputs
     const { equations: outerEquations, exprOutputs } = findEquationsAndOutputs(text, allTokens, context.localFunctionLines);
     preParseEquations(outerEquations);
+
+    if (_traceBuffer !== null && outerEquations.length > 0) {
+        _trace(`--- Equations (${outerEquations.length}) ---`);
+        for (const eq of outerEquations) {
+            const modTag = eq.modN ? ' [°=]' : '';
+            _trace(`  line ${eq.startLine + 1}${modTag}: ${eq.text.substring(0, 80)}`);
+        }
+    }
 
     // Build body definitions from declarations that couldn't evaluate during discovery
     // (e.g. x<- pmt*2 where pmt is equation-solved). solveEquations retries these.
@@ -962,9 +1067,11 @@ function solveRecord(text, context, record, parserTokens, skipTables = false) {
     text = formatResult.text;
     errors.push(...formatResult.errors);
 
-    // Pass 4: Evaluate tables (after all normal solving is complete)
+    // Pass 4: Evaluate tables (after all normal solving is complete) — pause tracing
     const tables = [];
     if (!skipTables) {
+        const savedBuf = _traceBuffer;
+        _traceBuffer = null; // skip table internals in trace
         const savedVars = new Map(context.variables);
         for (const td of tableDefs) {
             // Restore outer context so tables don't leak state to each other
@@ -974,6 +1081,7 @@ function solveRecord(text, context, record, parserTokens, skipTables = false) {
             tables.push(tableResult);
         }
         context.variables = savedVars;
+        _traceBuffer = savedBuf;
     }
 
     // Pass 5: Append references section showing used constants and functions
@@ -983,10 +1091,17 @@ function solveRecord(text, context, record, parserTokens, skipTables = false) {
         text = appendReferencesSection(text, context);
     }
 
-    // Pass 6: Append table outputs section
+    // Pass 6: Append trace section (before table outputs) and table outputs section
+    const trace = (traceMode && _traceBuffer) ? _traceBuffer.slice() : null;
+    if (trace && trace.length > 0) {
+        text = appendTraceSection(text, trace);
+    }
     text = appendTableOutputsSection(text, tables);
 
-    return { text, solved: solveResult.solved, errors, equationVarStatus: solveResult.equationVarStatus, tables };
+    // Restore previous trace buffer
+    _traceBuffer = prevTraceBuffer;
+
+    return { text, solved: solveResult.solved, errors, equationVarStatus: solveResult.equationVarStatus, tables, trace };
 }
 
 /**
@@ -1528,6 +1643,6 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        solveRecord, solveEquations, formatOutput, solveEquationInContext, findVariablesInAST, buildVariablesMap
+        solveRecord, solveEquations, formatOutput, solveEquationInContext, findVariablesInAST, buildVariablesMap, appendTraceSection
     };
 }

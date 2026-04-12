@@ -114,6 +114,7 @@ function loadModules() {
     global.solveRecord = solveEngine.solveRecord;
     global.solveEquations = solveEngine.solveEquations;
     global.formatOutput = solveEngine.formatOutput;
+    global.appendTraceSection = solveEngine.appendTraceSection;
 
     return { parser, evaluator, solver, variables, storage, solveEngine };
 }
@@ -170,7 +171,7 @@ function compareOutput(actual, expected) {
 /**
  * Solve all records in a data object
  */
-function solveAllRecords(data) {
+function solveAllRecords(data, traceMode = false) {
     const records = data.records;
 
     // Pre-parse Constants and Functions records once (matches UI flow via getReferenceInfo)
@@ -190,7 +191,8 @@ function solveAllRecords(data) {
 
         // Solve (captures pre-solve values and clears outputs internally)
         // First pass always skips tables — re-solve computes them once
-        const result = solveRecord(record.text, context, record, allTokens, true);
+        // traceMode enables the "--- Solve Trace ---" section (trace-tests.txt)
+        const result = solveRecord(record.text, context, record, allTokens, true, traceMode);
         record.text = result.text;
 
         // Re-solve formatted output: idempotency check, rounding detection, table evaluation
@@ -199,6 +201,10 @@ function solveAllRecords(data) {
         verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
         const verifyResult = solveRecord(record.text, verifyContext, record, verifyTokens);
         record.text = verifyResult.text;
+        // Re-append trace from first pass (re-solve strips it — matches handleSolve in ui.js)
+        if (traceMode && result.trace && result.trace.length > 0) {
+            record.text = appendTraceSection(record.text, result.trace);
+        }
         let errors = verifyResult.errors;
 
         // Store any errors in the record (match UI behavior)
@@ -246,9 +252,10 @@ function runTest(inputPath, expectedPath) {
         return { name: testName, passed: false, error: `Import failed: ${e.message}` };
     }
 
-    // Solve all records
+    // Solve all records — enable trace mode for the trace-tests file
+    const traceMode = testName === 'trace-tests';
     try {
-        data = solveAllRecords(data);
+        data = solveAllRecords(data, traceMode);
     } catch (e) {
         return { name: testName, passed: false, error: `Solve failed: ${e.message}` };
     }

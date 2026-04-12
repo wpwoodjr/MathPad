@@ -15,7 +15,9 @@ Status = "Error in Functions record: bad() — Unexpected end of expression"; St
 a: good(2)
 a-> 3
 
-"--- Reference Constants and Functions ---"
+
+
+"*--- Reference Constants and Functions ---"
 good(x) = x + 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -37,6 +39,8 @@ Status = "Error in Functions record: bad() — Unexpected end of expression"; St
 a: good(5)
 a-> 6
 
-"--- Reference Constants and Functions ---"
+
+
+"*--- Reference Constants and Functions ---"
 good(x) = x + 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

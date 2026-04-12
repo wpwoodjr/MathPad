@@ -48,7 +48,9 @@ max()->
 avg()->
 avg(3)-> 3
 
-"--- Reference Constants and Functions ---"
+
+
+"*--- Reference Constants and Functions ---"
 compound(pv; rate; n) = pv * (1 + rate)**n
 pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

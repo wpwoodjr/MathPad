@@ -187,8 +187,10 @@ pi-> 3.1416
 pi~-> 3.1416
 pi~?-> 1
 
-"--- Reference Constants and Functions ---"
-pi: 3.14159265358979
+
+
+"*--- Reference Constants and Functions ---"
+pi->> 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -218,6 +220,8 @@ c: 5
 c~-> 5
 c~?-> 1
 
-"--- Reference Constants and Functions ---"
-pi: 3.14159265358979
+
+
+"*--- Reference Constants and Functions ---"
+pi->> 3.14159265358979
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
