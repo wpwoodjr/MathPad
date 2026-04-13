@@ -72,7 +72,7 @@ y-> 5
   [4] Sweep subs: y
   [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
     Sweep 0: Brent's → x = 4
-      from: x**2 + 3*x = 28
+      from (line 4): x**2 + 3*x = 28
 "
 "*--- Iteration 2 ---"
 "  [1] Input expressions (none)
@@ -123,20 +123,10 @@ height-> 8
       line 5: unknowns height
   [4] Sweep subs: width
   [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
-    Sweep 1: too many unknowns (width, height)
-    Sweep 1: Brent's → height = 8.000000000000005
-      from: width * 2 + height = 20
-      with: width → (area / height)
-"
-"*--- Iteration 2 ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    line 4: width → (area / height)
-    line 5: width → ((20 - height) / 2)
-  [3] Evaluate fully-known substitutions
-    width = (area / height) = 5.9999999999999964
-  [4] Sweep subs: (none)
-  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+    Sweep 1: Brent's → height = 8.000000000000004
+      from (line 4): area = width * height
+      with (line 5): width → ((20 - height) / 2)
+      → width = 5.999999999999998 (via winning sub)
 "
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -299,19 +289,59 @@ set °: 49.424°
   [4] Sweep subs: speed
   [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
     Sweep 1: FAILED set — Could not find a root
-      from: drift = smg*sin(cts - cmg) / sin(cts - set)
+      from (line 10): drift = smg*sin(cts - cmg) / sin(cts - set)
     Sweep 1: Brent's → set = 49.423975705192845
-      from: smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with: speed → ((smg * sin((cmg - set))) / sin((cts - set)))
+      from (line 13): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+      with (line 9): speed → ((smg * sin((cmg - set))) / sin((cts - set)))
+      → speed = 1.0741568045762981 (via winning sub)
 "
-"*--- Iteration 2 ---"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Line 7: Equation doesn't balance: a = sqrt(-b) (relative diff NaN% >= 0.005%)"; StatusIsError = 1
+"Test 7: Sweep 1 alternate sub recovers from NaN substitution"
+// Demonstrates two improvements working together:
+// 1. Sweep 1 cartesian retry: first sub (a → sqrt(-b)) gives NaN when plugged
+//    into a + b = 9, so Brent's fails. Second sub (a → 2*b) yields 3*b = 9 → b=3.
+// 2. [3] direct eval skips NaN and prefers finite results: in iteration 2,
+//    sqrt(-3) → NaN is skipped, so a = 2*b = 6 is chosen instead.
+a = sqrt(-b)
+a = 2*b
+a + b = 9
+
+--Variables--
+a-> 6
+b-> 3
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  unknown: a, b
+"
+"*--- Equations (3) ---"
+"  line 7: a = sqrt(-b)
+  line 8: a = 2*b
+  line 9: a + b = 9
+"
+"*========== solveEquations (3 equations, 0 input expressions) =========="
+"*--- Iteration 1 ---"
 "  [1] Input expressions (none)
   [2] Substitution map
-    line 9: speed → ((smg * sin((cmg - set))) / sin((cts - set)))
-    line 20: speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
+    line 7: a → sqrt(-b)
+    line 8: a → (2 * b)
+    line 9: a → (9 - b)
   [3] Evaluate fully-known substitutions
-    speed = ((smg * sin((cmg - set))) / sin((cts - set))) = 1.0741568045762981
-  [4] Sweep subs: (none)
+    a: deferred
+      line 7: unknowns b
+      line 8: unknowns b
+      line 9: unknowns b
+  [4] Sweep subs: a
   [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+    Sweep 1: Brent's → b = 3
+      from (line 9): a + b = 9
+      with (line 8): a → (2 * b)
+      → a = 6 (via winning sub)
 "
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

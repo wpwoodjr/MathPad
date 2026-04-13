@@ -107,3 +107,20 @@ cts °: 315°
 Current
 drift: 1
 set °:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 7: Sweep 1 alternate sub recovers from NaN substitution"
+// Demonstrates two improvements working together:
+// 1. Sweep 1 cartesian retry: first sub (a → sqrt(-b)) gives NaN when plugged
+//    into a + b = 9, so Brent's fails. Second sub (a → 2*b) yields 3*b = 9 → b=3.
+// 2. [3] direct eval skips NaN and prefers finite results: in iteration 2,
+//    sqrt(-3) → NaN is skipped, so a = 2*b = 6 is chosen instead.
+a = sqrt(-b)
+a = 2*b
+a + b = 9
+
+--Variables--
+a->
+b->
