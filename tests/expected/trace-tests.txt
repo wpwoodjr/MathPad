@@ -466,7 +466,7 @@ set °<- 49.424°
     (none)
   [3] Evaluate fully-known substitutions
   [4] Sweep subs: (none)
-  · candidate (depth 2): all unknowns set, balance failed — saved as fallback
+  · candidate (depth 2): all unknowns set, balance failed
   [5] Branching (depth 2)
     (no alternatives available)
     Rejected: set = 0.001 (downstream failed)
@@ -942,7 +942,7 @@ set °: 45°
     (none)
   [3] Evaluate fully-known substitutions
   [4] Sweep subs: (none)
-  · candidate (depth 3): all unknowns set, balance failed — saved as fallback
+  · candidate (depth 3): all unknowns set, balance failed
   [5] Branching (depth 3)
     (no alternatives available)
     Rejected: drift = -0.9940321926376441 (downstream failed)

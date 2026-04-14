@@ -398,25 +398,16 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     const solveFailures = new Map(); // Track last failure per variable
     let solved = 0;
 
-    // Build variables map for lookup
-    let variables = buildVariablesMap(declarations);
+    // Build variables map for lookup (never reassigned after setup)
+    const variables = buildVariablesMap(declarations);
 
-    // Track user-provided values (input declarations only, not output)
-    const userProvidedVars = new Set();
-    for (const info of declarations) {
-        if (info.value !== null && info.declaration.type !== VarType.OUTPUT) {
-            userProvidedVars.add(info.name);
-        }
-    }
-
-
-    // Derive requiredVars for the terminal check: a variable is "required" if it
-    // appears in some equation and isn't yet in context. Declared-but-unreferenced
-    // outputs (e.g. `d->` with no equation) are NOT required — they can't be solved
-    // and the post-solve formatOutput pass reports them as "no value to output".
-    // Including equation-referenced-but-undeclared variables (e.g. `y` in a poly
-    // test's `f(y;...) = 0`) matches the old iterative solver's behavior of looping
-    // until no further equations could be solved.
+    // Derive requiredVars for the terminal check: every variable that appears in
+    // some equation and isn't yet in context is required. Declared-but-unreferenced
+    // outputs (e.g. `d->` with no equation) are NOT required — the post-solve
+    // formatOutput pass reports them as "no value to output". Including
+    // equation-referenced-but-undeclared variables (e.g. `y` in `f(y;...) = 0`)
+    // matches the old iterative solver's behavior of looping until no further
+    // equations could be solved.
     const requiredVars = new Set();
     for (const eq of equations) {
         if (!eq.allVars) continue;
@@ -520,7 +511,6 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         let progressed = true;
         while (progressed) {
             progressed = false;
-            const traceStartLen = _traceBuffer !== null ? _traceBuffer.length : 0;
 
             // [1] Retry pending body defs (those with unknown deps at start).
             // Body defs don't count toward "Solved N" (matches old iterative solver).
@@ -602,13 +592,12 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 }
                 // Resolve if there's a forced choice:
                 //   - exactly 1 finite candidate, OR
-                //   - 0 finite candidates AND ≥1 non-finite fallback AND only 1
-                //     fully-known sub total (no real choice).
+                //   - 0 finite candidates AND exactly 1 non-finite (Infinity) fallback
+                //     (no real choice to make).
                 let chosen = null;
                 if (finiteCandidates.length === 1) {
                     chosen = finiteCandidates[0];
-                } else if (finiteCandidates.length === 0 && nonFiniteFallbacks.length > 0
-                           && (finiteCandidates.length + nonFiniteFallbacks.length) === 1) {
+                } else if (finiteCandidates.length === 0 && nonFiniteFallbacks.length === 1) {
                     chosen = nonFiniteFallbacks[0];
                 }
                 if (chosen) {
@@ -652,16 +641,61 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 }
             }
             _trace(`  [4] Sweep subs: ${[...definitionSubs.keys()].join(', ') || '(none)'}`);
-
-            // Trim the trace for this advance pass if nothing progressed AND
-            // this isn't the first pass at this depth. The first pass shows
-            // the state of affairs even if unchanged.
-            if (!progressed && _traceBuffer !== null && _traceBuffer.length > traceStartLen) {
-                // Keep the first non-progressing pass so the user sees the terminal state.
-                // (Subsequent calls from branching re-enter deterministicAdvance, starting fresh.)
-            }
         }
         return { substitutions, definitionSubs };
+    }
+
+    // Definition-equation guard used by Kind 2, Kind 3, and the post-recursion
+    // "too many unknowns" classifier. Returns true if this equation should be
+    // skipped: either its LHS variable was already handled via substitutions,
+    // or its LHS variable is still unbound (don't Brent's a bare definition).
+    function isSkippableDefEquation(eq) {
+        if (eq.modN) return false;
+        const def = isDefinitionEquation(eq.leftText, eq.rightText, eq.rightAST);
+        if (!def) return false;
+        const rhsUnknowns = [...findVariablesInAST(def.expressionAST)]
+            .filter(v => !context.hasVariable(v));
+        if (rhsUnknowns.length === 0) return true;
+        if (!context.hasVariable(def.variable)) return true;
+        return false;
+    }
+
+    // Run Brent's on an equation with a given sub combo and yield each root as
+    // a branching candidate. Handles the error / limitsDeferred / tooManyUnknowns
+    // bookkeeping that Kind 2 and Kind 3 would otherwise duplicate.
+    function* rootsFromBrents(eq, comboSubs, kind) {
+        const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
+        let r;
+        try {
+            r = solveEquationInContext(eq.startLine, context, variables,
+                comboSubs, modValue, eq.leftAST, eq.rightAST, { allRoots: true });
+        } catch (e) {
+            errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
+            erroredEquations.add(eq.startLine);
+            return;
+        }
+        if (r.limitsDeferred) return;
+        if (r.tooManyUnknowns) {
+            unsolvedEquations.set(eq.startLine, r.tooManyUnknowns);
+            return;
+        }
+        if (!r.solved) {
+            if (r.error && r.variable) {
+                solveFailures.set(r.variable, { error: r.error, line: eq.startLine });
+            }
+            return;
+        }
+        const roots = eq.modN ? dedupeModEquivalent(r.values, eq.modN) : r.values;
+        for (const value of roots) {
+            yield {
+                kind,
+                variable: r.variable,
+                value,
+                eq,
+                combo: comboSubs.size > 0 ? comboSubs : null,
+                sourceLabel: `from line ${eq.startLine + 1}`,
+            };
+        }
     }
 
     // Build the candidates the branching step will try, in preference order.
@@ -702,53 +736,13 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         for (const eq of equations) {
             if (!eq.leftAST || !eq.rightAST) continue;
             if (erroredEquations.has(eq.startLine)) continue;
-            // Skip definition equations whose LHS variable isn't set yet
-            // (those are handled via substitutions, not direct Brent's).
-            const def = !eq.modN && isDefinitionEquation(eq.leftText, eq.rightText, eq.rightAST);
-            if (def) {
-                const rhsVars = findVariablesInAST(def.expressionAST);
-                const rhsUnknowns = [...rhsVars].filter(v => !context.hasVariable(v));
-                if (rhsUnknowns.length === 0) continue;
-                if (!context.hasVariable(def.variable)) continue;
-            }
+            if (isSkippableDefEquation(eq)) continue;
             // Only natural 1-unknown for sweep 0.
             const eqUnknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
             if (eqUnknowns.length !== 1) continue;
             // Skip if the unknown is in definitionSubs (would be substituted in sweep 1).
             if (definitionSubs.has(eqUnknowns[0])) continue;
-
-            const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
-            let r;
-            try {
-                r = solveEquationInContext(eq.startLine, context, variables,
-                    new Map(), modValue, eq.leftAST, eq.rightAST, { allRoots: true });
-            } catch (e) {
-                errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
-                erroredEquations.add(eq.startLine);
-                continue;
-            }
-            if (r.limitsDeferred) continue;
-            if (r.tooManyUnknowns) {
-                unsolvedEquations.set(eq.startLine, r.tooManyUnknowns);
-                continue;
-            }
-            if (!r.solved) {
-                if (r.error && r.variable) {
-                    solveFailures.set(r.variable, { error: r.error, line: eq.startLine });
-                }
-                continue;
-            }
-            const roots = eq.modN ? dedupeModEquivalent(r.values, eq.modN) : r.values;
-            for (const value of roots) {
-                yield {
-                    kind: 'sweep0',
-                    variable: r.variable,
-                    value,
-                    eq,
-                    combo: null,
-                    sourceLabel: `from line ${eq.startLine + 1}`,
-                };
-            }
+            yield* rootsFromBrents(eq, new Map(), 'sweep0');
         }
 
         // --- Kind 3: sweep-1 cartesian sub combos × equations × roots ---
@@ -757,49 +751,8 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             for (const eq of equations) {
                 if (!eq.leftAST || !eq.rightAST) continue;
                 if (erroredEquations.has(eq.startLine)) continue;
-                // Definition guard: same as Kind 2.
-                const def = !eq.modN && isDefinitionEquation(eq.leftText, eq.rightText, eq.rightAST);
-                if (def) {
-                    const rhsVars = findVariablesInAST(def.expressionAST);
-                    const rhsUnknowns = [...rhsVars].filter(v => !context.hasVariable(v));
-                    if (rhsUnknowns.length === 0) continue;
-                    if (!context.hasVariable(def.variable)) continue;
-                }
-
-                const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
-                let r;
-                try {
-                    r = solveEquationInContext(eq.startLine, context, variables,
-                        comboSubs, modValue, eq.leftAST, eq.rightAST, { allRoots: true });
-                } catch (e) {
-                    // Same-eq subs are filtered inside solveEquationInContext.
-                    // An exception here is a real parse/eval problem.
-                    errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
-                    erroredEquations.add(eq.startLine);
-                    continue;
-                }
-                if (r.limitsDeferred) continue;
-                if (r.tooManyUnknowns) {
-                    unsolvedEquations.set(eq.startLine, r.tooManyUnknowns);
-                    continue;
-                }
-                if (!r.solved) {
-                    if (r.error && r.variable) {
-                        solveFailures.set(r.variable, { error: r.error, line: eq.startLine });
-                    }
-                    continue;
-                }
-                const roots = eq.modN ? dedupeModEquivalent(r.values, eq.modN) : r.values;
-                for (const value of roots) {
-                    yield {
-                        kind: 'sweep1',
-                        variable: r.variable,
-                        value,
-                        eq,
-                        combo: comboSubs,
-                        sourceLabel: `from line ${eq.startLine + 1}`,
-                    };
-                }
+                if (isSkippableDefEquation(eq)) continue;
+                yield* rootsFromBrents(eq, comboSubs, 'sweep1');
             }
         }
     }
@@ -863,90 +816,74 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         return lines;
     }
 
-    let recursionDepth = 0;
-    // bestCandidate holds a snapshot of the FIRST branch state in which all
-    // `requiredVars` were set, even if the terminal balance check failed. This
-    // lets degenerate systems (Test 7's NaN `a=sqrt(-b)`, balance-tests Test 9b's
-    // polynomial-precision-noise case) still produce a useful answer: we exhaust
-    // the search looking for a balanced result, and if none is found, we fall
-    // back to the first "all-unknowns-set" state — matching the old iterative
-    // solver's behavior of "find x, then report the balance error".
+    // bestCandidate is a snapshot of a "final but imperfect" state — useful for
+    // surfacing partial answers to the user when no branch reaches a fully-
+    // balanced solution. It's saved first-wins at the deepest level where the
+    // solver can make no further progress:
+    //   - All required vars set but balance fails (Test 7 NaN, Test 9b polynomial
+    //     precision noise, miscellaneous TVM limit-violation)
+    //   - Stuck: no branching alternatives remain (shadow-constants too-many-
+    //     unknowns, fn-arg-count)
+    // On top-level failure, we restore bestCandidate before post-solve error
+    // reporting so values and solveFailures reflect the actual best-effort state.
     let bestCandidate = null;
-    function solveRecursive() {
-        if (recursionDepth >= maxIterations) return 'none';
-        recursionDepth++;
-        const myDepth = recursionDepth;
-        try {
-            _trace(`--- Advance (depth ${myDepth}) ---`);
-            const { substitutions, definitionSubs } = deterministicAdvance();
-
-            // Are all required unknowns set in this branch? A var counts as
-            // "satisfied" if it has a value OR it has a recorded solveFailure
-            // (e.g. a [3] direct-eval limit violation). Treating limit-failed
-            // vars as satisfied lets a branch reach terminal and be saved as a
-            // candidate so the error is surfaced to the user — otherwise
-            // snapshot/restore would roll back the solveFailure along with the
-            // other branch state.
-            let allSet = true;
-            for (const v of requiredVars) {
-                if (!context.hasVariable(v) && !solveFailures.has(v)) { allSet = false; break; }
-            }
-            if (allSet) {
-                // All unknowns are bound. Preferred outcome: every equation
-                // balances. Accept immediately if so.
-                if (checkAllEquationsBalance(context, equations, record, places, requiredVars, erroredEquations)) {
-                    _trace(`  ✓ balanced (depth ${myDepth})`);
-                    return 'balanced';
-                }
-                // Not balanced. Save as fallback candidate (first-wins) so
-                // error reporting has a useful state if nothing better is found.
-                if (!bestCandidate) {
-                    bestCandidate = snapshotState(context, solveFailures, unsolvedEquations,
-                                                  erroredEquations, computedValues, errors, solved);
-                    _trace(`  · candidate (depth ${myDepth}): all unknowns set, balance failed — saved as fallback`);
-                }
-                // Fall through to branching: maybe a deeper branch balances.
-            }
-
-            // Branching step.
-            _trace(`  [5] Branching (depth ${myDepth})`);
-            let branchCount = 0;
-            for (const alt of enumerateAlternatives(substitutions, definitionSubs)) {
-                branchCount++;
-                const snap = snapshotState(context, solveFailures, unsolvedEquations,
-                                           erroredEquations, computedValues, errors, solved);
-
-                _trace(`    Try ${alt.kind}: ${alt.variable} = ${alt.value} (${alt.sourceLabel})`);
-                for (const line of buildAttemptTraceLines(alt)) _trace(line);
-
-                applyDecision(alt);
-
-                if (solveRecursive() === 'balanced') return 'balanced';
-
-                solved = restoreState(context, solveFailures, unsolvedEquations,
-                                      erroredEquations, computedValues, errors, snap);
-                _trace(`    Rejected: ${alt.variable} = ${alt.value} (downstream failed)`);
-            }
-            if (branchCount === 0) {
-                _trace(`    (no alternatives available)`);
-                // Stuck: we've advanced as far as we can at this level and no
-                // alternatives exist. If this is the first such state (deepest in
-                // DFS order by the time recursion unwinds here), save it as
-                // bestCandidate so the final error reporting has the
-                // most-progressed state to work from.
-                if (!bestCandidate) {
-                    bestCandidate = snapshotState(context, solveFailures, unsolvedEquations,
-                                                  erroredEquations, computedValues, errors, solved);
-                    _trace(`  · candidate (depth ${myDepth}): stuck, saved as fallback`);
-                }
-            }
-            return 'none';
-        } finally {
-            recursionDepth--;
-        }
+    function saveCandidate(depth, reason) {
+        if (bestCandidate) return;
+        bestCandidate = snapshotState(context, solveFailures, unsolvedEquations,
+                                      erroredEquations, computedValues, errors, solved);
+        _trace(`  · candidate (depth ${depth}): ${reason}`);
     }
 
-    const status = solveRecursive();
+    function solveRecursive(depth) {
+        if (depth >= maxIterations) return 'none';
+        const myDepth = depth + 1;
+        _trace(`--- Advance (depth ${myDepth}) ---`);
+        const { substitutions, definitionSubs } = deterministicAdvance();
+
+        // "allSet" is true when every required var is either bound in context or
+        // has been marked as failed (e.g. a [3] direct-eval limit violation).
+        // Counting solveFailures vars as satisfied lets a branch reach terminal
+        // and be saved as a candidate — otherwise snapshot/restore would roll
+        // back the failure along with the rest of the branch state and the user
+        // would never see the error.
+        const allSet = [...requiredVars].every(
+            v => context.hasVariable(v) || solveFailures.has(v)
+        );
+        if (allSet) {
+            if (checkAllEquationsBalance(context, equations, record, places, requiredVars, erroredEquations)) {
+                _trace(`  ✓ balanced (depth ${myDepth})`);
+                return 'balanced';
+            }
+            saveCandidate(myDepth, 'all unknowns set, balance failed');
+            // Fall through to branching — maybe a deeper branch balances.
+        }
+
+        _trace(`  [5] Branching (depth ${myDepth})`);
+        let branchCount = 0;
+        for (const alt of enumerateAlternatives(substitutions, definitionSubs)) {
+            branchCount++;
+            const snap = snapshotState(context, solveFailures, unsolvedEquations,
+                                       erroredEquations, computedValues, errors, solved);
+
+            _trace(`    Try ${alt.kind}: ${alt.variable} = ${alt.value} (${alt.sourceLabel})`);
+            for (const line of buildAttemptTraceLines(alt)) _trace(line);
+
+            applyDecision(alt);
+
+            if (solveRecursive(myDepth) === 'balanced') return 'balanced';
+
+            solved = restoreState(context, solveFailures, unsolvedEquations,
+                                  erroredEquations, computedValues, errors, snap);
+            _trace(`    Rejected: ${alt.variable} = ${alt.value} (downstream failed)`);
+        }
+        if (branchCount === 0) {
+            _trace(`    (no alternatives available)`);
+            saveCandidate(myDepth, 'stuck with no alternatives');
+        }
+        return 'none';
+    }
+
+    const status = solveRecursive(0);
     if (status !== 'balanced' && bestCandidate) {
         // No perfectly-balanced branch was found. Fall back to the first state
         // in which all unknowns were bound so error reporting uses real values.
@@ -957,41 +894,17 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         _trace(`========== solveEquations FAILED (no complete solution) ==========`);
     }
 
-    // Post-recursion classification of equations that couldn't be solved.
-    // This replaces the old sweep-1 loop's unsolvedEquations tracking with a
-    // clean pass over final state. Reports:
-    //   - "Too many unknowns" when an equation has ≥2 unknowns the solver couldn't
-    //     reduce (no substitution path exists).
-    // Setting unsolvedEquations here so the existing report loop below picks it up.
-    {
-        const finalSubs = buildSubstitutionMap(equations, context, errors);
-        for (const eq of equations) {
-            if (!eq.leftAST || !eq.rightAST) continue;
-            if (erroredEquations.has(eq.startLine)) continue;
-            // Same definition-equation guard as Kind 2: skip defs whose LHS variable
-            // isn't bound yet — they're handled via substitutions, not error reports.
-            const def = !eq.modN && isDefinitionEquation(eq.leftText, eq.rightText, eq.rightAST);
-            if (def) {
-                if (!context.hasVariable(def.variable)) continue;
-            }
-            // Apply substitutions the same way solveEquationInContext does,
-            // so "too many unknowns" reflects the post-substitution reality.
-            let leftAST = eq.leftAST, rightAST = eq.rightAST;
-            const applicableSubs = new Map();
-            for (const [varName, subs] of finalSubs) {
-                // Use the first sub and only if its source is a different equation
-                const s = subs[0];
-                if (s && s.sourceLine !== eq.startLine) applicableSubs.set(varName, s.ast);
-            }
-            if (applicableSubs.size > 0) {
-                leftAST = substituteInAST(leftAST, applicableSubs);
-                rightAST = substituteInAST(rightAST, applicableSubs);
-            }
-            const eqVars = new Set([...findVariablesInAST(leftAST), ...findVariablesInAST(rightAST)]);
-            const eqUnknowns = [...eqVars].filter(v => !context.hasVariable(v));
-            if (eqUnknowns.length >= 2) {
-                unsolvedEquations.set(eq.startLine, eqUnknowns);
-            }
+    // Post-recursion classification: equations with ≥2 remaining unknowns get
+    // reported as "Too many unknowns". Skips definition equations whose LHS
+    // variable still isn't bound (they're handled via substitutions, not
+    // as error reports).
+    for (const eq of equations) {
+        if (!eq.leftAST || !eq.rightAST) continue;
+        if (erroredEquations.has(eq.startLine)) continue;
+        if (isSkippableDefEquation(eq)) continue;
+        const eqUnknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
+        if (eqUnknowns.length >= 2) {
+            unsolvedEquations.set(eq.startLine, eqUnknowns);
         }
     }
 
