@@ -470,7 +470,7 @@ cmg °= atan(ws*sin(cts) + drift*sin(set); ws*cos(cts) + drift*cos(set))
 ws = speed*cos(leeway)
 
 --Variables--
-cmg[327.8:5.5] °:: 359.991614707713836°
+cmg[327.8:5.5] °:: 359.991614707713779°
 speed: 11.1
 cts °: 5.5°
 drift: 2
@@ -535,4 +535,32 @@ x[Radians(350):Radians(370)] °->> 0.10016742116156
 y[Radians(350):Radians(10)] °->> 0.10016742116156
 z[Radians(10):Radians(370)] °->> 3.041425232428234
 w[Radians(10):Radians(350)] °->> 3.041425232428234
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Line 13: Equation doesn't balance: b = 240° (relative diff 150% >= 0.005%)\nLine 15: Equation doesn't balance: d = 5° (relative diff 98.63% >= 0.005%)\nLine 16: Equation doesn't balance: e = 380° (relative diff 94.737% >= 0.005%)"; StatusIsError = 1
+"Full-circle angular limits [0:360] don't collapse to zero-width"
+"Without a full-circle guard, modM(0) == modM(360) == 0 would collapse"
+"the [3] direct-eval limit check to v>=0 && v<=0 and reject any non-zero"
+"value. The cases here exercise both in-range preservation and"
+"out-of-range normalization across full-circle ranges:"
+"  a: 316 ∈ [0:360], preserved exactly."
+"  b: 240 ∉ [-180:180] raw → stored as -120 (in range), displays as 240°."
+"  c: 50 ∈ [10:370], preserved."
+"  d: 5 ∉ [10:370] raw → stored as 365 (wrapped forward), displays as 5°."
+"  e: 380 ∉ [10:370] raw → stored as 20 (wrapped back), displays as 20°."
+
+a = 316°
+b = 240°
+c = 50°
+d = 5°
+e = 380°
+
+--Variables--
+a[0:360] °-> 316°
+b[-180:180] °-> 240°
+c[10:370] °-> 50°
+d[10:370] °-> 5°
+e[10:370] °-> 20°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

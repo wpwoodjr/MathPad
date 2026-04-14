@@ -428,3 +428,30 @@ y[Radians(350):Radians(10)] °->>
 z[Radians(10):Radians(370)] °->>
 w[Radians(10):Radians(350)] °->>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"Full-circle angular limits [0:360] don't collapse to zero-width"
+"Without a full-circle guard, modM(0) == modM(360) == 0 would collapse"
+"the [3] direct-eval limit check to v>=0 && v<=0 and reject any non-zero"
+"value. The cases here exercise both in-range preservation and"
+"out-of-range normalization across full-circle ranges:"
+"  a: 316 ∈ [0:360], preserved exactly."
+"  b: 240 ∉ [-180:180] raw → stored as -120 (in range), displays as 240°."
+"  c: 50 ∈ [10:370], preserved."
+"  d: 5 ∉ [10:370] raw → stored as 365 (wrapped forward), displays as 5°."
+"  e: 380 ∉ [10:370] raw → stored as 20 (wrapped back), displays as 20°."
+
+a = 316°
+b = 240°
+c = 50°
+d = 5°
+e = 380°
+
+--Variables--
+a[0:360] °->
+b[-180:180] °->
+c[10:370] °->
+d[10:370] °->
+e[10:370] °->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

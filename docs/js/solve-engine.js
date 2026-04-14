@@ -468,10 +468,21 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 if (isAngular) {
                     const M = context.degreesMode ? 360 : 2 * Math.PI;
                     const modM = (x) => ((x % M) + M) % M;
-                    const v = modM(value), l = modM(low), h = modM(high);
-                    inRange = (l <= h) ? (v >= l && v <= h) : (v >= l || v <= h);
-                    if (inRange) {
-                        value = v >= l ? low + (v - l) : low + (v + M - l);
+                    // Arc-based range check: compute the arc length from low to high
+                    // around the unit circle. This uniformly handles full-circle,
+                    // wraparound, and normal ranges without special-casing.
+                    //   - Full circle ([0:360], [10:370], ...): arcLen = 0 after mod,
+                    //     widened to M so any value is in range.
+                    //   - Wraparound ([327.8:5.5]): arcLen is the short arc through 0.
+                    //   - Normal ([10:350]): arcLen = h - l.
+                    let arcLen = modM(high - low);
+                    if (arcLen === 0 && low !== high) arcLen = M;
+                    const offset = modM(value - low);
+                    inRange = offset <= arcLen;
+                    if (inRange && (value < low || value > low + arcLen)) {
+                        // Renormalize into [low, low + arcLen]. Values already in
+                        // that window are preserved exactly (no FP round-trip).
+                        value = low + offset;
                     }
                 } else {
                     inRange = value >= low && value <= high;
@@ -757,41 +768,23 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         }
     }
 
-    // Set a Brent's-derived value for a variable. Does NOT run the [3] direct-eval
-    // limit check — Brent's already constrained the value to the declared limit range
-    // via its search scope. (The [3] limit check applies mod-wrap normalization that
-    // collapses e.g. [0:360] to a zero-width range because modM(0)=modM(360)=0.)
-    function applyBrentsValue(varName, value, sourceLine) {
-        context.setVariable(varName, value);
-        computedValues.set(varName, value);
-        solveFailures.delete(varName);
-        if (sourceLine != null) unsolvedEquations.delete(sourceLine);
-        solved++;
-    }
-
-    // Apply a branching decision (set the variable and, for sweep-1 combos,
+    // Apply a branching decision: set the variable and, for sweep-1 combos,
     // lock in the chosen sub alternates so the next recursion level doesn't
-    // have to re-discover the combo's forced values).
+    // have to re-discover the combo's forced values.
     function applyDecision(alt) {
-        if (alt.kind === 'directEval') {
-            // Direct-eval alternates still run through the limit check — it's
-            // how [3]-style limit validation stays active for those cases.
-            applyDirectValue(alt.variable, alt.value, alt.sourceLine);
-            return;
-        }
-        // Brent's result (Kind 2 or Kind 3) — trust the solver's search range.
-        applyBrentsValue(alt.variable, alt.value, alt.eq ? alt.eq.startLine : null);
+        const sourceLine = alt.kind === 'directEval'
+            ? alt.sourceLine
+            : (alt.eq ? alt.eq.startLine : null);
+        applyDirectValue(alt.variable, alt.value, sourceLine);
         // For sweep-1 combos: evaluate each chosen sub against the now-updated
         // context so subsequent advance passes don't re-explore the combo.
-        // Immediate-resolve also uses the trust-Brent's path (no limit check)
-        // so a sub that evaluates to e.g. 316° in [0:360] isn't rejected.
         if (alt.combo && alt.combo.size > 0) {
             for (const [subVar, sub] of alt.combo) {
                 if (context.hasVariable(subVar)) continue;
                 try {
                     const v = evaluate(sub.ast, context);
                     if (Number.isFinite(v)) {
-                        applyBrentsValue(subVar, v, sub.sourceLine);
+                        applyDirectValue(subVar, v, sub.sourceLine);
                     }
                 } catch (e) { /* leave for next advance pass */ }
             }
