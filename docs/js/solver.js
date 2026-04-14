@@ -187,9 +187,14 @@ function expandFromGuess(f, guess = 1) {
  * @param {Function} f - Function where f(x) = 0 is the equation to solve
  * @param {Object} limits - Optional search limits { low, high }
  * @param {number} knownScale - Max magnitude of known variables (extends search range)
- * @returns {number} Solution value
+ * @param {number|null} modN - Modulus for °= equations (to reject wrapping discontinuities)
+ * @param {Object} [options] - { allRoots: boolean }. When true, returns an ordered array
+ *                             of all roots found instead of just the best one. Used by the
+ *                             recursive solver to enumerate candidates for backtracking.
+ * @returns {number|number[]} Solution value, or array of values when allRoots is true.
+ *                            Ordering: positive roots ascending, then non-positive by |value|.
  */
-function solveEquation(f, limits = null, knownScale = 0, modN = null) {
+function solveEquation(f, limits = null, knownScale = 0, modN = null, { allRoots = false } = {}) {
     const hasLimits = limits && isFinite(limits.low) && isFinite(limits.high);
     const fTol = 128 * Number.EPSILON;
 
@@ -296,15 +301,14 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null) {
         }
     }
 
-    // Return best root: prefer smallest positive, then smallest absolute
+    // Return roots: prefer smallest positive, then smallest absolute.
+    // When allRoots is true, return the full ordered list so callers can
+    // enumerate alternatives in preference order (used by the recursive solver).
     if (roots.length > 0) {
-        const positiveRoots = roots.filter(r => r > 0);
-        if (positiveRoots.length > 0) {
-            positiveRoots.sort((a, b) => a - b);
-            return positiveRoots[0];
-        }
-        roots.sort((a, b) => Math.abs(a) - Math.abs(b));
-        return roots[0];
+        const positive = roots.filter(r => r > 0).sort((a, b) => a - b);
+        const nonPositive = roots.filter(r => r <= 0).sort((a, b) => Math.abs(a) - Math.abs(b));
+        const ordered = [...positive, ...nonPositive];
+        return allRoots ? ordered : ordered[0];
     }
 
     // Fallback for no-limits: expand outward from default guess.
@@ -321,7 +325,7 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null) {
             const fa = safeEval(f, bracket[0]);
             const fb = safeEval(f, bracket[1]);
             const root = tryBracket(bracket[0], bracket[1], fa, fb);
-            if (root !== null) return root;
+            if (root !== null) return allRoots ? [root] : root;
         }
     }
 
