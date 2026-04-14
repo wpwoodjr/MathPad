@@ -568,51 +568,37 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 _trace('    (none)');
             }
 
-            // [3] Evaluate fully-known substitutions — unambiguous only.
+            // [3] Evaluate fully-known substitutions.
             //
-            // "Finite candidates" = subs that evaluate to a finite Number (not NaN
-            // and not ±Infinity). Ambiguity for branching purposes is measured in
-            // FINITE candidates only: if only one finite answer exists, we resolve
-            // here and skip branching. NaN candidates are never used (unverifiable).
-            // Infinity candidates are used ONLY as a last-resort fallback when the
-            // variable has exactly one fully-known sub (no real choice to make) —
-            // this handles the course-heading-debug case where `sin(correction)` is
-            // 0 and boatSpeed legitimately resolves to Infinity.
+            // A sub is a "candidate" if all its variables are bound and it
+            // evaluates to a non-NaN value. NaN means "this substitution can't
+            // be computed here" and is never a valid resolution. ±Infinity is
+            // a valid degenerate answer (e.g. `boatSpeed = sin(...) / 0`) and
+            // is treated like any other numeric value.
+            //
+            // Resolution rule:
+            //   0 candidates → deferred (wait for more info next iteration)
+            //   1 candidate  → forced choice, resolve here
+            //   2+ candidates → ambiguous, defer to Kind 1 branching
             _trace('  [3] Evaluate fully-known substitutions');
             for (const [varName, subs] of substitutions) {
                 if (context.hasVariable(varName)) continue;
-                const finiteCandidates = [];
-                const nonFiniteFallbacks = []; // ±Infinity (not NaN)
+                const candidates = [];
                 const unknownSubs = [];
                 for (const sub of subs) {
-                    const subVars = [...findVariablesInAST(sub.ast)];
-                    const subUnknowns = subVars.filter(v => !context.hasVariable(v));
+                    const subUnknowns = [...findVariablesInAST(sub.ast)]
+                        .filter(v => !context.hasVariable(v));
                     if (subUnknowns.length > 0) {
                         unknownSubs.push({ sub, unknowns: subUnknowns });
                         continue;
                     }
                     try {
                         const v = evaluate(sub.ast, context);
-                        if (Number.isFinite(v)) {
-                            finiteCandidates.push({ sub, value: v });
-                        } else if (typeof v === 'number' && !Number.isNaN(v)) {
-                            // ±Infinity — usable as fallback only.
-                            nonFiniteFallbacks.push({ sub, value: v });
-                        }
+                        if (!Number.isNaN(v)) candidates.push({ sub, value: v });
                     } catch (e) { /* skip */ }
                 }
-                // Resolve if there's a forced choice:
-                //   - exactly 1 finite candidate, OR
-                //   - 0 finite candidates AND exactly 1 non-finite (Infinity) fallback
-                //     (no real choice to make).
-                let chosen = null;
-                if (finiteCandidates.length === 1) {
-                    chosen = finiteCandidates[0];
-                } else if (finiteCandidates.length === 0 && nonFiniteFallbacks.length === 1) {
-                    chosen = nonFiniteFallbacks[0];
-                }
-                if (chosen) {
-                    const { sub, value } = chosen;
+                if (candidates.length === 1) {
+                    const { sub, value } = candidates[0];
                     try {
                         if (applyDirectValue(varName, value, sub.sourceLine)) {
                             progressed = true;
@@ -625,7 +611,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                             errors.push(`Line ${sub.sourceLine + 1}: ${e.message}`);
                         }
                     }
-                } else if (finiteCandidates.length === 0 && nonFiniteFallbacks.length === 0) {
+                } else if (candidates.length === 0) {
                     if (_traceBuffer !== null) {
                         _trace(`    ${varName}: deferred`);
                         for (const { sub, unknowns } of unknownSubs) {
@@ -634,9 +620,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                     }
                 } else {
                     // Ambiguous — leave for Kind 1 branching.
-                    if (_traceBuffer !== null) {
-                        _trace(`    ${varName}: ambiguous (${finiteCandidates.length} finite alternates) — deferred to branching`);
-                    }
+                    _trace(`    ${varName}: ambiguous (${candidates.length} alternates) — deferred to branching`);
                 }
             }
 
@@ -718,16 +702,18 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     //   Kind 3: sweep-1 with cartesian combos of sub alternates (all roots).
     function* enumerateAlternatives(substitutions, definitionSubs) {
         // --- Kind 1: direct-eval alternates ---
+        // Matches [3]'s candidate rule: non-NaN (finite or ±Infinity) counts.
+        // Yield each sub when the variable has ≥2 candidates ([3] would have
+        // deferred it here).
         for (const [varName, subs] of substitutions) {
             if (context.hasVariable(varName)) continue;
-            // Gather every sub that evaluates finite.
             const cands = [];
             for (const sub of subs) {
                 const subUnknowns = [...findVariablesInAST(sub.ast)].filter(v => !context.hasVariable(v));
                 if (subUnknowns.length > 0) continue;
                 try {
                     const v = evaluate(sub.ast, context);
-                    if (Number.isFinite(v)) cands.push({ sub, value: v });
+                    if (!Number.isNaN(v)) cands.push({ sub, value: v });
                 } catch (e) { /* skip */ }
             }
             if (cands.length < 2) continue; // [3] already resolved (1) or deferred (0)

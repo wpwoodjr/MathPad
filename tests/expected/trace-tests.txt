@@ -32,7 +32,7 @@ c: 5
     line 3: b → (c - a)
     line 4: b → (5 - a)
   [3] Evaluate fully-known substitutions
-    b: ambiguous (2 finite alternates) — deferred to branching
+    b: ambiguous (2 alternates) — deferred to branching
   [4] Sweep subs: b
   [5] Branching (depth 1)
     Try directEval: b = 3 (from line 3, direct eval)
@@ -930,7 +930,7 @@ set °: 45°
     line 12: drift → ((smg * sin((cts - cmg))) / sin((cts - set)))
     line 26: drift → sqrt(((((smg * sin(cmg)) - (speed * sin(cts))) ** 2) + (((smg * cos(cmg)) - (speed * cos(cts))) ** 2)))
   [3] Evaluate fully-known substitutions
-    drift: ambiguous (2 finite alternates) — deferred to branching
+    drift: ambiguous (2 alternates) — deferred to branching
   [4] Sweep subs: drift
   [5] Branching (depth 2)
     Try directEval: drift = -0.9940321926376441 (from line 12, direct eval)
@@ -968,7 +968,7 @@ set °: 45°
     line 12: drift → ((smg * sin((cts - cmg))) / sin((cts - set)))
     line 26: drift → sqrt(((((smg * sin(cmg)) - (speed * sin(cts))) ** 2) + (((smg * cos(cmg)) - (speed * cos(cts))) ** 2)))
   [3] Evaluate fully-known substitutions
-    drift: ambiguous (2 finite alternates) — deferred to branching
+    drift: ambiguous (2 alternates) — deferred to branching
   [4] Sweep subs: drift
   [5] Branching (depth 2)
     Try directEval: drift = 0.994032192637643 (from line 12, direct eval)
