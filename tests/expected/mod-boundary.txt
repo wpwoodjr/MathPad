@@ -262,7 +262,7 @@ Status = "Solved 2 equations"; StatusIsError = 0
 // cmg=350, drift=20: smg+salt °= 350, smg-salt °= 20
 // smg = (350+20)/2 mod 360 = 185, salt = 185-350 mod 360 = -165 or 195
 salt-> -15
-smg-> 365
+smg-> 5
 drift °= smg - salt
 smg + salt °= cmg
 cmg: 350
@@ -338,7 +338,7 @@ a °= atan(b; -1)
 drift °= smg - salt
 smg + salt °= cmg
 salt<- 96.3894
-smg<- -95.3894
+smg<- 99.3894
 cmg: 1
 drift: 3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

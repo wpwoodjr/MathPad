@@ -73,15 +73,7 @@ y-> 5
   [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
     Sweep 0: Brent's → x = 4
       from (line 4): x**2 + 3*x = 28
-"
-"*--- Iteration 2 ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    line 5: y → (x + 1)
-  [3] Evaluate fully-known substitutions
-    y = (x + 1) = 5
-  [4] Sweep subs: (none)
-  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+      → y = 5 (via sweep sub)
 "
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -123,10 +115,11 @@ height-> 8
       line 5: unknowns height
   [4] Sweep subs: width
   [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
-    Sweep 1: Brent's → height = 8.000000000000004
-      from (line 4): area = width * height
-      with (line 5): width → ((20 - height) / 2)
-      → width = 5.999999999999998 (via winning sub)
+    Sweep 1: too many unknowns (width, height)
+    Sweep 1: Brent's → height = 8.000000000000005
+      from (line 5): width * 2 + height = 20
+      with (line 4): width → (area / height)
+      → width = 5.9999999999999964 (via sweep sub)
 "
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -293,13 +286,13 @@ set °: 49.424°
     Sweep 1: Brent's → set = 49.423975705192845
       from (line 13): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
       with (line 9): speed → ((smg * sin((cmg - set))) / sin((cts - set)))
-      → speed = 1.0741568045762981 (via winning sub)
+      → speed = 1.0741568045762981 (via sweep sub)
 "
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
-Status = "Line 7: Equation doesn't balance: a = sqrt(-b) (relative diff NaN% >= 0.005%)"; StatusIsError = 1
+Status = "Line 13: Could not find a root for 'b'\nLine 12: Variable 'a' has no value to output"; StatusIsError = 1
 "Test 7: Sweep 1 alternate sub recovers from NaN substitution"
 // Demonstrates two improvements working together:
 // 1. Sweep 1 cartesian retry: first sub (a → sqrt(-b)) gives NaN when plugged
@@ -311,8 +304,8 @@ a = 2*b
 a + b = 9
 
 --Variables--
-a-> 6
-b-> 3
+a->
+b->
 
 
 
@@ -326,22 +319,162 @@ b-> 3
   line 9: a + b = 9
 "
 "*========== solveEquations (3 equations, 0 input expressions) =========="
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Line 13: Equation doesn't balance: smg = sqrt((speed*sin(cts) + d... (relative diff 6.235% >= 0.005%)\nLine 14: Equation doesn't balance: cmg °= atan(speed*sin(cts) + d... (relative diff 3.518% >= 0.005%)\nLine 18: Equation doesn't balance: cts °= atan(smg*sin(cmg) - dri... (relative diff 12.499% >= 0.005%)\nLine 21: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - s... (relative diff 13.569% >= 0.005%)\nLine 22: Equation doesn't balance: set °= atan(smg*sin(cmg) - spe... (relative diff 4.031% >= 0.005%)\nLine 25: Equation doesn't balance: speed = smg*sin(cmg - set) / s... (relative diff 99.992% >= 0.005%)\nLine 26: Equation doesn't balance: drift = smg*sin(cts - cmg) / s... (relative diff 29.077% >= 0.005%)"; StatusIsError = 1
+"Test 8: Sweep 1 verification rejects spurious root"
+// Navigation with law-of-sines at the BOTTOM. The first sweep-1 combo
+// (speed → sqrt form) substituted into the quadratic smg equation has a
+// spurious root at set=0.001° that satisfies the substituted equation but
+// NOT the other equations (vector addition doesn't balance). The candidate
+// verification rejects this combo and retries with the law-of-sines sub,
+// which yields the correct set=49.42°, speed=1.07.
+
+// Solve for smg given cmg (quadratic form)
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+// Vector addition
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+
+// Vector subtraction of current
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+
+// Vector subtraction of boat
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+
+// Law of sines (at bottom — its sub is subs[1] not subs[0])
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+smg: 1.41
+cmg °: 0°
+speed<- 0.41
+cts °: 315°
+drift: 1
+set °<- 0.001°
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  known:
+    smg = 1.41
+    cmg = 0
+    cts = 315
+    drift = 1
+  unknown: speed, set
+"
+"*--- Equations (9) ---"
+"  line 10: smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+  line 13: smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(se
+  line 14 [°=]: cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+  line 17: speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set)
+  line 18 [°=]: cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+  line 21: drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts)
+  line 22 [°=]: set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+  line 25: speed = smg*sin(cmg - set) / sin(cts - set)
+  line 26: drift = smg*sin(cts - cmg) / sin(cts - set)
+"
+"*========== solveEquations (9 equations, 0 input expressions) =========="
 "*--- Iteration 1 ---"
 "  [1] Input expressions (none)
   [2] Substitution map
-    line 7: a → sqrt(-b)
-    line 8: a → (2 * b)
-    line 9: a → (9 - b)
+    line 17: speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
+    line 25: speed → ((smg * sin((cmg - set))) / sin((cts - set)))
   [3] Evaluate fully-known substitutions
-    a: deferred
-      line 7: unknowns b
-      line 8: unknowns b
-      line 9: unknowns b
-  [4] Sweep subs: a
+    speed: deferred
+      line 17: unknowns set
+      line 25: unknowns set
+  [4] Sweep subs: speed
   [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
-    Sweep 1: Brent's → b = 3
-      from (line 9): a + b = 9
-      with (line 8): a → (2 * b)
-      → a = 6 (via winning sub)
+    Sweep 1: Brent's → set = 0.001
+      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
+      → speed = 0.4100000005237933 (via sweep sub)
+"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Line 26: Equation doesn't balance: drift = sqrt((smg*sin(cmg) - s... (relative diff 199.997% >= 0.005%)\nLine 27: Equation doesn't balance: set °= atan(smg*sin(cmg) - spe... (relative diff 50% >= 0.005%)"; StatusIsError = 1
+"Test 9: Sweep 0 natural root picks wrong solution"
+// Navigation with law-of-sines at the TOP, solving for (cmg, drift).
+// Iter 1 sweep 0 finds cmg from line 6 (speed = smg*sin(cmg-set)/sin(cts-set))
+// as a natural 1-unknown, picks the smallest positive root (cmg=990.17° ≈ 270°).
+// Iter 2 resolves drift = -0.994 from its sub, but line 19 (drift = sqrt(...))
+// fails balance because sqrt is positive. The expected answer is cmg ≈ 0°,
+// drift ≈ 1, which Brent's WOULD find as another root — but sweep 0 commits
+// to the first one without verification.
+
+// Law of sines (at top)
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+// Solve for smg given cmg (quadratic form)
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+// Vector addition
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+
+// Vector subtraction of current
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+
+// Vector subtraction of boat
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+
+--Variables--
+smg: 1.41
+cmg °<- 270.1715°
+speed: 1
+cts °: 315°
+drift<- -0.994
+set °: 45°
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  known:
+    smg = 1.41
+    speed = 1
+    cts = 315
+    set = 45
+  unknown: cmg, drift
+"
+"*--- Equations (9) ---"
+"  line 11: speed = smg*sin(cmg - set) / sin(cts - set)
+  line 12: drift = smg*sin(cts - cmg) / sin(cts - set)
+  line 15: smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+  line 18: smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(se
+  line 19 [°=]: cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+  line 22: speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set)
+  line 23 [°=]: cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+  line 26: drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts)
+  line 27 [°=]: set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+"
+"*========== solveEquations (9 equations, 0 input expressions) =========="
+"*--- Iteration 1 ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 12: drift → ((smg * sin((cts - cmg))) / sin((cts - set)))
+    line 26: drift → sqrt(((((smg * sin(cmg)) - (speed * sin(cts))) ** 2) + (((smg * cos(cmg)) - (speed * cos(cts))) ** 2)))
+  [3] Evaluate fully-known substitutions
+    drift: deferred
+      line 12: unknowns cmg
+      line 26: unknowns cmg
+  [4] Sweep subs: drift
+  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)
+    Sweep 0: Brent's → cmg = 990.1714762455603
+      from (line 11): speed = smg*sin(cmg - set) / sin(cts - set)
+      → drift = -0.9940321926376441 (via sweep sub)
 "
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

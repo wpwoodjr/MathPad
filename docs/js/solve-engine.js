@@ -309,19 +309,13 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         _trace('  [3] Evaluate fully-known substitutions');
         for (const [varName, subs] of substitutions) {
             if (context.hasVariable(varName)) continue;
-            // Try each fully-known sub — prefer the first one that produces a finite value.
-            // Falls back to first fully-known sub if no alternative is finite.
+            // Try each sub — use first fully-evaluable one
             let chosen = null;
-            let fallback = null;
             for (const sub of subs) {
                 if ([...findVariablesInAST(sub.ast)].some(v => !context.hasVariable(v))) continue;
-                if (!fallback) fallback = sub;
-                try {
-                    const v = evaluate(sub.ast, context);
-                    if (isFinite(v)) { chosen = sub; break; }
-                } catch (e) { /* try next */ }
+                chosen = sub;
+                break;
             }
-            if (!chosen) chosen = fallback;
             if (!chosen) {
                 if (_traceBuffer !== null) {
                     _trace(`    ${varName}: deferred`);
@@ -391,39 +385,24 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
         // [4] Build sweep subs — only if [3] didn't resolve everything
         // Filter: variables with no value, no limits. Used as skip list for sweep 0
-        // and substitution source for sweep 1. Stores ALL alternates so sweep 1
-        // can try each combination when the first doesn't yield a solvable form.
-        const definitionSubs = new Map(); // varName → full sub array
+        // and substitutions for sweep 1. subs[0] wins — first sub in source order.
+        const definitionSubs = new Map(); // varName → single sub
         if (!changed) {
             for (const [varName, subs] of substitutions) {
                 if (context.hasVariable(varName)) continue;
                 const varInfo = variables.get(varName);
                 if (varInfo && varInfo.declaration && varInfo.declaration.limits) continue;
-                definitionSubs.set(varName, subs);
+                definitionSubs.set(varName, subs[0]);
             }
         }
         _trace(`  [4] Sweep subs: ${[...definitionSubs.keys()].join(', ') || '(none)'}`);
 
         // [5] Equation solving — two sweeps:
         //   Sweep 0: natural 1-unknown only (no subs), skip if unknown is in [4]
-        //   Sweep 1: equations reduced to 1 unknown via [4] subs. Iterates all
-        //            combinations of sweep sub alternates until one succeeds.
+        //   Sweep 1: equations reduced to 1 unknown via [4] subs
         _trace('  [5] Equation solving (sweep 0: natural, sweep 1: with sweep subs)');
-        // Generate cartesian product of sweep sub alternates.
-        // Yields Maps {varName → single sub} for each combination.
-        function* subCombinations(defSubs) {
-            const keys = [...defSubs.keys()];
-            if (keys.length === 0) { yield new Map(); return; }
-            const values = keys.map(k => defSubs.get(k));
-            function* rec(i, current) {
-                if (i === keys.length) { yield new Map(current); return; }
-                for (const v of values[i]) {
-                    yield* rec(i + 1, [...current, [keys[i], v]]);
-                }
-            }
-            yield* rec(0, []);
-        }
         for (let sweep = 0; sweep < 2 && !changed; sweep++) {
+            const sweepSubs = sweep === 0 ? new Map() : definitionSubs;
             for (const eq of equations) {
                 try {
                     // Handle incomplete equations (expr =)
@@ -462,45 +441,16 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                         if (eqUnknowns.length === 1 && definitionSubs.has(eqUnknowns[0])) continue;
                     }
 
-                    // Build combinations to try:
-                    //   Sweep 0: one empty sub map
-                    //   Sweep 1: cartesian product of all sweep sub alternates
-                    const combos = sweep === 0
-                        ? [new Map()]
-                        : [...subCombinations(definitionSubs)];
-
-                    let result = null;
-                    let winningSubs = null;
-                    let lastError = null;
-                    let lastErrorSubs = null;
+                    // Try to solve the equation numerically
                     const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
-                    for (const comboSubs of combos) {
-                        const r = solveEquationInContext(eq.startLine, context, variables,
-                            comboSubs, modValue, eq.leftAST, eq.rightAST);
-                        if (r.solved) {
-                            result = r;
-                            winningSubs = comboSubs;
-                            break;
-                        }
-                        if (r.error && r.variable) {
-                            lastError = r;
-                            lastErrorSubs = comboSubs;
-                        } else if (!result) {
-                            result = r; // remember tooManyUnknowns / resolved
-                            winningSubs = comboSubs;
-                        }
-                    }
-                    if (!result && lastError) {
-                        result = lastError;
-                        winningSubs = lastErrorSubs;
-                    }
-                    if (!result) continue;
+                    const result = solveEquationInContext(eq.startLine, context, variables,
+                        sweepSubs, modValue, eq.leftAST, eq.rightAST);
 
-                    // Build trace "from:"/"with:" lines for the chosen combination
+                    // Build trace "from:"/"with:" lines for the equation being solved
                     const buildEqTraceLines = () => {
                         const lines = [`      from (line ${eq.startLine + 1}): ${eq.text.trim()}`];
-                        if (sweep === 1 && winningSubs && winningSubs.size > 0 && eq.allVars) {
-                            for (const [varName, sub] of winningSubs) {
+                        if (sweep === 1 && sweepSubs.size > 0 && eq.allVars) {
+                            for (const [varName, sub] of sweepSubs) {
                                 // Subs from the same equation are filtered by solveEquationInContext,
                                 // so don't include them in the trace either.
                                 if (sub.sourceLine === eq.startLine) continue;
@@ -523,24 +473,22 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                             _trace(`    Sweep ${sweep}: Brent's → ${result.variable} = ${result.value}`);
                             for (const line of buildEqTraceLines()) _trace(line);
                         }
-                        // Now that the sweep sub target is solved, the winning sweep subs
-                        // themselves become fully evaluable — resolve them immediately
-                        // using the specific sub that succeeded. For °= subs, direct eval
-                        // gives a valid mod-equivalent (same philosophy as [3] direct eval).
-                        if (winningSubs && winningSubs.size > 0) {
-                            for (const [subVar, sub] of winningSubs) {
-                                if (context.hasVariable(subVar)) continue;
-                                try {
-                                    const v = evaluate(sub.ast, context);
-                                    if (isFinite(v)) {
-                                        context.setVariable(subVar, v);
-                                        computedValues.set(subVar, v);
-                                        solveFailures.delete(subVar);
-                                        solved++;
-                                        _trace(`      → ${subVar} = ${v} (via winning sub)`);
-                                    }
-                                } catch (e) { /* leave for next iteration */ }
-                            }
+                        // Now that Brent's set one variable, the sweep subs themselves
+                        // become fully evaluable — resolve them immediately instead of
+                        // waiting for iteration 2's [3] direct eval. Applies to both
+                        // sweeps; definitionSubs is built in [4] regardless of sweep.
+                        for (const [subVar, sub] of definitionSubs) {
+                            if (context.hasVariable(subVar)) continue;
+                            try {
+                                const v = evaluate(sub.ast, context);
+                                if (isFinite(v)) {
+                                    context.setVariable(subVar, v);
+                                    computedValues.set(subVar, v);
+                                    solveFailures.delete(subVar);
+                                    solved++;
+                                    _trace(`      → ${subVar} = ${v} (via sweep sub)`);
+                                }
+                            } catch (e) { /* leave for next iteration */ }
                         }
                         // Restart so Pass 1 can evaluate definitions with the new value,
                         // avoiding a second Brent's step that might pick an inconsistent root

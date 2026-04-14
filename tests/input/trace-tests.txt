@@ -124,3 +124,80 @@ a + b = 9
 --Variables--
 a->
 b->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 8: Sweep 1 verification rejects spurious root"
+// Navigation with law-of-sines at the BOTTOM. The first sweep-1 combo
+// (speed → sqrt form) substituted into the quadratic smg equation has a
+// spurious root at set=0.001° that satisfies the substituted equation but
+// NOT the other equations (vector addition doesn't balance). The candidate
+// verification rejects this combo and retries with the law-of-sines sub,
+// which yields the correct set=49.42°, speed=1.07.
+
+// Solve for smg given cmg (quadratic form)
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+// Vector addition
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+
+// Vector subtraction of current
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+
+// Vector subtraction of boat
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+
+// Law of sines (at bottom — its sub is subs[1] not subs[0])
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+--Variables--
+smg: 1.41
+cmg °: 0°
+speed<-
+cts °: 315°
+drift: 1
+set °<-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 9: Sweep 0 natural root picks wrong solution"
+// Navigation with law-of-sines at the TOP, solving for (cmg, drift).
+// Iter 1 sweep 0 finds cmg from line 6 (speed = smg*sin(cmg-set)/sin(cts-set))
+// as a natural 1-unknown, picks the smallest positive root (cmg=990.17° ≈ 270°).
+// Iter 2 resolves drift = -0.994 from its sub, but line 19 (drift = sqrt(...))
+// fails balance because sqrt is positive. The expected answer is cmg ≈ 0°,
+// drift ≈ 1, which Brent's WOULD find as another root — but sweep 0 commits
+// to the first one without verification.
+
+// Law of sines (at top)
+speed = smg*sin(cmg - set) / sin(cts - set)
+drift = smg*sin(cts - cmg) / sin(cts - set)
+
+// Solve for smg given cmg (quadratic form)
+smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+
+// Vector addition
+smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+
+// Vector subtraction of current
+speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
+cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+
+// Vector subtraction of boat
+drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+
+--Variables--
+smg: 1.41
+cmg °<-
+speed: 1
+cts °: 315°
+drift<-
+set °: 45°
