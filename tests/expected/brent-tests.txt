@@ -582,3 +582,25 @@ v = 1000
 --Variables--
 v[0:100]->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 11: Equation doesn't balance: z = x (left = -Infinity, right = Infinity)\nLine 13: Equation doesn't balance: a = sqrt(b) (left = NaN, right = NaN)\nLine 17: Equation doesn't balance: 3 = Infinity (left = 3, right = Infinity)"; StatusIsError = 1
+"Infinity and NaN tests"
+
+--Variables--
+x = Infinity
+x-> Infinity
+
+y = 2/0
+y-> Infinity
+
+z = -Infinity
+z = x
+
+a = sqrt(b)
+a-> NaN
+b: -3
+
+3 = Infinity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

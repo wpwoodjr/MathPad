@@ -334,6 +334,13 @@ function formatDuration(seconds, fractional) {
 function checkBalance(a, b, places) {
     const tolPlaces = Math.max(3, places + 1);
     const balanceTolerance = 5 * Math.pow(10, -tolPlaces);
+    // Exact equality short-circuit. Handles Infinity === Infinity (where the
+    // diff arithmetic would otherwise produce NaN and incorrectly report "doesn't
+    // balance"). NaN === NaN is false in JS so NaN values still fall through to
+    // the arithmetic-based check, which correctly reports them as unbalanced.
+    if (a === b) {
+        return { balanced: true, relative: false, difference: 0, tolerance: balanceTolerance, tolPlaces };
+    }
     const diff = Math.abs(a - b);
     if (a === 0 || b === 0) {
         const tolerance = Math.min(balanceTolerance, 5e-14);

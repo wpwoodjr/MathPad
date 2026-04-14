@@ -570,20 +570,26 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
             // [3] Evaluate fully-known substitutions.
             //
-            // A sub is a "candidate" if all its variables are bound and it
-            // evaluates to a non-NaN value. NaN means "this substitution can't
-            // be computed here" and is never a valid resolution. ±Infinity is
-            // a valid degenerate answer (e.g. `boatSpeed = sin(...) / 0`) and
-            // is treated like any other numeric value.
+            // Each fully-known sub is classified as either a non-NaN candidate
+            // (real value, Infinity, or -Infinity) or a NaN fallback. NaN is
+            // treated as inferior to any real/Infinity answer because it usually
+            // signals "this substitution path failed in this context" (e.g.
+            // sqrt of negative, 0/0). But when a variable has exactly one
+            // fully-known sub and it's NaN, we still store NaN so the user sees
+            // the degenerate answer directly instead of a generic "no value"
+            // error.
             //
             // Resolution rule:
-            //   0 candidates → deferred (wait for more info next iteration)
-            //   1 candidate  → forced choice, resolve here
-            //   2+ candidates → ambiguous, defer to Kind 1 branching
+            //   0 non-NaN + 0 NaN  → deferred (wait for more info next iteration)
+            //   1 non-NaN          → forced choice, resolve here
+            //   2+ non-NaN         → ambiguous, defer to Kind 1 branching
+            //   0 non-NaN + 1 NaN  → NaN fallback, resolve (single option)
+            //   0 non-NaN + 2+ NaN → deferred (multiple NaN subs — no obvious pick)
             _trace('  [3] Evaluate fully-known substitutions');
             for (const [varName, subs] of substitutions) {
                 if (context.hasVariable(varName)) continue;
                 const candidates = [];
+                const nanFallbacks = [];
                 const unknownSubs = [];
                 for (const sub of subs) {
                     const subUnknowns = [...findVariablesInAST(sub.ast)]
@@ -594,11 +600,19 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                     }
                     try {
                         const v = evaluate(sub.ast, context);
-                        if (!Number.isNaN(v)) candidates.push({ sub, value: v });
+                        if (typeof v !== 'number') continue;
+                        if (Number.isNaN(v)) nanFallbacks.push({ sub, value: v });
+                        else candidates.push({ sub, value: v });
                     } catch (e) { /* skip */ }
                 }
+                let chosen = null;
                 if (candidates.length === 1) {
-                    const { sub, value } = candidates[0];
+                    chosen = candidates[0];
+                } else if (candidates.length === 0 && nanFallbacks.length === 1) {
+                    chosen = nanFallbacks[0];
+                }
+                if (chosen) {
+                    const { sub, value } = chosen;
                     try {
                         if (applyDirectValue(varName, value, sub.sourceLine)) {
                             progressed = true;
@@ -611,16 +625,14 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                             errors.push(`Line ${sub.sourceLine + 1}: ${e.message}`);
                         }
                     }
-                } else if (candidates.length === 0) {
-                    if (_traceBuffer !== null) {
-                        _trace(`    ${varName}: deferred`);
-                        for (const { sub, unknowns } of unknownSubs) {
-                            _trace(`      line ${sub.sourceLine + 1}: unknowns ${unknowns.join(', ')}`);
-                        }
-                    }
-                } else {
+                } else if (candidates.length >= 2) {
                     // Ambiguous — leave for Kind 1 branching.
                     _trace(`    ${varName}: ambiguous (${candidates.length} alternates) — deferred to branching`);
+                } else if (_traceBuffer !== null) {
+                    _trace(`    ${varName}: deferred`);
+                    for (const { sub, unknowns } of unknownSubs) {
+                        _trace(`      line ${sub.sourceLine + 1}: unknowns ${unknowns.join(', ')}`);
+                    }
                 }
             }
 
@@ -974,13 +986,30 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             if (unknowns.length === 0) {
                 const leftVal = evaluate(eq.leftAST, context);
                 const rightVal = evaluate(eq.rightAST, context);
+                const eqText = eq.text.length > 30 ? eq.text.substring(0, 30) + '...' : eq.text;
+
+                // Non-finite shortcut: if either side is NaN or ±Infinity and
+                // they're not strictly equal, emit a concrete message naming the
+                // actual values instead of routing through checkBalance (which
+                // produces misleading "relative diff NaN%" phrasing because the
+                // diff arithmetic on non-finite inputs produces NaN).
+                if (!Number.isFinite(leftVal) || !Number.isFinite(rightVal)) {
+                    if (leftVal === rightVal) continue; // Infinity === Infinity etc.
+                    const fmt = (v) => Number.isNaN(v) ? 'NaN'
+                        : v === Infinity ? 'Infinity'
+                        : v === -Infinity ? '-Infinity'
+                        : String(v);
+                    errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (left = ${fmt(leftVal)}, right = ${fmt(rightVal)})`);
+                    if (!firstFailedEq) firstFailedEq = eq;
+                    continue;
+                }
+
                 const result = eq.modN
                     ? modCheckBalance(leftVal, rightVal, record.degreesMode ? 360 : 2 * Math.PI, places)
                     : checkBalance(leftVal, rightVal, places);
                 const balanced = result.balanced;
 
                 if (!balanced) {
-                    const eqText = eq.text.length > 30 ? eq.text.substring(0, 30) + '...' : eq.text;
                     if (result.relative) {
                         const pctPlaces = Math.max(0, result.tolPlaces - 2);
                         const diffPct = parseFloat(toFixed(result.difference * 100, pctPlaces));

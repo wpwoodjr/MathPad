@@ -330,7 +330,7 @@ set °: 49.424°
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
-Status = "Line 7: Equation doesn't balance: a = sqrt(-b) (relative diff NaN% >= 0.005%)"; StatusIsError = 1
+Status = "Line 7: Equation doesn't balance: a = sqrt(-b) (left = 6, right = NaN)"; StatusIsError = 1
 "Test 7: Sweep 1 alternate sub recovers from NaN substitution"
 // Demonstrates two improvements working together:
 // 1. Sweep 1 cartesian retry: first sub (a → sqrt(-b)) gives NaN when plugged
