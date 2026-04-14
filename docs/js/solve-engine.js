@@ -756,12 +756,16 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
     // Apply a branching decision: set the variable and, for sweep-1 combos,
     // lock in the chosen sub alternates so the next recursion level doesn't
-    // have to re-discover the combo's forced values.
+    // have to re-discover the combo's forced values. Returns true if the
+    // primary variable was successfully bound; false if applyDirectValue
+    // rejected it (e.g. limit check failure).
     function applyDecision(alt) {
         const sourceLine = alt.kind === 'directEval'
             ? alt.sourceLine
             : (alt.eq ? alt.eq.startLine : null);
-        applyDirectValue(alt.variable, alt.value, sourceLine);
+        if (!applyDirectValue(alt.variable, alt.value, sourceLine)) {
+            return false;
+        }
         // For sweep-1 combos: evaluate each chosen sub against the now-updated
         // context so subsequent advance passes don't re-explore the combo.
         if (alt.combo && alt.combo.size > 0) {
@@ -775,6 +779,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 } catch (e) { /* leave for next advance pass */ }
             }
         }
+        return true;
     }
 
     function buildAttemptTraceLines(alt) {
@@ -819,15 +824,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         _trace(`--- Advance (depth ${myDepth}) ---`);
         const { substitutions, definitionSubs } = deterministicAdvance();
 
-        // "allSet" is true when every required var is either bound in context or
-        // has been marked as failed (e.g. a [3] direct-eval limit violation).
-        // Counting solveFailures vars as satisfied lets a branch reach terminal
-        // and be saved as a candidate — otherwise snapshot/restore would roll
-        // back the failure along with the rest of the branch state and the user
-        // would never see the error.
-        const allSet = [...requiredVars].every(
-            v => context.hasVariable(v) || solveFailures.has(v)
-        );
+        const allSet = [...requiredVars].every(v => context.hasVariable(v));
         if (allSet) {
             if (checkAllEquationsBalance(context, equations, record, places, requiredVars, erroredEquations)) {
                 _trace(`  ✓ balanced (depth ${myDepth})`);
@@ -839,6 +836,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
         _trace(`  [5] Branching (depth ${myDepth})`);
         let branchCount = 0;
+        let progressingBranches = 0;
         for (const alt of enumerateAlternatives(substitutions, definitionSubs)) {
             branchCount++;
             const snap = snapshotState(context, solveFailures, unsolvedEquations,
@@ -847,7 +845,19 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             _trace(`    Try ${alt.kind}: ${alt.variable} = ${alt.value} (${alt.sourceLabel})`);
             for (const line of buildAttemptTraceLines(alt)) _trace(line);
 
-            applyDecision(alt);
+            if (!applyDecision(alt)) {
+                // applyDirectValue rejected the value (limit failure). The branch
+                // made no progress; recursing would see the same state and the
+                // same alternatives, exploding into ~2^maxIterations recursive
+                // calls. Capture the failure state as a candidate (first-wins
+                // across the loop) and skip the recursion.
+                saveCandidate(myDepth, `rejected by limit check: ${alt.variable} = ${alt.value}`);
+                solved = restoreState(context, solveFailures, unsolvedEquations,
+                                      erroredEquations, computedValues, errors, snap);
+                _trace(`    Rejected: ${alt.variable} = ${alt.value} (limit check)`);
+                continue;
+            }
+            progressingBranches++;
 
             if (solveRecursive(myDepth) === 'balanced') return 'balanced';
 
@@ -858,6 +868,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         if (branchCount === 0) {
             _trace(`    (no alternatives available)`);
             saveCandidate(myDepth, 'stuck with no alternatives');
+        } else if (progressingBranches === 0) {
+            // Every alternative was rejected by applyDecision without binding.
+            // saveCandidate already fired on the first rejection above, so the
+            // user still gets the error message — this branch level is done.
+            _trace(`    (all alternatives rejected by limit check)`);
         }
         return 'none';
     }

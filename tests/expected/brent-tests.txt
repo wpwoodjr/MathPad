@@ -564,3 +564,21 @@ c[10:370] °-> 50°
 d[10:370] °-> 5°
 e[10:370] °-> 20°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 13: Computed value 500 is outside limits [0, 100] for 'v'"; StatusIsError = 1
+"Kind 1 limit-rejection doesn't infinite-loop"
+"v has two fully-known subs (500 and 1000), both outside [0:100]."
+"[3] sees two candidates, defers to Kind 1 branching. Each branch"
+"calls applyDirectValue which rejects and records a solveFailure"
+"without binding the variable. Before the branch-bind check, the"
+"next recursion level would see the same state and branch identically,"
+"exploding to ~2^maxIterations calls."
+
+v = 500
+v = 1000
+
+--Variables--
+v[0:100]->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

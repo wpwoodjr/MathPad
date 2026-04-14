@@ -455,3 +455,20 @@ c[10:370] °->
 d[10:370] °->
 e[10:370] °->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Kind 1 limit-rejection doesn't infinite-loop"
+"v has two fully-known subs (500 and 1000), both outside [0:100]."
+"[3] sees two candidates, defers to Kind 1 branching. Each branch"
+"calls applyDirectValue which rejects and records a solveFailure"
+"without binding the variable. Before the branch-bind check, the"
+"next recursion level would see the same state and branch identically,"
+"exploding to ~2^maxIterations calls."
+
+v = 500
+v = 1000
+
+--Variables--
+v[0:100]->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
