@@ -140,10 +140,19 @@ function safeEval(f, x) {
  * Find a bracket by expanding outward from a guess
  * Used when no explicit limits are provided
  * Returns [a, b] or null if not found
+ *
+ * The search is capped at MAX_MAGNITUDE to prevent landing in the
+ * astronomical region where Math.sin/cos argument reduction is pure noise.
+ * At A = 1e19 the sin result is essentially random, and f(A) can "cross
+ * zero" by FP coincidence, producing a bogus root the solver would then
+ * commit to. The existing main-scan covers [-1e8, 1e8] and near-tangent
+ * detection handles narrow zero crossings; expandFromGuess is the only
+ * place that extends beyond that, so capping it here is sufficient.
  */
 function expandFromGuess(f, guess = 1) {
     const FACTOR = 1.6;
     const MAX_TRIES = 50;
+    const MAX_MAGNITUDE = 1e10;
 
     let a = guess > 0 ? guess / 2 : guess - 1;
     let b = guess > 0 ? guess * 2 : guess + 1;
@@ -167,6 +176,10 @@ function expandFromGuess(f, guess = 1) {
         if (fa * fb < 0) {
             return [a, b];
         }
+
+        // Stop if we've reached astronomical magnitudes — any "root" found
+        // beyond here is almost certainly FP noise in trig argument reduction.
+        if (Math.abs(a) > MAX_MAGNITUDE || Math.abs(b) > MAX_MAGNITUDE) return null;
 
         // Expand in the direction of smaller |f|
         if (Math.abs(fa) < Math.abs(fb)) {

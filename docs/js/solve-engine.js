@@ -902,10 +902,13 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         _trace(`========== solveEquations FAILED (no complete solution) ==========`);
     }
 
-    // Post-recursion classification: equations with ≥2 remaining unknowns get
-    // reported as "Too many unknowns". Skips definition equations whose LHS
-    // variable still isn't bound (they're handled via substitutions, not
-    // as error reports).
+    // Post-recursion classification: clear any stale unsolvedEquations entries
+    // (rootsFromBrents may have populated them from intermediate branching
+    // attempts where the list-of-unknowns doesn't reflect the final state), then
+    // repopulate based on the actual final state. Equations with ≥2 remaining
+    // unknowns get reported as "Too many unknowns". Skips definition equations
+    // whose LHS variable still isn't bound (they're handled via substitutions).
+    unsolvedEquations.clear();
     for (const eq of equations) {
         if (!eq.leftAST || !eq.rightAST) continue;
         if (erroredEquations.has(eq.startLine)) continue;
