@@ -466,9 +466,9 @@ set °<- 49.424°
     (none)
   [3] Evaluate fully-known substitutions
   [4] Sweep subs: (none)
-  · candidate (depth 2): all unknowns set, balance failed
   [5] Branching (depth 2)
     (no alternatives available)
+  · candidate (depth 2): no balanced branch found
     Rejected: set = 0.001 (downstream failed)
     Try sweep1: set = 0.01 (from line 10)
       from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
@@ -942,9 +942,9 @@ set °: 45°
     (none)
   [3] Evaluate fully-known substitutions
   [4] Sweep subs: (none)
-  · candidate (depth 3): all unknowns set, balance failed
   [5] Branching (depth 3)
     (no alternatives available)
+  · candidate (depth 3): no balanced branch found
     Rejected: drift = -0.9940321926376441 (downstream failed)
     Try directEval: drift = 0.9940321926376449 (from line 26, direct eval)
       from (line 26): drift = sqrt(((((smg * sin(cmg)) - (speed * sin(cts))) ** 2) + (((smg * cos(cmg)) - (speed * cos(cts))) ** 2)))

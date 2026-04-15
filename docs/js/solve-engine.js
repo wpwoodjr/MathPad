@@ -812,14 +812,19 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         return lines;
     }
 
-    // bestCandidate is a snapshot of a "final but imperfect" state — useful for
-    // surfacing partial answers to the user when no branch reaches a fully-
-    // balanced solution. It's saved first-wins at the deepest level where the
-    // solver can make no further progress:
-    //   - All required vars set but balance fails (Test 7 NaN, Test 9b polynomial
-    //     precision noise, miscellaneous TVM limit-violation)
-    //   - Stuck: no branching alternatives remain (shadow-constants too-many-
-    //     unknowns, fn-arg-count)
+    // bestCandidate is a snapshot of a "final but imperfect" state — used to
+    // surface partial answers to the user when no branch reaches a fully-
+    // balanced solution. First-wins: the deepest solveRecursive call to invoke
+    // saveCandidate captures its state, because DFS unwinds bottom-up.
+    //
+    // Two callers:
+    //   (a) Inside the branching loop, eagerly on limit-rejection — the
+    //       solveFailures entry would otherwise be wiped by the subsequent
+    //       restoreState call.
+    //   (b) At the end of solveRecursive before returning 'none' — catches the
+    //       "stuck with no alternatives", "all set but balance failed", and
+    //       "all branches exhausted without balancing" cases uniformly.
+    //
     // On top-level failure, we restore bestCandidate before post-solve error
     // reporting so values and solveFailures reflect the actual best-effort state.
     let bestCandidate = null;
@@ -842,15 +847,14 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 _trace(`  ✓ balanced (depth ${myDepth})`);
                 return 'balanced';
             }
-            saveCandidate(myDepth, 'all unknowns set, balance failed');
-            // Fall through to branching — maybe a deeper branch balances.
+            // Fall through to branching; the stuck-save below will catch this
+            // state (branching won't yield anything when allSet is true).
         }
 
         _trace(`  [5] Branching (depth ${myDepth})`);
-        let branchCount = 0;
-        let progressingBranches = 0;
+        let anyAlt = false;
         for (const alt of enumerateAlternatives(substitutions, definitionSubs)) {
-            branchCount++;
+            anyAlt = true;
             const snap = snapshotState(context, solveFailures, unsolvedEquations,
                                        erroredEquations, computedValues, errors, solved);
 
@@ -859,17 +863,17 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
             if (!applyDecision(alt)) {
                 // applyDirectValue rejected the value (limit failure). The branch
-                // made no progress; recursing would see the same state and the
-                // same alternatives, exploding into ~2^maxIterations recursive
-                // calls. Capture the failure state as a candidate (first-wins
-                // across the loop) and skip the recursion.
+                // made no progress, so recursing would see the same state and
+                // yield the same alternatives — explosion. Save the rejection
+                // state eagerly (the solveFailures entry would otherwise be
+                // wiped by the restoreState call below) so the user still sees
+                // the "outside limits" error, then skip the recursion.
                 saveCandidate(myDepth, `rejected by limit check: ${alt.variable} = ${alt.value}`);
                 solved = restoreState(context, solveFailures, unsolvedEquations,
                                       erroredEquations, computedValues, errors, snap);
                 _trace(`    Rejected: ${alt.variable} = ${alt.value} (limit check)`);
                 continue;
             }
-            progressingBranches++;
 
             if (solveRecursive(myDepth) === 'balanced') return 'balanced';
 
@@ -877,15 +881,13 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                                   erroredEquations, computedValues, errors, snap);
             _trace(`    Rejected: ${alt.variable} = ${alt.value} (downstream failed)`);
         }
-        if (branchCount === 0) {
-            _trace(`    (no alternatives available)`);
-            saveCandidate(myDepth, 'stuck with no alternatives');
-        } else if (progressingBranches === 0) {
-            // Every alternative was rejected by applyDecision without binding.
-            // saveCandidate already fired on the first rejection above, so the
-            // user still gets the error message — this branch level is done.
-            _trace(`    (all alternatives rejected by limit check)`);
-        }
+        if (!anyAlt) _trace(`    (no alternatives available)`);
+
+        // Fallback save: if no eager save fired during this invocation and
+        // nothing reached 'balanced' downstream, capture the post-advance state
+        // as a last-resort candidate. First-wins ensures the deepest such call
+        // (which unwinds first in DFS order) captures the most-progressed state.
+        saveCandidate(myDepth, 'no balanced branch found');
         return 'none';
     }
 
