@@ -1253,8 +1253,16 @@ function appendTableOutputsSection(text, tables) {
     const lines = ['"--- Table Outputs ---"'];
 
     for (const table of tables) {
-        // Title line with table type prefix
-        if (table.title) lines.push(`${table.keyword} "${table.title}"`);
+        // Title line with table type prefix. Append a "(N/M solved)" indicator
+        // inside the title quotes when the table didn't fully solve — matches
+        // the UI's variables panel status display (see CLAUDE.md
+        // "Solve status indicator").
+        if (table.title) {
+            const status = table.solveInfo
+                ? ` (${table.solveInfo.solved}/${table.solveInfo.total} solved)`
+                : '';
+            lines.push(`${table.keyword} "${table.title}${status}"`);
+        }
 
         if (isGridType(table)) {
             if (!table.grid || table.grid.length === 0) continue;
@@ -1838,9 +1846,6 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         }
         // Solve once (no iteration yet) — use balance check to suppress bad values
         const badVars = evaluateCell([]);
-        // Count unknowns that actually have a value and passed balance check
-        const solvedCount = unknowns.filter(u => !badVars.has(u.name) && context.hasVariable(u.name)).length;
-        const solveInfo = solvedCount < unknowns.length ? { solved: solvedCount, total: unknowns.length } : null;
         // Helper to evaluate a column. If the column is in 'degrees' format,
         // normalize the value into [0, M) so large wraparound values (or bogus
         // solver results far outside the principal range) don't cause
@@ -1865,7 +1870,28 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             if (value == null || !isFinite(value)) return '';
             return formatVariableValue(value, col.format, !!col.fullPrecision, formatOpts);
         }
-        // Group columns into vectors of 4
+        // Tally solveInfo by *distinct variables* referenced across all
+        // columns: how many unique vars are bound vs. how many are referenced.
+        // This matches the user's reading of "N unsolved cells" by collapsing
+        // duplicate references (e.g. `cts` appearing in two different columns
+        // counts once) and ignoring pure-constant columns entirely.
+        const refVars = new Set();
+        for (const col of columns) {
+            if (col.ast) {
+                for (const v of findVariablesInAST(col.ast)) refVars.add(v);
+            } else if (col.name) {
+                refVars.add(col.name);
+            }
+        }
+        let definedVars = 0;
+        for (const v of refVars) {
+            if (!badVars.has(v) && context.hasVariable(v)) definedVars++;
+        }
+        const solveInfo = definedVars < refVars.size
+            ? { solved: definedVars, total: refVars.size }
+            : null;
+
+        // Group columns into vectors of 4 for the output.
         const vectors = [];
         for (let i = 0; i < columns.length; i += 4) {
             const sdCol = columns[i], smCol = columns[i + 1];

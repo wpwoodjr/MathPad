@@ -229,7 +229,7 @@ grid("test variable limit solving") = {
 }
 
 "--- Table Outputs ---"
-grid "test variable limit solving"
+grid "test variable limit solving (36/48 solved)"
 "lim1"	"lim2"	"relDiff(x; y)"
 	-2	-1	0	1	2	3
 -4	0	0	0	0	0	0
@@ -336,7 +336,7 @@ table("> test fine grid") = {
 }
 
 "--- Table Outputs ---"
-table "> test no limits"
+table "> test no limits (7/12 solved)"
 "pmtsYr"	"cmpndsYr"
 1	
 2	
@@ -351,7 +351,7 @@ table "> test no limits"
 11	0.191
 12	11.994
 
-table "> test [0..12]"
+table "> test [0..12] (7/12 solved)"
 "pmtsYr"	"cmpndsYr"
 1	
 2	
@@ -366,7 +366,7 @@ table "> test [0..12]"
 11	0.191
 12	11.994
 
-table "> test start just above 0"
+table "> test start just above 0 (7/12 solved)"
 "pmtsYr"	"cmpndsYr"
 1	
 2	
@@ -381,7 +381,7 @@ table "> test start just above 0"
 11	0.191
 12	11.994
 
-table "v test step 2"
+table "v test step 2 (7/12 solved)"
 "pmtsYr"	"cmpndsYr"
 1	
 2	
@@ -396,7 +396,7 @@ table "v test step 2"
 11	0.191
 12	11.994
 
-table "> test fine grid"
+table "> test fine grid (7/12 solved)"
 "pmtsYr"	"cmpndsYr"
 1	
 2	

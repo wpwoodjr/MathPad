@@ -140,7 +140,7 @@ table("Bad cells") = {
 averagePwr: 125
 
 "--- Table Outputs ---"
-table "Bad cells"
+table "Bad cells (0/6 solved)"
 "Hours"	"User Pwr"	"Max Motor Pwr"
 2	125	
 3	125	
@@ -223,7 +223,7 @@ grid("MMP grid") = {
 }
 
 "--- Table Outputs ---"
-table "Hours vs MMP"
+table "Hours vs MMP (0/6 solved)"
 "Hours"	"User Pwr"	"Max Motor Pwr"
 2	145	
 3	145	
@@ -232,7 +232,7 @@ table "Hours vs MMP"
 6	145	
 7	145	
 
-table "User Pwr vs MMP"
+table "User Pwr vs MMP (0/11 solved)"
 "User Pwr"	"Hours"	"Max Motor Pwr"
 100	6	
 105	6	
@@ -246,7 +246,7 @@ table "User Pwr vs MMP"
 145	6	
 150	6	
 
-grid "Hours grid"
+grid "Hours grid (0/121 solved)"
 "User Pwr"	"Max Motor Pwr"	"Hours"
 	100	110	120	130	140	150	160	170	180	190	200
 100											
@@ -261,7 +261,7 @@ grid "Hours grid"
 145											
 150											
 
-grid "MMP grid"
+grid "MMP grid (0/121 solved)"
 "User Pwr"	"Hours"	"Max Motor Pwr"
 	2	2.5	3	3.5	4	4.5	5	5.5	6	6.5	7
 100											
@@ -306,7 +306,7 @@ table("1D limits") = {
 }
 
 "--- Table Outputs ---"
-grid "2D limits"
+grid "2D limits (0/6 solved)"
 "X Value"	"Y Value"	"Z Value"
 	2	3
 0		
@@ -352,14 +352,14 @@ table("1D input limits") = {
 }
 
 "--- Table Outputs ---"
-grid "2D input limits"
+grid "2D input limits (0/6 solved)"
 "X Value"	"Y Value"	"z"
 	2	3
 0		
 2		
 4		
 
-table "1D input limits"
+table "1D input limits (4/5 solved)"
 "x"	"z"
 0	7
 1	8
@@ -442,7 +442,7 @@ grid("MMP grid 2") = {
 }
 
 "--- Table Outputs ---"
-table "Hours vs MMP 2"
+table "Hours vs MMP 2 (0/6 solved)"
 "Hours"	"User Pwr"	"Max Motor Pwr"
 2	145	
 3	145	
@@ -451,7 +451,7 @@ table "Hours vs MMP 2"
 6	145	
 7	145	
 
-table "User Pwr vs MMP 2"
+table "User Pwr vs MMP 2 (0/11 solved)"
 "User Pwr"	"Hours"	"Max Motor Pwr"
 100	6	
 105	6	
@@ -465,7 +465,7 @@ table "User Pwr vs MMP 2"
 145	6	
 150	6	
 
-grid "Hours grid 2"
+grid "Hours grid 2 (0/121 solved)"
 "User Pwr"	"Max Motor Pwr"	"Hours"
 	100	110	120	130	140	150	160	170	180	190	200
 100											
@@ -480,7 +480,7 @@ grid "Hours grid 2"
 145											
 150											
 
-grid "MMP grid 2"
+grid "MMP grid 2 (0/121 solved)"
 "User Pwr"	"Hours"	"Max Motor Pwr"
 	2	2.5	3	3.5	4	4.5	5	5.5	6	6.5	7
 100											
@@ -513,7 +513,7 @@ table("Unused var") = {
 }
 
 "--- Table Outputs ---"
-table "Unused var"
+table "Unused var (0/3 solved)"
 "x"	"y"
 1	2
 2	4
