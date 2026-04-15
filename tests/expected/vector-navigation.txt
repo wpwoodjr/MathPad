@@ -980,13 +980,15 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 6 equations"; StatusIsError = 0
-"Law of sines/cosines — per-cell balance detects indirect failure"
+"Law of sines/cosines — recursive substitution finds cmg, drift"
 "Navigation formulated via intermediate variables A, B, C and a, b, c1"
-"rather than the unknowns cmg, drift directly. Each law-of-sines/cosines"
-"equation's vars (A, B, C, a, b, c1) don't textually mention cmg/drift,"
-"so a shallow 'equation contains an unknown' filter would miss them and"
-"the per-cell balance check would accept a wrong cmg/drift pair that"
-"fails the law of sines. Checking every equation catches it."
+"rather than the unknowns cmg, drift directly. Without recursive"
+"substitution, chaining subs like `a → (c1/sin(C))*sin(A)` together"
+"with `A → cmg - cts` stops at one layer, so the substituted eq still"
+"has A as an unknown and the solver can't find a 1-unknown path to cmg."
+"With recursive substitution, the chain fully expands and the system"
+"is solvable — the two laws of sines algebraically imply the third,"
+"and the solver finds cmg ≈ 28.586°, drift ≈ 100 via a substituted eq."
 
 a/sin(A) = b/sin(B)
 c1/sin(C) = a/sin(A)
@@ -1025,5 +1027,5 @@ table("v cmg and drift") = {
 "--- Table Outputs ---"
 table "v cmg and drift"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
-2.5	6.0432		102.8846	328.5856°		145.5856°
+2.5	6.0432	28.5863°	102.8846	328.5856°	100.0001	145.5856°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
