@@ -976,3 +976,54 @@ table "drift and set"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
 5.6	10.63	166°	10	162.4°	0.9	210.02°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 6 equations"; StatusIsError = 0
+"Law of sines/cosines — per-cell balance detects indirect failure"
+"Navigation formulated via intermediate variables A, B, C and a, b, c1"
+"rather than the unknowns cmg, drift directly. Each law-of-sines/cosines"
+"equation's vars (A, B, C, a, b, c1) don't textually mention cmg/drift,"
+"so a shallow 'equation contains an unknown' filter would miss them and"
+"the per-cell balance check would accept a wrong cmg/drift pair that"
+"fails the law of sines. Checking every equation catches it."
+
+a/sin(A) = b/sin(B)
+c1/sin(C) = a/sin(A)
+a*a = b*b + c1*c1 - 2*b*c1*cos(A)
+b*b = a*a + c1*c1 - 2*a*c1*cos(B)
+c1*c1 = a*a + b*b - 2*a*b*cos(C)
+A °= cmg - cts
+B °= set - cmg
+C °= 180 - (set - cts)
+a = drift
+b = speed
+c1 = smg
+
+--Variables--
+smg: 6.0432
+cmg °: 28.585°
+speed: 102.8846
+cts °: 328.5856°
+drift: 100
+set °: 145.5856°
+
+table("v cmg and drift") = {
+  cnt: 2.5..2.5
+  cmg<-
+  drift<-
+
+  cnt->
+  smg->
+  cmg °->
+  speed->
+  cts °->
+  drift->
+  set °->
+}
+
+"--- Table Outputs ---"
+table "v cmg and drift"
+"cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
+2.5	6.0432		102.8846	328.5856°		145.5856°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

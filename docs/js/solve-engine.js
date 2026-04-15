@@ -1772,15 +1772,20 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         }
     }
 
-    // Pre-parse and filter equations containing unknowns (constant across all cells)
-    const unknownNames = new Set(unknowns.map(u => u.name));
+    // Per-cell balance check inputs: every well-formed equation. The previous
+    // version filtered to equations whose allVars directly intersected the
+    // unknowns, but that missed indirect references — e.g. `a/sin(A) = b/sin(B)`
+    // uses `a, b, A, B` (none of them the actual unknowns `cmg, drift`), yet
+    // the equation's truth depends on cmg/drift through the substitutions
+    // `a = drift, A = cmg - cts, B = set - cmg`. Checking every equation uniformly
+    // catches these cases; equations whose vars all come from preSolveVars still
+    // balance trivially (they balanced in the outer solve), so the extra checks
+    // are cheap no-ops.
     const balancePlaces = record.places != null ? record.places : 4;
     const balanceEquations = [];
     for (const eq of equations) {
         if (!eq.leftAST || !eq.rightAST) continue;
-        if ([...eq.allVars].some(v => unknownNames.has(v))) {
-            balanceEquations.push({ leftAST: eq.leftAST, rightAST: eq.rightAST, modN: eq.modN });
-        }
+        balanceEquations.push({ leftAST: eq.leftAST, rightAST: eq.rightAST, modN: eq.modN });
     }
 
     // Shared per-cell evaluation: reset context, set up variables, solve via solveEquations
