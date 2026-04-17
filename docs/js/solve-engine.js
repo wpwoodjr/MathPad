@@ -224,6 +224,96 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
 }
 
 /**
+ * Re-solve a variable using its OUTPUT declaration's limits via the full
+ * solveEquations pipeline. Used for OUTPUT-with-limits display (e.g.
+ * `z[0:10]->`) — the display instruction gets its own complete solve
+ * independent of the main solve's choices.
+ *
+ * @param {string} varName
+ * @param {Object} decl - Object with `.limits` and optional `.format`. Outer
+ *     caller passes `decl.declaration` (full parser decl); table caller
+ *     passes the column spec (`{ limits, format, ... }`).
+ * @param {Array} equations - Equations to consult
+ * @param {Array} declarations - Declarations array (will be cloned with the
+ *     target's entry replaced by an INPUT carrying the OUTPUT's limits)
+ * @param {EvalContext} context
+ * @param {Object} record - Record settings (degreesMode, places, ...)
+ * @param {Map} preSolveVars - Pre-solve variable state to reset to
+ * @returns {{ value, reason }} reason: 'noEquation' | 'noRoot' | null
+ */
+function resolveWithLimits(varName, decl, equations, declarations, context, record, preSolveVars) {
+    const limits = decl.limits;
+
+    // Check if any equation references this variable
+    const hasEquation = equations.some(eq =>
+        eq.leftAST && eq.rightAST && eq.allVars && eq.allVars.has(varName));
+    if (!hasEquation) return { value: undefined, reason: 'noEquation' };
+
+    // Angular-aware in-limits check (mirrors applyDirectValue lines 468-486)
+    function valueInLimits(value) {
+        if (!limits) return true;
+        try {
+            const low = evaluate(parseTokens(limits.lowTokens), context);
+            const high = evaluate(parseTokens(limits.highTokens), context);
+            const isAngular = decl.format === 'degrees';
+            if (isAngular) {
+                const M = record.degreesMode ? 360 : 2 * Math.PI;
+                const modM = (x) => ((x % M) + M) % M;
+                let arcLen = modM(high - low);
+                if (arcLen === 0 && low !== high) arcLen = M;
+                return modM(value - low) <= arcLen;
+            }
+            const lo = Math.min(low, high), hi = Math.max(low, high);
+            return value >= lo && value <= hi;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Fast path: main-solve value already in limits → use it
+    if (context.variables.has(varName)) {
+        const value = context.variables.get(varName);
+        if (valueInLimits(value)) return { value, reason: null };
+    }
+
+    // Slow path: full pipeline re-solve with OUTPUT's limits.
+    // Build modified declarations: replace every entry with matching name by
+    // an INPUT carrying the OUTPUT's limits. buildVariablesMap picks the
+    // first entry per name (first-wins), so the re-solve sees the limits.
+    const modifiedDecls = declarations.map(d => {
+        if (d.name === varName) {
+            return {
+                ...d,
+                value: null,
+                declaration: {
+                    ...d.declaration,
+                    type: VarType.INPUT,
+                    limits,
+                    format: decl.format || d.declaration.format
+                }
+            };
+        }
+        return d;
+    });
+
+    // Reset to pre-solve state; delete target so re-solve treats it as unknown.
+    const savedVars = new Map(context.variables);
+    if (preSolveVars) context.variables = new Map(preSolveVars);
+    context.variables.delete(varName);
+    try {
+        solveEquations(context, modifiedDecls, record, equations);
+    } catch (e) {
+        context.variables = savedVars;
+        return { value: undefined, reason: 'noRoot' };
+    }
+    const value = context.variables.has(varName) ? context.variables.get(varName) : undefined;
+    context.variables = savedVars;
+
+    if (value !== undefined && valueInLimits(value)) return { value, reason: null };
+    return { value: undefined, reason: 'noRoot' };
+}
+
+/**
  * Solve equations and return computed values (no text modification).
  * Used by both the main solver and table/grid per-row evaluation.
  * @param {EvalContext} context - Context with known variables
@@ -1104,9 +1194,10 @@ function formatOutput(text, declarations, context, computedValues, record, solve
     for (const info of declarations) {
         if (!info.valueTokens || info.valueTokens.length === 0) {
             let value = null;
-            // Check for per-declaration re-solve value (multiple outputs with different limits)
+            // Check for per-declaration re-solve value (OUTPUT-with-limits)
             if (computedValues.has(`__resolvevar_${info.lineIndex}`)) {
                 value = computedValues.get(`__resolvevar_${info.lineIndex}`);
+                if (value === undefined) continue; // re-solve failed; specific error already pushed
             } else if (context.variables.has(info.name)) {
                 value = context.variables.get(info.name);
             } else if (context.constants.has(info.name) && !context.shadowedConstants.has(info.name)) {
@@ -1446,42 +1537,26 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
         if (context.hasVariable(name)) preSolveVars.set(name, context.getVariable(name));
     }
 
-    // Re-solve for additional output declarations with different limits
-    // First output sets the nominal value; subsequent outputs with limits re-solve the equation
+    // Re-solve each OUTPUT-with-limits via full pipeline. INPUT drives the main
+    // solve; OUTPUT-with-limits is a display instruction that does its own
+    // complete solve (fast path when main value is in limits). Each OUTPUT
+    // stores its result under `__resolvevar_${lineIndex}` so multiple outputs
+    // of the same variable with different limits produce distinct display values.
     const computedValues = solveResult.computedValues;
-    const seenOutputVars = new Set();
     for (const decl of declarations) {
         if (decl.declaration.type !== VarType.OUTPUT) continue;
-        if (!seenOutputVars.has(decl.name)) {
-            seenOutputVars.add(decl.name); // first output is nominal — skip
-            continue;
+        if (!decl.declaration.limits) continue;
+        const { value, reason } = resolveWithLimits(
+            decl.name, decl.declaration, outerEquations, declarations,
+            context, record, preSolveVars);
+        if (reason && !solveResult.solveFailures.has(decl.name)) {
+            if (reason === 'noEquation') {
+                errors.push(`Line ${decl.lineIndex + 1}: No equation references '${decl.name}' — cannot apply limits`);
+            } else if (reason === 'noRoot') {
+                errors.push(`Line ${decl.lineIndex + 1}: No value found for '${decl.name}' within limits`);
+            }
         }
-        // Additional output for same variable — re-solve with this declaration's limits
-        if (!decl.declaration.limits) continue; // no limits → just display nominal value
-        if (!context.hasVariable(decl.name)) continue; // nominal wasn't solved
-        // Find the equation that contains this variable
-        for (const eq of outerEquations) {
-            if (!eq.leftAST || !eq.rightAST) continue;
-            try {
-                if (!eq.allVars.has(decl.name)) continue;
-                // Build a temporary variables map with this declaration's limits
-                const tempVars = buildVariablesMap(declarations);
-                tempVars.set(decl.name, decl); // use THIS declaration's limits
-                // Temporarily clear the variable so it's the unknown
-                const savedValue = context.getVariable(decl.name);
-                context.variables.delete(decl.name);
-                context.declareVariable(decl.name);
-                const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
-                const result = solveEquationInContext(eq.startLine, context, tempVars,
-                    new Map(), modValue, eq.leftAST, eq.rightAST);
-                // Restore nominal value
-                context.setVariable(decl.name, savedValue);
-                if (result.solved) {
-                    computedValues.set(`__resolvevar_${decl.lineIndex}`, result.value);
-                }
-                break; // use first matching equation
-            } catch (e) { }
-        }
+        computedValues.set(`__resolvevar_${decl.lineIndex}`, value);
     }
 
     // Evaluate expression outputs
@@ -1745,21 +1820,6 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         degreesMode: record.degreesMode
     };
 
-    // Build variables map with limits from declarations
-    function buildTableVarsMap() {
-        const tableVarDecls = [];
-        for (const def of definitions) {
-            if (def.limits) tableVarDecls.push({ name: def.name, declaration: { limits: def.limits }, value: null });
-        }
-        for (const unk of unknowns) {
-            if (unk.limits) tableVarDecls.push({ name: unk.name, declaration: { limits: unk.limits }, value: null });
-        }
-        for (const col of columns) {
-            if (col.limits) tableVarDecls.push({ name: col.name, declaration: { limits: col.limits }, value: null });
-        }
-        return buildVariablesMap(tableVarDecls, context);
-    }
-
     // Build declarations for solveEquations from table body definitions and limits
     const tableDeclarations = [];
     for (const def of definitions) {
@@ -1778,8 +1838,23 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         if (col.limits) {
             tableDeclarations.push({
                 name: col.name, value: null,
-                declaration: { type: VarType.OUTPUT, limits: col.limits }
+                declaration: { type: VarType.OUTPUT, limits: col.limits, format: col.format }
             });
+        }
+    }
+
+    // Structural check: columns with limits but no body equation referencing the
+    // variable can't be re-solved. Report once (not per row/cell) and mark in
+    // noEquationColumns so getColumnValue returns undefined without attempting
+    // a guaranteed-to-fail re-solve.
+    const noEquationColumns = new Set();
+    for (const col of columns) {
+        if (!col.limits || col.ast) continue;
+        const hasEq = equations.some(eq =>
+            eq.leftAST && eq.rightAST && eq.allVars && eq.allVars.has(col.name));
+        if (!hasEq) {
+            noEquationColumns.add(col.name);
+            errors.push(`Line ${tableDef.startLine}: No equation references '${col.name}' — cannot apply limits`);
         }
     }
 
@@ -1799,6 +1874,12 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         balanceEquations.push({ leftAST: eq.leftAST, rightAST: eq.rightAST, modN: eq.modN });
     }
 
+    // Per-cell pre-solve snapshot used by getColumnValue's OUTPUT-with-limits
+    // re-solve path. Captured after iterators are set but before solveEquations
+    // runs, so re-solves restart from the row's clean state (not outer
+    // preSolveVars, which would lose iterator values).
+    let cellPreSolveVars = null;
+
     // Shared per-cell evaluation: reset context, set up variables, solve via solveEquations
     function evaluateCell(iterValues) {
         // Reset to pre-solve state (user declarations only, no equation-computed values)
@@ -1812,6 +1893,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         for (const iv of iterValues) {
             context.setVariable(iv.name, iv.value);
         }
+        // Snapshot for per-column re-solves (before solveEquations mutates context)
+        cellPreSolveVars = new Map(context.variables);
         // Solve with body definitions handled inside the iterative loop
         const solveResult = solveEquations(context, tableDeclarations, record, equations, defASTs);
         // Collect variables that failed to solve
@@ -1819,7 +1902,10 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         for (const [varName, failure] of solveResult.solveFailures) {
             badVars.add(varName);
         }
-        // Per-cell balance check: verify pre-parsed equations containing unknowns
+        // Per-cell balance check: if any equation doesn't balance, the whole cell
+        // is bad — blank every non-iterator column (iterators always display the
+        // iterator's value regardless of whether equations balance).
+        const iteratorNames = new Set(evaledIterators.map(it => it.name));
         for (const beq of balanceEquations) {
             try {
                 const leftVal = evaluate(beq.leftAST, context);
@@ -1830,11 +1916,34 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                     : checkBalance(leftVal, rightVal, balancePlaces);
                 if (!result.balanced) {
                     for (const unk of unknowns) badVars.add(unk.name);
+                    for (const col of columns) {
+                        if (!iteratorNames.has(col.name)) badVars.add(col.name);
+                    }
                     break;
                 }
             } catch (e) { }
         }
         return badVars;
+    }
+
+    // Extract a column's value after evaluateCell ran. Three cases:
+    //   AST column (`Label z+1->`)  → evaluate expression
+    //   Column with limits          → full-pipeline re-solve (fast path if
+    //                                 the cell-solve value is already in range)
+    //   Plain column (`z->`)        → read from context
+    // Callers apply their own badVars filter and angular normalization.
+    function getColumnValue(col) {
+        if (col.ast) {
+            try { return evaluate(col.ast, context); } catch (e) { return undefined; }
+        }
+        if (col.limits) {
+            if (noEquationColumns.has(col.name)) return undefined;
+            const { value } = resolveWithLimits(
+                col.name, col, equations, tableDeclarations,
+                context, record, cellPreSolveVars);
+            return value;
+        }
+        return context.getVariable(col.name);
     }
 
     // ==================== VECTORDRAW (polar vector diagram) ====================
@@ -1846,20 +1955,13 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         }
         // Solve once (no iteration yet) — use balance check to suppress bad values
         const badVars = evaluateCell([]);
-        // Helper to evaluate a column. If the column is in 'degrees' format,
-        // normalize the value into [0, M) so large wraparound values (or bogus
-        // solver results far outside the principal range) don't cause
-        // precision loss in Math.sin/cos when the graph is rendered.
+        // Wraparound normalization for 'degrees'-format columns: large values
+        // (or bogus solver results far outside the principal range) lose
+        // precision in Math.sin/cos when the graph is rendered.
         const angularM = record.degreesMode ? 360 : 2 * Math.PI;
         function getColValue(col) {
-            // Suppress variables that failed balance check
             if (!col.ast && badVars.has(col.name)) return undefined;
-            let value;
-            if (col.ast) {
-                try { value = evaluate(col.ast, context); } catch (e) { return undefined; }
-            } else {
-                value = context.getVariable(col.name);
-            }
+            let value = getColumnValue(col);
             if (value != null && isFinite(value) && col.format === 'degrees') {
                 value = value - angularM * Math.floor(value / angularM);
             }
@@ -1960,12 +2062,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             const rawRow = [];
             for (const col of columns) {
                 if (badVars.has(col.name)) { row.push(''); rawRow.push(null); continue; }
-                let value;
-                if (col.ast) {
-                    try { value = evaluate(col.ast, context); } catch (e) { }
-                } else {
-                    value = context.getVariable(col.name);
-                }
+                const value = getColumnValue(col);
                 if (value !== undefined) {
                     row.push(formatVariableValue(value, col.format, col.fullPrecision, formatOpts));
                     rawRow.push(value);
@@ -2026,13 +2123,11 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         colValues.push(v); if (colValues.length > 10000) break;
     }
 
-    // Helper: get output value from a column spec after cell evaluation
+    // Thin wrapper around the shared getColumnValue that tolerates null col
+    // (grid call sites pass rowHeaderCol/colHeaderCol/cellVar which may be absent).
     function getColValue(col) {
         if (!col) return undefined;
-        if (col.ast) {
-            try { return evaluate(col.ast, context); } catch (e) { return undefined; }
-        }
-        return context.getVariable(col.name);
+        return getColumnValue(col);
     }
 
     const isGridGraph = tableDef.keyword === 'gridgraph';

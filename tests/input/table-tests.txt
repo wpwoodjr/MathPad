@@ -70,7 +70,7 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Test table suppresses bad cells"
 
 --Variables--
-"*Bad cells should be empty when equation doesn't balance"
+"*Bad cells should be empty when no root within limits"
 
 fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
 tempAdjust(temp; refTemp; tempAdjFactor) = 1 + (refTemp - temp)/tempAdjFactor/100
@@ -88,8 +88,9 @@ temperature: 70
 limitPwr: 420
 
 table("Bad cells") = {
+  adjustedTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
   hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
-  MMP<-
+  MMP[100:200]<-
   hours<- 2..7
   Hours hours->
   User Pwr averagePwr->
@@ -102,7 +103,8 @@ Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Bike Range"
-"shouldn't provide table answers when the equation doesn't balance"
+"Tables with pole in polynomial equation — solver finds real root past pole"
+"Bike range: table equations reference outer-declared adjustedTemp"
 
 --Formulas--
 fitWatts(x; a; b; c; d) = a*x**3 + b*x**2 + c*x + d
@@ -133,6 +135,7 @@ temperature<- 70
 limitPwr: 420
 
 table("Hours vs MMP") = {
+  adjustedTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
   hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   MMP<-
   hours<- 2..7
@@ -142,6 +145,7 @@ table("Hours vs MMP") = {
 }
 
 table("User Pwr vs MMP") = {
+  adjustedTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
   hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   MMP<-
   averagePwr<- 100..150..5
@@ -151,6 +155,7 @@ table("User Pwr vs MMP") = {
 }
 
 grid("Hours grid") = {
+  adjustedTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
   hrs = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   hrs<-
   averagePwr<- 100..150..5
@@ -161,6 +166,7 @@ grid("Hours grid") = {
 }
 
 grid("MMP grid") = {
+  adjustedTemp = tempAdjust(temperature; refTemp; tempAdjFactor)
   hours = batteryCapacity*batteryAdjFactor/fitWatts(estWatts(averagePwr; limitPwr; MMP; adjustedTemp); a; b; c; d)
   MMP<-
   averagePwr<- 100..150..5
@@ -179,9 +185,9 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "*Test table and table2 limits"
 
 w: 1
-u = 2
 grid("2D limits") = {
   -w/u = x*y - z
+  u = 2
   z<-
   x<- 0..4..2
   y<- 2..3
@@ -207,9 +213,9 @@ Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "*Test table and table2 limits on input declarations"
 
 w: 1
-u = 2
 grid("2D input limits") = {
   -w/u = x*y - z + v
+  u = 2
   v: 10
   z[10:20]<-
   x<- 0..4..2
@@ -263,7 +269,6 @@ temperature<- 70
 limitPwr: 420
 
 table("Hours vs MMP 2") = {
-  hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
   maxMotorPwr[60:240]<-
   hours<- 2..7
   Hours hours->
@@ -272,7 +277,6 @@ table("Hours vs MMP 2") = {
 }
 
 table("User Pwr vs MMP 2") = {
-  hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
   maxMotorPwr[60:240]<-
   userPwr<- 100..150..5
   User Pwr userPwr->
@@ -281,7 +285,6 @@ table("User Pwr vs MMP 2") = {
 }
 
 grid("Hours grid 2") = {
-  hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
   hours<-
   userPwr<- 100..150..5
   maxMotorPwr<- 100..200..10
@@ -291,7 +294,6 @@ grid("Hours grid 2") = {
 }
 
 grid("MMP grid 2") = {
-  hours = runTime(adjBattCap; userPwr; limitPwr; maxMotorPwr; adjTemp; a; b; c; d)
   maxMotorPwr[60:240]<-
   userPwr<- 100..150..5
   hours<- 2..7..0.5
