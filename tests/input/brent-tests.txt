@@ -493,3 +493,37 @@ b: -3
 
 3 = Infinity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Demonstrates main solve produces y-> 30"
+"Main solve picks x=3 branch (y=30). OUTPUT-with-limits re-solves find"
+"x=-3 and y=-30 in their ranges. Plain y-> shows main-solve value."
+
+x*x = 9
+y = x * 10
+
+--Variables--
+
+x[-5:0]->               "want negative root"
+y[-100:0]->
+y->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Slow-path surfaces balance error and no-root error together"
+"Main solve picks b=-120 from b=-120°; abs(-120)=120 balances."
+"b[0:300]-> slow path finds b=120 via abs, but that now violates"
+"the b=-120° equation — balance error surfaces from slow path."
+"b[0:30]-> slow path can't find any root of abs(b)=120 in [0,30]"
+"— surfaces the usual 'Could not find a root' error."
+
+b = -120°
+abs(b) = 120
+
+--Variables--
+
+b[0:300] ->
+b[0:30] ->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

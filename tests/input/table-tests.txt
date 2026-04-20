@@ -234,6 +234,89 @@ table("1D input limits") = {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test tables 7"
+
+--Variables--
+"*noEquation structural check and multiple OUTPUT limits"
+
+table("No eq for column") = {
+  y = x + 1
+  x<- 0..3
+  x->
+  y->
+  z[0:10]->                 "z has no equation referencing it"
+}
+
+table("Multi-output limits") = {
+  y**2 = x
+  y<-
+  x<- 1..9..2
+  x->
+  y[-3:0]->                 "negative root"
+  y[0:3]->                  "positive root"
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Balance-check accumulates vars across all failing equations"
+"Reordering equations must not change which columns get blanked."
+"For y<0, sqrt(y)=NaN propagates through subs: x=NaN, z=NaN."
+"Both `x = sqrt(y)` and `z = x` fail balance (NaN vs NaN). The"
+"balance loop checks every failing equation (no early break) so both"
+"x and z get blanked regardless of equation order in the source."
+
+y: -4
+x = sqrt(y)
+z = x
+
+table("sqrt order A") = {
+  y: -4..4..1
+  y->
+  x->
+  z->
+}
+
+table("sqrt order B") = {
+  y: -4..4..1
+  z = x
+  x = sqrt(y)
+  y->
+  x->
+  z->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"tableGraph with inherited outer equation"
+"Plot f(x) vs x while inheriting f(x)=0 from outer. Balance check"
+"rejection of f(x)=0 for non-root x must NOT blank y: the failing"
+"equation references only x (iterator) and outer constants — no"
+"body-declared columns — so nothing gets added to badVars."
+
+c5: 1
+c4: -2
+c3: -10
+c2: 20
+c1: 9
+c0: -14
+f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
+
+--Variables--
+
+f(x; c5; c4; c3; c2; c1; c0) = 0
+
+tableGraph("f(x) showing roots") = {
+  x: -3.1..3.1..0.2
+  y: f(x; c5; c4; c3; c2; c1; c0)
+  "x axis label" x->
+  "y axis label" y->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Bike Range"

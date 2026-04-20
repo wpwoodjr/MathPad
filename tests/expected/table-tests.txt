@@ -374,6 +374,169 @@ table "1D input limits (4/5 solved)"
 4
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 6: No equation references 'z' — cannot apply limits"; StatusIsError = 1
+"Test tables 7"
+
+--Variables--
+"*noEquation structural check and multiple OUTPUT limits"
+
+table("No eq for column") = {
+  y = x + 1
+  x<- 0..3
+  x->
+  y->
+  z[0:10]->                 "z has no equation referencing it"
+}
+
+table("Multi-output limits") = {
+  y**2 = x
+  y<-
+  x<- 1..9..2
+  x->
+  y[-3:0]->                 "negative root"
+  y[0:3]->                  "positive root"
+}
+
+"--- Table Outputs ---"
+table "No eq for column"
+"x"	"y"	"z"
+0	1	
+1	2	
+2	3	
+3	4	
+
+table "Multi-output limits"
+"x"	"y"	"y"
+1	-1	1
+3	-1.73	1.73
+5	-2.24	2.24
+7	-2.65	2.65
+9	-3	3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 9: Equation doesn't balance: x = sqrt(y) (left = NaN, right = NaN)\nLine 10: Equation doesn't balance: z = x (left = NaN, right = NaN)"; StatusIsError = 1
+"Balance-check accumulates vars across all failing equations"
+"Reordering equations must not change which columns get blanked."
+"For y<0, sqrt(y)=NaN propagates through subs: x=NaN, z=NaN."
+"Both `x = sqrt(y)` and `z = x` fail balance (NaN vs NaN). The"
+"balance loop checks every failing equation (no early break) so both"
+"x and z get blanked regardless of equation order in the source."
+
+y: -4
+x = sqrt(y)
+z = x
+
+table("sqrt order A") = {
+  y: -4..4..1
+  y->
+  x->
+  z->
+}
+
+table("sqrt order B") = {
+  y: -4..4..1
+  z = x
+  x = sqrt(y)
+  y->
+  x->
+  z->
+}
+
+"--- Table Outputs ---"
+table "sqrt order A (5/9 solved)"
+"y"	"x"	"z"
+-4		
+-3		
+-2		
+-1		
+0	0	0
+1	1	1
+2	1.414	1.414
+3	1.732	1.732
+4	2	2
+
+table "sqrt order B (5/9 solved)"
+"y"	"x"	"z"
+-4		
+-3		
+-2		
+-1		
+0	0	0
+1	1	1
+2	1.414	1.414
+3	1.732	1.732
+4	2	2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"tableGraph with inherited outer equation"
+"Plot f(x) vs x while inheriting f(x)=0 from outer. Balance check"
+"rejection of f(x)=0 for non-root x must NOT blank y: the failing"
+"equation references only x (iterator) and outer constants — no"
+"body-declared columns — so nothing gets added to badVars."
+
+c5: 1
+c4: -2
+c3: -10
+c2: 20
+c1: 9
+c0: -14
+f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
+
+--Variables--
+
+f(x; c5; c4; c3; c2; c1; c0) = 0
+
+tableGraph("f(x) showing roots") = {
+  x: -3.1..3.1..0.2
+  y: f(x; c5; c4; c3; c2; c1; c0)
+  "x axis label" x->
+  "y axis label" y->
+}
+
+"--- Table Outputs ---"
+tablegraph "f(x) showing roots"
+"x axis label"	"y axis label"
+-3.1	-22.7857
+-2.9	25.4223
+-2.7	54.5527
+-2.5	68.9688
+-2.3	72.4384
+-2.1	68.1728
+-1.9	58.8648
+-1.7	46.7272
+-1.5	33.5313
+-1.3	20.6449
+-1.1	9.0713
+-0.9	-0.5127
+-0.7	-7.7183
+-0.5	-12.4062
+-0.3	-14.6486
+-0.1	-14.6902
+0.1	-12.9102
+0.3	-9.7838
+0.5	-5.8437
+0.7	-1.6421
+0.9	2.2883
+1.1	5.4723
+1.3	7.5307
+1.5	8.2188
+1.7	7.4644
+1.9	5.4068
+2.1	2.4348
+2.3	-0.7748
+2.5	-3.2187
+2.7	-3.5291
+2.9	0.0653
+3.1	9.7773
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0

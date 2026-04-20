@@ -423,41 +423,26 @@ function findVariables(node) {
  * Substitute variables in an AST with their definition expressions.
  *
  * Recursive: the replacement AST for a variable is itself walked and has
- * its variables substituted too, until the chain terminates or a cycle is
- * detected. This lets the solver derive algebraically-implied equations
- * like `c1/sin(C) = b/sin(B)` from `a/sin(A) = b/sin(B)` and
- * `c1/sin(C) = a/sin(A)` via chain substitution without needing symbolic
- * simplification — Brent's then solves the resulting equation numerically.
- *
- * Cycle handling: `visited` tracks the chain of variables currently being
- * substituted. If a variable's replacement references a variable already in
- * the chain, that inner reference is left as-is rather than looping.
+ * its variables substituted too. This lets the solver derive algebraically-
+ * implied equations like `c1/sin(C) = b/sin(B)` from `a/sin(A) = b/sin(B)`
+ * and `c1/sin(C) = a/sin(A)` via chain substitution without needing
+ * symbolic simplification — Brent's then solves the resulting equation
+ * numerically. Cycles are filtered out by buildSubstitutionMap upstream.
  *
  * @param {Object} node - AST node
  * @param {Map} substitutions - Map of variable name -> AST expression
- * @param {Set} [visited] - Variables currently being substituted (cycle guard)
  * @returns {Object} New AST with substitutions applied
  */
-function substituteInAST(node, substitutions, visited) {
+function substituteInAST(node, substitutions) {
     if (!node) return node;
-    if (visited === undefined) visited = new Set();
 
     switch (node.type) {
         case 'NUMBER':
             return node;
 
         case 'VARIABLE':
-            if (substitutions.has(node.name) && !visited.has(node.name)) {
-                // Recursively substitute within the replacement so that chains
-                // like `a → (c1/sin(C))*sin(A)` followed by `A → cmg - cts`
-                // fully expand to `(c1/sin(C))*sin(cmg - cts)` in one call.
-                const newVisited = new Set(visited);
-                newVisited.add(node.name);
-                return substituteInAST(
-                    deepCopyAST(substitutions.get(node.name)),
-                    substitutions,
-                    newVisited
-                );
+            if (substitutions.has(node.name)) {
+                return substituteInAST(deepCopyAST(substitutions.get(node.name)), substitutions);
             }
             return node;
 
@@ -465,22 +450,22 @@ function substituteInAST(node, substitutions, visited) {
             return {
                 type: 'BINARY_OP',
                 op: node.op,
-                left: substituteInAST(node.left, substitutions, visited),
-                right: substituteInAST(node.right, substitutions, visited)
+                left: substituteInAST(node.left, substitutions),
+                right: substituteInAST(node.right, substitutions)
             };
 
         case 'UNARY_OP':
             return {
                 type: 'UNARY_OP',
                 op: node.op,
-                operand: substituteInAST(node.operand, substitutions, visited)
+                operand: substituteInAST(node.operand, substitutions)
             };
 
         case 'FUNCTION_CALL':
             return {
                 type: 'FUNCTION_CALL',
                 name: node.name,
-                args: node.args.map(arg => substituteInAST(arg, substitutions, visited))
+                args: node.args.map(arg => substituteInAST(arg, substitutions))
             };
 
         default:

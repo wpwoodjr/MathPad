@@ -1,0 +1,47 @@
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Slow-path 'too many unknowns' when target's subs are excluded"
+"Main solve finds x=2.236, z=4.472 (solution of the system)."
+"x[0:2]-> fast path rejects (2.236 not in [0,2]). Slow path promotes"
+"x to INPUT+[0:2]. The sweep-subs filter then EXCLUDES x because it"
+"now has INPUT limits — but x's subs (x → z/2, x → sqrt(25-z²)) are"
+"the only way to reduce the two-unknown system. Slow path gives up"
+"and reports 'Too many unknowns (x, z)' even though the system IS"
+"solvable outside [0,2]. The real issue is that no (x,z) pair with"
+"x ∈ [0,2] satisfies both equations (requires x≥sqrt(5)≈2.236)."
+"x[0:3]-> takes the fast path (2.236 in [0,3]) and is unaffected."
+"Known limitation: sweep-subs filter conservatively excludes"
+"INPUT-with-limits vars in the slow path, losing the ability to"
+"reduce when the target's own subs are the only reduction path."
+
+x = z/2
+x**2 + z**2 = 25
+
+--Variables--
+z->
+x[0:3]->
+x[0:2]->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Same system but with abs(x) reports honest 'no root' error"
+"Identical system to the record above, but with `abs(x) = z/2`"
+"instead of `x = z/2`. deriveSubstitution can't isolate x from"
+"abs(x) on the LHS, so it inverts the other way: sub `z → abs(x)*2`"
+"for z (not x). Slow path promotes x to INPUT+[0:2]; sweep-subs"
+"still excludes x (INPUT+limits), but z IS included (no limits)."
+"Kind 3 applies z → abs(x)*2 to eq2: x² + 4·abs(x)² = 25 → 5x² = 25"
+"→ one-unknown in x. Brent's tries [0, 2], finds no root (sqrt(5) ≈"
+"2.236 outside the window) → 'Could not find a root in range [0:2]'."
+"Tiny syntactic change (x vs abs(x) on LHS) flips which variable"
+"has a sub, which determines whether slow path can reduce."
+
+abs(x) = z/2
+x**2 + z**2 = 25
+
+--Variables--
+z->
+x[0:2]->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

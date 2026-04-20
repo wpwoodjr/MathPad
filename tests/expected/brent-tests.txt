@@ -512,9 +512,9 @@ Status = "Solved 4 equations"; StatusIsError = 0
 0.1 = sin(w)
 
 --Variables--
-x[350:370] °->> 5.739170477266839°
-y[350:10] °->> 5.739170477266839°
-z[10:370] °->> 174.260829522733218°
+x[350:370] °->> 5.739170477266787°
+y[350:10] °->> 5.739170477266787°
+z[10:370] °->> 5.739170477266787°
 w[10:350] °->> 174.260829522733218°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -533,13 +533,13 @@ Status = "Solved 4 equations"; StatusIsError = 0
 --Variables--
 x[Radians(350):Radians(370)] °->> 0.10016742116156
 y[Radians(350):Radians(10)] °->> 0.10016742116156
-z[Radians(10):Radians(370)] °->> 3.041425232428234
+z[Radians(10):Radians(370)] °->> 0.10016742116156
 w[Radians(10):Radians(350)] °->> 3.041425232428234
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
-Status = "Line 13: Equation doesn't balance: b = 240° (relative diff 150% >= 0.005%)\nLine 15: Equation doesn't balance: d = 5° (relative diff 98.63% >= 0.005%)\nLine 16: Equation doesn't balance: e = 380° (relative diff 94.737% >= 0.005%)"; StatusIsError = 1
+Status = "Solved 5 equations"; StatusIsError = 0
 "Full-circle angular limits [0:360] don't collapse to zero-width"
 "Without a full-circle guard, modM(0) == modM(360) == 0 would collapse"
 "the [3] direct-eval limit check to v>=0 && v<=0 and reject any non-zero"
@@ -567,7 +567,7 @@ e[10:370] °-> 20°
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 13: Computed value 500 is outside limits [0, 100] for 'v'"; StatusIsError = 1
+Status = "Line 10: Equation doesn't balance: v = 1000 (relative diff 50% >= 0.005%)\nLine 13: Computed value 500 is outside limits [0, 100] for 'v'"; StatusIsError = 1
 "Kind 1 limit-rejection doesn't infinite-loop"
 "v has two fully-known subs (500 and 1000), both outside [0:100]."
 "[3] sees two candidates, defers to Kind 1 branching. Each branch"
@@ -603,4 +603,40 @@ a-> NaN
 b: -3
 
 3 = Infinity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+"Demonstrates main solve produces y-> 30"
+"Main solve picks x=3 branch (y=30). OUTPUT-with-limits re-solves find"
+"x=-3 and y=-30 in their ranges. Plain y-> shows main-solve value."
+
+x*x = 9
+y = x * 10
+
+--Variables--
+
+x[-5:0]-> -3            "want negative root"
+y[-100:0]-> -30
+y-> 30
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 8: Equation doesn't balance: b = -120° (relative diff 200% >= 0.5%)\nLine 14: Could not find a root in range [0:30] for 'b'"; StatusIsError = 1
+"Slow-path surfaces balance error and no-root error together"
+"Main solve picks b=-120 from b=-120°; abs(-120)=120 balances."
+"b[0:300]-> slow path finds b=120 via abs, but that now violates"
+"the b=-120° equation — balance error surfaces from slow path."
+"b[0:30]-> slow path can't find any root of abs(b)=120 in [0,30]"
+"— surfaces the usual 'Could not find a root' error."
+
+b = -120°
+abs(b) = 120
+
+--Variables--
+
+b[0:300] -> 120
+b[0:30] ->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

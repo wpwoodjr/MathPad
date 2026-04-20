@@ -229,7 +229,7 @@ speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set)
 cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
 
 drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
-set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+set °= mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
 
 speed = smg*sin(cmg - set) / sin(cts - set)
 drift = smg*sin(cts - cmg) / sin(cts - set)
@@ -259,7 +259,7 @@ smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(se
 cmg = mod(atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set)); 360)
 
 speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set))**2)
-cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
+cts °= mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
 
 drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
 set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
@@ -493,7 +493,7 @@ speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set)
 cts = mod(atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set)); 360)
 
 drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
-set = mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
+set °= mod(atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts)); 360)
 
 speed = smg*sin(cmg - set) / sin(cts - set)
 drift = smg*sin(cts - cmg) / sin(cts - set)

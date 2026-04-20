@@ -143,10 +143,14 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
     // Exactly one unknown - solve for it
     const unknown = unknowns[0];
 
-    // Get search limits if specified
+    // Get search limits if specified. OUTPUT declarations' limits are
+    // display instructions — they're applied via resolveWithLimits per
+    // output, not by the main Brent's. When only OUTPUTs exist for a var,
+    // main solve runs unconstrained.
     let limits = null;
     const varInfo = variables.get(unknown);
-    if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
+    if (varInfo && varInfo.declaration && varInfo.declaration.limits &&
+        varInfo.declaration.type !== VarType.OUTPUT) {
         try {
             const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
             const highAST = parseTokens(varInfo.declaration.limits.highTokens);
@@ -234,20 +238,24 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
  *     caller passes `decl.declaration` (full parser decl); table caller
  *     passes the column spec (`{ limits, format, ... }`).
  * @param {Array} equations - Equations to consult
- * @param {Array} declarations - Declarations array (will be cloned with the
- *     target's entry replaced by an INPUT carrying the OUTPUT's limits)
+ * @param {Array} declarations - Declarations array (target is filtered out
+ *     and replaced by a single INPUT entry carrying the OUTPUT's limits)
  * @param {EvalContext} context
  * @param {Object} record - Record settings (degreesMode, places, ...)
  * @param {Map} preSolveVars - Pre-solve variable state to reset to
- * @returns {{ value, reason }} reason: 'noEquation' | 'noRoot' | null
+ * @param {number} [targetLineIndex] - Line of the OUTPUT declaration being
+ *     re-solved; used as the lineIndex of the replacement entry so any
+ *     slow-path error about the target points at the right line.
+ * @returns {{ value, reason, errors }} reason: 'noEquation' | 'noRoot' | null.
+ *     `errors` is slow-path's error list (empty on fast path / noEquation).
  */
-function resolveWithLimits(varName, decl, equations, declarations, context, record, preSolveVars) {
+function resolveWithLimits(varName, decl, equations, declarations, context, record, preSolveVars, targetLineIndex) {
     const limits = decl.limits;
 
     // Check if any equation references this variable
     const hasEquation = equations.some(eq =>
         eq.leftAST && eq.rightAST && eq.allVars && eq.allVars.has(varName));
-    if (!hasEquation) return { value: undefined, reason: 'noEquation' };
+    if (!hasEquation) return { value: undefined, reason: 'noEquation', errors: [] };
 
     // Angular-aware in-limits check (mirrors applyDirectValue lines 468-486)
     function valueInLimits(value) {
@@ -273,44 +281,46 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
     // Fast path: main-solve value already in limits → use it
     if (context.variables.has(varName)) {
         const value = context.variables.get(varName);
-        if (valueInLimits(value)) return { value, reason: null };
+        if (valueInLimits(value)) return { value, reason: null, errors: [] };
     }
 
     // Slow path: full pipeline re-solve with OUTPUT's limits.
-    // Build modified declarations: replace every entry with matching name by
-    // an INPUT carrying the OUTPUT's limits. buildVariablesMap picks the
-    // first entry per name (first-wins), so the re-solve sees the limits.
-    const modifiedDecls = declarations.map(d => {
-        if (d.name === varName) {
-            return {
-                ...d,
-                value: null,
-                declaration: {
-                    ...d.declaration,
-                    type: VarType.INPUT,
-                    limits,
-                    format: decl.format || d.declaration.format
-                }
-            };
+    // Build modified declarations: filter out every entry for the target
+    // variable and push a single INPUT entry carrying the OUTPUT's limits
+    // and (if provided) the correct re-solve-target lineIndex. With only one
+    // entry, buildVariablesMap trivially picks it, and any slow-path error
+    // about the target points at the current re-solved OUTPUT's line.
+    const modifiedDecls = declarations.filter(d => d.name !== varName);
+    modifiedDecls.push({
+        name: varName,
+        value: null,
+        lineIndex: targetLineIndex != null ? targetLineIndex : 0,
+        declaration: {
+            type: VarType.INPUT,
+            limits,
+            format: decl.format
         }
-        return d;
     });
 
     // Reset to pre-solve state; delete target so re-solve treats it as unknown.
     const savedVars = new Map(context.variables);
     if (preSolveVars) context.variables = new Map(preSolveVars);
     context.variables.delete(varName);
+    let solveResult;
     try {
-        solveEquations(context, modifiedDecls, record, equations);
+        solveResult = solveEquations(context, modifiedDecls, record, equations);
     } catch (e) {
         context.variables = savedVars;
-        return { value: undefined, reason: 'noRoot' };
+        return { value: undefined, reason: 'noRoot', errors: [] };
     }
     const value = context.variables.has(varName) ? context.variables.get(varName) : undefined;
     context.variables = savedVars;
 
-    if (value !== undefined && valueInLimits(value)) return { value, reason: null };
-    return { value: undefined, reason: 'noRoot' };
+    const errors = (solveResult && solveResult.errors) || [];
+    if (value !== undefined && valueInLimits(value)) {
+        return { value, reason: null, errors };
+    }
+    return { value: undefined, reason: 'noRoot', errors };
 }
 
 /**
@@ -543,10 +553,12 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
     // Apply a direct-eval computed value for a variable, respecting its limits.
     // Returns true if the value was accepted; false if it failed limit validation
-    // (recording a solveFailure in that case).
+    // (recording a solveFailure in that case). OUTPUT limits are ignored here —
+    // they're display instructions applied per-output via resolveWithLimits.
     function applyDirectValue(varName, value, sourceLine) {
         const varInfo = variables.get(varName);
-        if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
+        if (varInfo && varInfo.declaration && varInfo.declaration.limits &&
+            varInfo.declaration.type !== VarType.OUTPUT) {
             try {
                 const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
                 const highAST = parseTokens(varInfo.declaration.limits.highTokens);
@@ -728,12 +740,15 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
             // [4] Build sweep subs — only if [3] didn't resolve everything.
             // Stores full alternate arrays for the cartesian product in branching.
+            // OUTPUT-only vars count as "no limits" here — their limits are
+            // display instructions, not constraints for the main solve.
             definitionSubs = new Map();
             if (!progressed) {
                 for (const [varName, subs] of substitutions) {
                     if (context.hasVariable(varName)) continue;
                     const varInfo = variables.get(varName);
-                    if (varInfo && varInfo.declaration && varInfo.declaration.limits) continue;
+                    if (varInfo && varInfo.declaration && varInfo.declaration.limits &&
+                        varInfo.declaration.type !== VarType.OUTPUT) continue;
                     definitionSubs.set(varName, subs);
                 }
             }
@@ -1546,15 +1561,12 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
     for (const decl of declarations) {
         if (decl.declaration.type !== VarType.OUTPUT) continue;
         if (!decl.declaration.limits) continue;
-        const { value, reason } = resolveWithLimits(
+        const { value, reason, errors: reErrors } = resolveWithLimits(
             decl.name, decl.declaration, outerEquations, declarations,
-            context, record, preSolveVars);
-        if (reason && !solveResult.solveFailures.has(decl.name)) {
-            if (reason === 'noEquation') {
-                errors.push(`Line ${decl.lineIndex + 1}: No equation references '${decl.name}' — cannot apply limits`);
-            } else if (reason === 'noRoot') {
-                errors.push(`Line ${decl.lineIndex + 1}: No value found for '${decl.name}' within limits`);
-            }
+            context, record, preSolveVars, decl.lineIndex);
+        errors.push(...reErrors);
+        if (reason === 'noEquation' && !solveResult.solveFailures.has(decl.name)) {
+            errors.push(`Line ${decl.lineIndex + 1}: No equation references '${decl.name}' — cannot apply limits`);
         }
         computedValues.set(`__resolvevar_${decl.lineIndex}`, value);
     }
@@ -1614,7 +1626,14 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
     // Restore previous trace buffer
     _traceBuffer = prevTraceBuffer;
 
-    return { text, solved: solveResult.solved, errors, equationVarStatus: solveResult.equationVarStatus, tables, trace };
+    // Dedup errors: main solve and each slow-path re-solve can produce
+    // overlapping messages (e.g. the same balance error surfacing from
+    // multiple OUTPUT-with-limits re-solves, or a slow-path message
+    // identical to one already pushed by main solve). Preserve first-
+    // occurrence order; drop exact duplicates.
+    const dedupedErrors = [...new Set(errors)];
+
+    return { text, solved: solveResult.solved, errors: dedupedErrors, equationVarStatus: solveResult.equationVarStatus, tables, trace };
 }
 
 /**
@@ -1902,9 +1921,12 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         for (const [varName, failure] of solveResult.solveFailures) {
             badVars.add(varName);
         }
-        // Per-cell balance check: if any equation doesn't balance, the whole cell
-        // is bad — blank every non-iterator column (iterators always display the
-        // iterator's value regardless of whether equations balance).
+        // Per-cell balance check: if an equation doesn't balance, blank the
+        // columns that (a) are body unknowns, or (b) are referenced by the
+        // failing equation and aren't iterators (iterators always display).
+        // This catches cases like `y**2 = x` with y outer-declared at 17 (blank
+        // y) while not over-blanking inherited outer equations that reference
+        // only iterators and outer constants (e.g. tableGraph plotting f(x)).
         const iteratorNames = new Set(evaledIterators.map(it => it.name));
         for (const beq of balanceEquations) {
             try {
@@ -1915,11 +1937,15 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                     ? modCheckBalance(leftVal, rightVal, modN, balancePlaces)
                     : checkBalance(leftVal, rightVal, balancePlaces);
                 if (!result.balanced) {
+                    const eqVars = new Set([
+                        ...findVariablesInAST(beq.leftAST),
+                        ...findVariablesInAST(beq.rightAST)
+                    ]);
                     for (const unk of unknowns) badVars.add(unk.name);
                     for (const col of columns) {
-                        if (!iteratorNames.has(col.name)) badVars.add(col.name);
+                        if (iteratorNames.has(col.name)) continue;
+                        if (eqVars.has(col.name)) badVars.add(col.name);
                     }
-                    break;
                 }
             } catch (e) { }
         }

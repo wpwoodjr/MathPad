@@ -289,7 +289,7 @@ x[-4:-2]->
 
 tableGraph("f(x) showing roots") = {
   x: -3.1..3.1..0.2
-  y: f(x; c5; c4; c3; c2; c1; c0)
+  y = f(x; c5; c4; c3; c2; c1; c0)
   "x axis label" x->
   "y axis label" y->
 }`,
