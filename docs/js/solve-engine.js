@@ -4,17 +4,16 @@
  */
 
 /**
- * Build a Map from variable declarations array (first declaration per name wins,
- * but input declarations take precedence over output declarations since outputs
- * are cleared before solving)
+ * Build the solver's variables map from the declarations array. Contains
+ * only INPUT declarations (OUTPUTs are display instructions, not solver
+ * constraints — handled separately by resolveWithLimits and formatOutput).
+ * First-wins on duplicate INPUT names.
  */
 function buildVariablesMap(declarations) {
     const map = new Map();
     for (const info of declarations) {
+        if (info.declaration.type === VarType.OUTPUT) continue;
         if (!map.has(info.name)) {
-            map.set(info.name, info);
-        } else if (map.get(info.name).declaration.type === VarType.OUTPUT &&
-                   info.declaration.type === VarType.INPUT) {
             map.set(info.name, info);
         }
     }
@@ -143,14 +142,11 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
     // Exactly one unknown - solve for it
     const unknown = unknowns[0];
 
-    // Get search limits if specified. OUTPUT declarations' limits are
-    // display instructions — they're applied via resolveWithLimits per
-    // output, not by the main Brent's. When only OUTPUTs exist for a var,
-    // main solve runs unconstrained.
+    // Get search limits if specified. Variables map contains only INPUTs
+    // (OUTPUT limits are display instructions handled by resolveWithLimits).
     let limits = null;
     const varInfo = variables.get(unknown);
-    if (varInfo && varInfo.declaration && varInfo.declaration.limits &&
-        varInfo.declaration.type !== VarType.OUTPUT) {
+    if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
         try {
             const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
             const highAST = parseTokens(varInfo.declaration.limits.highTokens);
@@ -285,22 +281,25 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
     }
 
     // Slow path: full pipeline re-solve with OUTPUT's limits.
-    // Build modified declarations: filter out every entry for the target
-    // variable and push a single INPUT entry carrying the OUTPUT's limits
-    // and (if provided) the correct re-solve-target lineIndex. With only one
-    // entry, buildVariablesMap trivially picks it, and any slow-path error
-    // about the target points at the current re-solved OUTPUT's line.
-    const modifiedDecls = declarations.filter(d => d.name !== varName);
-    modifiedDecls.push({
-        name: varName,
-        value: null,
-        lineIndex: targetLineIndex != null ? targetLineIndex : 0,
-        declaration: {
-            type: VarType.INPUT,
-            limits,
-            format: decl.format
-        }
-    });
+    // Prepend a single INPUT entry for the target carrying the OUTPUT's
+    // limits and (if provided) the correct re-solve-target lineIndex.
+    // buildVariablesMap is first-wins and filters out OUTPUTs, so this
+    // entry naturally wins over any other declarations for the same name.
+    // Slow-path errors about the target then point at the current
+    // re-solved OUTPUT's line.
+    const modifiedDecls = [
+        {
+            name: varName,
+            value: null,
+            lineIndex: targetLineIndex != null ? targetLineIndex : 0,
+            declaration: {
+                type: VarType.INPUT,
+                limits,
+                format: decl.format
+            }
+        },
+        ...declarations
+    ];
 
     // Reset to pre-solve state; delete target so re-solve treats it as unknown.
     const savedVars = new Map(context.variables);
@@ -553,12 +552,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
     // Apply a direct-eval computed value for a variable, respecting its limits.
     // Returns true if the value was accepted; false if it failed limit validation
-    // (recording a solveFailure in that case). OUTPUT limits are ignored here —
-    // they're display instructions applied per-output via resolveWithLimits.
+    // (recording a solveFailure in that case). Variables map has only INPUTs,
+    // so OUTPUT limits don't reach this code path.
     function applyDirectValue(varName, value, sourceLine) {
         const varInfo = variables.get(varName);
-        if (varInfo && varInfo.declaration && varInfo.declaration.limits &&
-            varInfo.declaration.type !== VarType.OUTPUT) {
+        if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
             try {
                 const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
                 const highAST = parseTokens(varInfo.declaration.limits.highTokens);
@@ -740,15 +738,15 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
             // [4] Build sweep subs — only if [3] didn't resolve everything.
             // Stores full alternate arrays for the cartesian product in branching.
-            // OUTPUT-only vars count as "no limits" here — their limits are
-            // display instructions, not constraints for the main solve.
+            // Variables with INPUT limits are "answer variables" being Brent's'd
+            // on directly; skip them so we don't substitute them away. Since
+            // the variables map contains only INPUTs, OUTPUT limits never enter.
             definitionSubs = new Map();
             if (!progressed) {
                 for (const [varName, subs] of substitutions) {
                     if (context.hasVariable(varName)) continue;
                     const varInfo = variables.get(varName);
-                    if (varInfo && varInfo.declaration && varInfo.declaration.limits &&
-                        varInfo.declaration.type !== VarType.OUTPUT) continue;
+                    if (varInfo && varInfo.declaration && varInfo.declaration.limits) continue;
                     definitionSubs.set(varName, subs);
                 }
             }
