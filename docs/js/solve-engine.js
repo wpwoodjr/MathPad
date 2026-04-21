@@ -448,22 +448,50 @@ function restoreState(context, solveFailures, unsolvedEquations, erroredEquation
 }
 
 /**
- * Lex-order cartesian product of substitution alternates.
- * Yields Maps {varName → single sub entry} for each combination.
- * First yielded combo is all-zeros (subs[0] for every var), biasing
- * toward the existing iterative solver's default preference.
+ * Yield all (subset × cartesian-of-alternates) combos from defSubs, in
+ * order of increasing subset size. Each yielded Map contains one sub
+ * entry per chosen key.
+ *
+ * Ordering matters: the backtracker's DFS tries candidates in the order
+ * they're yielded, so preferring smaller subsets first keeps exploration
+ * cheap. A smaller subset leaves more variables free in the substituted
+ * equations, which is usually what reduces a multi-unknown system to a
+ * 1-unknown Brent's target. Full cartesian comes last (rarely needed).
+ *
+ * For cyclically-related sub pairs (e.g., `x → z/2` and `z → 2*x` from
+ * the same equation), size-1 combos try each direction independently
+ * before any size-2 combo applies both simultaneously. This avoids the
+ * cycle-guarded no-op case where both subs applied together round-trip
+ * back to the original equation.
  */
 function* subCombinations(defSubs) {
     const keys = [...defSubs.keys()];
     if (keys.length === 0) { yield new Map(); return; }
-    const values = keys.map(k => defSubs.get(k));
-    function* rec(i, current) {
-        if (i === keys.length) { yield new Map(current); return; }
-        for (const v of values[i]) {
-            yield* rec(i + 1, [...current, [keys[i], v]]);
+    for (let size = 0; size <= keys.length; size++) {
+        yield* subsetsOfSize(keys, size, defSubs);
+    }
+}
+
+function* subsetsOfSize(keys, size, defSubs, start = 0, chosen = []) {
+    if (chosen.length === size) {
+        yield* cartesianOver(chosen, defSubs);
+        return;
+    }
+    const remaining = size - chosen.length;
+    for (let i = start; i <= keys.length - remaining; i++) {
+        yield* subsetsOfSize(keys, size, defSubs, i + 1, [...chosen, keys[i]]);
+    }
+}
+
+function* cartesianOver(chosenKeys, defSubs) {
+    if (chosenKeys.length === 0) { yield new Map(); return; }
+    const [first, ...rest] = chosenKeys;
+    for (const alt of defSubs.get(first)) {
+        for (const m of cartesianOver(rest, defSubs)) {
+            m.set(first, alt);
+            yield m;
         }
     }
-    yield* rec(0, []);
 }
 
 /**

@@ -139,6 +139,8 @@ height-> 8
   [4] Sweep subs: width
   [5] Branching (depth 1)
     sweep1 line 4: too many unknowns (width, height)
+    sweep1 line 5: too many unknowns (width, height)
+    sweep1 line 4: too many unknowns (width, height)
     Try sweep1: height = 8.000000000000005 (from line 5)
       from (line 5): width * 2 + height = 20
       with (line 4): width → (area / height)
@@ -274,12 +276,12 @@ smg: 1.41
 cmg °: 0°
 
 Boat through water
-speed: 1.0742
+speed: 0.9199
 cts °: 315°
 
 Current
 drift: 1
-set °: 49.424°
+set °: 40.576°
 
 
 
@@ -318,12 +320,21 @@ set °: 49.424°
     sweep0 line 10: Could not find a root for 'set'
     sweep0 line 21: Could not find a root for 'set'
     sweep1 line 10: Could not find a root for 'set'
-    Try sweep1: set = 49.423975705192845 (from line 13)
-      from (line 13): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 9): speed → ((smg * sin((cmg - set))) / sin((cts - set)))
+    sweep1 line 13: too many unknowns (set, speed)
+    sweep1 line 16: too many unknowns (speed, set)
+    sweep1 line 17: too many unknowns (speed, set)
+    sweep1 line 21: Could not find a root for 'set'
+    Try sweep1: speed = 0.9198843183703256 (from line 24)
+      from (line 24): drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
 "
 "*--- Advance (depth 2) ---"
 "  [1] Input expressions (none)
+  [2] Substitution map
+    line 25: set → atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts))))
+  [3] Evaluate fully-known substitutions
+    set = atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts)))) = 40.57602429483915
+  [4] Sweep subs: (none)
+  [1] Input expressions (none)
   [2] Substitution map
     (none)
   [3] Evaluate fully-known substitutions
@@ -374,6 +385,7 @@ b-> 3
       line 9: unknowns b
   [4] Sweep subs: a
   [5] Branching (depth 1)
+    sweep1 line 9: too many unknowns (a, b)
     Try sweep1: b = 0 (from line 8)
       from (line 8): a = 2*b
       with (line 7): a → sqrt(-b)
@@ -449,10 +461,10 @@ drift = smg*sin(cts - cmg) / sin(cts - set)
 --Variables--
 smg: 1.41
 cmg °: 0°
-speed<- 1.0742
+speed<- 0.9199
 cts °: 315°
 drift: 1
-set °<- 49.424°
+set °<- 40.576°
 
 
 
@@ -490,392 +502,21 @@ set °<- 49.424°
   [5] Branching (depth 1)
     sweep0 line 18: Could not find a root for 'set'
     sweep0 line 26: Could not find a root for 'set'
-    Try sweep1: set = 0.001 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-  · candidate (depth 2): no balanced branch found
-    Rejected: set = 0.001 (downstream failed)
-    Try sweep1: set = 0.01 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 0.01 (downstream failed)
-    Try sweep1: set = 0.1 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 0.1 (downstream failed)
-    Try sweep1: set = 1 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 1 (downstream failed)
-    Try sweep1: set = 10 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 10 (downstream failed)
-    Try sweep1: set = 100 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 100 (downstream failed)
-    Try sweep1: set = 1000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 1000 (downstream failed)
-    Try sweep1: set = 10000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 10000 (downstream failed)
-    Try sweep1: set = 100000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 100000 (downstream failed)
-    Try sweep1: set = 1000000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 1000000 (downstream failed)
-    Try sweep1: set = 10000000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 10000000 (downstream failed)
-    Try sweep1: set = 100000000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 100000000 (downstream failed)
-    Try sweep1: set = 0 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 0 (downstream failed)
-    Try sweep1: set = -0.001 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -0.001 (downstream failed)
-    Try sweep1: set = -0.01 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -0.01 (downstream failed)
-    Try sweep1: set = -0.1 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -0.1 (downstream failed)
-    Try sweep1: set = -1 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -1 (downstream failed)
-    Try sweep1: set = -10 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -10 (downstream failed)
-    Try sweep1: set = -100 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -100 (downstream failed)
-    Try sweep1: set = -1000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -1000 (downstream failed)
-    Try sweep1: set = -10000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -10000 (downstream failed)
-    Try sweep1: set = -100000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -100000 (downstream failed)
-    Try sweep1: set = -1000000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -1000000 (downstream failed)
-    Try sweep1: set = -10000000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -10000000 (downstream failed)
-    Try sweep1: set = -100000000 (from line 10)
-      from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -100000000 (downstream failed)
-    Try sweep1: set = 151.64084253035912 (from line 13)
-      from (line 13): smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = 151.64084253035912 (downstream failed)
-    Try sweep1: set = -10.731477056965364 (from line 13)
-      from (line 13): smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -10.731477056965364 (downstream failed)
-    Try sweep1: set = -928.3591574696406 (from line 13)
-      from (line 13): smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
-  [2] Substitution map
-    (none)
-  [3] Evaluate fully-known substitutions
-  [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -928.3591574696406 (downstream failed)
-    sweep1 line 14: Could not find a root for 'set'
+    sweep1 line 10: too many unknowns (set, speed)
+    sweep1 line 13: too many unknowns (speed, set)
+    sweep1 line 14: too many unknowns (speed, set)
     sweep1 line 18: Could not find a root for 'set'
-    Try sweep1: set = -49.4239757051601 (from line 21)
+    Try sweep1: speed = 0.9198843183703256 (from line 21)
       from (line 21): drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
 "
 "*--- Advance (depth 2) ---"
 "  [1] Input expressions (none)
   [2] Substitution map
-    (none)
+    line 22: set → atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts))))
   [3] Evaluate fully-known substitutions
+    set = atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts)))) = 40.57602429483915
   [4] Sweep subs: (none)
-  [5] Branching (depth 2)
-    (no alternatives available)
-    Rejected: set = -49.4239757051601 (downstream failed)
-    Try sweep1: set = 49.42397570516038 (from line 22)
-      from (line 22): set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
-      with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-"
-"*--- Advance (depth 2) ---"
-"  [1] Input expressions (none)
+  [1] Input expressions (none)
   [2] Substitution map
     (none)
   [3] Evaluate fully-known substitutions
@@ -994,6 +635,56 @@ set °: 45°
   [5] Branching (depth 3)
     (no alternatives available)
     Rejected: drift = 0.9940321926376449 (downstream failed)
+    sweep1 line 15: Could not find a root for 'drift'
+    Try sweep1: drift = 0.9940321926376428 (from line 18)
+      from (line 18): smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+"
+"*--- Advance (depth 3) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    (none)
+  [3] Evaluate fully-known substitutions
+  [4] Sweep subs: (none)
+  [5] Branching (depth 3)
+    (no alternatives available)
+    Rejected: drift = 0.9940321926376428 (downstream failed)
+    Try sweep1: drift = -0.9940321926376425 (from line 18)
+      from (line 18): smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(set))**2)
+"
+"*--- Advance (depth 3) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    (none)
+  [3] Evaluate fully-known substitutions
+  [4] Sweep subs: (none)
+  [5] Branching (depth 3)
+    (no alternatives available)
+    Rejected: drift = -0.9940321926376425 (downstream failed)
+    Try sweep1: drift = -0.9940321926376448 (from line 19)
+      from (line 19): cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+"
+"*--- Advance (depth 3) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    (none)
+  [3] Evaluate fully-known substitutions
+  [4] Sweep subs: (none)
+  [5] Branching (depth 3)
+    (no alternatives available)
+    Rejected: drift = -0.9940321926376448 (downstream failed)
+    sweep1 line 22: Could not find a root for 'drift'
+    Try sweep1: drift = -0.9940321926376456 (from line 23)
+      from (line 23): cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+"
+"*--- Advance (depth 3) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    (none)
+  [3] Evaluate fully-known substitutions
+  [4] Sweep subs: (none)
+  [5] Branching (depth 3)
+    (no alternatives available)
+    Rejected: drift = -0.9940321926376456 (downstream failed)
     Rejected: cmg = 990.1714762455603 (downstream failed)
     Try sweep0: cmg = -0.17147624556026225 (from line 11)
       from (line 11): speed = smg*sin(cmg - set) / sin(cts - set)
