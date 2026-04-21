@@ -112,13 +112,12 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     A variable may be solved more than once with different limits:
         x[0:1]->
         x[-1:0]->
-    Order doesn't matter for numeric limits — auto-swap normalizes [50:0] to [0:50].
-    For angular variables (° format), [low:high] with low > high (mod M) is treated
-    as the arc through 0:
-        cmg[327.8:5.5]°::                       arc through 0° (37.7° wide)
-    Brent's shifts the search range to span this arc; the substitution path uses
-    mod-aware comparison and normalizes the value into the user's range.
-    M = 360 in degrees mode, 2π in radians mode.
+    Limits are always linear — auto-swap normalizes [50:0] to [0:50], and `°`
+    on a declaration is display-only (not a solver signal). For wrap-through-0°
+    search, write a linear range that extends past M:
+        cmg[327.8:365.5]°::                     37.7° arc, covers wrap via linear range
+    Trig is periodic so Brent's evaluating 365° equals evaluating 5°. Mod-aware
+    solving semantics live entirely in `°=` equations, not in limits.
 
     Limits may reference other variables:
         y[0:x*2]<-                              x can be a known input or solved variable

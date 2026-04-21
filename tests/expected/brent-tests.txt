@@ -461,16 +461,18 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
-"Degrees-aware limits with wraparound through 0°"
-"cmg has limits [327.8..5.5] which wrap through 0°. atan2 returns -0.008°."
-"Mod-360 angular comparison: -0.008° ≡ 359.992° which is in [327.8..5.5]"
-"via wraparound. Value is normalized to 359.992 to fit within the limits."
+"Linear-range limits spanning past 360°"
+"cmg has limits [327.8:365.5] — a linear range that covers the arc from"
+"327.8° through 360°/0° to 5.5°. atan2 returns -0.008°; the `°=` equation's"
+"mod-360 residual makes Brent's find the equivalent 359.992° root within"
+"this linear range. No angular special-casing in the limits — wrap is"
+"expressed by a range extending past M."
 
 cmg °= atan(ws*sin(cts) + drift*sin(set); ws*cos(cts) + drift*cos(set))
 ws = speed*cos(leeway)
 
 --Variables--
-cmg[327.8:5.5] °:: 359.991614707713779°
+cmg[327.8:365.5] °:: 359.991614707713779°
 speed: 11.1
 cts °: 5.5°
 drift: 2
@@ -481,16 +483,17 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
-"Mod-aware limits with wraparound through 0 (radians mode)"
+"Linear-range limits spanning past 2π (radians mode)"
 "Same as the degrees test, but with limits in radians and degreesMode=0."
-"cmg's limits wrap through 0; atan2 returns a value near -0.0001 rad."
-"Mod-2π comparison normalizes it into the wraparound range."
+"Limits [Radians(327.8):Radians(365.5)] — linear range covering the wrap."
+"atan2 returns ≈ -0.0001 rad; `°=` mod-2π residual finds the equivalent"
+"root near 2π inside the linear range."
 
 cmg °= atan(ws*sin(cts) + drift*sin(set); ws*cos(cts) + drift*cos(set))
 ws = speed*cos(leeway)
 
 --Variables--
-cmg[Radians(327.8):Radians(5.5)] °:: 6.28303895622045
+cmg[Radians(327.8):Radians(365.5)] °:: 6.28303895622045
 speed: 11.1
 cts: Radians(5.5)
 drift: 2
@@ -501,10 +504,12 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 4 equations"; StatusIsError = 0
-"Brent's degrees-aware wraparound"
+"Linear limits across the 360° boundary"
 "sin = 0.1 has roots at 5.74° and 174.26° (mod 360°)."
-"For degrees-formatted variables, [low:high] with low > high (mod 360)"
-"is treated as a wraparound arc through 0°, not auto-swapped."
+"All limits are linear with auto-swap; `°` on a declaration is purely"
+"display. For a search band that crosses 360°, write a linear range"
+"that extends past 360 (e.g. [350:370]); trig is periodic so Brent's"
+"evaluating 365° is the same as evaluating 5°."
 
 0.1 = sin(x)
 0.1 = sin(y)
@@ -512,16 +517,16 @@ Status = "Solved 4 equations"; StatusIsError = 0
 0.1 = sin(w)
 
 --Variables--
-x[350:370] °->> 5.739170477266787°
-y[350:10] °->> 5.739170477266787°
-z[10:370] °->> 5.739170477266787°
-w[10:350] °->> 174.260829522733218°
+x[350:370] °->> 365.739170477266782°
+y[10:350] °->> 174.260829522733218°
+z[10:370] °->> 174.260829522733218°
+w[-10:10] °->> 5.739170477266787°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
-"Brent's mod-aware wraparound in radians mode"
+"Linear limits across the 2π boundary (radians mode)"
 "Same as degrees test, but with limits in radians and degreesMode=0."
 "sin = 0.1 has roots ≈ 0.1002 rad and ≈ 3.0414 rad (mod 2π)."
 
@@ -531,25 +536,25 @@ Status = "Solved 4 equations"; StatusIsError = 0
 0.1 = sin(w)
 
 --Variables--
-x[Radians(350):Radians(370)] °->> 0.10016742116156
-y[Radians(350):Radians(10)] °->> 0.10016742116156
-z[Radians(10):Radians(370)] °->> 0.10016742116156
-w[Radians(10):Radians(350)] °->> 3.041425232428234
+x[Radians(350):Radians(370)] °->> 6.383352728341145
+y[Radians(10):Radians(350)] °->> 3.041425232428234
+z[Radians(10):Radians(370)] °->> 3.041425232428234
+w[Radians(-10):Radians(10)] °->> 0.10016742116156
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
-Status = "Solved 5 equations"; StatusIsError = 0
-"Full-circle angular limits [0:360] don't collapse to zero-width"
-"Without a full-circle guard, modM(0) == modM(360) == 0 would collapse"
-"the [3] direct-eval limit check to v>=0 && v<=0 and reject any non-zero"
-"value. The cases here exercise both in-range preservation and"
-"out-of-range normalization across full-circle ranges:"
+Status = "Line 20: Computed value 240 is outside limits [-180, 180] for 'b'\nLine 22: Computed value 5 is outside limits [10, 370] for 'd'\nLine 23: Computed value 380 is outside limits [10, 370] for 'e'"; StatusIsError = 1
+"All angular limits are linear with auto-swap"
+"Limits never apply mod-M wraparound semantics — `°` on a declaration"
+"is purely display. Out-of-range values reject honestly regardless of"
+"whether the range is 360° wide. For wrap-through-0 search, write a"
+"linear range that extends past M (e.g. [350:370]). The cases here:"
 "  a: 316 ∈ [0:360], preserved exactly."
-"  b: 240 ∉ [-180:180] raw → stored as -120 (in range), displays as 240°."
+"  b: 240 ∉ [-180:180] — rejected, error reported."
 "  c: 50 ∈ [10:370], preserved."
-"  d: 5 ∉ [10:370] raw → stored as 365 (wrapped forward), displays as 5°."
-"  e: 380 ∉ [10:370] raw → stored as 20 (wrapped back), displays as 20°."
+"  d: 5 ∉ [10:370] — rejected, error reported."
+"  e: 380 ∉ [10:370] — rejected, error reported."
 
 a = 316°
 b = 240°
@@ -559,10 +564,10 @@ e = 380°
 
 --Variables--
 a[0:360] °-> 316°
-b[-180:180] °-> 240°
+b[-180:180] °->
 c[10:370] °-> 50°
-d[10:370] °-> 5°
-e[10:370] °-> 20°
+d[10:370] °->
+e[10:370] °->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1

@@ -152,19 +152,12 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
             const highAST = parseTokens(varInfo.declaration.limits.highTokens);
             let low = evaluate(lowAST, context);
             let high = evaluate(highAST, context);
-            // For angular variables (° format) with wraparound (low > high after mod),
-            // shift the search range to span the arc going from low through 0 to high.
-            // E.g., degrees [350:10] → [350:370], radians [6.1:0.1] → [6.1:6.38].
-            const isAngular = varInfo.declaration.format === 'degrees';
-            if (isAngular) {
-                const M = context.degreesMode ? 360 : 2 * Math.PI;
-                const modM = (x) => ((x % M) + M) % M;
-                if (modM(low) > modM(high)) {
-                    const arcLen = modM(high - low);
-                    low = modM(low);
-                    high = low + arcLen;
-                }
-            }
+            // Auto-swap inverted ranges. Limits are always linear; the `°`
+            // format is display-only. For wrap-through-0 search (e.g. cmg
+            // spanning 327.8° through 0° to 5.5°), write a linear range
+            // that extends past M, e.g. [327.8:365.5] — trig is periodic so
+            // Brent's evaluating 365° == evaluating 5°.
+            if (low > high) [low, high] = [high, low];
             limits = { low, high };
             if (varInfo.declaration.limits.stepTokens) {
                 const stepAST = parseTokens(varInfo.declaration.limits.stepTokens);
@@ -253,31 +246,27 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
         eq.leftAST && eq.rightAST && eq.allVars && eq.allVars.has(varName));
     if (!hasEquation) return { value: undefined, reason: 'noEquation', errors: [] };
 
-    // Angular-aware in-limits check (mirrors applyDirectValue lines 468-486)
+    // Check value against the OUTPUT's limits; return value if in limits,
+    // else undefined. Limits are always linear with auto-swap — `°` format
+    // is purely display. For wrap-through-0 semantics use a linear range
+    // that extends past M (e.g. [350:370]); trig is periodic.
     function valueInLimits(value) {
-        if (!limits) return true;
+        if (!limits) return value;
         try {
             const low = evaluate(parseTokens(limits.lowTokens), context);
             const high = evaluate(parseTokens(limits.highTokens), context);
-            const isAngular = decl.format === 'degrees';
-            if (isAngular) {
-                const M = record.degreesMode ? 360 : 2 * Math.PI;
-                const modM = (x) => ((x % M) + M) % M;
-                let arcLen = modM(high - low);
-                if (arcLen === 0 && low !== high) arcLen = M;
-                return modM(value - low) <= arcLen;
-            }
             const lo = Math.min(low, high), hi = Math.max(low, high);
-            return value >= lo && value <= hi;
+            return (value >= lo && value <= hi) ? value : undefined;
         } catch (e) {
-            return false;
+            return undefined;
         }
     }
 
     // Fast path: main-solve value already in limits → use it
     if (context.variables.has(varName)) {
-        const value = context.variables.get(varName);
-        if (valueInLimits(value)) return { value, reason: null, errors: [] };
+        const raw = context.variables.get(varName);
+        const value = valueInLimits(raw);
+        if (value !== undefined) return { value, reason: null, errors: [] };
     }
 
     // Slow path: full pipeline re-solve with OUTPUT's limits.
@@ -312,12 +301,13 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
         context.variables = savedVars;
         return { value: undefined, reason: 'noRoot', errors: [] };
     }
-    const value = context.variables.has(varName) ? context.variables.get(varName) : undefined;
+    const raw = context.variables.has(varName) ? context.variables.get(varName) : undefined;
     context.variables = savedVars;
 
     const errors = (solveResult && solveResult.errors) || [];
-    if (value !== undefined && valueInLimits(value)) {
-        return { value, reason: null, errors };
+    if (raw !== undefined) {
+        const value = valueInLimits(raw);
+        if (value !== undefined) return { value, reason: null, errors };
     }
     return { value: undefined, reason: 'noRoot', errors };
 }
@@ -590,31 +580,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 const highAST = parseTokens(varInfo.declaration.limits.highTokens);
                 let low = evaluate(lowAST, context);
                 let high = evaluate(highAST, context);
-                const isAngular = varInfo.declaration.format === 'degrees';
-                if (!isAngular && low > high) [low, high] = [high, low];
-                let inRange;
-                if (isAngular) {
-                    const M = context.degreesMode ? 360 : 2 * Math.PI;
-                    const modM = (x) => ((x % M) + M) % M;
-                    // Arc-based range check: compute the arc length from low to high
-                    // around the unit circle. This uniformly handles full-circle,
-                    // wraparound, and normal ranges without special-casing.
-                    //   - Full circle ([0:360], [10:370], ...): arcLen = 0 after mod,
-                    //     widened to M so any value is in range.
-                    //   - Wraparound ([327.8:5.5]): arcLen is the short arc through 0.
-                    //   - Normal ([10:350]): arcLen = h - l.
-                    let arcLen = modM(high - low);
-                    if (arcLen === 0 && low !== high) arcLen = M;
-                    const offset = modM(value - low);
-                    inRange = offset <= arcLen;
-                    if (inRange && (value < low || value > low + arcLen)) {
-                        // Renormalize into [low, low + arcLen]. Values already in
-                        // that window are preserved exactly (no FP round-trip).
-                        value = low + offset;
-                    }
-                } else {
-                    inRange = value >= low && value <= high;
-                }
+                // Auto-swap inverted ranges. Limits are always linear;
+                // `°` format is display-only. Wrap-through-0 is expressed
+                // via a linear range that extends past M (e.g. [350:370]).
+                if (low > high) [low, high] = [high, low];
+                const inRange = value >= low && value <= high;
                 if (!inRange) {
                     solveFailures.set(varName, {
                         error: `Computed value ${value} is outside limits [${low}, ${high}]`,
@@ -1278,6 +1248,15 @@ function formatOutput(text, declarations, context, computedValues, record, solve
             // Use pre-parsed declaration to insert value directly (no re-tokenization)
             const decl = info.declaration;
             let formatted;
+            // Evaluate angular limits for in-range mod normalization (° format).
+            // Silent-fail: if the limits can't evaluate yet, fall back to mod [0, M).
+            let limitLow, limitHigh;
+            if (decl.format === 'degrees' && decl.limits) {
+                try {
+                    limitLow = evaluate(parseTokens(decl.limits.lowTokens), context);
+                    limitHigh = evaluate(parseTokens(decl.limits.highTokens), context);
+                } catch (e) { /* fall back below */ }
+            }
             try {
                 formatted = formatVariableValue(value, decl.format, decl.fullPrecision, {
                     places: format.places,
@@ -1286,7 +1265,8 @@ function formatOutput(text, declarations, context, computedValues, record, solve
                     base: decl.base,
                     groupDigits: format.groupDigits,
                     currencySymbol: format.currencySymbol || '$',
-                    degreesMode: format.degreesMode
+                    degreesMode: format.degreesMode,
+                    limitLow, limitHigh
                 });
             } catch (e) {
                 errors.push(`Line ${info.lineIndex + 1}: ${e.message}`);

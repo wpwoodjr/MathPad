@@ -76,8 +76,7 @@ node tests/gen-expected.js TESTNAME
 - Error reporting with line numbers shown in status bar (dedup by string)
 
 ### Variable Limits
-- **Auto-swap numeric**: `[50:0]` is treated as `[0:50]` — order doesn't matter. Brent's uses `Math.min/max`; substitution path swaps for non-angular vars.
-- **Mod-aware wraparound for `°` variables**: `cmg[327.8:5.5]` is treated as the angular arc through 0°. Brent's shifts search range; substitution path uses mod-aware comparison and normalizes the value into the user's limit range. Modulus is 360 (degrees mode) or 2π (radians mode).
+- **Limits are always linear**: `[50:0]` is auto-swapped to `[0:50]` — order doesn't matter. `°` on a declaration is display-only and does NOT affect search-range semantics. For wrap-through-0° search, write a linear range extending past M (e.g. `[327.8:365.5]`) — trig is periodic so Brent's evaluating 365° == evaluating 5°. Mod-aware solving semantics live entirely in `°=` equations.
 - **Limit deferral**: when a limit expression depends on a not-yet-solved variable, the solve attempt returns `{ solved: false, limitsDeferred: true }` instead of running unconstrained. The iterative loop retries on subsequent passes.
 - **End-of-solve validation**: catches undefined references in limit expressions even when the variable has a value (which would otherwise bypass the per-attempt check).
 

@@ -464,11 +464,27 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
         return formatPercent(value, places);
     }
 
-    // Handle degrees format (mode-aware: degrees mode uses ° + mod 360, radians mode uses mod 2π no symbol)
+    // Handle degrees format (mode-aware: degrees mode uses ° + mod M, radians
+    // mode uses mod 2π no symbol). When the declaration has limits, mod into
+    // the user's range (so `-120` with limits `[-180:180]` displays as `-120°`,
+    // not `240°`) — this keeps the written-back text round-trippable through
+    // re-solve. Falls back to mod [0, M) if no limits or the shifted value
+    // doesn't land in range.
     if (varFormat === 'degrees') {
         const degreesMode = format.degreesMode !== false;
         const M = degreesMode ? 360 : 2 * Math.PI;
-        const normalized = value - M * Math.floor(value / M);
+        let normalized;
+        if (format.limitLow != null && format.limitHigh != null) {
+            const low = Math.min(format.limitLow, format.limitHigh);
+            const high = Math.max(format.limitLow, format.limitHigh);
+            const shifted = value - M * Math.floor((value - low) / M);
+            normalized = (shifted >= low && shifted <= high) ? shifted : value;
+            const formatted = fullPrecision
+                ? formatNumber(normalized, places, stripZeros, numberFormat, 10, false, null)
+                : toFixed(normalized, places).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+            return degreesMode ? formatted + '°' : formatted;
+        }
+        normalized = value - M * Math.floor(value / M);
         if (fullPrecision) {
             const formatted = formatNumber(normalized, places, stripZeros, numberFormat, 10, false, null);
             return degreesMode ? formatted + '°' : formatted;

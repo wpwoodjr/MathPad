@@ -139,7 +139,7 @@
     </div>
 
     <div class="note">
-        <strong>Limits</strong> are auto-swapped if reversed (<code>[50:0]</code> = <code>[0:50]</code>). Limit expressions can reference other variables (<code>y[0:x*2]&lt;-</code>); the solver defers a variable until its limit dependencies are solved. For angular variables (<code>°</code> format), <code>[low:high]</code> with <code>low &gt; high</code> mod 360 is treated as the arc through 0&deg; — e.g., <code>cmg[327.8:5.5]°</code> is the 37.7° arc through 0.
+        <strong>Limits</strong> are always linear — auto-swapped if reversed (<code>[50:0]</code> = <code>[0:50]</code>). Limit expressions can reference other variables (<code>y[0:x*2]&lt;-</code>); the solver defers a variable until its limit dependencies are solved. The <code>°</code> format marker is display-only (not a solver signal). For a search that wraps through 0&deg;, write a linear range extending past 360 — e.g., <code>cmg[327.8:365.5]°</code> covers the 37.7&deg; arc. Trig is periodic so Brent&rsquo;s evaluating 365&deg; equals evaluating 5&deg;.
     </div>
 
     <h3>Input vs Output</h3>

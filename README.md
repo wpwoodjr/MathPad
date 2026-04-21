@@ -62,7 +62,7 @@ Or open `docs/index.html` locally in a browser. No build step required.
 | `var:>>` | Persistent output — full precision |
 | `var[lo:hi]:` | Constrain search range for root-finding (auto-swap if reversed) |
 | `var[lo:hi:step]:` | With explicit step for Brent's grid search |
-| `cmg[a:b]°:` | Angular limits — mod-aware wraparound (e.g. `[327.8:5.5]` = arc through 0°) |
+| `cmg[a:b]°:` | `°` format is display-only; for wrap-through-0° search, extend the linear range past 360 (e.g. `[327.8:365.5]`) |
 | `x~` | Pre-solve value (value before this solve started) |
 | `x~?` | 1 if variable has a pre-solve value, 0 otherwise |
 
