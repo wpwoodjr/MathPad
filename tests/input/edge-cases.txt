@@ -41,3 +41,29 @@ x**2 + z**2 = 25
 z->
 x[0:2]->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Table transitive blanking: z derived from bad x should also blank"
+"Equations: x*x = y (solves x = sqrt(y)), x = x + 1 (always fails),"
+"x = z (propagates x to z). For each row iterating y, x is body-"
+"derived and goes bad on `x = x + 1`. Transitive propagation: `x = z`"
+"contains the bad x, so z (also body-derived) is marked bad too."
+"Result: x and z blanked; y shown honestly (iterator)."
+
+y: 2
+x*x = y
+x = x + 1
+x = z
+
+--Variables--
+x-> 1.414
+z-> 1.414
+
+table("transitive") = {
+  y: 0..4..1
+  y->
+  x->
+  z->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1933,7 +1933,13 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     const balanceEquations = [];
     for (const eq of equations) {
         if (!eq.leftAST || !eq.rightAST) continue;
-        balanceEquations.push({ leftAST: eq.leftAST, rightAST: eq.rightAST, modN: eq.modN });
+        const eqVars = new Set([
+            ...findVariablesInAST(eq.leftAST),
+            ...findVariablesInAST(eq.rightAST)
+        ]);
+        balanceEquations.push({
+            leftAST: eq.leftAST, rightAST: eq.rightAST, modN: eq.modN, eqVars
+        });
     }
 
     // Per-cell pre-solve snapshot used by getColumnValue's OUTPUT-with-limits
@@ -1964,13 +1970,19 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         for (const [varName, failure] of solveResult.solveFailures) {
             badVars.add(varName);
         }
-        // Per-cell balance check: if an equation doesn't balance, blank the
-        // columns that (a) are body unknowns, or (b) are referenced by the
-        // failing equation and aren't iterators (iterators always display).
-        // This catches cases like `y**2 = x` with y outer-declared at 17 (blank
-        // y) while not over-blanking inherited outer equations that reference
-        // only iterators and outer constants (e.g. tableGraph plotting f(x)).
-        const iteratorNames = new Set(evaledIterators.map(it => it.name));
+        // A variable is "body-derived" (eligible to be blanked) if it wasn't
+        // already known at row-start. Iterators and outer constants/INPUTs
+        // are in cellPreSolveVars — their values came from outside the per-
+        // row solve, not from it, so they always display honestly.
+        const isBlankable = (name) => !cellPreSolveVars.has(name);
+
+        // Per-cell balance check: track failure separately from blanking,
+        // because a row can fail balance without any var to blame (e.g. the
+        // user's outer INPUTs and the iterator together don't satisfy an
+        // equation). The row still counts as unsolved — we just don't hide
+        // any column. When there IS a body-derived var in the failing eq,
+        // blank it (and body unknowns).
+        let balanceFailed = false;
         for (const beq of balanceEquations) {
             try {
                 const leftVal = evaluate(beq.leftAST, context);
@@ -1980,19 +1992,39 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                     ? modCheckBalance(leftVal, rightVal, modN, balancePlaces)
                     : checkBalance(leftVal, rightVal, balancePlaces);
                 if (!result.balanced) {
-                    const eqVars = new Set([
-                        ...findVariablesInAST(beq.leftAST),
-                        ...findVariablesInAST(beq.rightAST)
-                    ]);
+                    balanceFailed = true;
                     for (const unk of unknowns) badVars.add(unk.name);
-                    for (const col of columns) {
-                        if (iteratorNames.has(col.name)) continue;
-                        if (eqVars.has(col.name)) badVars.add(col.name);
+                    for (const v of beq.eqVars) {
+                        if (isBlankable(v)) badVars.add(v);
                     }
                 }
             } catch (e) { }
         }
-        return badVars;
+        // Transitive propagation: if any variable in an equation is already
+        // bad, treat the equation's other body-derived vars as bad too —
+        // their values were computed from (or constrained with) a bad var.
+        // Handles cases like `x = x + 1` (fails → x bad) then `x = z` (balances
+        // trivially because z was derived from x, but z is still unreliable).
+        // Outer INPUTs and iterators aren't propagated to (their values came
+        // from the user, not from the failing solve). Repeat until stable.
+        let changed = true;
+        while (changed) {
+            changed = false;
+            for (const beq of balanceEquations) {
+                let hasBad = false;
+                for (const v of beq.eqVars) {
+                    if (badVars.has(v)) { hasBad = true; break; }
+                }
+                if (!hasBad) continue;
+                for (const v of beq.eqVars) {
+                    if (isBlankable(v) && !badVars.has(v)) {
+                        badVars.add(v);
+                        changed = true;
+                    }
+                }
+            }
+        }
+        return { badVars, balanceFailed };
     }
 
     // Extract a column's value after evaluateCell ran. Three cases:
@@ -2023,7 +2055,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             return emptyResult();
         }
         // Solve once (no iteration yet) — use balance check to suppress bad values
-        const badVars = evaluateCell([]);
+        const { badVars } = evaluateCell([]);
         // Wraparound normalization for 'degrees'-format columns: large values
         // (or bogus solver results far outside the principal range) lose
         // precision in Math.sin/cos when the graph is rendered.
@@ -2122,9 +2154,9 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             if (rowCount >= maxRows) { errors.push(`Line ${tableDef.startLine}: Table exceeded ${maxRows} rows`); break; }
 
             context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
-            const badVars = evaluateCell([{ name: iter.name, value: val }]);
+            const { badVars, balanceFailed } = evaluateCell([{ name: iter.name, value: val }]);
             totalRows++;
-            if (badVars.size === 0 && unknowns.every(u => context.hasVariable(u.name))) goodRows++;
+            if (!balanceFailed && badVars.size === 0 && unknowns.every(u => context.hasVariable(u.name))) goodRows++;
 
             // Collect output values (formatted and raw)
             const row = [];
@@ -2212,7 +2244,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         const rawGridRow = [];
         for (let c = 0; c < colValues.length; c++) {
             context.preSolveValues = new Map();
-            const badVars = evaluateCell([
+            const { badVars, balanceFailed } = evaluateCell([
                 { name: iter1.name, value: rowValues[r] },
                 { name: iter2.name, value: colValues[c] }
             ]);
@@ -2234,7 +2266,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
             // Track solve success per cell
             totalCells++;
-            if (badVars.size === 0 && unknowns.every(u => context.hasVariable(u.name))) goodCells++;
+            if (!balanceFailed && badVars.size === 0 && unknowns.every(u => context.hasVariable(u.name))) goodCells++;
 
             // Cell value: third output
             if (cellVar && !badVars.has(cellVar.name)) {

@@ -72,10 +72,10 @@ table("Balance test") = {
 "--- Table Outputs ---"
 table "Balance test (0/4 solved)"
 "x"	"y"
-0	
-1	
-2	
-3
+0	17
+1	17
+2	17
+3	17
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -501,7 +501,7 @@ tableGraph("f(x) showing roots") = {
 }
 
 "--- Table Outputs ---"
-tablegraph "f(x) showing roots"
+tablegraph "f(x) showing roots (0/32 solved)"
 "x axis label"	"y axis label"
 -3.1	-22.7857
 -2.9	25.4223
