@@ -158,6 +158,8 @@ a**2 + b**2 = c**2</pre>
 
     <p>If all variables have values, MathPad checks that both sides <strong>balance</strong>. If there's an unknown, it <strong>solves</strong> using Brent's root-finding method.</p>
 
+    <p>For systems of equations with multiple unknowns, the solver algebraically rearranges each equation to isolate every possible variable (both directions &mdash; <code>x = z/2</code> yields <code>x</code> and <code>z</code> substitutions), then uses a recursive backtracking search. It tries small combinations of substitutions first, letting Brent's find one-unknown reductions; if a branch doesn't balance, it backtracks and tries another. Declaring answer variables with a range hint (<code>x[low:high]&lt;-</code>) helps pick the desired root when multiple valid solutions exist.</p>
+
     <h3>Degree Equality</h3>
     <p>Use <code>=&deg;</code> for mod-aware comparison (mod 360 in degrees mode, mod 2&pi; in radians):</p>
     <pre>heading =&deg; target_heading</pre>

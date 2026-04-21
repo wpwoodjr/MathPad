@@ -63,15 +63,17 @@ node tests/gen-expected.js TESTNAME
 
 ### Solving
 - **Solve button** or Ctrl+Enter triggers `solveRecord()` in solve-engine.js
-- Pipeline: discover variables → evaluate definitions → build substitutions → solve equations with Brent's method → format output
-- Iterative refinement: multiple passes until convergence
-- **Direct evaluation first**: Fully-known substitutions (definition or algebraically derived) are evaluated directly before Brent's — multiple subs per variable tried (alternates)
-- **Two-sweep equation solving**: Sweep 0 tries natural 1-unknown equations (no subs), skipping variables in the sweep sub list; sweep 1 applies sweep subs to reduce unknowns
-- **Sweep subs**: Variables with no value, no limits — declaring a variable (e.g. `adjTemp->>`) to peek doesn't change solve behavior
-- **Break-on-solve**: After Brent's solves one equation, restarts so definitions can evaluate with the new value before a second Brent's step picks an inconsistent root
-- **Always re-solve**: First pass skips tables; re-solve runs unconditionally and computes them. Re-solve also gives a second chance when the first solve filled in cleared variables but had balance errors. Same logic in `run-tests.js` and `gen-expected.js`.
+- Pipeline: discover variables → evaluate definitions → build substitutions → solve equations (recursive backtracking) → per-OUTPUT-with-limits re-solve → format output
+- **Recursive backtracking solver** (`solveRecursive` in solve-engine.js): each depth runs `deterministicAdvance` ([1]-[4]: body defs, sub map, direct-eval, sweep subs), then `enumerateAlternatives` yields Kind 1/2/3 candidates. Backtracker snapshots state, applies a candidate, recurses. First balanced branch wins; otherwise best-progressed snapshot via first-wins `saveCandidate`. `maxIterations = 50`.
+- **OUTPUTs filtered from solver**: `buildVariablesMap` skips OUTPUT declarations — OUTPUT limits are display-only, handled by `resolveWithLimits` after the main solve.
+- **Direct evaluation first**: fully-known substitutions (algebraic or definition) are evaluated directly in [3] before any Brent's; multiple alternates per variable trigger Kind 1 branching when ambiguous, NaN fallback when all alternates are NaN
+- **Multi-sub derivation**: `deriveSubstitutions` (generator) yields every algebraically isolable variable per equation, both LHS and RHS directions. Cycles in the sub map are allowed; `substituteInAST`'s visited-set cycle guard ensures runtime termination
+- **Subset-enumerated Kind 3**: `subCombinations` yields subsets in increasing size (0, 1, …, N), each with cartesian of per-key alternates. Smaller subsets tried first so cyclically-related sub pairs don't cancel via cycle-guard round-trips
+- **Break-on-solve**: after a Kind 2/3 candidate applies, recursion re-runs `deterministicAdvance`, so definitions and direct-evals pick up the new value before further Brent's attempts
+- **Always re-solve**: first pass skips tables; re-solve runs unconditionally and computes them. Re-solve also gives a second chance when the first solve filled in cleared variables but had balance errors. Same logic in `run-tests.js` and `gen-expected.js`.
+- **OUTPUT-with-limits re-solve** (`resolveWithLimits`): each OUTPUT declaration with limits runs its own re-solve after main solve. Fast path if main-solve value already in limits; slow path builds modifiedDecls (prepend INPUT+limits for target) and calls full `solveEquations`. Slow-path errors surface to the user; results stored under `__resolvevar_${lineIndex}` keys.
 - Results inserted back into text preserving comments and formatting
-- Error reporting with line numbers shown in status bar
+- Error reporting with line numbers shown in status bar (dedup by string)
 
 ### Variable Limits
 - **Auto-swap numeric**: `[50:0]` is treated as `[0:50]` — order doesn't matter. Brent's uses `Math.min/max`; substitution path swaps for non-angular vars.
@@ -168,7 +170,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 |------|---------|
 | `ui.js` | UI state, event handling, record management, sidebar/tabs/details rendering |
 | `solve-engine.js` | `solveRecord()` main entry, equation solving orchestration, output formatting, table/grid evaluation (`evaluateTable`) |
-| `solver.js` | Brent's root-finding algorithm, equation detection, substitution derivation (`deriveSubstitution`, `tryIsolateVariable`) |
+| `solver.js` | Brent's root-finding algorithm, equation detection, substitution derivation (`deriveSubstitutions` generator, `tryIsolateVariables` generator, single-result wrappers for back-compat) |
 | `evaluator.js` | Expression evaluation, 50+ built-in functions, `formatNumber()`, `checkBalance()` |
 | `variables.js` | Variable declaration parsing, `parseAllVariables()`, `setVariableValue()`, `buildOutputLine()`, `findTableDefinitions()` |
 | `parser.js` | Tokenizer (tokens have `.ws` whitespace, `.raw` error text), AST generation, `VarType`/`ClearBehavior` enums |
@@ -320,11 +322,15 @@ App loads → localStorage (instant) → check Drive metadata
 3. Handle in `line-parser.js` `LineParser` and `getMarkerString()`
 4. Handle in `solveRecord()` if special behavior needed
 
-**Modifying solving behavior**: Edit `solveRecord()` in `solve-engine.js`. `solveEquations(context, declarations, record, equations, bodyDefinitions)` takes equations and optional body definitions as parameters, enabling reuse by both the main solver and table/grid per-row evaluation. Body definitions (`:` declarations) are evaluated in the iterative loop alongside equations, handling out-of-order deps and equation-dependent definitions.
+**Modifying solving behavior**: Edit `solveRecord()` in `solve-engine.js`. `solveEquations(context, declarations, record, equations, bodyDefinitions)` takes equations and optional body definitions as parameters, enabling reuse by both the main solver and table/grid per-row evaluation. The recursive `solveRecursive` + `deterministicAdvance` + `enumerateAlternatives` structure handles body defs, substitutions, direct-eval, and Kind 1/2/3 branching within each level. Body definitions (`:` declarations) are evaluated in phase [1] of each Advance pass, handling out-of-order deps and equation-dependent definitions.
 
 **Adding a table/grid/vectorDraw feature**: Table detection is in `findTableDefinitions()` (variables.js), evaluation in `evaluateTable()` (solve-engine.js), rendering in `setTableData()` / `_renderTable2()` (variables-panel.js), styling in style.css (`.mathpad-table`, `.mathpad-grid`)
 
-**Algebraic substitution** (`deriveSubstitution` in `solver.js`): Derives substitutions to reduce multi-unknown equations to single-unknown for Brent's. Uses recursive `tryIsolateVariable` to peel off binary operations one level at a time via `invertOperation`, handling arbitrary-depth nesting (e.g., `a*b/D = C` → `a = C*D/b`). Subsumes additive patterns (`var*B + C = D`), nested products/quotients, and `**` (power) inversion.
+**Algebraic substitution** (`deriveSubstitutions` in `solver.js`): Generator yielding every algebraically isolable unknown per equation, symmetric (both LHS-with-RHS-as-target and RHS-with-LHS-as-target). Uses `tryIsolateVariables` (generator) to peel off binary operations one level at a time via `invertOperation`, handling arbitrary-depth nesting (e.g., `a*b/D = C` → `a = C*D/b` AND `b = C*D/a`). Subsumes additive patterns (`var*B + C = D`), nested products/quotients, and `**` (power) inversion. `substituteInAST` recursively applies subs with a visited-set cycle guard so cyclically-related subs (e.g., `x → z/2` and `z → 2*x`) terminate safely at runtime.
+
+**Kind 3 combo enumeration** (`subCombinations` in `solve-engine.js`): yields (subset × cartesian-of-alternates) combos in increasing subset size (0, 1, …, N). The backtracker's DFS tries smaller subsets first, so cyclically-related sub pairs don't cancel via the cycle guard's round-trip (width/height-style records still reduce to 1-unknown on size-1 combos). Full cartesian is last resort.
+
+**OUTPUT-with-limits re-solve** (`resolveWithLimits` in `solve-engine.js`): each OUTPUT declaration with limits runs its own re-solve after the main solve. Fast path uses the main-solve value if already in limits; slow path builds modifiedDecls (prepend INPUT+limits entry for the target), calls full `solveEquations`, and surfaces any balance/root errors to the user. Stored under `__resolvevar_${lineIndex}` keys; `formatOutput` reads them per-declaration.
 
 **Debugging equations**: The solver logs substitutions and solving steps to console
 

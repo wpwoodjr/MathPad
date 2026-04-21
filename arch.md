@@ -187,59 +187,106 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         - Export/import: optional Created = "ISO8601"; Modified = "ISO8601" line
         - Import leaves fields undefined when not in source (so test roundtrips don't add the line)
 
-## solveEquations iterative loop
+## solveEquations — recursive backtracking solver
     solveEquations(context, declarations, record, equations, bodyDefinitions)
     Used by both main solver (solveRecord) and table/grid per-row evaluation (evaluateCell)
 
-    while (changed && iterations < 50):
+    The top-level loop is solveRecursive(depth). Each recursion level runs
+    deterministicAdvance (phases [1]-[4] below, all zero-branching work), then
+    enumerateAlternatives yields candidate decisions (Kind 1/2/3). For each
+    candidate the backtracker snapshots state, applies the decision, and
+    recurses. First branch that balances wins; if none do, falls back to the
+    best-progressed snapshot via first-wins saveCandidate. maxIterations = 50
+    caps recursion depth.
 
-        ### [1] Body definitions (:defs not yet resolved)
-            Evaluates bodyDefinitions (array of {name, ast}), skips if already has value
-            Outer solve: declarations that failed during discoverVariables
+    The solver's variables map contains only INPUT declarations — OUTPUT
+    limits are display-only, handled by resolveWithLimits after the solve.
+    (See the buildVariablesMap filter in solve-engine.js.)
+
+        ### [1] Body definitions (pendingBodyDefs retry)
+            Evaluates bodyDefinitions whose deps are now known. Retried each pass.
+            Outer solve: declarations that couldn't evaluate at discoverVariables
                 (out-of-order deps like b: a+3 before a: 5, or equation-dependent like x: pmt*2)
             Table body: defASTs from table body declarations (cleared per row)
 
         ### [2] Build substitution map (buildSubstitutionMap in solver.js)
-            For each equation:
-                Try isDefinitionEquation (left side simple variable)
-                Else try deriveSubstitution (algebraic isolation)
-                Multiple subs per variable stored as array (first + alternates)
-            deriveSubstitution uses tryIsolateVariable — recursive peeling of binary ops
-                via invertOperation, handles arbitrary-depth nesting (a*b/D = C → a = C*D/b)
+            For each equation, deriveSubstitutions (generator) yields every
+            algebraically isolable unknown. Symmetric — both LHS-with-RHS-as-
+            target and RHS-with-LHS-as-target are explored. All yields added
+            to the map; multiple entries for the same variable become alternates.
+
+            tryIsolateVariables walks a BINARY_OP tree, exploring BOTH subtrees
+            at every level via invertOperation — handles arbitrary-depth nesting
+            (a*b/D = C → a = C*D/b AND b = C*D/a; var*B + C = D → var = (D-C)/B).
+
+            Cycles in the sub map are allowed (e.g., `x → z/2` and `z → 2*x` from
+            `x = z/2`). substituteInAST's cycle guard (visited-set) ensures
+            runtime termination, and subset-enumerated Kind 3 combos try each
+            direction independently before any combo applies both together.
+
+            Legacy single-result wrappers `deriveSubstitution` and
+            `tryIsolateVariable` are kept for back-compat (return first yield).
 
         ### [3] Evaluate fully-known substitutions
-            For each variable's subs array: try each, evaluate first fully-evaluable one
-            Check limits, set variable. Direct computation avoids Brent's.
-            Alternates enable direct eval when primary sub has unknowns
-                (e.g. k has sub k→j+350 with unknown j, alt k→l/2 with known l)
+            For each variable's subs array: classify fully-known subs into
+            non-NaN candidates (finite or ±Infinity) and NaN fallbacks.
+                0 non-NaN + 0 NaN   → deferred (wait for deps)
+                1 non-NaN           → forced choice; apply via applyDirectValue
+                2+ non-NaN          → ambiguous; defer to Kind 1 branching
+                0 non-NaN + 1 NaN   → NaN fallback, apply (user sees degenerate)
+                0 non-NaN + 2+ NaN  → deferred
+            applyDirectValue checks INPUT-limits (OUTPUT limits are filtered
+            out of the solver's variables map).
 
-        ### [4] Build sweep subs (only if [3] didn't set changed)
-            Filter substitutions: variable has no value, no limits
-            Uses first sub per variable for inlining
-            Serves as skip list for sweep 0 and substitutions for sweep 1
+        ### [4] Build sweep subs (only if [3] made no progress)
+            definitionSubs: variables without values and without INPUT+limits.
+            Kept as arrays of alternates (Kind 3 iterates subsets × cartesian).
 
-        ### [5] Equation solving (only if nothing changed)
-            Sweep 0: no subs → natural 1-unknown equations only
-                Skip if the sole unknown is in [4] (should be substituted, not solved directly)
-                Prevents spurious roots (e.g. adjTemp solved from hours equation in isolation)
-            Sweep 1: apply [4] subs → solve equations reduced to 1 unknown
-            Incomplete equations (expr =): evaluate and insert result
-            For definition equations (var = expr):
-                If RHS fully known: skip (already handled by [3])
-                If variable has no value: skip (don't Brent's a bare definition)
-                Otherwise fall through to Brent's (e.g. user set x:5, solve x=a+b for a)
-            Brent's root-finding for 1-unknown equations
-            tryBracket helper: unified singularity/pole rejection for all bracket paths
-                (main scan, near-tangent detection, expandFromGuess fallback)
+        ### [5] Branching — enumerateAlternatives yields candidates
+            Kind 1: direct-eval alternates — variables with ≥2 non-NaN fully-
+                    known subs, yielded one per alternate.
+            Kind 2: sweep-0 natural 1-unknown equations — Brent's allRoots.
+                    Skip if unknown is in definitionSubs (defer to Kind 3).
+            Kind 3: sweep-1 subset-enumerated combos × equations × roots.
+                    subCombinations yields in increasing subset size order:
+                    size 0 = {} (no subs), size 1 = each sub alone, …,
+                    size N = full cartesian. Preferring smaller subsets first
+                    keeps cyclically-related sub pairs from cancelling via the
+                    cycle guard's round-trip (handles width/height-style
+                    systems cleanly). Bare-def equations are filtered only
+                    when the combo has no non-self sub to apply (self-source
+                    subs are stripped by solveEquationInContext, so would yield
+                    a tautology).
+
+            Each candidate tried: snapshot → applyDecision → recurse. On
+            balanced, return up. On failure, restoreState and try next.
+
+        ### Brent's (solveEquation in solver.js)
+            Brent's for 1-unknown equations after substitutions applied.
+            tryBracket helper: unified singularity/pole rejection for all bracket
+                paths (main scan, near-tangent detection, expandFromGuess fallback).
                 Rejects: non-finite fRoot, mod-wrap discontinuities (|fRoot| > modN/4),
-                singularities (|fRoot| > max endpoint — pole, not real root)
+                singularities (|fRoot| > max endpoint — pole, not real root).
             expandFromGuess skipped for mod-aware (°=) equations: trig arg reduction
-                loses precision at large magnitudes, producing garbage "roots"
-            Break-on-solve: after solving one equation, restart loop so [1] and [3]
-                can evaluate with the new value before a second Brent's step
-            Limit deferral: if a variable's limit expression depends on a variable
-                not yet solved, return { solved: false, limitsDeferred: true } and
-                retry on a later iteration (avoids running Brent's unconstrained)
+                loses precision at large magnitudes, producing garbage "roots".
+            allRoots=true: returns ordered array of all roots found (Kind 2/3).
+            Limit deferral: if a variable's limit expression depends on a not-yet-
+                solved variable, return { solved: false, limitsDeferred: true } and
+                retry on a later Advance pass.
+
+    ## OUTPUT-with-limits re-solve (resolveWithLimits in solve-engine.js)
+    Main solve treats all OUTPUT limits as display-only. After main solve, each
+    OUTPUT declaration with limits runs its own re-solve:
+        Fast path: main-solve value already in declared limits → use it.
+        Slow path: filter declarations, prepend a single INPUT entry for the
+            target carrying the OUTPUT's limits, call solveEquations with
+            modifiedDecls. buildVariablesMap picks the prepended entry (first-wins).
+            solveEquations runs the full pipeline, producing the re-solved value.
+        Results stored under `__resolvevar_${lineIndex}` in computedValues;
+        formatOutput consults that key per-declaration. Slow-path errors are
+        returned and merged into solveRecord's errors array (deduped by string).
+        innerError removed — slow-path errors carry their own correct line numbers
+        because modifiedDecls uses the target lineIndex.
 
     ## Re-solve pass (always runs)
     After the first solve, formatOutput writes solved values back into the text.
@@ -252,10 +299,44 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     Both run-tests.js and gen-expected.js use the same flow.
 
     ## End-of-solve limit validation
-    After the iterative loop, validate every declared variable's limit expressions
+    After the recursive loop, validate every declared variable's limit expressions
     (low, high, step). Report undefined references separately as errors. This catches
     bugs where a variable has a value (so the per-attempt limit check doesn't run)
     but its limit expressions are broken.
+
+    ## Solver completeness
+    For MathPad's scope (algebraic & practical multi-equation systems), the
+    solver covers:
+        Algebraic derivation via tryIsolateVariables + invertOperation for
+            BINARY_OP chains.
+        Multi-sub symmetry — every isolable unknown per equation gets a sub,
+            both directions.
+        Kind 1 direct-eval for fully-known substitutions, with multi-candidate
+            branching for ambiguous cases.
+        Kind 2 sweep-0 natural 1-unknown equations via Brent's allRoots.
+        Kind 3 sweep-1 subset-enumerated combos over subs × equations × roots.
+        Recursive backtracking with snapshot/restore and best-candidate fallback.
+        Cycle-safe substitution via substituteInAST's visited-set guard.
+        Angular-aware math via °= equations' modN and modN-aware balance check.
+        Cross-source subs reducing bare-def equations (Kind 3 filter refinement).
+        OUTPUT-with-limits re-solve via resolveWithLimits (full-pipeline).
+
+    Known gaps (by design or scope):
+        FUNCTION_CALL sub derivation: abs(x) = z/2, log(x) = y can't isolate x.
+            Only the RHS side gets a sub. Monotonic inverses would be
+            straightforward to add; non-monotonic (abs) adds branching.
+        Genuine multi-unknown numerical root-finding: Brent's is 1D. Systems
+            irreducible to 1-unknown by any combo (e.g., sin(x)+cos(y)=1,
+            x*y=2) give up. Would need Newton-Raphson or similar 2D solver.
+        Global optimization: Brent's requires a sign change. Non-convex
+            systems outside knownScale's range may miss brackets.
+        Root selection without hints: when multiple valid solutions exist
+            (navigation triangle, polynomial with several real roots), the
+            solver picks whichever enumeration order finds first. Users
+            disambiguate via limits or initial guesses.
+        Complex roots: real-only by design. x² = -1 fails.
+        Symbolic simplification: x² = y² ⟹ x = ±y isn't algebraically
+            recognized. Found numerically via Brent's allRoots if at all.
 
 ## Definition evaluation order
     discoverVariables parses literal values (numbers, dates, durations) directly via parseLiteralValue()

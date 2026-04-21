@@ -83,7 +83,9 @@ if(heading °= targetHeading; "on course"; "off course")
 
 ### Algebraic Substitution
 
-When a system has multiple unknowns, the solver derives algebraic substitutions to reduce equations to a single unknown for Brent's root-finding. The following forms are recognized (where `B`, `C`, `D` are arbitrary expressions not containing the target variable):
+When a system has multiple unknowns, the solver derives algebraic substitutions to reduce equations to a single unknown for Brent's root-finding. Derivation is **symmetric** — both LHS-with-RHS-as-target and RHS-with-LHS-as-target are explored, so `x = z/2` yields both `x → z/2` and `z → 2*x`. The recursive backtracker enumerates subset-sized combinations (size 0, 1, …, N) to prefer smaller combos that leave more variables free for Brent's.
+
+The following forms are recognized (where `B`, `C`, `D` are arbitrary expressions not containing the target variable):
 
 **Direct extraction** — variable is a top-level operand:
 
@@ -202,7 +204,9 @@ Each variable has a ⟲ icon that clears it and solves, making it easy to comput
 
 - Pure client-side JavaScript — no build system, no frameworks, no server
 - ~12,300 lines of JS across 13 modules
-- Brent's root-finding algorithm with adaptive bracketing, known-scale heuristics, direct evaluation of fully-known substitutions (with alternates), and natural-first sweep solving
+- Brent's root-finding algorithm with adaptive bracketing, known-scale heuristics, and singularity/pole rejection
+- Recursive backtracking solver with deterministic-advance phases (direct-eval, substitution building, sweep subs) and three kinds of branching candidates (direct-eval alternates, sweep-0 natural 1-unknown, sweep-1 subset-enumerated substitution combos)
+- Multi-sub symmetric substitution derivation; cycle-safe recursive substitution via visited-set guard
 - Token-based parser with AST generation for expression evaluation
 - Auto-saves to localStorage with 500ms debounce; Google Drive sync every 15 seconds
 - Mobile responsive with touch-friendly controls
