@@ -780,17 +780,23 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             r = solveEquationInContext(eq.startLine, context, variables,
                 comboSubs, modValue, eq.leftAST, eq.rightAST, { allRoots: true });
         } catch (e) {
+            _trace(`    ${kind} line ${eq.startLine + 1}: ${e.message}`);
             errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
             erroredEquations.add(eq.startLine);
             return;
         }
-        if (r.limitsDeferred) return;
+        if (r.limitsDeferred) {
+            _trace(`    ${kind} line ${eq.startLine + 1}: limits deferred`);
+            return;
+        }
         if (r.tooManyUnknowns) {
+            _trace(`    ${kind} line ${eq.startLine + 1}: too many unknowns (${r.tooManyUnknowns.join(', ')})`);
             unsolvedEquations.set(eq.startLine, r.tooManyUnknowns);
             return;
         }
         if (!r.solved) {
             if (r.error && r.variable) {
+                _trace(`    ${kind} line ${eq.startLine + 1}: ${r.error} for '${r.variable}'`);
                 solveFailures.set(r.variable, { error: r.error, line: eq.startLine });
             }
             return;
@@ -863,7 +869,18 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             for (const eq of equations) {
                 if (!eq.leftAST || !eq.rightAST) continue;
                 if (erroredEquations.has(eq.startLine)) continue;
-                if (isSkippableDefEquation(eq)) continue;
+                // isSkippableDefEquation filters "bare definition of unbound
+                // var" equations; but in Kind 3 a non-self sub from the combo
+                // can reduce such an equation (e.g., applying `x → z/2` from
+                // eq1 to `x = sqrt(25-z²)` yields `z/2 = sqrt(25-z²)`, a
+                // 1-unknown equation in z). Skip only when the combo has no
+                // non-self sub to offer — self-source subs are filtered by
+                // solveEquationInContext and would leave the eq multi-unknown.
+                if (isSkippableDefEquation(eq)) {
+                    const hasNonSelf = [...comboSubs.values()]
+                        .some(sub => sub.sourceLine !== eq.startLine);
+                    if (!hasNonSelf) continue;
+                }
                 yield* rootsFromBrents(eq, comboSubs, 'sweep1');
             }
         }

@@ -138,6 +138,7 @@ height-> 8
       line 5: unknowns height
   [4] Sweep subs: width
   [5] Branching (depth 1)
+    sweep1 line 4: too many unknowns (width, height)
     Try sweep1: height = 8.000000000000005 (from line 5)
       from (line 5): width * 2 + height = 20
       with (line 4): width → (area / height)
@@ -314,6 +315,9 @@ set °: 49.424°
       line 20: unknowns set
   [4] Sweep subs: speed
   [5] Branching (depth 1)
+    sweep0 line 10: Could not find a root for 'set'
+    sweep0 line 21: Could not find a root for 'set'
+    sweep1 line 10: Could not find a root for 'set'
     Try sweep1: set = 49.423975705192845 (from line 13)
       from (line 13): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
       with (line 9): speed → ((smg * sin((cmg - set))) / sin((cts - set)))
@@ -370,6 +374,34 @@ b-> 3
       line 9: unknowns b
   [4] Sweep subs: a
   [5] Branching (depth 1)
+    Try sweep1: b = 0 (from line 8)
+      from (line 8): a = 2*b
+      with (line 7): a → sqrt(-b)
+"
+"*--- Advance (depth 2) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    (none)
+  [3] Evaluate fully-known substitutions
+  [4] Sweep subs: (none)
+  [5] Branching (depth 2)
+    (no alternatives available)
+  · candidate (depth 2): no balanced branch found
+    Rejected: b = 0 (downstream failed)
+    sweep1 line 9: Could not find a root for 'b'
+    Try sweep1: b = 0 (from line 7)
+      from (line 7): a = sqrt(-b)
+      with (line 8): a → (2 * b)
+"
+"*--- Advance (depth 2) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    (none)
+  [3] Evaluate fully-known substitutions
+  [4] Sweep subs: (none)
+  [5] Branching (depth 2)
+    (no alternatives available)
+    Rejected: b = 0 (downstream failed)
     Try sweep1: b = 3 (from line 9)
       from (line 9): a + b = 9
       with (line 8): a → (2 * b)
@@ -456,6 +488,8 @@ set °<- 49.424°
       line 25: unknowns set
   [4] Sweep subs: speed
   [5] Branching (depth 1)
+    sweep0 line 18: Could not find a root for 'set'
+    sweep0 line 26: Could not find a root for 'set'
     Try sweep1: set = 0.001 (from line 10)
       from (line 10): smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
       with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
@@ -821,6 +855,8 @@ set °<- 49.424°
   [5] Branching (depth 2)
     (no alternatives available)
     Rejected: set = -928.3591574696406 (downstream failed)
+    sweep1 line 14: Could not find a root for 'set'
+    sweep1 line 18: Could not find a root for 'set'
     Try sweep1: set = -49.4239757051601 (from line 21)
       from (line 21): drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
       with (line 17): speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
