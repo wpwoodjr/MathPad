@@ -1,19 +1,15 @@
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Slow-path 'too many unknowns' when target's subs are excluded"
+"Slow-path finds honest no-root error via multi-sub z-direction"
 "Main solve finds x=2.236, z=4.472 (solution of the system)."
 "x[0:2]-> fast path rejects (2.236 not in [0,2]). Slow path promotes"
-"x to INPUT+[0:2]. The sweep-subs filter then EXCLUDES x because it"
-"now has INPUT limits — but x's subs (x → z/2, x → sqrt(25-z²)) are"
-"the only way to reduce the two-unknown system. Slow path gives up"
-"and reports 'Too many unknowns (x, z)' even though the system IS"
-"solvable outside [0,2]. The real issue is that no (x,z) pair with"
-"x ∈ [0,2] satisfies both equations (requires x≥sqrt(5)≈2.236)."
+"x to INPUT+[0:2]. The sweep-subs filter excludes x (INPUT+limits),"
+"but multi-sub derivation yields z-direction subs too (z → 2*x and"
+"z → sqrt(25-x²)). Kind 3 applies z → 2*x to eq2: x² + (2x)² = 25"
+"→ 5x² = 25 → 1-unknown in x. Brent's tries [0, 2], no root, reports"
+"'Could not find a root in range [0:2] for 'x'' honestly."
 "x[0:3]-> takes the fast path (2.236 in [0,3]) and is unaffected."
-"Known limitation: sweep-subs filter conservatively excludes"
-"INPUT-with-limits vars in the slow path, losing the ability to"
-"reduce when the target's own subs are the only reduction path."
 
 x = z/2
 x**2 + z**2 = 25

@@ -76,12 +76,15 @@ y-> 5
 "  [1] Input expressions (none)
   [2] Substitution map
     line 5: y → (x + 1)
+    line 5: x → (y - 1)
   [3] Evaluate fully-known substitutions
     y: deferred
       line 5: unknowns x
-  [4] Sweep subs: y
+    x: deferred
+      line 5: unknowns y
+  [4] Sweep subs: y, x
   [5] Branching (depth 1)
-    Try sweep0: x = 4 (from line 4)
+    Try sweep1: x = 4 (from line 4)
       from (line 4): x**2 + 3*x = 28
 "
 "*--- Advance (depth 2) ---"
@@ -132,11 +135,16 @@ height-> 8
   [2] Substitution map
     line 4: width → (area / height)
     line 5: width → ((20 - height) / 2)
+    line 4: height → (area / width)
+    line 5: height → (20 - (width * 2))
   [3] Evaluate fully-known substitutions
     width: deferred
       line 4: unknowns height
       line 5: unknowns height
-  [4] Sweep subs: width
+    height: deferred
+      line 4: unknowns width
+      line 5: unknowns width
+  [4] Sweep subs: width, height
   [5] Branching (depth 1)
     sweep1 line 4: too many unknowns (width, height)
     sweep1 line 5: too many unknowns (width, height)
@@ -189,13 +197,10 @@ y-> 2
 "  [1] Input expressions (none)
   [2] Substitution map
     line 6: x → (b - a)
-  [3] Evaluate fully-known substitutions
-    x = (b - a) = 1
-  [4] Sweep subs: (none)
-  [1] Input expressions (none)
-  [2] Substitution map
+    line 7: x → (c - y)
     line 7: y → (c - x)
   [3] Evaluate fully-known substitutions
+    x = (b - a) = 1
     y = (c - x) = 2
   [4] Sweep subs: (none)
   [1] Input expressions (none)
@@ -311,14 +316,15 @@ set °: 40.576°
   [2] Substitution map
     line 9: speed → ((smg * sin((cmg - set))) / sin((cts - set)))
     line 20: speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
+    line 25: set → atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts))))
   [3] Evaluate fully-known substitutions
     speed: deferred
       line 9: unknowns set
       line 20: unknowns set
-  [4] Sweep subs: speed
+    set: deferred
+      line 25: unknowns speed
+  [4] Sweep subs: speed, set
   [5] Branching (depth 1)
-    sweep0 line 10: Could not find a root for 'set'
-    sweep0 line 21: Could not find a root for 'set'
     sweep1 line 10: Could not find a root for 'set'
     sweep1 line 13: too many unknowns (set, speed)
     sweep1 line 16: too many unknowns (speed, set)
@@ -378,12 +384,17 @@ b-> 3
     line 7: a → sqrt(-b)
     line 8: a → (2 * b)
     line 9: a → (9 - b)
+    line 8: b → (a / 2)
+    line 9: b → (9 - a)
   [3] Evaluate fully-known substitutions
     a: deferred
       line 7: unknowns b
       line 8: unknowns b
       line 9: unknowns b
-  [4] Sweep subs: a
+    b: deferred
+      line 8: unknowns a
+      line 9: unknowns a
+  [4] Sweep subs: a, b
   [5] Branching (depth 1)
     sweep1 line 9: too many unknowns (a, b)
     Try sweep1: b = 0 (from line 8)
@@ -494,14 +505,15 @@ set °<- 40.576°
   [2] Substitution map
     line 17: speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
     line 25: speed → ((smg * sin((cmg - set))) / sin((cts - set)))
+    line 22: set → atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts))))
   [3] Evaluate fully-known substitutions
     speed: deferred
       line 17: unknowns set
       line 25: unknowns set
-  [4] Sweep subs: speed
+    set: deferred
+      line 22: unknowns speed
+  [4] Sweep subs: speed, set
   [5] Branching (depth 1)
-    sweep0 line 18: Could not find a root for 'set'
-    sweep0 line 26: Could not find a root for 'set'
     sweep1 line 10: too many unknowns (set, speed)
     sweep1 line 13: too many unknowns (speed, set)
     sweep1 line 14: too many unknowns (speed, set)
@@ -592,13 +604,16 @@ set °: 45°
   [2] Substitution map
     line 12: drift → ((smg * sin((cts - cmg))) / sin((cts - set)))
     line 26: drift → sqrt(((((smg * sin(cmg)) - (speed * sin(cts))) ** 2) + (((smg * cos(cmg)) - (speed * cos(cts))) ** 2)))
+    line 19: cmg → atan(((speed * sin(cts)) + (drift * sin(set))); ((speed * cos(cts)) + (drift * cos(set))))
   [3] Evaluate fully-known substitutions
     drift: deferred
       line 12: unknowns cmg
       line 26: unknowns cmg
-  [4] Sweep subs: drift
+    cmg: deferred
+      line 19: unknowns drift
+  [4] Sweep subs: drift, cmg
   [5] Branching (depth 1)
-    Try sweep0: cmg = 990.1714762455603 (from line 11)
+    Try sweep1: cmg = 990.1714762455603 (from line 11)
       from (line 11): speed = smg*sin(cmg - set) / sin(cts - set)
 "
 "*--- Advance (depth 2) ---"
@@ -686,7 +701,7 @@ set °: 45°
     (no alternatives available)
     Rejected: drift = -0.9940321926376456 (downstream failed)
     Rejected: cmg = 990.1714762455603 (downstream failed)
-    Try sweep0: cmg = -0.17147624556026225 (from line 11)
+    Try sweep1: cmg = -0.17147624556026225 (from line 11)
       from (line 11): speed = smg*sin(cmg - set) / sin(cts - set)
 "
 "*--- Advance (depth 2) ---"
