@@ -751,3 +751,62 @@ a4[0:a3] -> 120
 
 --Variables--
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 4 equations"; StatusIsError = 0
+"°= equation across marker / limit-range combinations"
+"Comprehensive coverage of `°=` interacting with display markers and"
+"limit ranges. All cases use mod-360 balance via `°=`, find -120 (or"
+"500 for x2), and display per the marker convention:"
+"  - plain `->` shows the raw value (no mod normalization)"
+"  - `°->` mods into the user's limit range (or [0, 360) if no limits"
+"    apply or no shifted value lands in range)"
+"  - `°<-` literals drop their `°` (unit marker only)"
+"User INPUT literals bypass limit validation but `°=` still drives"
+"display normalization on output."
+
+d °= 240
+d[-180:180] -> -120
+d[-180:180] °-> -120°
+
+a °= 240
+a[-180:180] <- -120
+a-> -120
+a °-> 240°
+
+c °= 240
+c[-180:180] °<- -120°
+c-> -120
+
+x °= 240
+x[-90:-360] -> -120
+x[-360:-90] °-> -120°
+
+x2 °= 500
+x2: 500
+x2 °-> 140°
+// x2 °-> 140°
+x2[360:501] °-> 500°
+
+--Variables--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 12: Could not find a root for 'x'"; StatusIsError = 1
+"Surface 'Could not find a root' for OUTPUT-only vars"
+"x*x = -4 has no real solution. Brent's fails to bracket; the failure"
+"is recorded in solveFailures. Without explicit handling for OUTPUT-only"
+"vars (filtered from the variables map by Option A), the failure was"
+"silently dropped — status reported 'Nothing to solve' as if the solver"
+"hadn't tried. Now the OUTPUT decl's lineIndex is used as fallback so"
+"the user sees the actual root-finding failure."
+
+y: -4
+// x = sqrt(y)
+x*x = y
+x->
+
+--Variables--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

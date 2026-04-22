@@ -1066,12 +1066,25 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     }
 
     // Report solve failures before expression output evaluation
-    // so solver errors ("Could not find a root") appear before "has no value" errors
+    // so solver errors ("Could not find a root") appear before "has no value" errors.
+    // For INPUT vars use the declaration's lineIndex; for OUTPUT-only vars
+    // (filtered from `variables` map by Option A) look up the OUTPUT decl
+    // explicitly — otherwise these errors silently disappear and the user
+    // sees "Nothing to solve" when the solver actually tried and failed.
+    // Failures for vars without any declaration (e.g. function parameters
+    // appearing in function-definition equations) are skipped — they're not
+    // user-facing "solve this" requests.
     for (const [varName, failure] of solveFailures) {
+        let lineIdx;
         const varInfo = variables.get(varName);
         if (varInfo) {
-            errors.push(`Line ${varInfo.lineIndex + 1}: ${failure.error} for '${varName}'`);
+            lineIdx = varInfo.lineIndex;
+        } else {
+            const outputDecl = declarations.find(d => d.name === varName && d.declaration.type === VarType.OUTPUT);
+            if (!outputDecl) continue;
+            lineIdx = outputDecl.lineIndex;
         }
+        errors.push(`Line ${lineIdx + 1}: ${failure.error} for '${varName}'`);
     }
 
     // Report equations that couldn't be solved due to too many unknowns
