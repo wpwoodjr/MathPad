@@ -184,6 +184,24 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+"Nominal value of x is 3, not -3"
+"Locks in Option A: OUTPUT limits are display-only, never constrain"
+"the main solve. x*x = 9 has roots ±3; main solve picks 3 (first-"
+"balanced branch). x[0:-3]-> re-solves into [-3, 0] and displays -3,"
+"but the nominal x stays 3 — confirmed by z = x*1 → 3."
+
+x*x = 9
+x[0:-3] -> -3
+
+z = x * 1
+z-> 3
+
+--Variables--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Solved 2 equations"; StatusIsError = 0
 "Fifth degree polynomial"
 
 c5: 1
@@ -629,11 +647,14 @@ y-> 30
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 8: Equation doesn't balance: b = -120° (relative diff 200% >= 0.5%)\nLine 14: Could not find a root in range [0:30] for 'b'"; StatusIsError = 1
-"Slow-path surfaces balance error and no-root error together"
+Status = "Line 16: Could not find a value for 'b' in range [0:300] consistent with all equations\nLine 17: Could not find a root in range [0:30] for 'b'"; StatusIsError = 1
+"Slow-path reports no-root when Brent's finds a value that breaks other equations"
 "Main solve picks b=-120 from b=-120°; abs(-120)=120 balances."
-"b[0:300]-> slow path finds b=120 via abs, but that now violates"
-"the b=-120° equation — balance error surfaces from slow path."
+"b[0:300]-> slow path: Brent's on abs(b)=120 finds b=120 in [0,300],"
+"but b=120 violates b=-120°. Rather than surfacing the confusing"
+"balance error (which would blame the user's equations when really"
+"the limit constraint is the conflict source), we report 'Could not"
+"find a value consistent with all equations'. OUTPUT is blank."
 "b[0:30]-> slow path can't find any root of abs(b)=120 in [0,30]"
 "— surfaces the usual 'Could not find a root' error."
 
@@ -642,6 +663,32 @@ abs(b) = 120
 
 --Variables--
 
-b[0:300] -> 120
+b[0:300] ->
 b[0:30] ->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 11: Equation doesn't balance: b = 120 (relative diff 200% >= 0.005%)\nLine 15: Equation doesn't balance: a3 = -120 (relative diff 200% >= 0.005%)\nLine 12: Could not find a value for 'b' in range [0:300] consistent with all equations"; StatusIsError = 1
+"bestCandidate captures most-progressed state, not first-eager save"
+"b's slow-path: direct-eval sets a4=120 at depth 1, then phase 5 tries"
+"b=-120 first (from `b = -120` sub, first line). Limits [0:300] reject"
+"-120 and saveCandidate fires eagerly to preserve 'outside limits' error."
+"Under first-wins, bestCandidate would lock in {a4} only (size 1). When"
+"subsequent branches deepen to {a4, b, a3} (size 3), most-progress-wins"
+"replaces with that richer state. End-of-solve validation on a4[0:a3]"
+"then sees a3 in context — no spurious 'Variable a3 has no value' error."
+
+b = -120
+b = 120
+b[0:300] ->
+
+a3 = 120
+a3 = -120
+a3[0:300] -> 120
+
+a4 = 120
+a4[0:a3] -> 120
+
+--Variables--
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

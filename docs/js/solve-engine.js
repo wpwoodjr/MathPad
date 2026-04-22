@@ -262,6 +262,14 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
         }
     }
 
+    // Helper: build the "no consistent value in range" error message.
+    function noConsistentValueError() {
+        const lineNum = (targetLineIndex != null ? targetLineIndex : 0) + 1;
+        const lo = limits && limits.lowTokens ? tokensToText(limits.lowTokens).trim() : '?';
+        const hi = limits && limits.highTokens ? tokensToText(limits.highTokens).trim() : '?';
+        return `Line ${lineNum}: Could not find a value for '${varName}' in range [${lo}:${hi}] consistent with all equations`;
+    }
+
     // Fast path: main-solve value already in limits → use it
     if (context.variables.has(varName)) {
         const raw = context.variables.get(varName);
@@ -304,7 +312,16 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
     const raw = context.variables.has(varName) ? context.variables.get(varName) : undefined;
     context.variables = savedVars;
 
-    const errors = (solveResult && solveResult.errors) || [];
+    let errors = (solveResult && solveResult.errors) || [];
+    // If the slow-path couldn't satisfy all equations — i.e. Brent's found a
+    // value via one equation but other equations don't balance with it —
+    // treat it as "no consistent value" rather than surfacing the confusing
+    // balance error. The balance error would blame the user's equations when
+    // really the limit constraint is the source of the conflict.
+    const hasBalanceError = errors.some(e => e.includes("doesn't balance"));
+    if (hasBalanceError) {
+        return { value: undefined, reason: 'noRoot', errors: [noConsistentValueError()] };
+    }
     if (raw !== undefined) {
         const value = valueInLimits(raw);
         if (value !== undefined) return { value, reason: null, errors };
@@ -932,22 +949,24 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
     // bestCandidate is a snapshot of a "final but imperfect" state — used to
     // surface partial answers to the user when no branch reaches a fully-
-    // balanced solution. First-wins: the deepest solveRecursive call to invoke
-    // saveCandidate captures its state, because DFS unwinds bottom-up.
-    //
-    // Two callers:
-    //   (a) Inside the branching loop, eagerly on limit-rejection — the
-    //       solveFailures entry would otherwise be wiped by the subsequent
-    //       restoreState call.
-    //   (b) At the end of solveRecursive before returning 'none' — catches the
-    //       "stuck with no alternatives", "all set but balance failed", and
-    //       "all branches exhausted without balancing" cases uniformly.
+    // balanced solution. Most-progress-wins: keep the snapshot with the most
+    // bound variables. This handles two callers symmetrically:
+    //   (a) Inside the branching loop, eagerly on limit-rejection — captures
+    //       the solveFailures entry that would otherwise be wiped by the
+    //       subsequent restoreState. If nothing else makes more progress,
+    //       this stays as bestCandidate (so the user sees "outside limits").
+    //   (b) At the end of solveRecursive before returning 'none' — catches
+    //       the "stuck with no alternatives", "all set but balance failed",
+    //       and "all branches exhausted without balancing" cases. When a
+    //       deeper branch made progress (more vars set), this replaces an
+    //       earlier shallow eager save so end-of-solve validation has the
+    //       full context (e.g. limit expressions referencing other vars).
     //
     // On top-level failure, we restore bestCandidate before post-solve error
     // reporting so values and solveFailures reflect the actual best-effort state.
     let bestCandidate = null;
     function saveCandidate(depth, reason) {
-        if (bestCandidate) return;
+        if (bestCandidate && bestCandidate.variables.size >= context.variables.size) return;
         bestCandidate = snapshotState(context, solveFailures, unsolvedEquations,
                                       erroredEquations, computedValues, errors, solved);
         _trace(`  · candidate (depth ${depth}): ${reason}`);
