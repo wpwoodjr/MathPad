@@ -187,16 +187,54 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         - Import leaves fields undefined when not in source (so test roundtrips don't add the line)
 
 ## solveEquations — recursive backtracking solver
-    solveEquations(context, declarations, record, equations, bodyDefinitions)
-    Used by both main solver (solveRecord) and table/grid per-row evaluation (evaluateCell)
+    solveEquations(context, declarations, record, equations, bodyDefinitions, skipLimitValidation)
+    Used by both main solver (solveRecord) and table/grid per-row evaluation (evaluateCell),
+    typically via the solveEquationsByComponent wrapper that partitions independent
+    sub-systems first.
 
     The top-level loop is solveRecursive(depth). Each recursion level runs
     deterministicAdvance (phases [1]-[4] below, all zero-branching work), then
     enumerateAlternatives yields candidate decisions (Kind 1/2/3). For each
     candidate the backtracker snapshots state, applies the decision, and
     recurses. First branch that balances wins; if none do, falls back to the
-    best-progressed snapshot via first-wins saveCandidate. maxIterations = 50
-    caps recursion depth.
+    most-progressed snapshot. saveCandidate's progress-wins rule
+    (`bestCandidate.variables.size >= context.variables.size` short-circuits)
+    ensures eager limit-rejection saves get replaced when subsequent branches
+    bind more vars. maxIterations = 50 caps recursion depth.
+
+## solveEquationsByComponent — partitioning wrapper
+    solveEquationsByComponent(context, declarations, record, equations, bodyDefinitions)
+    Splits equations into connected components by shared variables, then runs
+    solveEquations once per component with the shared context.
+
+        ### partitionEquationsByComponent
+            Union-find over variable names. Vars are unioned if they:
+              - share an equation (eq.allVars),
+              - are connected through limit-expression refs (z[y:0] unions z+y
+                so chained-deferral resolves correctly),
+              - are connected through body-def RHS refs (b: rate/100 unions
+                b+rate so iterative pass-1 evaluator resolves rate first).
+            Equations group by union representative. Returns array of equation
+            arrays. Equations with no vars (parse errors) get a singleton bucket.
+
+        ### Per-component solve and merge
+            Each component's solveEquations call gets the FULL declarations
+            and bodyDefinitions list (cross-component vars are inert by partition
+            definition) plus skipLimitValidation=true. Wrapper merges
+            computedValues / solveFailures / equationVarStatus by union, sums
+            solved, concatenates errors. Then runs validateLimits once on the
+            merged final context — by this point all components have written
+            their results to the shared context.variables, so cross-component
+            limit refs (e.g. a4[0:a3] where a3 is in a different component)
+            evaluate cleanly.
+
+            Single-component records short-circuit to a direct solveEquations
+            call (no partition overhead).
+
+            Avoids the cartesian-product blow-up the backtracker would otherwise
+            incur when independent contradictory sub-systems are present (e.g.
+            N independent {x = 120, x = -120} pairs would explore 2^N combos
+            without partitioning).
 
     The solver's variables map contains only INPUT declarations — OUTPUT
     limits are display-only, handled by resolveWithLimits after the solve.
@@ -277,15 +315,26 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     Main solve treats all OUTPUT limits as display-only. After main solve, each
     OUTPUT declaration with limits runs its own re-solve:
         Fast path: main-solve value already in declared limits → use it.
-        Slow path: filter declarations, prepend a single INPUT entry for the
-            target carrying the OUTPUT's limits, call solveEquations with
-            modifiedDecls. buildVariablesMap picks the prepended entry (first-wins).
-            solveEquations runs the full pipeline, producing the re-solved value.
+        Slow path: prepend a single INPUT entry for the target carrying the
+            OUTPUT's limits, call solveEquationsByComponent with modifiedDecls.
+            buildVariablesMap picks the prepended entry (first-wins). The
+            full pipeline runs, producing the re-solved value.
         Results stored under `__resolvevar_${lineIndex}` in computedValues;
-        formatOutput consults that key per-declaration. Slow-path errors are
-        returned and merged into solveRecord's errors array (deduped by string).
-        innerError removed — slow-path errors carry their own correct line numbers
-        because modifiedDecls uses the target lineIndex.
+        formatOutput consults that key per-declaration.
+
+    Slow-path balance-error reframing:
+        If the slow-path's solve produces "Equation doesn't balance" errors
+        (e.g. Brent's finds a value via one equation that another equation
+        rejects), the wrapper detects this and replaces them with a single
+        message: "Could not find a value for X in range [lo:hi] consistent
+        with all equations". Reasoning: the main solve already proved the
+        equations are mutually consistent, so the conflict must be from the
+        OUTPUT limit constraint — point the user at the limit, not the
+        equations. OUTPUT renders blank in this case.
+
+        This reframe applies only to the slow-path. Fast-path output keeps
+        the main-solve value even if other equations have balance errors
+        (preserves useful debugging info for over-constrained systems).
 
     ## Re-solve pass (always runs)
     After the first solve, formatOutput writes solved values back into the text.
@@ -370,6 +419,11 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         Calls solveEquations with body defASTs as bodyDefinitions (same pipeline as main solver)
         Per-cell error suppression (bad cells empty, good cells show values)
         Per-cell balance checking: equations containing unknowns verified after solve
+        Transitive blanking: when an equation fails balance, blank body-derived
+            vars in that equation, then propagate — any equation containing a
+            bad var marks its other body-derived vars bad too. Outer INPUTs
+            and iterators (in cellPreSolveVars) are protected (they're user-
+            given, not derived from this row's solve).
         Unused variable warnings with actual line numbers
     ### Grid axis and output mapping
         Iterator declaration order determines axes: first = rows, second = columns

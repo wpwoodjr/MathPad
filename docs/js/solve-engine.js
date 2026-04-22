@@ -304,7 +304,7 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
     context.variables.delete(varName);
     let solveResult;
     try {
-        solveResult = solveEquations(context, modifiedDecls, record, equations);
+        solveResult = solveEquationsByComponent(context, modifiedDecls, record, equations);
     } catch (e) {
         context.variables = savedVars;
         return { value: undefined, reason: 'noRoot', errors: [] };
@@ -520,7 +520,7 @@ function dedupeModEquivalent(values, modN) {
     return out;
 }
 
-function solveEquations(context, declarations, record = {}, equations, bodyDefinitions = []) {
+function solveEquations(context, declarations, record = {}, equations, bodyDefinitions = [], skipLimitValidation = false) {
     _trace(`========== solveEquations (${equations.length} equations, ${bodyDefinitions.length} input expressions) ==========`);
     const places = record.places != null ? record.places : 4;
     const errors = [];
@@ -1083,30 +1083,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     }
 
     // Validate limit expressions for all declared variables (catches undefined references
-    // even when the variable wasn't actually solved via Brent's)
-    for (const decl of declarations) {
-        if (!decl.declaration.limits) continue;
-        try {
-            const lowAST = parseTokens(decl.declaration.limits.lowTokens);
-            evaluate(lowAST, context);
-        } catch (e) {
-            errors.push(`Line ${decl.lineIndex + 1}: Invalid lower limit for '${decl.name}' - ${e.message}`);
-        }
-        try {
-            const highAST = parseTokens(decl.declaration.limits.highTokens);
-            evaluate(highAST, context);
-        } catch (e) {
-            errors.push(`Line ${decl.lineIndex + 1}: Invalid upper limit for '${decl.name}' - ${e.message}`);
-        }
-        if (decl.declaration.limits.stepTokens) {
-            try {
-                const stepAST = parseTokens(decl.declaration.limits.stepTokens);
-                evaluate(stepAST, context);
-            } catch (e) {
-                errors.push(`Line ${decl.lineIndex + 1}: Invalid step for '${decl.name}' - ${e.message}`);
-            }
-        }
-    }
+    // even when the variable wasn't actually solved via Brent's). Skipped when called
+    // from solveEquationsByComponent — wrapper runs validation once on the merged
+    // context (each component only sees its own vars, so per-component validation
+    // would spuriously flag limits referencing vars in other components).
+    if (!skipLimitValidation) validateLimits(declarations, context, errors);
 
     // Check equation consistency (reuses precomputed equations)
     // First-wins ordering: a variable's status is set by the first equation it appears in
@@ -1213,6 +1194,137 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     }
 
     return { computedValues, solved, errors, solveFailures, equationVarStatus };
+}
+
+/**
+ * Validate every declared variable's limit expressions in the given context.
+ * Pushes errors for any limit AST that fails to evaluate (e.g. references an
+ * unsolved variable). Used both inside solveEquations (single-component path)
+ * and by solveEquationsByComponent's wrapper after merging component results.
+ */
+function validateLimits(declarations, context, errors) {
+    for (const decl of declarations) {
+        if (!decl.declaration.limits) continue;
+        try {
+            evaluate(parseTokens(decl.declaration.limits.lowTokens), context);
+        } catch (e) {
+            errors.push(`Line ${decl.lineIndex + 1}: Invalid lower limit for '${decl.name}' - ${e.message}`);
+        }
+        try {
+            evaluate(parseTokens(decl.declaration.limits.highTokens), context);
+        } catch (e) {
+            errors.push(`Line ${decl.lineIndex + 1}: Invalid upper limit for '${decl.name}' - ${e.message}`);
+        }
+        if (decl.declaration.limits.stepTokens) {
+            try {
+                evaluate(parseTokens(decl.declaration.limits.stepTokens), context);
+            } catch (e) {
+                errors.push(`Line ${decl.lineIndex + 1}: Invalid step for '${decl.name}' - ${e.message}`);
+            }
+        }
+    }
+}
+
+/**
+ * Partition equations into connected components by shared variables.
+ * Two equations are in the same component if they share at least one
+ * variable (transitively). Limit-expression references and body-def RHS
+ * references also union vars, so chained-deferral cases (e.g. z[y:0],
+ * b: rate/100) keep their dependencies in the same component.
+ */
+function partitionEquationsByComponent(equations, declarations, bodyDefinitions) {
+    const parent = new Map();
+    function find(x) {
+        if (!parent.has(x)) parent.set(x, x);
+        let r = x;
+        while (parent.get(r) !== r) r = parent.get(r);
+        let cur = x;
+        while (parent.get(cur) !== r) { const next = parent.get(cur); parent.set(cur, r); cur = next; }
+        return r;
+    }
+    function union(a, b) {
+        const ra = find(a), rb = find(b);
+        if (ra !== rb) parent.set(ra, rb);
+    }
+    for (const eq of equations) {
+        if (!eq.allVars) continue;
+        const vars = [...eq.allVars];
+        for (let i = 1; i < vars.length; i++) union(vars[0], vars[i]);
+    }
+    if (declarations) {
+        for (const decl of declarations) {
+            if (!decl.declaration || !decl.declaration.limits) continue;
+            const limits = decl.declaration.limits;
+            for (const tokenKey of ['lowTokens', 'highTokens', 'stepTokens']) {
+                if (!limits[tokenKey]) continue;
+                try {
+                    const ast = parseTokens(limits[tokenKey]);
+                    for (const v of findVariablesInAST(ast)) union(decl.name, v);
+                } catch (e) { /* ignore parse errors */ }
+            }
+        }
+    }
+    if (bodyDefinitions) {
+        for (const def of bodyDefinitions) {
+            if (!def.ast || !def.name) continue;
+            for (const v of findVariablesInAST(def.ast)) union(def.name, v);
+        }
+    }
+    const groups = new Map();
+    let parseErrorBucket = null;
+    for (const eq of equations) {
+        if (!eq.allVars || eq.allVars.size === 0) {
+            if (!parseErrorBucket) parseErrorBucket = [];
+            parseErrorBucket.push(eq);
+            continue;
+        }
+        const rep = find([...eq.allVars][0]);
+        if (!groups.has(rep)) groups.set(rep, []);
+        groups.get(rep).push(eq);
+    }
+    const result = [...groups.values()];
+    if (parseErrorBucket) result.push(parseErrorBucket);
+    return result;
+}
+
+/**
+ * Partition equations into independent components and solve each separately.
+ * Avoids the backtracker's cartesian-product blow-up when independent sub-
+ * systems are present (e.g. {b=120, b=-120} alongside {a=120, a=-120}).
+ *
+ * Per-component solveEquations runs with full declarations and body defs,
+ * but skips its own end-of-solve limit validation. The wrapper runs limit
+ * validation once on the merged context — this avoids spurious "Variable
+ * X has no value" errors for vars belonging to other components that
+ * haven't run yet from a given component's perspective.
+ *
+ * Returns the same shape as solveEquations.
+ */
+function solveEquationsByComponent(context, declarations, record, equations, bodyDefinitions = []) {
+    const components = partitionEquationsByComponent(equations, declarations, bodyDefinitions);
+    if (components.length <= 1) {
+        return solveEquations(context, declarations, record, equations, bodyDefinitions);
+    }
+    _trace(`========== Partitioned into ${components.length} independent components ==========`);
+    const merged = {
+        computedValues: new Map(),
+        solved: 0,
+        errors: [],
+        solveFailures: new Map(),
+        equationVarStatus: new Map()
+    };
+    for (const compEqs of components) {
+        const result = solveEquations(context, declarations, record, compEqs, bodyDefinitions, /* skipLimitValidation */ true);
+        for (const [k, v] of result.computedValues) merged.computedValues.set(k, v);
+        merged.solved += result.solved;
+        merged.errors.push(...result.errors);
+        for (const [k, v] of result.solveFailures) merged.solveFailures.set(k, v);
+        for (const [k, v] of result.equationVarStatus) merged.equationVarStatus.set(k, v);
+    }
+    // Wrapper-level limit validation: now context has all components' results,
+    // so limits referencing cross-component vars resolve correctly.
+    validateLimits(declarations, context, merged.errors);
+    return merged;
 }
 
 /**
@@ -1585,7 +1697,7 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
     }
 
     // Pass 2: Equation Solving
-    const solveResult = solveEquations(context, declarations, record, outerEquations, bodyDefinitions);
+    const solveResult = solveEquationsByComponent(context, declarations, record, outerEquations, bodyDefinitions);
     errors.push(...solveResult.errors);
 
     // Update preSolveVars with body definitions resolved by solveEquations
@@ -1963,7 +2075,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         // Snapshot for per-column re-solves (before solveEquations mutates context)
         cellPreSolveVars = new Map(context.variables);
         // Solve with body definitions handled inside the iterative loop
-        const solveResult = solveEquations(context, tableDeclarations, record, equations, defASTs);
+        const solveResult = solveEquationsByComponent(context, tableDeclarations, record, equations, defASTs);
         // Collect variables that failed to solve
         const badVars = new Set();
         for (const [varName, failure] of solveResult.solveFailures) {

@@ -577,3 +577,60 @@ a4[0:a3] ->
 
 --Variables--
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Body def deps cross components"
+"Without partitioning's body-def-deps union, equations `b*x=12` and"
+"`rate*2=6` would form independent components {b,x} and {rate}."
+"Body def `b: rate/100` would defer in {b,x} (rate unknown) and emit"
+"a stale 'cannot evaluate b' error before {rate} got to solve rate=3."
+"Unioning b with rate via the body def keeps them in the same component"
+"so deferral resolves correctly: rate=3 → b=0.03 → x=400."
+
+b: rate / 100
+b * x = 12
+rate * 2 = 6
+
+--Variables--
+x->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Partitioning test (six independent components)"
+"Six independent variables, each with a contradictory equation pair."
+"Without partitioning the backtracker explodes — every variable has 2"
+"directEval alternates and 2 sweep1 alternates (substitution combos),"
+"and the recursion nests them as a cartesian product across variables."
+"In practice this means tens of thousands of solve attempts before the"
+"backtracker exhausts. With partitioning each variable solves in its"
+"own 1-var sub-system (~4 attempts each, 24 total)."
+"a4[0:a3] limit-depends on a3, so they share a component."
+
+b = -120
+b = 120
+b[0:300] ->
+
+a = 120
+a = -120
+a[0:300] ->
+
+a1 = 120
+a1 = -120
+a1[0:300] ->
+
+a2 = 120
+a2 = -120
+a2[0:300] ->
+
+a3 = 120
+a3 = -120
+a3[0:300] ->
+
+a4 = 120
+a4 = -120
+a4[0:a3] ->
+
+--Variables--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

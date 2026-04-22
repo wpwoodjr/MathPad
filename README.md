@@ -203,9 +203,10 @@ Each variable has a ⟲ icon that clears it and solves, making it easy to comput
 ## Technical Details
 
 - Pure client-side JavaScript — no build system, no frameworks, no server
-- ~12,300 lines of JS across 13 modules
+- ~14,500 lines of JS across 13 modules
 - Brent's root-finding algorithm with adaptive bracketing, known-scale heuristics, and singularity/pole rejection
-- Recursive backtracking solver with deterministic-advance phases (direct-eval, substitution building, sweep subs) and three kinds of branching candidates (direct-eval alternates, sweep-0 natural 1-unknown, sweep-1 subset-enumerated substitution combos)
+- Recursive backtracking solver with deterministic-advance phases (direct-eval, substitution building, sweep subs) and three kinds of branching candidates (direct-eval alternates, sweep-0 natural 1-unknown, sweep-1 subset-enumerated substitution combos); falls back to most-progressed snapshot when no balanced branch found
+- Equation-graph partitioning into independent components (union-find over shared vars, limit refs, body-def refs) to avoid cartesian-product blow-up on disjoint sub-systems
 - Multi-sub symmetric substitution derivation; cycle-safe recursive substitution via visited-set guard
 - Token-based parser with AST generation for expression evaluation
 - Auto-saves to localStorage with 500ms debounce; Google Drive sync every 15 seconds
