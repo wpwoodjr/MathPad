@@ -312,14 +312,14 @@ table("1D limits") = {
 }
 
 "--- Table Outputs ---"
-grid "2D limits"
+grid "2D limits (5/6 solved)"
 "X Value"	"Y Value"	"Z Value"
 	2	3
 0	0.5	0.5
 2	4.5	6.5
 4	8.5	
 
-table "1D limits"
+table "1D limits (4/5 solved)"
 "x"	"z[0:10]"
 0	7
 1	8
@@ -400,7 +400,7 @@ table("Multi-output limits") = {
 }
 
 "--- Table Outputs ---"
-table "No eq for column"
+table "No eq for column (0/4 solved)"
 "x"	"y"	"z[0:10]"
 0	1	
 1	2	
@@ -1942,7 +1942,7 @@ Status = "Solved 1 equation"; StatusIsError = 0
 
 y = 0
 
-table("Test ~") = {
+table("Test equation = 0 balances per places setting") = {
   x: 0..0.006..0.0001
   x->>
   y: x
@@ -1957,7 +1957,7 @@ table("Test ~") = {
 --Variables--
 
 "--- Table Outputs ---"
-table "Test ~ (5/61 solved)"
+table "Test equation = 0 balances per places setting (5/61 solved)"
 "x"	"y"	"y"	"isClose(y; 0; places())"	"isClose(0; y; places())"	"isClose(y; 0; 2)"	"isClose(y; 0; 4)"
 0	0	0	1	1	1	1
 0.0001	0.0001	0	1	1	1	0
@@ -2020,4 +2020,130 @@ table "Test ~ (5/61 solved)"
 0.0058			0	0	0	0
 0.0059			0	0	0	0
 0.006			0	0	0	0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+"vectorDraw indicator with OUTPUT-with-limits no-root"
+"Two vectors, second vector's end_mag has limits that exclude the"
+"actual value (emag2=5 not in [10:20]). Per-column resolveWithLimits"
+"returns no value, leaving the cell blank. Indicator counts emag2 as"
+"unsolved → '7/8 solved'."
+
+sd1: 0
+sm1: 0
+ed1: 90
+emag1 = 3
+sd2: 0
+sm2: 0
+ed2: 180
+emag2 = 5
+
+vectorDraw("indicator test") = {
+  sd1 °->
+  sm1 ->
+  Vec1 ed1 °->
+  emag1[0:5]->
+
+  sd2 °->
+  sm2 ->
+  Vec2 ed2 °->
+  emag2[10:20]->
+}
+
+--Variables--
+
+"--- Table Outputs ---"
+vectordraw "indicator test (7/8 solved)"
+"sd1"	"sm1"	"Vec1"	"emag1[0:5]"
+0°	0	90°	3
+"sd2"	"sm2"	"Vec2"	"emag2[10:20]"
+0°	0	180°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Test solve errors"
+"Compares INPUT-with-limits vs OUTPUT-with-limits behavior in"
+"grids/tables across cells where the constraint limit excludes the"
+"value the equation requires. Per-cell row/cell counter should reflect"
+"the resulting empty cells via the (n/m solved) indicator."
+
+--Variables--
+
+z<- 5
+w: 1
+
+grid("2D input limits") = {
+  -w/u = x*y - z + v
+  u = 2
+  v: 10
+  z[10:20]<-
+  x<- 0..4..2
+  y<- 2..3
+  X Value x->
+  Y Value y->
+  z->
+}
+
+grid("2D output limits") = {
+  -w/u = x*y - z + v
+  u = 2
+  v: 10
+  z<-
+  x<- 0..4..2
+  y<- 2..3
+  X Value x->
+  Y Value y->
+  z[10:20]->
+}
+
+table("1D input limits") = {
+  z = x + 7
+  z[8:10]:
+  x<- 0..4
+  x->
+  z->
+}
+
+table("1D output limits") = {
+  z = x + 7
+  z:
+  x<- 0..4
+  x->
+  z[8:10]->
+}
+
+"--- Table Outputs ---"
+grid "2D input limits (5/6 solved)"
+"X Value"	"Y Value"	"z"
+	2	3
+0	10.5	10.5
+2	14.5	16.5
+4	18.5	
+
+grid "2D output limits (5/6 solved)"
+"X Value"	"Y Value"	"z[10:20]"
+	2	3
+0	10.5	10.5
+2	14.5	16.5
+4	18.5	
+
+table "1D input limits (3/5 solved)"
+"x"	"z"
+0	
+1	8
+2	9
+3	10
+4	
+
+table "1D output limits (3/5 solved)"
+"x"	"z[8:10]"
+0	
+1	8
+2	9
+3	10
+4
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

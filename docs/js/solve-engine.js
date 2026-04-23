@@ -2210,24 +2210,31 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             return formatVariableValue(value, col.format, !!col.fullPrecision, formatOpts);
         }
         // Tally solveInfo by *distinct variables* referenced across all
-        // columns: how many unique vars are bound vs. how many are referenced.
-        // This matches the user's reading of "N unsolved cells" by collapsing
-        // duplicate references (e.g. `cts` appearing in two different columns
-        // counts once) and ignoring pure-constant columns entirely.
+        // columns: how many unique vars produce a renderable value vs. how
+        // many are referenced. A var is "solved" if at least one of its
+        // columns yields a finite value via getColValue (which accounts for
+        // OUTPUT-with-limits no-root cases — main value present in context
+        // but per-column re-solve failed). Collapses duplicate var refs
+        // across columns and ignores pure-constant columns.
         const refVars = new Set();
+        const solvedRefVars = new Set();
         for (const col of columns) {
             if (col.ast) {
                 for (const v of findVariablesInAST(col.ast)) refVars.add(v);
             } else if (col.name) {
                 refVars.add(col.name);
             }
+            const v = getColValue(col);
+            if (v !== undefined && isFinite(v)) {
+                if (col.ast) {
+                    for (const rv of findVariablesInAST(col.ast)) solvedRefVars.add(rv);
+                } else if (col.name) {
+                    solvedRefVars.add(col.name);
+                }
+            }
         }
-        let definedVars = 0;
-        for (const v of refVars) {
-            if (!badVars.has(v) && context.hasVariable(v)) definedVars++;
-        }
-        const solveInfo = definedVars < refVars.size
-            ? { solved: definedVars, total: refVars.size }
+        const solveInfo = solvedRefVars.size < refVars.size
+            ? { solved: solvedRefVars.size, total: refVars.size }
             : null;
 
         // Group columns into vectors of 4 for the output.
@@ -2292,19 +2299,30 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
             const { badVars, balanceFailed } = evaluateCell([{ name: iter.name, value: val }]);
             totalRows++;
-            if (!balanceFailed && badVars.size === 0 && unknowns.every(u => context.hasVariable(u.name))) goodRows++;
+            // Row counts as fully solved only if no balance failure, no body
+            // unknowns blank, AND every column produced a value. The column-
+            // empty case fires when OUTPUT-with-limits resolveWithLimits
+            // returns no root (e.g. polynomial with no root in the limit
+            // range) — without checking columns, the indicator would falsely
+            // claim "all rows solved" while displaying blank cells.
+            let rowFullySolved = !balanceFailed && badVars.size === 0
+                && unknowns.every(u => context.hasVariable(u.name));
 
             // Collect output values (formatted and raw)
             const row = [];
             const rawRow = [];
             for (const col of columns) {
-                if (badVars.has(col.name)) { row.push(''); rawRow.push(null); continue; }
+                if (badVars.has(col.name)) { row.push(''); rawRow.push(null); rowFullySolved = false; continue; }
                 const value = getColumnValue(col);
                 if (value !== undefined) {
                     row.push(formatVariableValue(value, col.format, col.fullPrecision, formatOpts));
                     rawRow.push(value);
-                } else { row.push(''); rawRow.push(null); }
+                } else {
+                    row.push(''); rawRow.push(null);
+                    rowFullySolved = false;
+                }
             }
+            if (rowFullySolved) goodRows++;
             rows.push(row);
             rawRows.push(rawRow);
 
@@ -2402,16 +2420,25 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
             // Track solve success per cell
             totalCells++;
-            if (!balanceFailed && badVars.size === 0 && unknowns.every(u => context.hasVariable(u.name))) goodCells++;
-
-            // Cell value: third output
+            // Cell value: third output. Only count as solved if the cell
+            // actually produced a value (badVars or no-root from
+            // resolveWithLimits both produce blank cells).
+            let cellSolved = !balanceFailed && badVars.size === 0
+                && unknowns.every(u => context.hasVariable(u.name));
             if (cellVar && !badVars.has(cellVar.name)) {
                 const value = getColValue(cellVar);
                 if (value !== undefined) {
                     gridRow.push(formatVariableValue(value, cellVar.format, cellVar.fullPrecision, formatOpts));
                     rawGridRow.push(value);
-                } else { gridRow.push(''); rawGridRow.push(null); }
-            } else { gridRow.push(''); rawGridRow.push(null); }
+                } else {
+                    gridRow.push(''); rawGridRow.push(null);
+                    cellSolved = false;
+                }
+            } else {
+                gridRow.push(''); rawGridRow.push(null);
+                cellSolved = false;
+            }
+            if (cellSolved) goodCells++;
         }
         grid.push(gridRow);
         rawGrid.push(rawGridRow);

@@ -911,3 +911,89 @@ table("Test equation = 0 balances per places setting") = {
 
 --Variables--
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"vectorDraw indicator with OUTPUT-with-limits no-root"
+"Two vectors, second vector's end_mag has limits that exclude the"
+"actual value (emag2=5 not in [10:20]). Per-column resolveWithLimits"
+"returns no value, leaving the cell blank. Indicator counts emag2 as"
+"unsolved → '7/8 solved'."
+
+sd1: 0
+sm1: 0
+ed1: 90
+emag1 = 3
+sd2: 0
+sm2: 0
+ed2: 180
+emag2 = 5
+
+vectorDraw("indicator test") = {
+  sd1 °->
+  sm1 ->
+  Vec1 ed1 °->
+  emag1[0:5]->
+
+  sd2 °->
+  sm2 ->
+  Vec2 ed2 °->
+  emag2[10:20]->
+}
+
+--Variables--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test solve errors"
+"Compares INPUT-with-limits vs OUTPUT-with-limits behavior in"
+"grids/tables across cells where the constraint limit excludes the"
+"value the equation requires. Per-cell row/cell counter should reflect"
+"the resulting empty cells via the (n/m solved) indicator."
+
+--Variables--
+
+z<- 5
+w: 1
+
+grid("2D input limits") = {
+  -w/u = x*y - z + v
+  u = 2
+  v: 10
+  z[10:20]<-
+  x<- 0..4..2
+  y<- 2..3
+  X Value x->
+  Y Value y->
+  z->
+}
+
+grid("2D output limits") = {
+  -w/u = x*y - z + v
+  u = 2
+  v: 10
+  z<-
+  x<- 0..4..2
+  y<- 2..3
+  X Value x->
+  Y Value y->
+  z[10:20]->
+}
+
+table("1D input limits") = {
+  z = x + 7
+  z[8:10]:
+  x<- 0..4
+  x->
+  z->
+}
+
+table("1D output limits") = {
+  z = x + 7
+  z:
+  x<- 0..4
+  x->
+  z[8:10]->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
