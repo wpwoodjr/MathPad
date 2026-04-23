@@ -532,7 +532,7 @@ set[0:360]-> 209.9993
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
-Status = "Line 14: Equation doesn't balance: set = mod(atan(smg*sin(cmg) - ... (absolute diff 359.9888 >= 5e-14)"; StatusIsError = 1
+Status = "Line 14: Equation doesn't balance: set = mod(atan(smg*sin(cmg) - ... (absolute diff 359.9888 >= 0.0005)"; StatusIsError = 1
 "16. Re-solve with rounded values (places=3) - mod 360 balance error"
 // Re-solve test: first solve produced these rounded values
 // mod(atan(...); 360) gives 359.989° instead of 0° on re-solve → balance error

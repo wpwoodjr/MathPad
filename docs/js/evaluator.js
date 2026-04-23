@@ -343,8 +343,12 @@ function checkBalance(a, b, places) {
     }
     const diff = Math.abs(a - b);
     if (a === 0 || b === 0) {
-        const tolerance = Math.min(balanceTolerance, 5e-14);
-        return { balanced: diff < tolerance, relative: false, difference: diff, tolerance, tolPlaces };
+        // No fixed cap: the absolute branch fires whenever one side is exactly
+        // zero (e.g. `f(x) = 0` after Brent's solves). Brent's-grade residuals
+        // for steep functions can exceed any small fixed cap, so we let the
+        // user's `places` control sensitivity via balanceTolerance.
+        // Catastrophic mismatches (NaN, large diffs) still fail any tolerance.
+        return { balanced: diff < balanceTolerance, relative: false, difference: diff, tolerance: balanceTolerance, tolPlaces };
     } else {
         const maxVal = Math.max(Math.abs(a), Math.abs(b));
         const relDiff = diff / maxVal;

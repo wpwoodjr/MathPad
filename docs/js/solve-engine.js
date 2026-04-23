@@ -1808,6 +1808,18 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
  * Parses body for iterators (x<- 0..4), unknowns (z<-), definitions (v: 10),
  * outputs (z->), and equations. Dimensionality determined by iterator count.
  */
+// Reconstruct the limits text from parsed token arrays for use in auto-
+// generated column headers (e.g. `x[1:8]` instead of just `x` when the
+// declaration is `x[1:8]->` with no user-provided label). Returns ''
+// when the declaration has no limits.
+function buildLimitsSuffix(limits) {
+    if (!limits || !limits.lowTokens || !limits.highTokens) return '';
+    const lo = tokensToText(limits.lowTokens).trim();
+    const hi = tokensToText(limits.highTokens).trim();
+    const step = limits.stepTokens ? ':' + tokensToText(limits.stepTokens).trim() : '';
+    return `[${lo}:${hi}${step}]`;
+}
+
 function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) {
     const errors = [];
     const isGrid = tableDef.keyword === 'grid' || tableDef.keyword === 'gridgraph';
@@ -1878,7 +1890,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             } else if (parsed.type === VarType.OUTPUT) {
                 columns.push({
                     name: parsed.name,
-                    header: (parsed.label && parsed.label.trim()) || parsed.name,
+                    header: (parsed.label && parsed.label.trim()) || (parsed.name + buildLimitsSuffix(parsed.limits)),
                     format: parsed.format || null,
                     fullPrecision: parsed.fullPrecision || false,
                     base: parsed.base || 10,
@@ -1893,7 +1905,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                 errors.push(`Line ${tableDef.startLine}: Error in table expression '${exprText}' — ${e.message}`);
             }
             columns.push({
-                name, header: (parsed.label && parsed.label.trim()) || name,
+                name, header: (parsed.label && parsed.label.trim()) || (name + buildLimitsSuffix(parsed.limits)),
                 format: parsed.format || null, fullPrecision: parsed.fullPrecision || false,
                 base: parsed.base || 10, limits: parsed.limits || null, ast
             });
