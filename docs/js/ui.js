@@ -424,6 +424,15 @@ function createEditorForRecord(record) {
     editor.lastUserEditAt = record.modified ?? null;
     if (editor.undoStack.length > 0) {
         editor.undoStack[0].modifiedAt = editor.lastUserEditAt;
+        // Seed initial metadata from the record's saved status so undoing all
+        // the way back to the loaded state restores its status (Solved N,
+        // Cleared, etc.) instead of leaving the current status visible.
+        if (record.status) {
+            editor.undoStack[0].metadata = {
+                statusMessage: record.status,
+                statusIsError: !!record.statusIsError
+            };
+        }
     }
 
     // Create VariablesPanel manager
@@ -1207,13 +1216,11 @@ function setupEventListeners() {
 
     // Solve button — Ctrl+click enables solve trace output.
     // mousedown sets skip flag on active vars panel so the variable-input blur
-    // (fired before click when editing a variable) doesn't trigger a quick-solve
-    // without trace before the ctrl-click trace solve runs.
-    addListener('btn-solve', 'mousedown', (e) => {
-        if (e.ctrlKey) {
-            const info = UI.editors.get(UI.currentRecordId);
-            if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = true;
-        }
+    // (fired before click when editing a variable) doesn't trigger a redundant
+    // quick-solve before the click handler runs the actual solve.
+    addListener('btn-solve', 'mousedown', () => {
+        const info = UI.editors.get(UI.currentRecordId);
+        if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = true;
     });
     addListener('btn-solve', 'click', (e) => {
         // Clear skip flag set by mousedown in case no blur happened in between
@@ -1222,8 +1229,18 @@ function setupEventListeners() {
         handleSolve(true, !!(e && e.ctrlKey));
     });
 
-    // Clear Input button
-    addListener('btn-clear', 'click', handleClearInput);
+    // Clear Input button — same skip-blur-solve pattern as Solve: the blur
+    // fired when an input loses focus would otherwise run a quick-solve right
+    // before Clear wipes the value.
+    addListener('btn-clear', 'mousedown', () => {
+        const info = UI.editors.get(UI.currentRecordId);
+        if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = true;
+    });
+    addListener('btn-clear', 'click', () => {
+        const info = UI.editors.get(UI.currentRecordId);
+        if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = false;
+        handleClearInput();
+    });
 
     // File input for import
     addListener('file-input', 'change', handleFileSelect);
@@ -1488,16 +1505,19 @@ function handleSolve(undoable = true, traceMode = false) {
             setStatus('Nothing to solve');
         }
 
-        // Cache solve results on undo entry so undo/redo can restore highlights
-        if (textChanged) {
-            editorInfo.editor.setTopMetadata({
-                errors: errors,
-                equationVarStatus: equationVarStatus,
-                tables: tables,
-                statusMessage: UI.lastPersistentStatus.message,
-                statusIsError: UI.lastPersistentStatus.isError
-            });
-        }
+        // Cache solve results on the current undo entry so undo/redo can
+        // restore highlights and status. Always cache (not just when text
+        // changed) — solves where the equation system has no values to
+        // compute (all-known balance check, contradictory pair, etc.) leave
+        // the text unchanged but still produce errors/status that should be
+        // restorable on redo.
+        editorInfo.editor.setTopMetadata({
+            errors: errors,
+            equationVarStatus: equationVarStatus,
+            tables: tables,
+            statusMessage: UI.lastPersistentStatus.message,
+            statusIsError: UI.lastPersistentStatus.isError
+        });
 
         // Restore cursor to end of same line only if textarea has focus
         if (document.activeElement === editorInfo.editor.textarea) {
@@ -1577,12 +1597,19 @@ function handleClearInput() {
     editorInfo.variablesManager.setTableData(null);
 
     setStatus('Cleared');
-    if (textChanged) {
-        editorInfo.editor.setTopMetadata({
-            statusMessage: 'Cleared',
-            statusIsError: false
-        });
-    }
+    // Always cache 'Cleared' status on the current undo state so undo across
+    // a clear-with-no-text-change still restores the prior status correctly.
+    // Explicitly null errors/equationVarStatus so the merge doesn't leave
+    // stale highlights from a prior solve-cached state. (Tables don't need
+    // nulling — they live in the "--- Table Outputs ---" section of the text,
+    // which Clear strips, forcing a text change → new undo state with fresh
+    // metadata, so there's nothing stale to merge with.)
+    editorInfo.editor.setTopMetadata({
+        errors: null,
+        equationVarStatus: null,
+        statusMessage: 'Cleared',
+        statusIsError: false
+    });
 
     // Restore cursor only if textarea has focus
     if (document.activeElement === editorInfo.editor.textarea) {

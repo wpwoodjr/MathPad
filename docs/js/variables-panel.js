@@ -452,10 +452,11 @@ class VariablesPanel {
             solveBtn.className = 'variable-solve-btn';
             solveBtn.textContent = '⟲';
             solveBtn.title = 'Clear and solve';
-            // Ctrl+mousedown sets a flag so the upcoming blur doesn't trigger
-            // a quick-solve before the click handler runs its trace solve.
-            solveBtn.addEventListener('mousedown', (e) => {
-                if (e.ctrlKey) this._skipNextBlurSolve = true;
+            // mousedown sets a flag so the upcoming blur (fired before click
+            // when an input is focused) doesn't trigger a quick-solve before
+            // the click handler runs its own solve.
+            solveBtn.addEventListener('mousedown', () => {
+                this._skipNextBlurSolve = true;
             });
             solveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
