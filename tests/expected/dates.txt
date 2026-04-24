@@ -8,7 +8,7 @@ Dates
 // now()@t->> 493093:11:32.579
 
 t1@d: 04-02-2026 09:03:04.750
-t1@t-> 493093:03:04
+t1@t-> 493093:03:05
 TimePart(t1)@t->> 9:03:04.750
 
 n: 1775095376.535
@@ -31,8 +31,8 @@ a-n @t->> 0:14:59.301
 b@d: 04-01-2026 22:22:09.75
 b@d->> 04/01/2026 22:22:09
 
-a@t-> 493082:17:55
-n@t-> 493082:02:56
+a@t-> 493082:17:56
+n@t-> 493082:02:57
 899@t->> 0:14:59
 899@d->> 12/31/1969 19:14:59
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -111,4 +111,34 @@ d@t-> 2:30:15
 
 e@t: 2:30:15.5
 e@t->> 2:30:15.500
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Nothing to solve"; StatusIsError = 0
+Dates 5 - rounding carry into minutes/hours
+
+// Without fractional output, seconds round to nearest. The carries should
+// propagate cleanly: 59.5s → +1 min, 59:59.5 → +1 hr, 23:59:59.5 → +1 day-ish.
+// Fractional output (->>) keeps flooring so the .x part is shown verbatim.
+
+a@t: 0:00:46.623
+a@t-> 0:00:47        "rounds up: 0:00:47"
+a@t->> 0:00:46.623   "fractional: 0:00:46.623"
+
+b@t: 0:00:59.5
+b@t-> 0:01:00        "carries to 0:01:00"
+
+c@t: 0:59:59.5
+c@t-> 1:00:00        "carries to 1:00:00"
+
+d@t: 1:59:59.5
+d@t-> 2:00:00        "carries to 2:00:00"
+
+e@t: 0:00:46.4
+e@t-> 0:00:46        "rounds down: 0:00:46"
+
+// Negative duration also rounds correctly (away from zero on .5)
+f@t: -0:00:46.623
+f@t-> -0:00:47       "rounds to -0:00:47"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

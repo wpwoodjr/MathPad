@@ -311,6 +311,10 @@ function formatDateValue(epochSeconds, includeTime) {
 function formatDuration(seconds, fractional) {
     const neg = seconds < 0;
     let total = Math.abs(seconds);
+    // Without fractional output, round to the nearest whole second up front so
+    // values like 46.623 display as :47 (not :46). Rounding here also lets a
+    // 59.5→60 carry propagate naturally into minutes (and 3599.5→3600 into hours).
+    if (!fractional) total = Math.round(total);
     const h = Math.floor(total / 3600);
     total -= h * 3600;
     const m = Math.floor(total / 60);
