@@ -1469,9 +1469,7 @@ function formatOutput(text, declarations, context, computedValues, record, solve
  */
 function removeReferencesSection(text) {
     const before = text;
-    text = text.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
-    text = text.replace(/\n*"\*?--- Solve Trace ---"[\s\S]*$/, '');
-    text = text.replace(/\n*"\*?--- Reference Constants and Functions ---"[\s\S]*$/, '');
+    text = stripStaleSections(text);
     // If anything was stripped, leave a single trailing newline
     if (text !== before) text = text.trimEnd() + '\n';
     return text;

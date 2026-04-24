@@ -408,9 +408,10 @@ function createEditorForRecord(record) {
     container.appendChild(formulasPanel);
     UI.editorContainer.appendChild(container);
 
-    // Strip stale table output section (table data not persisted — re-solve to regenerate)
+    // Strip stale generated sections (Tables, Trace, References) — these are
+    // last-solve artifacts; the user's source text is everything above them.
     let initialText = record.text;
-    initialText = initialText.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
+    initialText = stripStaleSections(initialText);
     if (initialText !== record.text) {
         record.text = initialText;
         debouncedSave(UI.data);
@@ -488,12 +489,12 @@ function createEditorForRecord(record) {
                     setStatus(metadata.statusMessage, metadata.statusIsError);
                 }
             }
-            // Strip stale sections and clear solve state only on user keyboard input
+            // Strip stale generated sections (Tables, Trace, References) and clear
+            // solve state on user keyboard input — once the user starts editing,
+            // the previous solve's output is no longer in sync with the source.
             if (userInput) {
                 variablesManager.clearErrors();
-                let stripped = value;
-                stripped = stripped.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
-                stripped = stripped.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
+                const stripped = stripStaleSections(value);
                 if (stripped !== value) {
                     editor.saveToHistoryNow();
                     editor.setValue(stripped, false);
@@ -515,10 +516,17 @@ function createEditorForRecord(record) {
         syncFromVariables = true;
         const cursorPos = editor.getCursorPosition();
         const oldLength = editor.getValue().length;
-        editor.setValue(newText, true);  // undoable=true for granular undo of each change
+        // Strip Tables/Trace/References before pushing the edit — a value
+        // change invalidates the previous solve's appended sections. The
+        // editor's own user-input strip doesn't fire for vars-panel edits
+        // (setValue → onChange with userInput=false), so do it here. Without
+        // this, undoing back to the vars-panel edit state would show the
+        // new value alongside stale sections from before the edit.
+        const strippedText = stripStaleSections(newText);
+        editor.setValue(strippedText, true);  // undoable=true for granular undo of each change
         syncFromVariables = false;  // Reset immediately so undo can update vars panel
         if (document.activeElement === editor.textarea) {
-            const delta = newText.length - oldLength;
+            const delta = strippedText.length - oldLength;
             editor.setCursorPosition(Math.max(0, cursorPos + delta));
         }
     });
@@ -1575,9 +1583,7 @@ function handleClearInput() {
 
     // Remove table outputs, trace, and references sections
     const beforeStrip = text;
-    text = text.replace(/\n*"--- Table Outputs ---"[\s\S]*$/, '');
-    text = text.replace(/\n*"\*?--- Solve Trace ---"[\s\S]*$/, '');
-    text = text.replace(/\n*"\*?--- Reference Constants and Functions ---"[\s\S]*$/, '');
+    text = stripStaleSections(text);
     // If anything was stripped, leave a single trailing newline
     if (text !== beforeStrip) text = text.trimEnd() + '\n';
 

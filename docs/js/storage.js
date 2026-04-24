@@ -5,6 +5,35 @@
 const STORAGE_KEY = 'mathpad_data';
 const STORAGE_VERSION = 2;
 
+/**
+ * Strip the three "appended by solveRecord" sections from a record's text:
+ *   "--- Table Outputs ---"
+ *   "*--- Solve Trace ---"
+ *   "*--- Reference Constants and Functions ---"
+ * Matches the leftmost marker and eats from there to EOF, so all three
+ * appended sections come off in a single pass. Used on initial load and
+ * when editing the formulas; persistence (saveData, driveSaveFile) calls
+ * cleanDataForSave below to keep these display artifacts out of storage.
+ */
+const STALE_SECTIONS_RE = /\n*"\*?--- (Table Outputs|Solve Trace|Reference Constants and Functions) ---"[\s\S]*$/;
+function stripStaleSections(text) {
+    return text.replace(STALE_SECTIONS_RE, '');
+}
+
+/**
+ * Return a save-ready shallow clone of `data` with each record's text
+ * stripped of the appended Tables/Trace/References sections. The in-memory
+ * data object is left untouched so the editor keeps showing its current
+ * value within the session.
+ */
+function cleanDataForSave(data) {
+    if (!data || !data.records) return data;
+    return {
+        ...data,
+        records: data.records.map(r => ({ ...r, text: stripStaleSections(r.text) }))
+    };
+}
+
 const DEFAULT_SETTINGS_RECORD = {
     title: 'Default Settings',
     text: `"New Record"
@@ -506,7 +535,7 @@ function saveData(data, localOnly = false) {
             }
         }
         data.version = STORAGE_VERSION;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanDataForSave(data)));
         if (!localOnly) markDriveDirty();
         return true;
     } catch (e) {
@@ -1003,7 +1032,7 @@ function getRecordsByCategory(data) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         STORAGE_KEY, createDefaultData, isReferenceRecord, isReferenceTitle, generateId,
-        loadData, saveData, debouncedSave,
+        loadData, saveData, debouncedSave, stripStaleSections, cleanDataForSave,
         exportToText, importFromText, downloadTextFile, readTextFile,
         createRecord, deleteRecord, findRecord, updateRecord,
         addCategory, deleteCategory, renameCategory, getRecordsByCategory

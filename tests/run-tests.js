@@ -108,6 +108,7 @@ function loadModules() {
     global.createDefaultData = storage.createDefaultData;
     global.isReferenceRecord = storage.isReferenceRecord;
     global.isReferenceTitle = storage.isReferenceTitle;
+    global.stripStaleSections = storage.stripStaleSections;
 
     // Solve Engine (depends on all above)
     const solveEngine = require(path.join(jsPath, 'solve-engine.js'));

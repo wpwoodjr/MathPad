@@ -373,7 +373,11 @@ async function driveSaveFile(data, overrideName, forceNew) {
     if (!(await ensureToken())) return false;
 
     const fileName = overrideName || DriveState.fileName || 'MathPad.mathpad.json';
-    const content = JSON.stringify(data);
+    // Strip stale generated sections (Tables, Trace, References) per record
+    // before serializing — the Drive file shouldn't carry display artifacts
+    // from the last solve. cleanDataForSave shallow-clones so in-memory
+    // record.text stays as-is for the current session.
+    const content = JSON.stringify(cleanDataForSave(data));
 
     try {
         for (let attempt = 0; attempt < 2; attempt++) {
