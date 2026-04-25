@@ -303,6 +303,7 @@ a**2 + b**2 = c**2</pre>
     <pre>f(x; y) = expression using x and y</pre>
     <p>Define functions in the special <strong>"Functions"</strong> record to make them available to all records. Function parameters use semicolons as separators, just like built-in functions.</p>
     <p class="example">Example: pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)</p>
+    <p>Function bodies can reference values from the <strong>Constants</strong> record and call other user-defined functions and built-ins. They <em>cannot</em> read variables from the calling record &mdash; only the function's parameters and the global environment (constants + functions) are visible inside the body. Shadowing a constant locally (e.g. <code>c: 1</code> in a record that uses a function referencing <code>c</code>) does <em>not</em> change the function's behavior &mdash; it always sees the canonical value from the Constants record. This keeps functions self-contained and predictable.</p>
 
     <h2 id="special-records">Special Records</h2>
     <table>

@@ -16,6 +16,7 @@ Status = "Line 3: Too many unknowns (a, b)"; StatusIsError = 1
 // Solving the Functions record treats fn defs as equations (expected errors)
 "User-defined functions"
 hypot(a;b) = sqrt(a**2 + b**2)
+lightDist(seconds) = c * seconds
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -281,4 +282,29 @@ z-> 4
 
 "*--- Reference Constants and Functions ---"
 e->> 2.71828182845905
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"User function references constant from Constants record"
+"`lightDist(s) = c * s` is defined in the Functions record using `c`"
+"from the Constants record (speed of light). Functions are sealed"
+"against the calling record's local namespace — even when `c` is"
+"shadowed locally to 1, the function still uses the canonical c."
+
+--Variables--
+
+dist1: lightDist(1)
+
+c: 1
+dist2: lightDist(1)
+dist1-> 299792458
+dist2-> 299792458
+
+
+
+"*--- Reference Constants and Functions ---"
+c->> 299792458
+lightDist(seconds) = c * seconds
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
