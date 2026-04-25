@@ -1989,15 +1989,17 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         referencedVars.add(col.name);
     }
     for (const iter of iterators) {
-        // Include variables used in iterator bounds (e.g., lastPmt in 0..lastPmt)
+        // Include variables used in iterator bounds (e.g., lastPmt in 0..lastPmt).
+        // Iterators themselves aren't checked for "unused" — they may legitimately
+        // exist just to drive row count (e.g. produce N copies of the same row, or
+        // an outer counter for a nested iterator). Unknowns and definitions still
+        // get the check because they're load-bearing — an unreferenced unknown
+        // can never be solved, and an unreferenced definition is wasted work.
         for (const expr of [iter.startExpr, iter.endExpr, iter.stepExpr]) {
             if (expr) {
                 try { for (const v of findVariablesInAST(parseExpression(expr))) referencedVars.add(v); }
                 catch (e) { }
             }
-        }
-        if (!referencedVars.has(iter.name)) {
-            errors.push(`Line ${tableDef.startLine + iter.lineIdx}: Table variable '${iter.name}' is not used in any equation or output`);
         }
     }
     for (const unk of unknowns) {
