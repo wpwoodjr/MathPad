@@ -520,6 +520,20 @@ function runAllTests() {
                 ['->', 'punctuation']
             ]
         },
+        {
+            // Label is everything before the expression that ends at ->. Even
+            // when the label tokens themselves form an expression-like sequence
+            // (`z+1 `), the actual output expression is the last whitespace-
+            // separated group (`z*z`), and what came before is label text.
+            name: 'expression output with expression-like label (z+1 z*z->)',
+            line: 'z+1 z*z->',
+            assertions: [
+                ['z+1 ', 'comment'],
+                ['z', 'variable'],
+                ['*', 'operator'],
+                ['->', 'punctuation']
+            ]
+        },
         // Simple variable output - variable before marker is variable-def
         {
             name: 'simple variable output (b->)',
@@ -765,6 +779,19 @@ function runAllTests() {
                 [':', 'punctuation'],
                 ['pi', 'variable'],  // shadowed, not builtin
                 ['+', 'operator'],
+                ['2', 'number']
+            ]
+        },
+        {
+            // Declaration LHS using a name that is also a reference constant
+            // (e.g. `c` for speed of light). The name is being defined here, so
+            // it must render as variable-def — not as a builtin reference.
+            name: 'reference constant on LHS of <<- is variable-def, not builtin (c<<-2)',
+            line: 'c<<-2',
+            options: { referenceConstants: new Set(['c']) },
+            assertions: [
+                ['c', 'variable-def'],
+                ['<<-', 'punctuation'],
                 ['2', 'number']
             ]
         },

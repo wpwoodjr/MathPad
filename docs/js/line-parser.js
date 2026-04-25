@@ -465,6 +465,35 @@ class LineParser {
             return tokensBeforeMarker.slice(lastColonIdx + 1);
         }
 
+        // Try parse-and-cut: an expression-output line of the form
+        // "<label> <expr>->" should split at the last whitespace gap that
+        // produces a valid parseable expression on the right. Try the whole
+        // tokens first (covers `f(a; b)->` where internal spaces are part of
+        // the expression), then iterate gaps from earliest to latest, picking
+        // the first that parses cleanly.
+        const tryParse = (tokens) => {
+            if (tokens.length === 0) return false;
+            try {
+                return parseTokens([...tokens]) !== null;
+            } catch (e) {
+                return false;
+            }
+        };
+        if (tryParse(tokensBeforeMarker)) {
+            return tokensBeforeMarker;
+        }
+        const gapIndices = [];
+        for (let i = 1; i < tokensBeforeMarker.length; i++) {
+            const prev = tokensBeforeMarker[i - 1];
+            const cur = tokensBeforeMarker[i];
+            const prevEnd = prev.col + tokenToRaw(prev).length;
+            if (cur.col > prevEnd) gapIndices.push(i);
+        }
+        for (const idx of gapIndices) {
+            const candidate = tokensBeforeMarker.slice(idx);
+            if (tryParse(candidate)) return candidate;
+        }
+
         // Find where the expression actually starts
         // Strategy: find the first operator and trace back to find the start of the expression
         // For "Result x+y" we want to find "x+y" - the x starts the expression

@@ -333,6 +333,7 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
                 t.type === TokenType.COLON ||
                 t.type === TokenType.DOUBLE_COLON ||
                 t.type === TokenType.ARROW_LEFT ||
+                t.type === TokenType.ARROW_LEFT_FULL ||
                 t.type === TokenType.ARROW_RIGHT ||
                 t.type === TokenType.ARROW_FULL ||
                 t.type === TokenType.ARROW_PERSIST ||

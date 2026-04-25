@@ -192,7 +192,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
   stripZeros: boolean, groupDigits: boolean,
   format: 'float' | 'sci' | 'eng',
   degreesMode: boolean,    // false = radians
-  shadowConstants: boolean,// output markers shadow reference constants
+  shadowConstants: boolean,// parsed-and-ignored: documented intent was "output markers shadow reference constants when true", but no code currently reads this flag
   currencySymbol: string,  // currency symbol for $ format (default '$')
   created: number | null,  // Unix ms; sentinel default for legacy records
   modified: number | null  // Unix ms; null until first textarea edit

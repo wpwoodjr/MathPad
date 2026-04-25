@@ -258,7 +258,12 @@ function analyzeLines(text, strippedText, referenceConstants, tokensByLine) {
         // --- Shadow detection (non-reference lines only) ---
         if (!inReferenceSection && result && result.kind === 'declaration') {
             const decl = result;
-            const isDefMarker = decl.marker === ':' || decl.marker === '<-' || decl.marker === '::';
+            // All four INPUT (definition) markers shadow reference constants:
+            // `:`, `<-`, `<<-`, `::`. Output markers don't shadow — there's a
+            // documented `ShadowConstants` record flag for opting them in, but
+            // it's currently parsed-and-ignored (see storage.js).
+            const isDefMarker = decl.marker === ':' || decl.marker === '<-'
+                                || decl.marker === '<<-' || decl.marker === '::';
             if (isDefMarker) {
                 localVariables.add(decl.name);
             }
