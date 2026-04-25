@@ -346,7 +346,7 @@ x: 42    "the answer"</pre>
     <p class="example">Example: counter: if(counter~?; counter~ + 1; 0) &mdash; increments each time you solve</p>
 
     <h2 id="tables-grids">Tables, Grids, and Vector Diagrams</h2>
-    <p>Use <code>table</code> to iterate a variable over a range and display results in columns. Use <code>grid</code> for 2D cell grids with two iterators. Use <code>vectorDraw</code> to render SVG polar vector diagrams.</p>
+    <p>Use <code>table</code> to iterate a variable over a range and display results in columns. Use <code>tableGraph</code> to render those rows as an SVG line graph. Use <code>grid</code> for 2D cell grids with two iterators. Use <code>vectorDraw</code> to render SVG polar vector diagrams.</p>
 
     <h3>Table (Columnar Output)</h3>
     <pre>table("Distance vs Time") = {
@@ -356,6 +356,20 @@ x: 42    "the answer"</pre>
   time-&gt;
   distance-&gt;
 }</pre>
+    <p><strong>Multiple iterators</strong> iterate as nested loops over the cartesian product. The first-declared iterator is the outermost loop (changes slowest); the last-declared is innermost (changes fastest). Iterator bounds are evaluated once up-front, so inner iterators cannot depend on outer iterator values.</p>
+
+    <h3>tableGraph (Line Graph)</h3>
+    <p>Same body syntax as <code>table</code>, but rendered as an SVG line graph. Column 0 is the X-axis; remaining columns are Y series (one line each).</p>
+    <p>With multiple iterators, <strong>line grouping is opt-in</strong>: an inner iterator becomes a line-grouping variable only if it has a <code>iter-&gt;</code> output column. The column's label is used in the legend (e.g. <code>Y y-&gt;</code> produces <code>Y = 1.0</code>). Without <code>y-&gt;</code>, the inner iterator just sweeps silently and only one line is drawn.</p>
+    <pre>tableGraph("z = x^y") = {
+  z = x**y
+  x: 1..2..0.1
+  y: 1..2..0.1
+  X x-&gt;
+  Y y-&gt;
+  Z z-&gt;
+}</pre>
+    <p>The above renders 11 lines (one per <code>y</code> value), each plotting <code>z</code> against <code>x</code>, labeled <code>Y = 1.0</code>, <code>Y = 1.1</code>, &hellip; <code>Y = 2.0</code>.</p>
 
     <h3>Grid (2D Cell Grid)</h3>
     <pre>grid("Multiplication") = {

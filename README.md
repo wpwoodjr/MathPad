@@ -139,6 +139,21 @@ grid("Multiplication") = {
 
 Tables inherit outer equations when the body has none; body equations override if any are present. Tables also inherit all outer values, however a value may be overridden by a declaration in the table.  Each row/cell is solved independently. Optional font size: `table("Title"; 12) = { ... }`.
 
+**Multiple iterators** iterate as nested loops over the cartesian product. First-declared = outermost (changes slowest); last-declared = innermost (changes fastest). Iterator bounds are evaluated once up-front, so inner iterators cannot depend on outer iterator values.
+
+**`tableGraph`** renders the rows as an SVG line graph instead of a column table. Column 0 is the X-axis; remaining columns are Y series (one line each). With multiple iterators, grouping is opt-in: an inner iterator becomes a line-grouping variable only if it has a `iter->` output column. The column's label (e.g. `Y` in `Y y->`) is used in the legend (`Y = 1.0`). Without `y->`, the inner iterator just sweeps silently.
+
+```
+tableGraph("z = x^y") = {
+  z = x**y
+  x: 1..2..0.1
+  y: 1..2..0.1
+  X x->
+  Y y->
+  Z z->
+}
+```
+
 **Vector Diagrams:**
 
 ```

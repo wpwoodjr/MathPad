@@ -397,8 +397,21 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     ### Syntax
         table("Title") = { body }       columnar output, 1+ iterators
         table("Title"; fontSize) = { body }   optional font size
+        tableGraph("Title") = { body }  like table, rendered as SVG line graph
         grid("Title") = { body }        2D cell grid, 2+ iterators
         vectorDraw("Title") = { body }  SVG polar vector diagram
+    ### Multi-iterator tables
+        Multiple iterators iterate as nested loops over the cartesian product
+        First-declared = outermost (slowest); last-declared = innermost (fastest)
+        Iterator bounds are evaluated once up-front, so inner iterators
+            cannot depend on outer iterator values
+    ### tableGraph rendering
+        Column 0 is the X-axis; remaining columns are Y series (one line each)
+        Multi-iterator grouping is opt-in: an inner iterator becomes a
+            line-grouping variable only if it has a `iter->` output column.
+            The column's label (e.g. `Y` in `Y y->`) is used in the legend
+            ("Y = 1.0"). Without `y->`, the iterator sweeps silently
+        Text output uses only the declared output columns
     ### Body declarations
         x<- 0..10          iterator (range, step defaults to 1 or -1)
         x: 0..10..2        iterator with explicit step

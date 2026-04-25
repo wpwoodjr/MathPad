@@ -83,6 +83,7 @@ node tests/gen-expected.js TESTNAME
 
 ### Tables, Grids, and vectorDraw
 - **`table("Title") = { body }`** — columnar output iterating 1+ variables over a range. Multiple iterators produce rows over the cartesian product (first declared = outermost loop, last declared = innermost). Iterator bounds are evaluated once up-front, so inner iterators can't depend on outer iterator values.
+- **`tableGraph("Title") = { body }`** — like `table` but rendered as an SVG line graph. Column 0 is the X-axis; remaining columns are Y series. Multi-iterator grouping is opt-in: an inner iterator becomes a line-grouping variable only if it has a `iter->` output column. The column's label (e.g. `Y` in `Y y->`) is used in the legend (`Y = 1.0`). Without `y->`, the iterator just sweeps silently. Text output uses only the declared output columns.
 - **`grid("Title") = { body }`** — 2D cell grid iterating 2+ variables
 - **`vectorDraw("Title") = { body }`** — polar vector diagram with start/end direction+magnitude
 - Body declarations: iterators (`x<- 0..10` or `x: 0..10..2`), unknowns (`z<-`), definitions (`v: 10`), outputs (`Label z->`)

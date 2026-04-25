@@ -2371,7 +2371,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
         const type = tableDef.keyword === 'tablegraph' ? 'graph' : 'table';
         const solveInfo = goodRows < totalRows ? { solved: goodRows, total: totalRows } : null;
-        return { type, keyword, title: expandedTitle, columns, rows, rawRows, formatOpts, fontSize, solveInfo, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+        const iteratorNames = evaledIterators.map(it => it.name);
+        return { type, keyword, title: expandedTitle, columns, rows, rawRows, iteratorNames, formatOpts, fontSize, solveInfo, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
     }
 
     // ==================== GRID (2D cell values) ====================

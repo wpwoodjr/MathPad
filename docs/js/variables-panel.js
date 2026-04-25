@@ -1220,11 +1220,71 @@ class VariablesPanel {
         const yCols = [];
         for (let c = 1; c < table.columns.length; c++) yCols.push(c);
         if (yCols.length === 0) { this.insertRowInOrder(wrapper, table.startLine - 1); return; }
-        const multiLine = yCols.length > 1;
 
         // Color palette for multiple lines
         const colors = ['#4fc1ff', '#ff6b6b', '#51cf66', '#ffd43b', '#cc5de8', '#ff922b', '#20c997',
                          '#748ffc', '#f783ac', '#a9e34b', '#66d9e8', '#e599f7'];
+
+        // Build the list of lines to draw. Each line: { label, yc, rowIndexes }.
+        //
+        // Grouping columns = output columns whose variable name matches an
+        // iterator other than the X-axis variable (col 0). Their presence as
+        // declared outputs is what enables grouping — without `y->`, an inner
+        // iterator just sweeps silently and produces no separate lines.
+        // Each grouping column contributes its header to the legend label
+        // ("Y = 1.0" when the column is `Y y->`).
+        //
+        // Y-series columns = remaining output columns past col 0 (those not
+        // claimed by grouping). Each (group × Y-series) pair becomes one line.
+        const iteratorNames = new Set(table.iteratorNames || []);
+        const xColName = table.columns[xCol].name;
+        const groupingCols = [];
+        for (let c = 1; c < table.columns.length; c++) {
+            const col = table.columns[c];
+            if (col.name !== xColName && iteratorNames.has(col.name)) {
+                groupingCols.push({ colIdx: c, col });
+            }
+        }
+        const groupingIdxSet = new Set(groupingCols.map(g => g.colIdx));
+        const ySeriesCols = yCols.filter(c => !groupingIdxSet.has(c));
+
+        const lines = [];
+        if (groupingCols.length > 0 && ySeriesCols.length > 0) {
+            const groups = new Map();
+            for (let r = 0; r < table.rawRows.length; r++) {
+                const vals = groupingCols.map(g => table.rawRows[r][g.colIdx]);
+                const key = JSON.stringify(vals);
+                if (!groups.has(key)) groups.set(key, { values: vals, rowIndexes: [] });
+                groups.get(key).rowIndexes.push(r);
+            }
+            const fmt = table.formatOpts || {};
+            for (const group of groups.values()) {
+                const groupLabel = groupingCols.map((g, i) => {
+                    const header = g.col.header || g.col.name;
+                    const v = group.values[i];
+                    const formatted = v != null && isFinite(v)
+                        ? formatVariableValue(v, g.col.format, g.col.fullPrecision, fmt)
+                        : String(v);
+                    return `${header} = ${formatted}`;
+                }).join(', ');
+                for (const yc of ySeriesCols) {
+                    const yColName = table.columns[yc].header || table.columns[yc].name;
+                    const label = ySeriesCols.length > 1 ? `${yColName} (${groupLabel})` : groupLabel;
+                    lines.push({ label, yc, rowIndexes: group.rowIndexes });
+                }
+            }
+        } else {
+            // Fallback: one line per Y column over all rows (single-iter or
+            // multi-iter with no grouping outputs declared).
+            for (const yc of yCols) {
+                lines.push({
+                    label: table.columns[yc].header || table.columns[yc].name,
+                    yc,
+                    rowIndexes: table.rawRows.map((_, i) => i)
+                });
+            }
+        }
+        const multiLine = lines.length > 1;
 
         // Tick formatters
         const xFmt = (v) => {
@@ -1283,9 +1343,8 @@ class VariablesPanel {
             let legendY = 20;
             const legendLineHeight = 16;
             const legendMaxX = width - margin.right;
-            for (let i = 0; i < yCols.length; i++) {
-                const col = table.columns[yCols[i]];
-                const label = col.header || col.name;
+            for (let i = 0; i < lines.length; i++) {
+                const label = lines[i].label;
                 const itemWidth = label.length * 6 + 25;
                 if (legendX + itemWidth > legendMaxX && legendX > margin.left) {
                     legendX = margin.left;
@@ -1317,12 +1376,13 @@ class VariablesPanel {
         const xTicks = this._niceTicks(xMin, xMax, 8, table.columns[xCol].format);
         this._drawGraphAxes({ svg, ns, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines: true });
 
-        // Data lines — one per y column
-        for (let yi = 0; yi < yCols.length; yi++) {
-            const yc = yCols[yi];
+        // Data lines — one per entry in `lines`
+        for (let li = 0; li < lines.length; li++) {
+            const { yc, rowIndexes } = lines[li];
             let pathD = '';
             let started = false;
-            for (const row of table.rawRows) {
+            for (const r of rowIndexes) {
+                const row = table.rawRows[r];
                 const x = row[xCol], y = row[yc];
                 if (x == null || y == null || !isFinite(x) || !isFinite(y)) { started = false; continue; }
                 const px = sx(x), py = sy(y);
@@ -1334,7 +1394,7 @@ class VariablesPanel {
                 path.setAttribute('d', pathD);
                 path.setAttribute('fill', 'none');
                 if (multiLine) {
-                    path.setAttribute('stroke', colors[yi % colors.length]);
+                    path.setAttribute('stroke', colors[li % colors.length]);
                 } else {
                     path.setAttribute('class', 'graph-line');
                 }
@@ -1344,9 +1404,12 @@ class VariablesPanel {
             }
         }
 
-        // Axis labels
+        // Axis labels — show Y label when all lines plot the same Y column.
+        // Use ySeriesCols (excludes grouping cols) so a graph with
+        // `X x->`, `Y y->`, `Z z->` still labels the Y axis as "Z".
         const xLabel = table.columns[xCol].header || table.columns[xCol].name;
-        const yLabel = multiLine ? '' : (table.columns[yCols[0]].header || table.columns[yCols[0]].name);
+        const yAxisCols = ySeriesCols.length > 0 ? ySeriesCols : yCols;
+        const yLabel = yAxisCols.length === 1 ? (table.columns[yAxisCols[0]].header || table.columns[yAxisCols[0]].name) : '';
         if (xLabel) {
             const text = document.createElementNS(ns, 'text');
             text.setAttribute('x', margin.left + plotW / 2); text.setAttribute('y', height - 5);
