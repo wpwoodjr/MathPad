@@ -466,11 +466,8 @@ class LineParser {
         }
 
         // Try parse-and-cut: an expression-output line of the form
-        // "<label> <expr>->" should split at the last whitespace gap that
-        // produces a valid parseable expression on the right. Try the whole
-        // tokens first (covers `f(a; b)->` where internal spaces are part of
-        // the expression), then iterate gaps from earliest to latest, picking
-        // the first that parses cleanly.
+        // "<label> <expr>->" should split at a whitespace gap that produces
+        // a valid parseable expression on the right.
         const tryParse = (tokens) => {
             if (tokens.length === 0) return false;
             try {
@@ -479,15 +476,51 @@ class LineParser {
                 return false;
             }
         };
-        if (tryParse(tokensBeforeMarker)) {
-            return tokensBeforeMarker;
-        }
         const gapIndices = [];
         for (let i = 1; i < tokensBeforeMarker.length; i++) {
             const prev = tokensBeforeMarker[i - 1];
             const cur = tokensBeforeMarker[i];
             const prevEnd = prev.col + tokenToRaw(prev).length;
             if (cur.col > prevEnd) gapIndices.push(i);
+        }
+        // Whitespace-asymmetry signal: a gap followed by either a tight unary
+        // operator or an LPAREN suggests the user wrote "label <expr>" with
+        // an expression that's a syntactic island. Examples:
+        //   B -test->     → label "B", expression "-test"  (asymmetric `-`)
+        //   Label (9-1)-> → label "Label", expression "(9-1)"  (gap before `(`
+        //                   means it's a paren-group, not a function call)
+        // When this signal fires, prefer the cut over the whole even if the
+        // whole would also parse cleanly (e.g. `B - test` as binary, or
+        // `Label(9-1)` as a function call) — the asymmetric spacing is a
+        // deliberate user signal. Try the latest such gap first.
+        const isStrongCutSignal = (idx) => {
+            const tok = tokensBeforeMarker[idx];
+            // LPAREN preceded by an IDENTIFIER (across the gap): the user
+            // wrote `Name (...)` with space, which would otherwise parse as a
+            // function call. The space says they meant `Name` as a label and
+            // `(...)` as a paren-grouped expression. Only fires when the
+            // previous token is an identifier — `10 - (380°)` (LPAREN after
+            // an operator) is a normal binary expression, not a cut point.
+            if (tok.type === TokenType.LPAREN && idx > 0
+                && tokensBeforeMarker[idx - 1].type === TokenType.IDENTIFIER) {
+                return true;
+            }
+            // Operator tight against its operand: unary applied to the right
+            if (tok.type === TokenType.OPERATOR && idx + 1 < tokensBeforeMarker.length) {
+                const next = tokensBeforeMarker[idx + 1];
+                return next.col === tok.col + tokenToRaw(tok).length;
+            }
+            return false;
+        };
+        for (let i = gapIndices.length - 1; i >= 0; i--) {
+            if (isStrongCutSignal(gapIndices[i])) {
+                const candidate = tokensBeforeMarker.slice(gapIndices[i]);
+                if (tryParse(candidate)) return candidate;
+            }
+        }
+        // No unary-asymmetry signal: try the whole, then cuts earliest-to-latest.
+        if (tryParse(tokensBeforeMarker)) {
+            return tokensBeforeMarker;
         }
         for (const idx of gapIndices) {
             const candidate = tokensBeforeMarker.slice(idx);

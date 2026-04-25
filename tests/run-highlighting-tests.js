@@ -534,6 +534,47 @@ function runAllTests() {
                 ['->', 'punctuation']
             ]
         },
+        {
+            // Asymmetric-spacing signal: `B -test` has space BEFORE `-` but
+            // not after, so `-test` is a unary expression and `B ` is the
+            // label. (Compare `B - test`, which is binary subtraction.)
+            name: 'expression output with label and unary minus (B -test °->)',
+            line: 'B -test °->',
+            assertions: [
+                ['B ', 'comment'],
+                ['-', 'operator'],
+                ['test', 'variable'],
+                ['°->', 'punctuation']
+            ]
+        },
+        {
+            // Symmetric spacing on `-` keeps it as binary subtraction, not a
+            // label/unary split. Whole `90 - A` parses as one expression.
+            name: 'expression output with symmetric binary minus (90 - A °->)',
+            line: '90 - A °->',
+            assertions: [
+                ['90', 'number'],
+                ['-', 'operator'],
+                ['A', 'variable'],
+                ['°->', 'punctuation']
+            ]
+        },
+        {
+            // Identifier-then-space-then-LPAREN: the gap means the user wrote
+            // a label followed by a paren-grouped expression, not a function
+            // call. (`Label(9-1)` with no space would be a function call.)
+            name: 'expression output with label and paren-grouped expr (Label (9 - 1) ->)',
+            line: 'Label (9 - 1) ->',
+            assertions: [
+                ['Label ', 'comment'],
+                ['(', 'paren'],
+                ['9', 'number'],
+                ['-', 'operator'],
+                ['1', 'number'],
+                [')', 'paren'],
+                ['->', 'punctuation']
+            ]
+        },
         // Simple variable output - variable before marker is variable-def
         {
             name: 'simple variable output (b->)',

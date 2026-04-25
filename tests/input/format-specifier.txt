@@ -179,3 +179,18 @@ table("Ruble price: \pmt$\") = {
   x->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 0; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"Asymmetric-spacing rule on expression output"
+"Whitespace-symmetric `-` parses as binary subtraction (whole expression);"
+"asymmetric (space-before, no-space-after) parses as label + unary minus."
+"Identifier-then-space-then-LPAREN parses as label + paren-grouped expr"
+"(no space would be a function call)."
+
+A °<- 60°
+
+A - 10 °->
+A -10 °->
+Label (9 - 1) ->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
