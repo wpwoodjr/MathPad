@@ -997,3 +997,48 @@ table("1D output limits") = {
   z[8:10]->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Multi-iterator tables"
+"Tables with N iterators produce rows over the cartesian product."
+"First-declared iterator is the outermost loop (changes slowest);"
+"last-declared changes fastest. Iterator bounds are evaluated once"
+"up-front, so inner iterators can't depend on outer iterator values."
+
+--Variables--
+a + b = c
+
+a: 4
+b: 5
+c: 9
+
+table("2-iterator nested") = {
+  b: 3..4
+  c: 7..11
+  a<-
+  b->
+  c->
+  a->
+}
+
+table("3-iterator nested") = {
+  i: 1..2
+  j: 1..3
+  k: 10..30..10
+  s = i + j + k
+  i->
+  j->
+  k->
+  s->
+}
+
+table("Inner depends on outer iterator (NOT supported)") = {
+  i: 1..3
+  j: 1..i
+  s = i + j
+  i->
+  j->
+  s->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

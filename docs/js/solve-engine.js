@@ -1763,14 +1763,21 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
         const savedBuf = _traceBuffer;
         _traceBuffer = null; // skip table internals in trace
         const savedVars = new Map(context.variables);
+        const savedDeclared = new Set(context.declaredVariables);
         for (const td of tableDefs) {
-            // Restore outer context so tables don't leak state to each other
+            // Restore outer context so tables don't leak state to each other.
+            // Both `variables` and `declaredVariables` need restoring: setVariable
+            // adds to both, and `evaluate` distinguishes "no value" (declared) vs
+            // "undefined" (not declared) when reporting errors — leaking
+            // declaredVariables makes identical tables report different errors.
             context.variables = new Map(savedVars);
+            context.declaredVariables = new Set(savedDeclared);
             const tableResult = evaluateTable(td, context, record, outerEquations, preSolveVars);
             errors.push(...tableResult.errors);
             tables.push(tableResult);
         }
         context.variables = savedVars;
+        context.declaredVariables = savedDeclared;
         _traceBuffer = savedBuf;
     }
 
@@ -2277,8 +2284,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
     // ==================== TABLE and TABLEGRAPH (columnar) ====================
     if (tableDef.keyword === 'table' || tableDef.keyword === 'tablegraph') {
-        const iter = evaledIterators[0];
-        if (!iter) {
+        if (evaledIterators.length === 0) {
             errors.push(`Line ${tableDef.startLine}: Table has no iterator (use x<- 0..10)`);
             return emptyResult();
         }
@@ -2289,13 +2295,40 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         const maxRows = 10000;
         let goodRows = 0, totalRows = 0;
 
-        for (let rowCount = 0; ; rowCount++) {
-            const val = iter.start + rowCount * iter.step;
-            if (iter.step > 0 ? val > iter.end : val < iter.end) break;
-            if (rowCount >= maxRows) { errors.push(`Line ${tableDef.startLine}: Table exceeded ${maxRows} rows`); break; }
+        // Build per-iterator value lists. First-declared iterator is the
+        // outermost loop (changes slowest); last-declared changes fastest.
+        // Iterator bounds are evaluated once up-front, so inner iterators
+        // can't depend on outer iterator values.
+        const iterValueLists = evaledIterators.map(iter => {
+            const arr = [];
+            for (let i = 0; ; i++) {
+                const v = iter.start + i * iter.step;
+                if (iter.step > 0 ? v > iter.end : v < iter.end) break;
+                arr.push(v);
+                if (arr.length > maxRows) break;
+            }
+            return arr;
+        });
+        const totalRowCount = iterValueLists.reduce((a, b) => a * b.length, 1);
+        if (totalRowCount > maxRows) {
+            errors.push(`Line ${tableDef.startLine}: Table exceeded ${maxRows} rows`);
+        }
+        const rowLimit = Math.min(totalRowCount, maxRows);
+
+        for (let rowCount = 0; rowCount < rowLimit; rowCount++) {
+            // Decompose rowCount into per-iterator indices in lexicographic
+            // order: last iterator's index changes fastest.
+            let idx = rowCount;
+            const iterValues = new Array(evaledIterators.length);
+            for (let d = evaledIterators.length - 1; d >= 0; d--) {
+                const len = iterValueLists[d].length;
+                const di = idx % len;
+                idx = Math.floor(idx / len);
+                iterValues[d] = { name: evaledIterators[d].name, value: iterValueLists[d][di] };
+            }
 
             context.preSolveValues = rowCount === 0 ? new Map() : prevValues;
-            const { badVars, balanceFailed } = evaluateCell([{ name: iter.name, value: val }]);
+            const { badVars, balanceFailed } = evaluateCell(iterValues);
             totalRows++;
             // Row counts as fully solved only if no balance failure, no body
             // unknowns blank, AND every column produced a value. The column-
@@ -2333,7 +2366,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             for (const col of columns) {
                 if (!col.ast) { const v = context.getVariable(col.name); if (v !== undefined) prevValues.set(col.name, v); }
             }
-            prevValues.set(iter.name, val);
+            for (const iv of iterValues) prevValues.set(iv.name, iv.value);
         }
 
         const type = tableDef.keyword === 'tablegraph' ? 'graph' : 'table';
