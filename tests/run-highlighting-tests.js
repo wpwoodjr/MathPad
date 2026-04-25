@@ -993,6 +993,25 @@ function runAllTests() {
                 ['"test"', 'comment']
             ]
         },
+        {
+            name: '= inside string comment doesn\'t trigger equation branch (val "a = b + c")',
+            line: 'val "a = b + c"',
+            assertions: [
+                ['val', 'comment'],
+                ['"a = b + c"', 'comment']
+            ]
+        },
+        {
+            name: 'label text around °= equation (prefix a °= b suffix)',
+            line: 'prefix a °= b suffix',
+            assertions: [
+                ['prefix ', 'comment'],
+                ['a', 'variable'],
+                ['°=', 'operator'],
+                ['b', 'variable'],
+                [' suffix', 'comment']
+            ]
+        },
         // Inline eval with money format suffix
         // Base format output value (4D#16 should be number, not comment)
         {

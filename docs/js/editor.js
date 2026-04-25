@@ -289,8 +289,11 @@ function analyzeLines(text, strippedText, referenceConstants, tokensByLine) {
                     end: lineStart + exprStart
                 });
             }
-        } else if (!result && line.includes('=')) {
-            // Equation line - find label text before and after the equation
+        } else if (!result && (tokensByLine[i] || []).some(t => t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '°='))) {
+            // Equation line - find label text before and after the equation.
+            // Check for an actual `=`/`°=` operator token (not raw text) so an
+            // `=` inside a string comment (e.g. `val "a = b + c"`) doesn't
+            // trigger the equation branch and skip the plain-text-label fallback.
             const eqRegions = findEquationLabelRegions(line, tokensByLine[i]);
             for (const r of eqRegions) {
                 labelRegions.push({
@@ -404,15 +407,16 @@ function findEquationLabelRegions(line, lineTokens) {
 
     if (!result.leftText || !result.rightText) return regions;
 
-    // Find the = token position as anchor
-    const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && t.value === '=');
+    // Find the = token position as anchor (matches extractEquationFromLine,
+    // which accepts both `=` and `°=`).
+    const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '°='));
     if (!eqTok) return regions;
     const eqCol = eqTok.col - 1; // 0-based
 
     // Find where leftText and rightText appear in the original line
     const leftStart = line.lastIndexOf(result.leftText, eqCol);
     if (leftStart === -1) return regions;
-    const rightStart = line.indexOf(result.rightText, eqCol + 1);
+    const rightStart = line.indexOf(result.rightText, eqCol + eqTok.value.length);
     if (rightStart === -1) return regions;
 
     // Everything before the LHS is label text
