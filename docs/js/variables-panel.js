@@ -1434,8 +1434,12 @@ class VariablesPanel {
     }
 
     /**
-     * Render a vectorDraw block: SVG diagram of vectors in polar coords with arrowheads.
-     * Each vector has start (dir, mag) and end (dir, mag) — both polar from origin.
+     * Render a vectorDraw block: SVG diagram of vectors with arrowheads.
+     * Each vector has start and end. The pair semantics depend on table.vectorType:
+     *   navigation — (dir, mag) bearing; 0° = up, +° clockwise
+     *   polar      — (dir, mag) math; 0° = right, +° counter-clockwise
+     *   cartesian  — (x, y) raw coordinates
+     * Both halves of each pair are SVG y-down coordinates.
      */
     _renderVectorDraw(table) {
         if (!table.vectors || table.vectors.length === 0) return;
@@ -1450,14 +1454,23 @@ class VariablesPanel {
 
         const colors = ['#4ade80', '#60a5fa', '#fb923c', '#f472b6', '#a78bfa', '#facc15', '#34d399'];
 
-        // Convert each vector's start/end polar (degrees mode aware) to Cartesian (y-down for SVG)
-        // Polar with bearing convention: angle measured CW from north, so (sin θ, -cos θ)
+        // Pick the (a, b) → (x, y) conversion based on vectorType. SVG's
+        // y-axis points down, so we negate the up-direction component.
+        const vectorType = table.vectorType || 'navigation';
         const degreesMode = table.formatOpts && table.formatOpts.degreesMode !== false;
         const toRad = (angle) => degreesMode ? angle * Math.PI / 180 : angle;
-        const polarToXY = (dir, mag) => {
-            if (dir == null || mag == null || !isFinite(dir) || !isFinite(mag)) return null;
-            const r = toRad(dir);
-            return { x: Math.sin(r) * mag, y: -Math.cos(r) * mag };
+        const pairToXY = (a, b) => {
+            if (a == null || b == null || !isFinite(a) || !isFinite(b)) return null;
+            if (vectorType === 'cartesian') {
+                return { x: a, y: -b };
+            }
+            const r = toRad(a);
+            if (vectorType === 'polar') {
+                // 0° = +x (right), 90° = +y (up). Standard math convention.
+                return { x: Math.cos(r) * b, y: -Math.sin(r) * b };
+            }
+            // navigation (default): 0° = up (north), 90° = right (east). Bearing.
+            return { x: Math.sin(r) * b, y: -Math.cos(r) * b };
         };
 
         // Each vector has: start point in absolute polar, end as relative displacement in polar
@@ -1465,8 +1478,8 @@ class VariablesPanel {
         let minX = 0, maxX = 0, minY = 0, maxY = 0;
         for (let i = 0; i < table.vectors.length; i++) {
             const v = table.vectors[i];
-            const start = polarToXY(v.startDir, v.startMag);
-            const disp = polarToXY(v.endDir, v.endMag);
+            const start = pairToXY(v.startDir, v.startMag);
+            const disp = pairToXY(v.endDir, v.endMag);
             if (!start || !disp) {
                 segs.push(null);
                 continue;
@@ -1523,7 +1536,7 @@ class VariablesPanel {
             marker.setAttribute('id', `${markerPrefix}-${i}`);
             marker.setAttribute('markerWidth', '7');
             marker.setAttribute('markerHeight', '5');
-            marker.setAttribute('refX', '6');
+            marker.setAttribute('refX', '7');
             marker.setAttribute('refY', '2.5');
             marker.setAttribute('orient', 'auto');
             const poly = document.createElementNS(ns, 'polygon');
@@ -1534,35 +1547,220 @@ class VariablesPanel {
         }
         svg.appendChild(defs);
 
+        // Type-specific backdrop, drawn before vectors so they render on top.
+        // All backdrops are intentionally faint (low opacity, thin strokes)
+        // so the vectors stay the visual focus.
+        const plotLeft = margin.left;
+        const plotRight = margin.left + plotW;
+        const plotTop = margin.top;
+        const plotBottom = margin.top + plotH;
+        const cx0 = tx(0), cy0 = ty(0);
+
+        if (vectorType === 'cartesian') {
+            // Visible data range — invert tx/ty to get the data-coord values
+            // at the plot rect's edges. Stored data Y is in SVG y-down (the
+            // pairToXY conversion above flips user-space y), so smaller plot
+            // svgY corresponds to smaller data y here.
+            //   tx(x) = offX + x*scale  →  x = (svgX - offX) / scale
+            //   ty(y) = offY + y*scale  →  y = (svgY - offY) / scale
+            const xLeftData = (plotLeft - offX) / scale;
+            const xRightData = (plotRight - offX) / scale;
+            const yTopData = (plotTop - offY) / scale;
+            const yBottomData = (plotBottom - offY) / scale;
+            // Compute nice ticks per axis, then unify to a single step (the
+            // larger of the two) so both axes use the same spacing — graph
+            // paper, not independent scales.
+            const xTicksRaw = this._niceTicks(xLeftData, xRightData, 8);
+            const yTicksRaw = this._niceTicks(yTopData, yBottomData, 8);
+            const stepOf = (ticks) => ticks.length >= 2 ? Math.abs(ticks[1] - ticks[0]) : 1;
+            const step = Math.max(stepOf(xTicksRaw), stepOf(yTicksRaw));
+            const ticksAt = (min, max, step) => {
+                const start = Math.ceil(min / step) * step;
+                const out = [];
+                for (let v = start; v <= max + step * 0.01; v += step) {
+                    out.push(Math.round(v / step) * step);
+                }
+                return out;
+            };
+            const xTicks = ticksAt(xLeftData, xRightData, step);
+            const yTicks = ticksAt(yTopData, yBottomData, step);
+            const addLine = (x1, y1, x2, y2, isAxis) => {
+                const ln = document.createElementNS(ns, 'line');
+                ln.setAttribute('x1', x1); ln.setAttribute('y1', y1);
+                ln.setAttribute('x2', x2); ln.setAttribute('y2', y2);
+                ln.setAttribute('stroke', 'currentColor');
+                ln.setAttribute('opacity', isAxis ? '0.4' : '0.15');
+                ln.setAttribute('stroke-width', isAxis ? '0.8' : '0.5');
+                svg.appendChild(ln);
+            };
+            for (const xv of xTicks) addLine(tx(xv), plotTop, tx(xv), plotBottom, xv === 0);
+            for (const yv of yTicks) addLine(plotLeft, ty(yv), plotRight, ty(yv), yv === 0);
+            // Tick value labels along the axes. Place X-axis labels just
+            // below the y=0 line (clamped to plot bottom if y=0 isn't in
+            // view); Y-axis labels just left of the x=0 line. The origin
+            // label is skipped to avoid clutter at (0, 0). Y values are
+            // negated to show user-space coordinates (the data store is in
+            // SVG y-down — see pairToXY above).
+            const xAxisSvgY = Math.max(plotTop + 6, Math.min(plotBottom - 12, ty(0)));
+            const yAxisSvgX = Math.max(plotLeft + 18, Math.min(plotRight - 4, tx(0)));
+            const addLabel = (x, y, anchor, text) => {
+                const t = document.createElementNS(ns, 'text');
+                t.setAttribute('x', x); t.setAttribute('y', y);
+                t.setAttribute('text-anchor', anchor);
+                t.setAttribute('class', 'graph-text');
+                t.setAttribute('font-size', '9');
+                t.setAttribute('opacity', '0.55');
+                t.textContent = text;
+                svg.appendChild(t);
+            };
+            for (const xv of xTicks) {
+                if (xv === 0) continue;
+                addLabel(tx(xv), xAxisSvgY + 11, 'middle', this._formatTickLabel(xv));
+            }
+            for (const yv of yTicks) {
+                if (yv === 0) continue;
+                // Negate yv → user-space (positive up).
+                addLabel(yAxisSvgX - 4, ty(yv) + 3, 'end', this._formatTickLabel(-yv));
+            }
+        } else if (vectorType === 'polar') {
+            // Concentric circles + radial spokes every 30°. Use the data
+            // extent's max radius so rings reach the data; spokes extend to
+            // the outermost ring.
+            const rMax = Math.max(Math.abs(minX), Math.abs(maxX), Math.abs(minY), Math.abs(maxY));
+            const rTicks = rMax > 0 ? this._niceTicks(0, rMax, 5).filter(r => r > 0) : [];
+            for (const r of rTicks) {
+                const c = document.createElementNS(ns, 'circle');
+                c.setAttribute('cx', cx0); c.setAttribute('cy', cy0);
+                c.setAttribute('r', Math.abs(r * scale));
+                c.setAttribute('fill', 'none');
+                c.setAttribute('stroke', 'currentColor');
+                c.setAttribute('opacity', '0.18');
+                c.setAttribute('stroke-width', '0.5');
+                svg.appendChild(c);
+            }
+            const spokeR = (rTicks.length > 0 ? rTicks[rTicks.length - 1] : rMax) * scale;
+            for (let deg = 0; deg < 360; deg += 30) {
+                const r = deg * Math.PI / 180;
+                // Polar convention: 0° = +x, 90° = +y. SVG y-down → -sin.
+                const x2 = cx0 + Math.cos(r) * spokeR;
+                const y2 = cy0 - Math.sin(r) * spokeR;
+                const ln = document.createElementNS(ns, 'line');
+                ln.setAttribute('x1', cx0); ln.setAttribute('y1', cy0);
+                ln.setAttribute('x2', x2); ln.setAttribute('y2', y2);
+                ln.setAttribute('stroke', 'currentColor');
+                ln.setAttribute('opacity', '0.18');
+                ln.setAttribute('stroke-width', '0.5');
+                svg.appendChild(ln);
+            }
+            // Angle labels at each spoke (every 30°), just outside the
+            // outermost ring. Always shown in degrees (with °) regardless of
+            // the record's degrees/radians mode — the spokes are at fixed
+            // 30° intervals so the labels are conceptual reference markers.
+            const angleLabelR = spokeR + 12;
+            for (let deg = 0; deg < 360; deg += 30) {
+                const r = deg * Math.PI / 180;
+                const lx = cx0 + Math.cos(r) * angleLabelR;
+                const ly = cy0 - Math.sin(r) * angleLabelR;
+                const t = document.createElementNS(ns, 'text');
+                t.setAttribute('x', lx);
+                t.setAttribute('y', ly + 3);
+                t.setAttribute('text-anchor', 'middle');
+                t.setAttribute('class', 'graph-text');
+                t.setAttribute('font-size', '9');
+                t.setAttribute('opacity', '0.55');
+                t.textContent = deg + '°';
+                svg.appendChild(t);
+            }
+            // Radius labels along the +x axis (0° spoke), one per ring.
+            // Placed just INSIDE each ring (on the +x side) so they don't
+            // collide with the 0° angle label that sits OUTSIDE the outermost
+            // ring. Anchored at 'end' so the label extends inward from the
+            // ring crossing.
+            for (const r of rTicks) {
+                const t = document.createElementNS(ns, 'text');
+                t.setAttribute('x', cx0 + r * scale - 3);
+                t.setAttribute('y', cy0 - 3);
+                t.setAttribute('text-anchor', 'end');
+                t.setAttribute('class', 'graph-text');
+                t.setAttribute('font-size', '9');
+                t.setAttribute('opacity', '0.55');
+                t.textContent = this._formatTickLabel(r);
+                svg.appendChild(t);
+            }
+        } else if (vectorType === 'navigation') {
+            // Compass rose at a nice data radius:
+            //   - single outer ring
+            //   - degree labels every 10° just outside the ring (0..350)
+            //   - radial tick marks pointing inward, every 5°
+            //     (major at every-10° label positions, minor at intermediate 5°)
+            // Navigation convention: 0° = up = N, +° clockwise.
+            const rMax = Math.max(Math.abs(minX), Math.abs(maxX), Math.abs(minY), Math.abs(maxY));
+            const rTicks = rMax > 0 ? this._niceTicks(0, rMax, 5).filter(r => r > 0) : [];
+            const roseR = rTicks.length > 0 ? rTicks[rTicks.length - 1] * scale : 26;
+            const navUnit = (deg) => {
+                const r = deg * Math.PI / 180;
+                return { dx: Math.sin(r), dy: -Math.cos(r) };
+            };
+            // Outer ring
+            const ring = document.createElementNS(ns, 'circle');
+            ring.setAttribute('cx', cx0); ring.setAttribute('cy', cy0);
+            ring.setAttribute('r', roseR);
+            ring.setAttribute('fill', 'none');
+            ring.setAttribute('stroke', 'currentColor');
+            ring.setAttribute('opacity', '0.30');
+            ring.setAttribute('stroke-width', '0.7');
+            svg.appendChild(ring);
+            // Radial tick marks pointing inward from the ring (every 5°)
+            const tickBandLen = roseR * 0.10;
+            for (let deg = 0; deg < 360; deg += 5) {
+                const isMajor = deg % 10 === 0;
+                const tickLen = tickBandLen * (isMajor ? 1.0 : 0.4);
+                const u = navUnit(deg);
+                const ln = document.createElementNS(ns, 'line');
+                ln.setAttribute('x1', cx0 + u.dx * (roseR - tickLen));
+                ln.setAttribute('y1', cy0 + u.dy * (roseR - tickLen));
+                ln.setAttribute('x2', cx0 + u.dx * roseR);
+                ln.setAttribute('y2', cy0 + u.dy * roseR);
+                ln.setAttribute('stroke', 'currentColor');
+                ln.setAttribute('opacity', isMajor ? '0.45' : '0.18');
+                ln.setAttribute('stroke-width', isMajor ? '0.8' : '0.5');
+                svg.appendChild(ln);
+            }
+            // Degree labels every 10° just outside the ring
+            const labelR = roseR + 10;
+            for (let deg = 0; deg < 360; deg += 10) {
+                const u = navUnit(deg);
+                const t = document.createElementNS(ns, 'text');
+                t.setAttribute('x', cx0 + u.dx * labelR);
+                t.setAttribute('y', cy0 + u.dy * labelR + 3);
+                t.setAttribute('text-anchor', 'middle');
+                t.setAttribute('class', 'graph-text');
+                t.setAttribute('font-size', '9');
+                t.setAttribute('opacity', '0.55');
+                t.textContent = String(deg);
+                svg.appendChild(t);
+            }
+        }
+
         // Origin dot
         const originDot = document.createElementNS(ns, 'circle');
-        originDot.setAttribute('cx', tx(0));
-        originDot.setAttribute('cy', ty(0));
+        originDot.setAttribute('cx', cx0);
+        originDot.setAttribute('cy', cy0);
         originDot.setAttribute('r', '3');
         originDot.setAttribute('class', 'graph-text');
         originDot.setAttribute('fill', 'currentColor');
         svg.appendChild(originDot);
-
-        // Draw each vector line + arrowhead. Shorten end slightly so the arrow tip lands at the actual endpoint.
-        function shortenEnd(x1, y1, x2, y2, amount) {
-            const dx = x2 - x1, dy = y2 - y1;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            if (len < amount) return { x: x2, y: y2 };
-            const f = (len - amount) / len;
-            return { x: x1 + dx * f, y: y1 + dy * f };
-        }
 
         for (let i = 0; i < segs.length; i++) {
             const seg = segs[i];
             if (!seg) continue;
             const x1 = tx(seg.start.x), y1 = ty(seg.start.y);
             const x2 = tx(seg.end.x), y2 = ty(seg.end.y);
-            const sEnd = shortenEnd(x1, y1, x2, y2, 4);
             const line = document.createElementNS(ns, 'line');
             line.setAttribute('x1', x1.toFixed(1));
             line.setAttribute('y1', y1.toFixed(1));
-            line.setAttribute('x2', sEnd.x.toFixed(1));
-            line.setAttribute('y2', sEnd.y.toFixed(1));
+            line.setAttribute('x2', x2.toFixed(1));
+            line.setAttribute('y2', y2.toFixed(1));
             line.setAttribute('stroke', seg.color);
             line.setAttribute('stroke-width', '2.5');
             line.setAttribute('marker-end', `url(#${markerPrefix}-${i})`);

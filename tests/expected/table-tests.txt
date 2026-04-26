@@ -2040,7 +2040,7 @@ sm2: 0
 ed2: 180
 emag2 = 5
 
-vectorDraw("indicator test") = {
+vectorDraw("indicator test"; navigation) = {
   sd1 °->
   sm1 ->
   Vec1 ed1 °->
@@ -2575,4 +2575,68 @@ table "v multi iterator table test"
 3	3	2	54	-36.24
 3	3	2.5	67.5	-44.3
 3	3	3	81	-52.2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Line 31: vectorDraw requires a type as the second argument (navigation, polar, or cartesian) — e.g. vectorDraw(\"Title\"; navigation)\nLine 38: vectorDraw type must be one of: navigation, polar, cartesian (got: 'bogus')"; StatusIsError = 1
+"vectorDraw type arg: navigation, polar, cartesian"
+"navigation: 0° = up (north), +° clockwise (bearing convention)"
+"polar:      0° = right (east), +° counter-clockwise (math convention)"
+"cartesian:  raw (x, y) coordinates — no angle handling"
+"Each accepts the same vector at the same destination but expressed"
+"differently: pointing east with magnitude 5 from the origin."
+
+--Variables--
+
+vectorDraw("v navigation: east 5"; navigation) = {
+  0 °->
+  0 ->
+  East 90 °->
+  5 ->
+}
+
+vectorDraw("v polar: east 5"; polar) = {
+  0 °->
+  0 ->
+  East 0 °->
+  5 ->
+}
+
+vectorDraw("v cartesian: east 5"; cartesian) = {
+  0 ->
+  0 ->
+  East 5 ->
+  0 ->
+}
+
+vectorDraw("missing type errors") = {
+  0 °->
+  0 ->
+  90 °->
+  5 ->
+}
+
+vectorDraw("invalid type errors"; bogus) = {
+  0 °->
+  0 ->
+  90 °->
+  5 ->
+}
+
+"--- Table Outputs ---"
+vectordraw "v navigation: east 5"
+"0"	"0"	"East"	"5"
+0°	0	90°	5
+
+vectordraw "v polar: east 5"
+"0"	"0"	"East"	"5"
+0°	0	0°	5
+
+vectordraw "v cartesian: east 5"
+"0"	"0"	"East"	"0"
+0	0	5	0
+
+vectordraw "missing type errors"
+vectordraw "invalid type errors"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -929,7 +929,7 @@ sm2: 0
 ed2: 180
 emag2 = 5
 
-vectorDraw("indicator test") = {
+vectorDraw("indicator test"; navigation) = {
   sd1 °->
   sm1 ->
   Vec1 ed1 °->
@@ -1102,5 +1102,52 @@ table("v multi iterator table test") = {
   w->
   z->
   "-(Z**0.9)" -(z**0.9)->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"vectorDraw type arg: navigation, polar, cartesian"
+"navigation: 0° = up (north), +° clockwise (bearing convention)"
+"polar:      0° = right (east), +° counter-clockwise (math convention)"
+"cartesian:  raw (x, y) coordinates — no angle handling"
+"Each accepts the same vector at the same destination but expressed"
+"differently: pointing east with magnitude 5 from the origin."
+
+--Variables--
+
+vectorDraw("v navigation: east 5"; navigation) = {
+  0 °->
+  0 ->
+  East 90 °->
+  5 ->
+}
+
+vectorDraw("v polar: east 5"; polar) = {
+  0 °->
+  0 ->
+  East 0 °->
+  5 ->
+}
+
+vectorDraw("v cartesian: east 5"; cartesian) = {
+  0 ->
+  0 ->
+  East 5 ->
+  0 ->
+}
+
+vectorDraw("missing type errors") = {
+  0 °->
+  0 ->
+  90 °->
+  5 ->
+}
+
+vectorDraw("invalid type errors"; bogus) = {
+  0 °->
+  0 ->
+  90 °->
+  5 ->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

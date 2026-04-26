@@ -23,7 +23,7 @@ Or open `docs/index.html` locally in a browser. No build step required.
 - **Global Constants** — define constants in a "Constants" record, available to all other records
 - **Google Drive Sync** — sign in with Google to sync records across devices with automatic conflict detection
 - **Tables and Grids** — iterate variables over ranges to produce columnar tables or 2D grids, with per-cell equation solving
-- **Vector Diagrams** — `vectorDraw` renders SVG polar vector diagrams with bearing convention, legend, and per-vector solving
+- **Vector Diagrams** — `vectorDraw` renders SVG vector diagrams in navigation, polar, or cartesian coordinates with legend and per-vector solving
 - **Import/Export** — compatible with original PalmOS MathPad export format
 
 ### Editor
@@ -109,7 +109,7 @@ Subtraction (`-`), commuted forms (`C + var * B`), and swapped sides (`D = var *
 
 ### Tables, Grids, and Vector Diagrams
 
-Use `table` for columnar output, `grid` for 2D cell grids, and `vectorDraw` for polar vector diagrams:
+Use `table` for columnar output, `grid` for 2D cell grids, and `vectorDraw` for vector diagrams (navigation, polar, or cartesian):
 
 ```
 table("Distance vs Time") = {
@@ -157,7 +157,7 @@ tableGraph("z = x^y") = {
 **Vector Diagrams:**
 
 ```
-vectorDraw("Wind Triangle") = {
+vectorDraw("Wind Triangle"; navigation) = {
   "equations..."
   tc °->            "start direction (bearing)"
   start_mag ->      "start magnitude"
@@ -166,7 +166,9 @@ vectorDraw("Wind Triangle") = {
 }
 ```
 
-Each vector is defined by four outputs: start direction (`°->`) and magnitude (`->`) give the absolute polar position from the origin; end direction (`°->`) and magnitude (`->`) give the relative displacement. Labels on the end pair identify the vector in the legend. Uses bearing convention (north up, clockwise), respects degrees/radians mode, and formats legend values using the record's places, strip zeros, and group digits settings.
+The second argument is the coordinate **type** (required): `navigation` (0° = up, +° clockwise — bearings), `polar` (0° = right, +° counter-clockwise — math), or `cartesian` (raw `x, y`, no angle handling). For navigation/polar each pair is `(direction, magnitude)`; for cartesian each pair is `(x, y)`. An optional font size goes third: `vectorDraw("Title"; polar; 12)`.
+
+Each vector is defined by four outputs: a start pair (absolute position from the origin) and an end pair (relative displacement). Labels on the end pair identify the vector in the legend. Direction columns respect the record's degrees/radians mode; legend values use the record's places, strip zeros, and group digits settings.
 
 When a table, grid, or vector diagram doesn't fully solve, its title shows `(n/m solved)` to indicate partial results.
 

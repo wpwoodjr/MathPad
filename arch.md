@@ -399,7 +399,12 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         table("Title"; fontSize) = { body }   optional font size
         tableGraph("Title") = { body }  like table, rendered as SVG line graph
         grid("Title") = { body }        2D cell grid, 2+ iterators
-        vectorDraw("Title") = { body }  SVG polar vector diagram
+        vectorDraw("Title"; type[; fontSize]) = { body }
+            SVG vector diagram. type (required) = navigation | polar | cartesian.
+            navigation: 0° = up, +° clockwise (bearings)
+            polar:      0° = right, +° counter-clockwise (math)
+            cartesian:  raw (x, y) coordinates — no angle handling
+            Pair semantics: (dir, mag) for navigation/polar; (x, y) for cartesian.
     ### Multi-iterator tables
         Multiple iterators iterate as nested loops over the cartesian product
         First-declared = outermost (slowest); last-declared = innermost (fastest)

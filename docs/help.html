@@ -347,7 +347,7 @@ x: 42    "the answer"</pre>
     <p class="example">Example: counter: if(counter~?; counter~ + 1; 0) &mdash; increments each time you solve</p>
 
     <h2 id="tables-grids">Tables, Grids, and Vector Diagrams</h2>
-    <p>Use <code>table</code> to iterate a variable over a range and display results in columns. Use <code>tableGraph</code> to render those rows as an SVG line graph. Use <code>grid</code> for 2D cell grids with two iterators. Use <code>vectorDraw</code> to render SVG polar vector diagrams.</p>
+    <p>Use <code>table</code> to iterate a variable over a range and display results in columns. Use <code>tableGraph</code> to render those rows as an SVG line graph. Use <code>grid</code> for 2D cell grids with two iterators. Use <code>vectorDraw</code> to render SVG vector diagrams (navigation, polar, or cartesian).</p>
 
     <h3>Table (Columnar Output)</h3>
     <pre>table("Distance vs Time") = {
@@ -409,15 +409,22 @@ x: 42    "the answer"</pre>
     </div>
 
     <h3>Vector Diagrams</h3>
-    <p>Use <code>vectorDraw</code> to render SVG polar vector diagrams. Each vector is defined by four outputs: a start direction and magnitude (absolute polar position from the origin) and an end direction and magnitude (relative displacement).</p>
-    <pre>vectorDraw("Wind Triangle") = {
+    <p>Use <code>vectorDraw</code> to render SVG vector diagrams. The second argument is the coordinate <strong>type</strong> (required) and selects how each vector's four outputs are interpreted:</p>
+    <table>
+        <tr><th>Type</th><th>Pair semantics</th><th>Convention</th></tr>
+        <tr><td><code>navigation</code></td><td>(direction, magnitude)</td><td>0&deg; = up (north), positive angles clockwise &mdash; compass bearings</td></tr>
+        <tr><td><code>polar</code></td><td>(direction, magnitude)</td><td>0&deg; = right (east), positive angles counter-clockwise &mdash; math convention</td></tr>
+        <tr><td><code>cartesian</code></td><td>(x, y)</td><td>raw coordinates &mdash; no angle handling</td></tr>
+    </table>
+    <p>Each vector is defined by four outputs: a start pair (absolute position from the origin) and an end pair (relative displacement). For <code>navigation</code> and <code>polar</code> the pairs are <em>(direction, magnitude)</em>; for <code>cartesian</code> they're <em>(x, y)</em>.</p>
+    <pre>vectorDraw("Wind Triangle"; navigation) = {
   "equations..."
   tc °-&gt;          "start direction (bearing)"
   start_mag -&gt;    "start magnitude"
-  Label end_dir °-&gt;   "end direction (bearing, labels the vector in the legend)"
+  Label end_dir °-&gt;   "end direction (labels the vector in the legend)"
   end_mag -&gt;      "end magnitude (relative displacement)"
 }</pre>
-    <p>Labels on the end direction/magnitude pair identify the vector in the legend. Vectors use bearing convention (north up, clockwise) and respect the record's degrees/radians mode. Collapsible titles and optional font size work just like tables.</p>
+    <p>Labels on the end pair identify the vector in the legend. Direction columns use the record's degrees/radians mode (cartesian columns are unitless). Collapsible titles and optional font size work just like tables &mdash; for <code>vectorDraw</code> the font size is the third argument: <code>vectorDraw("Title"; polar; 12)</code>.</p>
     <p>The legend and all vector outputs respect the record's decimal places, strip zeros, and group digits settings.</p>
 
     <h3>Solve Status Indicator</h3>

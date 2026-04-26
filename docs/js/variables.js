@@ -1160,9 +1160,11 @@ function findTableDefinitions(text, allTokens) {
         const eqTok = tokens[rparenIdx + 1];
         if (eqTok.type !== TokenType.OPERATOR || eqTok.value !== '=') return;
 
-        // Extract args: title (COMMENT token) and optional fontSize
+        // Extract args: title (COMMENT token), then either fontSize (most
+        // tables) or type+fontSize (vectorDraw).
         let title = '';
         let fontSizeExpr = null;
+        let vectorType = null;
         const argTokens = tokens.slice(tableIdx + 2, rparenIdx);
 
         // Split by semicolons
@@ -1179,9 +1181,22 @@ function findTableDefinitions(text, allTokens) {
             title = tokensToText(args[0]).trim();
         }
 
-        // Arg 2: optional fontSize expression
-        if (args.length >= 2 && args[1].length > 0) {
-            fontSizeExpr = tokensToText(args[1]).trim();
+        if (keyword === 'vectordraw') {
+            // vectorDraw("Title"; type[; fontSize])
+            // Arg 2 is the coordinate type (navigation/polar/cartesian) — required.
+            // Arg 3 is the optional fontSize. Capture the raw text either way and
+            // let evaluateTable validate the type identifier.
+            if (args.length >= 2 && args[1].length > 0) {
+                vectorType = tokensToText(args[1]).trim();
+            }
+            if (args.length >= 3 && args[2].length > 0) {
+                fontSizeExpr = tokensToText(args[2]).trim();
+            }
+        } else {
+            // Other tables: arg 2 is optional fontSize.
+            if (args.length >= 2 && args[1].length > 0) {
+                fontSizeExpr = tokensToText(args[1]).trim();
+            }
         }
 
         // Extract body text between { and }
@@ -1193,7 +1208,7 @@ function findTableDefinitions(text, allTokens) {
         const startLine = tokens[tableIdx].line;  // 1-based
         const endLine = rbraceTok.line;     // 1-based
 
-        tables.push({ keyword, title, fontSizeExpr, bodyText, bodyLines, startLine, endLine });
+        tables.push({ keyword, title, fontSizeExpr, vectorType, bodyText, bodyLines, startLine, endLine });
     }
 }
 

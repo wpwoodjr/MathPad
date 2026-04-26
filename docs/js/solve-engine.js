@@ -1832,7 +1832,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     const keyword = tableDef.keyword;
     const emptyResult = () => {
         if (isGrid) return { type: 'grid', keyword, title: tableDef.title, iter1Label: '', iter2Label: '', rowValues: [], colValues: [], cellHeader: '', grid: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
-        if (isVectorDraw) return { type: 'vectorDraw', keyword, title: tableDef.title, vectors: [], formatOpts: null, fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+        if (isVectorDraw) return { type: 'vectorDraw', keyword, title: tableDef.title, vectorType: (tableDef.vectorType || '').toLowerCase() || null, vectors: [], formatOpts: null, fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
         return { type: 'table', keyword, title: tableDef.title, columns: [], rows: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
     };
 
@@ -2190,11 +2190,30 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         return context.getVariable(col.name);
     }
 
-    // ==================== VECTORDRAW (polar vector diagram) ====================
+    // ==================== VECTORDRAW (polar/cartesian vector diagram) ====================
     if (tableDef.keyword === 'vectordraw') {
-        // Each vector is 4 columns: start_dir, start_mag, end_dir, end_mag
+        // Coordinate type is required: navigation (default historic), polar,
+        // or cartesian. Validates here so a typo or missing arg fails loudly
+        // rather than silently picking a default.
+        const validVectorTypes = new Set(['navigation', 'polar', 'cartesian']);
+        const vectorType = (tableDef.vectorType || '').toLowerCase();
+        if (!vectorType) {
+            errors.push(`Line ${tableDef.startLine}: vectorDraw requires a type as the second argument (navigation, polar, or cartesian) — e.g. vectorDraw("Title"; navigation)`);
+            return emptyResult();
+        }
+        if (!validVectorTypes.has(vectorType)) {
+            errors.push(`Line ${tableDef.startLine}: vectorDraw type must be one of: navigation, polar, cartesian (got: '${tableDef.vectorType}')`);
+            return emptyResult();
+        }
+        // Each vector is 4 columns. For navigation/polar these are
+        // (start_dir, start_mag, end_dir, end_mag); for cartesian they're
+        // (start_x, start_y, end_x, end_y). Layout-wise it's identical —
+        // only the rendering math differs.
         if (columns.length === 0 || columns.length % 4 !== 0) {
-            errors.push(`Line ${tableDef.startLine}: vectorDraw requires multiples of 4 outputs (start_dir, start_mag, end_dir, end_mag per vector)`);
+            const cols = vectorType === 'cartesian'
+                ? '(start_x, start_y, end_x, end_y per vector)'
+                : '(start_dir, start_mag, end_dir, end_mag per vector)';
+            errors.push(`Line ${tableDef.startLine}: vectorDraw requires multiples of 4 outputs ${cols}`);
             return emptyResult();
         }
         // Solve once (no iteration yet) — use balance check to suppress bad values
@@ -2274,6 +2293,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             type: 'vectorDraw',
             keyword,
             title: expandedTitle,
+            vectorType,
             vectors,
             formatOpts,
             fontSize,
