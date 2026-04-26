@@ -168,7 +168,7 @@ vectorDraw("Wind Triangle"; navigation) = {
 
 The second argument is the coordinate **type** (required): `navigation` (0° = up, +° clockwise — bearings), `polar` (0° = right, +° counter-clockwise — math), or `cartesian` (raw `x, y`, no angle handling). For navigation/polar each pair is `(direction, magnitude)`; for cartesian each pair is `(x, y)`. An optional font size goes third: `vectorDraw("Title"; polar; 12)`.
 
-Each vector is defined by four outputs: a start pair (absolute position from the origin) and an end pair (relative displacement). Labels on the end pair identify the vector in the legend. Direction columns respect the record's degrees/radians mode; legend values use the record's places, strip zeros, and group digits settings.
+Each vector is defined by four outputs: a start pair (absolute position from the origin) and an end pair. For navigation/polar the end pair is the **relative displacement** (added to the start). For cartesian the end pair is the **absolute destination** point. Labels on the end pair identify the vector in the legend. Direction columns respect the record's degrees/radians mode; legend values use the record's places, strip zeros, and group digits settings.
 
 When a table, grid, or vector diagram doesn't fully solve, its title shows `(n/m solved)` to indicate partial results.
 

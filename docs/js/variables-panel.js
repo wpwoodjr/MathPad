@@ -1473,18 +1473,23 @@ class VariablesPanel {
             return { x: Math.sin(r) * b, y: -Math.cos(r) * b };
         };
 
-        // Each vector has: start point in absolute polar, end as relative displacement in polar
+        // Each vector has a start point in absolute coords. The end pair's
+        // semantics depend on type: navigation/polar give it as a relative
+        // (direction, magnitude) displacement (added to start); cartesian
+        // gives it as an absolute (end_x, end_y) destination.
         const segs = [];
         let minX = 0, maxX = 0, minY = 0, maxY = 0;
         for (let i = 0; i < table.vectors.length; i++) {
             const v = table.vectors[i];
             const start = pairToXY(v.startDir, v.startMag);
-            const disp = pairToXY(v.endDir, v.endMag);
-            if (!start || !disp) {
+            const endPair = pairToXY(v.endDir, v.endMag);
+            if (!start || !endPair) {
                 segs.push(null);
                 continue;
             }
-            const end = { x: start.x + disp.x, y: start.y + disp.y };
+            const end = vectorType === 'cartesian'
+                ? endPair
+                : { x: start.x + endPair.x, y: start.y + endPair.y };
             segs.push({ start, end, color: colors[i % colors.length], vector: v });
             for (const p of [start, end]) {
                 if (p.x < minX) minX = p.x;
@@ -1671,16 +1676,33 @@ class VariablesPanel {
                 t.textContent = deg + '°';
                 svg.appendChild(t);
             }
-            // Radius labels along the +x axis (0° spoke), one per ring.
-            // Placed just INSIDE each ring (on the +x side) so they don't
-            // collide with the 0° angle label that sits OUTSIDE the outermost
-            // ring. Anchored at 'end' so the label extends inward from the
-            // ring crossing.
+            // Radius labels along whichever cardinal axis has the largest
+            // data extent — ensures the labels land inside the visible plot.
+            // (A vector going to 180° has maxX = 0, so labels on +x would
+            // sit outside the viewport.) Placed just INSIDE each ring so
+            // they don't collide with the angle label sitting OUTSIDE the
+            // outermost ring on the same axis.
+            //   axis dx, dy is the SVG-space unit vector pointing OUT along
+            //   the chosen direction. Step inward by `pad` pixels.
+            // Labels are nudged off their spoke so the spoke line stays
+            // visible. Horizontal axes (+x/-x): label sits just ABOVE the
+            // spoke (yOff -3 raises baseline above cy0). Vertical axes
+            // (+y/-y): label sits just to the LEFT of the spoke (xOff -3,
+            // anchor 'end' so text extends leftward).
+            const extents = [
+                { ext: maxX,  dx:  1, dy:  0, anchor: 'end',   xOff:  0, yOff: -3 }, // +x
+                { ext: -minX, dx: -1, dy:  0, anchor: 'start', xOff:  0, yOff: -3 }, // -x
+                { ext: -minY, dx:  0, dy: -1, anchor: 'end',   xOff: -3, yOff: 11 }, // +y user-up (SVG low y)
+                { ext: maxY,  dx:  0, dy:  1, anchor: 'end',   xOff: -3, yOff: -3 }, // -y user-down
+            ];
+            const labelAxis = extents.reduce((a, b) => b.ext > a.ext ? b : a);
+            const pad = 3;
             for (const r of rTicks) {
+                const d = r * scale - pad;
                 const t = document.createElementNS(ns, 'text');
-                t.setAttribute('x', cx0 + r * scale - 3);
-                t.setAttribute('y', cy0 - 3);
-                t.setAttribute('text-anchor', 'end');
+                t.setAttribute('x', cx0 + labelAxis.dx * d + labelAxis.xOff);
+                t.setAttribute('y', cy0 + labelAxis.dy * d + labelAxis.yOff);
+                t.setAttribute('text-anchor', labelAxis.anchor);
                 t.setAttribute('class', 'graph-text');
                 t.setAttribute('font-size', '9');
                 t.setAttribute('opacity', '0.55');

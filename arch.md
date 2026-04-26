@@ -451,8 +451,11 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         Equation ASTs (leftAST, rightAST, allVars) parsed once onto equation objects
         Reused by: solveEquationInContext, buildSubstitutionMap, balance checks, per-cell evaluation
     ### vectorDraw
-        Each vector is 4 outputs: start_dir °->, start_mag ->, end_dir °->, end_mag ->
-        Start pair is absolute polar from origin; end pair is relative displacement
+        Each vector is 4 outputs: start pair, then end pair (4 columns total)
+        Start pair is absolute (from origin)
+        End-pair semantics by type:
+            navigation/polar: relative displacement (added to start)
+            cartesian: absolute destination point
         Labels on end pair identify vector in legend
         Bearing convention: north up, angles clockwise (sin θ, -cos θ)
         Degrees/radians mode aware; degrees-format values normalized mod M at capture

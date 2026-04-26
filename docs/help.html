@@ -416,7 +416,7 @@ x: 42    "the answer"</pre>
         <tr><td><code>polar</code></td><td>(direction, magnitude)</td><td>0&deg; = right (east), positive angles counter-clockwise &mdash; math convention</td></tr>
         <tr><td><code>cartesian</code></td><td>(x, y)</td><td>raw coordinates &mdash; no angle handling</td></tr>
     </table>
-    <p>Each vector is defined by four outputs: a start pair (absolute position from the origin) and an end pair (relative displacement). For <code>navigation</code> and <code>polar</code> the pairs are <em>(direction, magnitude)</em>; for <code>cartesian</code> they're <em>(x, y)</em>.</p>
+    <p>Each vector is defined by four outputs: a start pair (absolute position from the origin) and an end pair. For <code>navigation</code> and <code>polar</code> the end pair is the <em>relative displacement</em> &mdash; (direction, magnitude) added to the start. For <code>cartesian</code> the end pair is the <em>absolute destination</em> point (x, y).</p>
     <pre>vectorDraw("Wind Triangle"; navigation) = {
   "equations..."
   tc °-&gt;          "start direction (bearing)"

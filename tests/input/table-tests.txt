@@ -1151,3 +1151,71 @@ vectorDraw("invalid type errors"; bogus) = {
   5 ->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"vectorDraw end-pair semantics: cartesian = absolute, navigation/polar = relative"
+"All three records draw the same triangle: vector 1 up to (0,1),"
+"vector 2 right to (1,0), vector 3 connecting (0,1) to (1,0)."
+"Cartesian end pair is the absolute destination point (x, y)."
+"Navigation/polar end pair is a (direction, magnitude) displacement"
+"added to the start, so vector 3's displacement is (1, -1) =>"
+"sqrt(2) at bearing 135° (nav) or angle -45° (polar)."
+
+--Variables--
+
+// Same vectors, different coordinate systems
+
+vectorDraw("Cartesian"; cartesian) = {
+  0 ->
+  0 ->
+  0 ->
+  1 ->
+
+  0 ->
+  0 ->
+  1 ->
+  0 ->
+
+  0 ->
+  1 ->
+  1 ->
+  0 ->
+}
+
+// Polar (0° = right, +° CCW, end pair = relative displacement):
+vectorDraw("Polar"; polar) = {
+  0 °->
+  0 ->
+  90 °->
+  1 ->
+
+  0 °->
+  0 ->
+  0 °->
+  1 ->
+
+  90 °->
+  1 ->
+  -45 °->
+  sqrt(2) ->
+}
+
+// Navigation (0° = up/north, +° CW, end pair = relative displacement):
+vectorDraw("Navigation"; navigation) = {
+  0 °->
+  0 ->
+  0 °->
+  1 ->
+
+  0 °->
+  0 ->
+  90 °->
+  1 ->
+
+  0 °->
+  1 ->
+  135 °->
+  sqrt(2) ->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
