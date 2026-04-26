@@ -72,10 +72,10 @@ table("Balance test") = {
 "--- Table Outputs ---"
 table "Balance test (0/4 solved)"
 "x"	"y"
-0	17
-1	17
-2	17
-3	17
+0	
+1	
+2	
+3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -143,12 +143,12 @@ averagePwr: 125
 "--- Table Outputs ---"
 table "Bad cells (4/6 solved)"
 "Hours"	"User Pwr"	"Max Motor Pwr"
-2	125	
+2		
 3	125	191.31
 4	125	162.31
 5	125	131.56
 6	125	106.59
-7	125
+7
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1

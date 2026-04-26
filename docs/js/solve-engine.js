@@ -2155,11 +2155,15 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         for (const [varName, failure] of solveResult.solveFailures) {
             badVars.add(varName);
         }
-        // A variable is "body-derived" (eligible to be blanked) if it wasn't
-        // already known at row-start. Iterators and outer constants/INPUTs
-        // are in cellPreSolveVars — their values came from outside the per-
-        // row solve, not from it, so they always display honestly.
-        const isBlankable = (name) => !cellPreSolveVars.has(name);
+        // Option B: blank any variable in a failing equation, regardless of
+        // whether it came from outer preSolveVars. Only iterators are exempt
+        // (otherwise the user can't tell which row failed). Outer INPUTs
+        // with limits are constrained unknowns whose previously-found root
+        // may not satisfy the per-cell iterator values; outer constants
+        // referenced by failing equations are themselves part of the failure
+        // story, so blanking them isn't misleading either.
+        const iteratorNames = new Set(iterValues.map(iv => iv.name));
+        const isBlankable = (name) => !iteratorNames.has(name);
 
         // Per-cell balance check: track failure separately from blanking,
         // because a row can fail balance without any var to blame (e.g. the

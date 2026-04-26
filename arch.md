@@ -437,11 +437,13 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         Calls solveEquations with body defASTs as bodyDefinitions (same pipeline as main solver)
         Per-cell error suppression (bad cells empty, good cells show values)
         Per-cell balance checking: equations containing unknowns verified after solve
-        Transitive blanking: when an equation fails balance, blank body-derived
-            vars in that equation, then propagate — any equation containing a
-            bad var marks its other body-derived vars bad too. Outer INPUTs
-            and iterators (in cellPreSolveVars) are protected (they're user-
-            given, not derived from this row's solve).
+        Transitive blanking: when an equation fails balance, blank EVERY var
+            in that equation (except iterators), then propagate — any equation
+            containing a bad var marks its other non-iterator vars bad too.
+            Iterators are exempt so the user can still tell which row failed;
+            outer constants and outer INPUTs-with-limits both get blanked
+            because their displayed values would be misleading when the per-
+            cell equation doesn't balance with them.
         Unused variable warnings with actual line numbers
     ### Grid axis and output mapping
         Iterator declaration order determines axes: first = rows, second = columns

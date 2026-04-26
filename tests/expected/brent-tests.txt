@@ -910,3 +910,20 @@ x->
 
 --Variables--
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Solved 1 equation"; StatusIsError = 0
+"INPUT limits steer Brent's to a non-natural root"
+"x*x = 16 has two roots, ±4. Without limits Brent's would find +4"
+"(positive scan starts there). The INPUT limits [-10:0] constrain the"
+"search range so Brent's must land on -4 instead. Plain x-> displays"
+"the constrained main-solve value (no per-OUTPUT re-solve happens for"
+"a bare OUTPUT — the limits live on the INPUT and drive the main solve)."
+
+x*x = 16
+
+--Variables--
+x[-10:0]<- -4
+x-> -4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
