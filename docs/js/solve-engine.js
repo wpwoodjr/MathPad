@@ -790,28 +790,48 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     // bookkeeping that Kind 2 and Kind 3 would otherwise duplicate.
     function* rootsFromBrents(eq, comboSubs, kind) {
         const modValue = eq.modN ? (record.degreesMode ? 360 : 2 * Math.PI) : null;
+        // Build trace annotations: the combo's non-self subs (showing what was
+        // applied) and the substituted equation form (showing the result Brent's
+        // was given). Skip when tracing is off or combo is empty/all-self.
+        // Mirrors the applicableSubs construction in solveEquationInContext.
+        let comboStr = '', subStr = '';
+        if (_traceBuffer !== null && comboSubs && comboSubs.size > 0) {
+            const applicable = new Map();
+            const parts = [];
+            for (const [v, s] of comboSubs) {
+                if (s.sourceLine === eq.startLine) continue;
+                applicable.set(v, s.ast);
+                parts.push(`${v}@${s.sourceLine + 1}→${_astStr(s.ast)}`);
+            }
+            if (applicable.size > 0) {
+                comboStr = ` [${parts.join(', ')}]`;
+                const L = substituteInAST(eq.leftAST, applicable);
+                const R = substituteInAST(eq.rightAST, applicable);
+                subStr = ` in ${_astStr(L)} = ${_astStr(R)}`;
+            }
+        }
         let r;
         try {
             r = solveEquationInContext(eq.startLine, context, variables,
                 comboSubs, modValue, eq.leftAST, eq.rightAST, { allRoots: true });
         } catch (e) {
-            _trace(`    ${kind} line ${eq.startLine + 1}: ${e.message}`);
+            _trace(`    ${kind} line ${eq.startLine + 1}${comboStr}: ${e.message}${subStr}`);
             errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
             erroredEquations.add(eq.startLine);
             return;
         }
         if (r.limitsDeferred) {
-            _trace(`    ${kind} line ${eq.startLine + 1}: limits deferred`);
+            _trace(`    ${kind} line ${eq.startLine + 1}${comboStr}: limits deferred${subStr}`);
             return;
         }
         if (r.tooManyUnknowns) {
-            _trace(`    ${kind} line ${eq.startLine + 1}: too many unknowns (${r.tooManyUnknowns.join(', ')})`);
+            _trace(`    ${kind} line ${eq.startLine + 1}${comboStr}: too many unknowns (${r.tooManyUnknowns.join(', ')})${subStr}`);
             unsolvedEquations.set(eq.startLine, r.tooManyUnknowns);
             return;
         }
         if (!r.solved) {
             if (r.error && r.variable) {
-                _trace(`    ${kind} line ${eq.startLine + 1}: ${r.error} for '${r.variable}'`);
+                _trace(`    ${kind} line ${eq.startLine + 1}${comboStr}: ${r.error} for '${r.variable}'${subStr}`);
                 solveFailures.set(r.variable, { error: r.error, line: eq.startLine });
             }
             return;
@@ -884,6 +904,24 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             for (const eq of equations) {
                 if (!eq.leftAST || !eq.rightAST) continue;
                 if (erroredEquations.has(eq.startLine)) continue;
+                // Skip non-empty combos that can't change the equation. A combo
+                // entry is "useful" only if its key appears in eq.allVars (chain
+                // substitution can only start from a present variable) AND its
+                // sourceLine differs from eq.startLine (same-line entries get
+                // filtered out inside solveEquationInContext). The empty combo
+                // (size 0) is preserved — it runs Brent's on the bare equation,
+                // which catches eqs whose sole unknown was passed over by
+                // sweep0 because it's in definitionSubs.
+                if (comboSubs.size > 0) {
+                    let hasUseful = false;
+                    for (const [k, s] of comboSubs) {
+                        if (s.sourceLine !== eq.startLine && eq.allVars.has(k)) {
+                            hasUseful = true;
+                            break;
+                        }
+                    }
+                    if (!hasUseful) continue;
+                }
                 // isSkippableDefEquation filters "bare definition of unbound
                 // var" equations; but in Kind 3 a non-self sub from the combo
                 // can reduce such an equation (e.g., applying `x → z/2` from
@@ -936,12 +974,16 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             return lines;
         }
         lines.push(`      from (line ${alt.eq.startLine + 1}): ${alt.eq.text.trim()}`);
-        if (alt.combo && alt.combo.size > 0 && alt.eq.allVars) {
+        // Show every sub in the combo (except those from the equation's own
+        // line, which would substitute a definition into itself). The old
+        // `allVars` filter hid subs whose target variable wasn't in the
+        // equation's literal vars — but chain substitution can pull such
+        // subs in transitively (e.g. a → sqrt(z) then z → c2**3), so they
+        // are load-bearing and should be visible in the trace.
+        if (alt.combo && alt.combo.size > 0) {
             for (const [varName, sub] of alt.combo) {
                 if (sub.sourceLine === alt.eq.startLine) continue;
-                if (alt.eq.allVars.has(varName)) {
-                    lines.push(`      with (line ${sub.sourceLine + 1}): ${varName} → ${_astStr(sub.ast)}`);
-                }
+                lines.push(`      with (line ${sub.sourceLine + 1}): ${varName} → ${_astStr(sub.ast)}`);
             }
         }
         return lines;

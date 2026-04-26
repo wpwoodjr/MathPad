@@ -201,3 +201,50 @@ speed: 1
 cts °: 315°
 drift<-
 set °: 45°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 10: Multi-sub map — symmetric derivation, both directions per equation"
+// Shows deriveSubstitutions yielding both directions for each equation:
+//   line 9  (a + b = c):  a → c-b  AND  b → c-a
+//   line 10 (a = 2*z):    a → 2*z  AND  z → a/2
+//   line 11 (b = 3*z):    b → 3*z  AND  z → b/3
+// Two alternates land in the sub map per variable (a, b, z). The
+// winning sweep-1 combo is size 2: {a → c-b, b → 3*z} applied to
+// `a = 2*z` collapses (via cycle-guarded substitution) to a 1-unknown
+// solve for z. Both subs appear in the trace's `with` lines.
+a + b = c
+a = 2*z
+b = 3*z
+
+--Variables--
+a->
+b->
+c: 25
+z->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+"Test 11: True size-2 sweep1 combo (multi-sub Kind 3)"
+// Engineered to exercise subset-enumerated Kind 3 at combo size 2 with
+// BOTH `with` lines visible in the trace. Two tricks:
+//   1. `sqrt(...)` wraps a, b in a function call so the LHS contributes
+//      no substitutions — a and b are isolable only from the lateral
+//      definition equations.
+//   2. Writing `a = z + z` (z occurring twice) prevents tryIsolateVariables
+//      from yielding `z → a/2` — the same-side-contains-target filter rejects
+//      it. So `z` never enters the sub map, and `definitionSubs` is just
+//      {a, b}. No chain substitution path can sneak in via z.
+// Result: only the size-2 combo {a → z+z, b → z+z+z} reduces the sqrt
+// equation to a 1-unknown solve for z, and both subs lie in line 8's
+// original allVars — so the trace prints both `with` lines.
+sqrt(a**2 + b**2) = 5
+a = z + z
+b = z + z + z
+
+--Variables--
+a->
+b->
+z[0:5]->

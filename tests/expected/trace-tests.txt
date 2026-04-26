@@ -148,7 +148,6 @@ height-> 8
   [5] Branching (depth 1)
     sweep1 line 4: too many unknowns (width, height)
     sweep1 line 5: too many unknowns (width, height)
-    sweep1 line 4: too many unknowns (width, height)
     Try sweep1: height = 8.000000000000005 (from line 5)
       from (line 5): width * 2 + height = 20
       with (line 4): width → (area / height)
@@ -411,7 +410,7 @@ b-> 3
     (no alternatives available)
   · candidate (depth 2): no balanced branch found
     Rejected: b = 0 (downstream failed)
-    sweep1 line 9: Could not find a root for 'b'
+    sweep1 line 9 [a@7→sqrt(-b)]: Could not find a root for 'b' in (sqrt(-b) + b) = 9
     Try sweep1: b = 0 (from line 7)
       from (line 7): a = sqrt(-b)
       with (line 8): a → (2 * b)
@@ -723,5 +722,154 @@ set °: 45°
   [3] Evaluate fully-known substitutions
   [4] Sweep subs: (none)
   ✓ balanced (depth 3)
+"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 3 equations"; StatusIsError = 0
+"Test 10: Multi-sub map — symmetric derivation, both directions per equation"
+// Shows deriveSubstitutions yielding both directions for each equation:
+//   line 9  (a + b = c):  a → c-b  AND  b → c-a
+//   line 10 (a = 2*z):    a → 2*z  AND  z → a/2
+//   line 11 (b = 3*z):    b → 3*z  AND  z → b/3
+// Two alternates land in the sub map per variable (a, b, z). The
+// winning sweep-1 combo is size 2: {a → c-b, b → 3*z} applied to
+// `a = 2*z` collapses (via cycle-guarded substitution) to a 1-unknown
+// solve for z. Both subs appear in the trace's `with` lines.
+a + b = c
+a = 2*z
+b = 3*z
+
+--Variables--
+a-> 10
+b-> 15
+c: 25
+z-> 5
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  known:
+    c = 25
+  unknown: a, b, z
+"
+"*--- Equations (3) ---"
+"  line 10: a + b = c
+  line 11: a = 2*z
+  line 12: b = 3*z
+"
+"*========== solveEquations (3 equations, 0 input expressions) =========="
+"*--- Advance (depth 1) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 10: a → (c - b)
+    line 11: a → (2 * z)
+    line 10: b → (c - a)
+    line 12: b → (3 * z)
+    line 11: z → (a / 2)
+    line 12: z → (b / 3)
+  [3] Evaluate fully-known substitutions
+    a: deferred
+      line 10: unknowns b
+      line 11: unknowns z
+    b: deferred
+      line 10: unknowns a
+      line 12: unknowns z
+    z: deferred
+      line 11: unknowns a
+      line 12: unknowns b
+  [4] Sweep subs: a, b, z
+  [5] Branching (depth 1)
+    sweep1 line 10: too many unknowns (a, b)
+    sweep1 line 11 [a@10→(c - b)]: too many unknowns (b, z) in (c - b) = (2 * z)
+    sweep1 line 10 [a@11→(2 * z)]: too many unknowns (z, b) in ((2 * z) + b) = c
+    sweep1 line 12 [b@10→(c - a)]: too many unknowns (a, z) in (c - a) = (3 * z)
+    sweep1 line 10 [b@12→(3 * z)]: too many unknowns (a, z) in (a + (3 * z)) = c
+    sweep1 line 12 [z@11→(a / 2)]: too many unknowns (b, a) in b = (3 * (a / 2))
+    sweep1 line 11 [z@12→(b / 3)]: too many unknowns (a, b) in a = (2 * (b / 3))
+    sweep1 line 11 [b@10→(c - a), a@10→(c - b)]: too many unknowns (a, z) in (c - (c - a)) = (2 * z)
+    sweep1 line 12 [b@10→(c - a), a@10→(c - b)]: too many unknowns (b, z) in (c - (c - b)) = (3 * z)
+    sweep1 line 10 [b@12→(3 * z)]: too many unknowns (a, z) in (a + (3 * z)) = c
+    Try sweep1: z = 5 (from line 11)
+      from (line 11): a = 2*z
+      with (line 12): b → (3 * z)
+      with (line 10): a → (c - b)
+"
+"*--- Advance (depth 2) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    (none)
+  [3] Evaluate fully-known substitutions
+  [4] Sweep subs: (none)
+  ✓ balanced (depth 2)
+"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 3 equations"; StatusIsError = 0
+"Test 11: True size-2 sweep1 combo (multi-sub Kind 3)"
+// Engineered to exercise subset-enumerated Kind 3 at combo size 2 with
+// BOTH `with` lines visible in the trace. Two tricks:
+//   1. `sqrt(...)` wraps a, b in a function call so the LHS contributes
+//      no substitutions — a and b are isolable only from the lateral
+//      definition equations.
+//   2. Writing `a = z + z` (z occurring twice) prevents tryIsolateVariables
+//      from yielding `z → a/2` — the same-side-contains-target filter rejects
+//      it. So `z` never enters the sub map, and `definitionSubs` is just
+//      {a, b}. No chain substitution path can sneak in via z.
+// Result: only the size-2 combo {a → z+z, b → z+z+z} reduces the sqrt
+// equation to a 1-unknown solve for z, and both subs lie in line 8's
+// original allVars — so the trace prints both `with` lines.
+sqrt(a**2 + b**2) = 5
+a = z + z
+b = z + z + z
+
+--Variables--
+a-> 2.7735
+b-> 4.1603
+z[0:5]-> 1.3868
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  unknown: a, b, z
+"
+"*--- Equations (3) ---"
+"  line 14: sqrt(a**2 + b**2) = 5
+  line 15: a = z + z
+  line 16: b = z + z + z
+"
+"*========== solveEquations (3 equations, 0 input expressions) =========="
+"*--- Advance (depth 1) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 15: a → (z + z)
+    line 16: b → ((z + z) + z)
+  [3] Evaluate fully-known substitutions
+    a: deferred
+      line 15: unknowns z
+    b: deferred
+      line 16: unknowns z
+  [4] Sweep subs: a, b
+  [5] Branching (depth 1)
+    sweep1 line 14: too many unknowns (a, b)
+    sweep1 line 14 [a@15→(z + z)]: too many unknowns (z, b) in sqrt((((z + z) ** 2) + (b ** 2))) = 5
+    sweep1 line 14 [b@16→((z + z) + z)]: too many unknowns (a, z) in sqrt(((a ** 2) + (((z + z) + z) ** 2))) = 5
+    Try sweep1: z = 1.3867504905630728 (from line 14)
+      from (line 14): sqrt(a**2 + b**2) = 5
+      with (line 16): b → ((z + z) + z)
+      with (line 15): a → (z + z)
+"
+"*--- Advance (depth 2) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    (none)
+  [3] Evaluate fully-known substitutions
+  [4] Sweep subs: (none)
+  ✓ balanced (depth 2)
 "
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
