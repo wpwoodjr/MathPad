@@ -1219,3 +1219,49 @@ vectorDraw("Navigation"; navigation) = {
   sqrt(2) ->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+"Table solve behavior"
+
+x: 1
+z*(z+x) = 16
+z[0:-10]<- -4.531
+
+table("1) z inherits negative root from outer") = {
+  x: -1..1..0.5
+  x->
+  z->
+}
+
+table("> 2) z resolves in table no limits, positive roots") = {
+  x: -1..1..0.5
+  z<-
+  z->
+}
+
+table("> 3) z resolves with limits in table positive roots only") = {
+  x: -1..1..0.5
+  z[0:10]<-
+  z->
+}
+
+table("> 4) z resolves in table with limits negative roots only") = {
+  x: -1..1..0.5
+  z[0:-10]<-
+  z->
+}
+
+table("> 5) z negative root limits in input solve value but resolves with limits as positive") = {
+  x: -1..1..0.5
+  z[0:-10]<-
+  z->
+  z[0:10]->
+}
+
+table("6) z inherits negative root but resolves with limits as positive") = {
+  x: -1..1..0.5
+  z->
+  z[0:10]->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

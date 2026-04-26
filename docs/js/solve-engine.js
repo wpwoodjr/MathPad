@@ -1605,7 +1605,10 @@ function appendTableOutputsSection(text, tables) {
         lines.push(''); // blank line between tables
     }
 
-    text = text.trimEnd() + '\n\n' + lines.join('\n').trimEnd();
+    // Strip only trailing newlines — using `trimEnd()` would also strip
+    // tabs, eating data rows whose cells are all blank (e.g. `'\t\n'`
+    // for a 2-column row of two empty strings).
+    text = text.trimEnd() + '\n\n' + lines.join('\n').replace(/\n+$/, '');
     return text;
 }
 

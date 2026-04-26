@@ -660,8 +660,10 @@ function exportToText(data, options = {}) {
             lines.push(`"${record.title}"`);
         }
 
-        // Record content (strip trailing blank lines for consistency with import)
-        lines.push(record.text.trimEnd());
+        // Record content (strip trailing blank lines for consistency with
+        // import). Use a newline-only strip — `trimEnd()` would also strip
+        // tabs, eating table-output rows whose cells are all empty.
+        lines.push(record.text.replace(/\n+$/, ''));
 
         // Separator
         lines.push(SEPARATOR);

@@ -1387,7 +1387,7 @@ async function handleFileSelect(e) {
  */
 function handleExport() {
     try {
-        const text = exportToText(UI.data, { selectedRecordId: UI.currentRecordId });
+        const text = exportToText(cleanDataForSave(UI.data), { selectedRecordId: UI.currentRecordId });
         const d = new Date();
         const timestamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         downloadTextFile(text, `mathpad_export_${timestamp}.txt`);

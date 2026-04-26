@@ -75,7 +75,7 @@ table "Balance test (0/4 solved)"
 0	
 1	
 2	
-3
+3	
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -148,7 +148,7 @@ table "Bad cells (4/6 solved)"
 4	125	162.31
 5	125	131.56
 6	125	106.59
-7
+7		
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
@@ -325,7 +325,7 @@ table "1D limits (4/5 solved)"
 1	8
 2	9
 3	10
-4
+4	
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -371,7 +371,7 @@ table "1D input limits (4/5 solved)"
 1	8
 2	9
 3	10
-4
+4	
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -2059,7 +2059,7 @@ vectordraw "indicator test (7/8 solved)"
 "sd1"	"sm1"	"Vec1"	"emag1[0:5]"
 0°	0	90°	3
 "sd2"	"sm2"	"Vec2"	"emag2[10:20]"
-0°	0	180°
+0°	0	180°	
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -2145,7 +2145,7 @@ table "1D output limits (3/5 solved)"
 1	8
 2	9
 3	10
-4
+4	
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -2733,4 +2733,100 @@ vectordraw "Navigation"
 0°	0	90°	1
 "0"	"1"	"135"	"sqrt(2)"
 0°	1	135°	1.41
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 4: Equation doesn't balance: z*(z+x) = 16 (relative diff 0.006% >= 0.005%)"; StatusIsError = 1
+"Table solve behavior"
+
+x: 1
+z*(z+x) = 16
+z[0:-10]<- -4.531
+
+table("1) z inherits negative root from outer") = {
+  x: -1..1..0.5
+  x->
+  z->
+}
+
+table("> 2) z resolves in table no limits, positive roots") = {
+  x: -1..1..0.5
+  z<-
+  z->
+}
+
+table("> 3) z resolves with limits in table positive roots only") = {
+  x: -1..1..0.5
+  z[0:10]<-
+  z->
+}
+
+table("> 4) z resolves in table with limits negative roots only") = {
+  x: -1..1..0.5
+  z[0:-10]<-
+  z->
+}
+
+table("> 5) z negative root limits in input solve value but resolves with limits as positive") = {
+  x: -1..1..0.5
+  z[0:-10]<-
+  z->
+  z[0:10]->
+}
+
+table("6) z inherits negative root but resolves with limits as positive") = {
+  x: -1..1..0.5
+  z->
+  z[0:10]->
+}
+
+"--- Table Outputs ---"
+table "1) z inherits negative root from outer (0/5 solved)"
+"x"	"z"
+-1	
+-0.5	
+0	
+0.5	
+1	
+
+table "> 2) z resolves in table no limits, positive roots"
+"z"
+4.5311
+4.2578
+4
+3.7578
+3.5311
+
+table "> 3) z resolves with limits in table positive roots only"
+"z"
+4.5311
+4.2578
+4
+3.7578
+3.5311
+
+table "> 4) z resolves in table with limits negative roots only"
+"z"
+-3.5311
+-3.7578
+-4
+-4.2578
+-4.5311
+
+table "> 5) z negative root limits in input solve value but resolves with limits as positive"
+"z"	"z[0:10]"
+-3.5311	4.5311
+-3.7578	4.2578
+-4	4
+-4.2578	3.7578
+-4.5311	3.5311
+
+table "6) z inherits negative root but resolves with limits as positive (0/5 solved)"
+"z"	"z[0:10]"
+	
+	
+	
+	
+	
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
