@@ -6,7 +6,7 @@ An algebraic equation solver with automatic unknown detection, root-finding, and
 <img width="163" height="163" alt="image" src="https://github.com/user-attachments/assets/77817643-bd90-4c19-9ec7-9f2654016c79" />
 
 MathPad was originally created by **Rick Huebner** for PalmOS PDAs (circa 1997-2000). This repository contains:
-- A modern web-based reimplementation with full feature parity and cloud sync
+- A modern web-based reimplementation with near-feature parity and cloud sync
 - The original MathPad 1.5 release (documentation, PRC files, and desktop utilities)
 
 ## Web Application
@@ -216,6 +216,34 @@ years <- 30            "number of years"
 3. To solve backwards, set `pmt: $2,000` and click ⟲ next to `pv` — MathPad finds `pv: $328,903.63`
 
 Each variable has a ⟲ icon that clears it and solves, making it easy to compute any variable from the others. MathPad automatically detects the unknown and solves using root-finding.
+
+## Differences from PalmOS MathPad 1.5
+
+**New in the web app:**
+
+- **Simultaneous equation solving** — the original solved one unknown at a time; the web app uses recursive backtracking with algebraic substitution and component partitioning to handle linked systems
+- **Tables, grids, and vector diagrams** with per-cell solving (`table`, `grid`, `tableGraph`, `vectorDraw`)
+- **Variables panel** with structured display, equation balance highlighting (green/orange/red), and inline editing
+- **Format suffixes** — `$` (money), `%` (percent), `°` (mode-aware degrees), `@d` (date), `@t` (duration); plus `°=` for mod-aware equality
+- **Extended limits** — `[lo:hi:step]`, expression bounds, auto-swap, mod-aware wraparound for angular vars
+- **Pre-solve access** — `x~` (value before this solve) and `x~?` (existence check)
+- **New markers** — `<<-` (full-precision input), `:>` and `:>>` (persistent outputs)
+- **Undo/redo, multiple tabs, dark/light themes, Google Drive sync**
+
+**Behavior changes that affect imported PalmOS records:**
+
+- **`Now`, `Date(...)`, `Days(...)` have changed semantics.** Web `Now` is Unix seconds (since 1970); original was days since 1904. `Date(y;m;d;h;min;s)` is now a constructor; `Days(d1;d2)` is now a date-difference. Records that did arithmetic on these will produce different numbers.
+- **Trig units are now per-record.** The original was always radians (use `Degrees()`/`Radians()` to convert). The web app has a per-record `degreesMode` toggle that changes Sin/Cos/Tan interpretation directly.
+- **`{…}` is now also used for table/grid bodies.** Multi-line equations wrapped in `{…}` still parse the same, but the brace syntax is now overloaded.
+
+**Dropped from the original:**
+
+- Builtins `JDays`, `JDate`, `HMS`
+- Confirmation breakpoint suffix `?:` (the dialog that paused after solving)
+- Write-protected regions `/* … */`
+- Page-position markers `--Input--` / `--Output--` (the web app's `--Variables--` is unrelated)
+- Inline `\expr\` substitution outside of table/grid titles
+- IR beaming and the Private record flag (Drive sync replaces beaming)
 
 ## Technical Details
 
