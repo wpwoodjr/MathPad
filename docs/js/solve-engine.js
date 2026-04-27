@@ -2001,6 +2001,12 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     for (const col of columns) {
         if (col.ast) col.astVars = findVariablesInAST(col.ast);
     }
+    // Iterator names — used by per-row blanking (iterators are exempt from
+    // blanking on balance failure because they're the user's input axis) and
+    // by bodyOwnedNames below. Computed once at table init since iterators
+    // don't change between rows.
+    const iteratorNames = new Set(iterators.map(it => it.name));
+
     // Names the table body owns: iterators (set per row), plus inputs and
     // definitions (NOT inherited from the outer solve). Used by getColumnValue's
     // resolveWithLimits call to decide whether the fast path may use the
@@ -2008,8 +2014,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     // names (i.e. inherited outer values) the per-row iterator state may
     // demand a different value.
     const bodyOwnedNames = new Set([
-        ...defASTs.map(d => d.name),
-        ...iterators.map(it => it.name)
+        ...iteratorNames,
+        ...defASTs.map(d => d.name)
     ]);
 
     // Pre-evaluate body definitions needed for iterator bounds
@@ -2189,14 +2195,12 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         for (const [varName, failure] of solveResult.solveFailures) {
             badVars.add(varName);
         }
-        // Option B: blank any variable in a failing equation, regardless of
-        // whether it came from outer preSolveVars. Only iterators are exempt
-        // (otherwise the user can't tell which row failed). Outer INPUTs
-        // with limits are constrained unknowns whose previously-found root
-        // may not satisfy the per-cell iterator values; outer constants
-        // referenced by failing equations are themselves part of the failure
-        // story, so blanking them isn't misleading either.
-        const iteratorNames = new Set(iterValues.map(iv => iv.name));
+        // On balance failure, blank every variable in the failing equation
+        // except iterators. Iterators are the user's input axis — blanking
+        // them would hide which row failed. Other vars (outer INPUTs with
+        // limits, outer constants referenced by the equation) get blanked
+        // too: their currently-displayed values aren't consistent with the
+        // equation for this row, so showing them is misleading.
         const isBlankable = (name) => !iteratorNames.has(name);
 
         // Per-cell balance check: track failure separately from blanking,
