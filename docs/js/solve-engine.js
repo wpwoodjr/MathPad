@@ -238,7 +238,7 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
  * @returns {{ value, reason, errors }} reason: 'noEquation' | 'noRoot' | null.
  *     `errors` is slow-path's error list (empty on fast path / noEquation).
  */
-function resolveWithLimits(varName, decl, equations, declarations, context, record, preSolveVars, targetLineIndex) {
+function resolveWithLimits(varName, decl, equations, declarations, context, record, preSolveVars, targetLineIndex, ownDeclNames) {
     const limits = decl.limits;
 
     // Check if any equation references this variable
@@ -270,8 +270,13 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
         return `Line ${lineNum}: Could not find a value for '${varName}' in range [${lo}:${hi}] consistent with all equations`;
     }
 
-    // Fast path: main-solve value already in limits → use it
-    if (context.variables.has(varName)) {
+    // Fast path: existing context value already in limits → use it. For per-
+    // cell table re-solves, the caller passes ownDeclNames (the set of body
+    // input/definition names); fast path only applies when the target has a
+    // body decl, since otherwise the value is just inherited from the outer
+    // solve and per-row iterators may demand a different value.
+    if (context.variables.has(varName) &&
+        (!ownDeclNames || ownDeclNames.has(varName))) {
         const raw = context.variables.get(varName);
         const value = valueInLimits(raw);
         if (value !== undefined) return { value, reason: null, errors: [] };
@@ -1987,6 +1992,16 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     for (const col of columns) {
         if (col.ast) col.astVars = findVariablesInAST(col.ast);
     }
+    // Names the table body owns: iterators (set per row), plus inputs and
+    // definitions (NOT inherited from the outer solve). Used by getColumnValue's
+    // resolveWithLimits call to decide whether the fast path may use the
+    // existing context value or must re-solve per row — for non-body-owned
+    // names (i.e. inherited outer values) the per-row iterator state may
+    // demand a different value.
+    const bodyOwnedNames = new Set([
+        ...defASTs.map(d => d.name),
+        ...iterators.map(it => it.name)
+    ]);
 
     // Pre-evaluate body definitions needed for iterator bounds
     // (e.g., lastPmt: years*pmtsYr - pmtDue used in paymentNum: 0..lastPmt)
@@ -2252,7 +2267,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             if (noEquationColumns.has(col.name)) return undefined;
             const { value } = resolveWithLimits(
                 col.name, col, equations, tableDeclarations,
-                context, record, cellPreSolveVars);
+                context, record, cellPreSolveVars, undefined, bodyOwnedNames);
             return value;
         }
         return context.getVariable(col.name);

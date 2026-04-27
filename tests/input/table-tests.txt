@@ -1284,6 +1284,13 @@ table("v 8) z solves with restricted limits in table") = {
   w: z*3
   w->
 }
+
+table("v 9) no body decl, z[-10:0]-> includes outer z: still re-solves per row") = {
+  x: -1..1..0.5
+  x->
+  z->
+  z[-10:0]->
+}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1

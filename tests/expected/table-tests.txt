@@ -2751,6 +2751,13 @@ table("v 8) z solves with restricted limits in table") = {
   w->
 }
 
+table("v 9) no body decl, z[-10:0]-> includes outer z: still re-solves per row") = {
+  x: -1..1..0.5
+  x->
+  z->
+  z[-10:0]->
+}
+
 "--- Table Outputs ---"
 table "> 1) z inherits negative root from outer (1/5 solved)"
 "x"	"z"
@@ -2815,6 +2822,14 @@ table "v 8) z solves with restricted limits in table (3/5 solved)"
 0	4	8	12
 0.5			
 1			
+
+table "v 9) no body decl, z[-10:0]-> includes outer z: still re-solves per row (1/5 solved)"
+"x"	"z"	"z[-10:0]"
+-1		-3.531
+-0.5		-3.758
+0		-4
+0.5		-4.258
+1	-4.531	-4.531
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
