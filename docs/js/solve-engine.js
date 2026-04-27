@@ -2195,10 +2195,12 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         // Transitive propagation: if any variable in an equation is already
         // bad, treat the equation's other body-derived vars as bad too —
         // their values were computed from (or constrained with) a bad var.
-        // Handles cases like `x = x + 1` (fails → x bad) then `x = z` (balances
-        // trivially because z was derived from x, but z is still unreliable).
-        // Outer INPUTs and iterators aren't propagated to (their values came
-        // from the user, not from the failing solve). Repeat until stable.
+        // Same for body definitions (`w: z*3`): if z is bad, w (computed
+        // from z) is bad too. Handles cases like `x = x + 1` (fails → x bad)
+        // then `x = z` (balances trivially because z was derived from x, but
+        // z is still unreliable). Outer INPUTs and iterators aren't propagated
+        // to (their values came from the user, not from the failing solve).
+        // Repeat until stable.
         let changed = true;
         while (changed) {
             changed = false;
@@ -2212,6 +2214,16 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                     if (isBlankable(v) && !badVars.has(v)) {
                         badVars.add(v);
                         changed = true;
+                    }
+                }
+            }
+            for (const { name, ast } of defASTs) {
+                if (!ast || badVars.has(name) || !isBlankable(name)) continue;
+                for (const v of findVariablesInAST(ast)) {
+                    if (badVars.has(v)) {
+                        badVars.add(name);
+                        changed = true;
+                        break;
                     }
                 }
             }
@@ -2414,7 +2426,20 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             const row = [];
             const rawRow = [];
             for (const col of columns) {
-                if (badVars.has(col.name)) { row.push(''); rawRow.push(null); rowFullySolved = false; continue; }
+                // Limits columns (`z[0:10]->`) do their own per-cell re-solve
+                // via resolveWithLimits — that re-solve has its own success
+                // state and shouldn't be blanked by badVars on the bare name.
+                if (!col.limits && badVars.has(col.name)) { row.push(''); rawRow.push(null); rowFullySolved = false; continue; }
+                // AST columns (`z*2->`): blank if any referenced var is bad,
+                // so a failing z propagates symmetrically to expressions that
+                // would otherwise leak its value (z*2 = -9.062 → user infers z).
+                if (col.ast) {
+                    let astBad = false;
+                    for (const v of findVariablesInAST(col.ast)) {
+                        if (badVars.has(v)) { astBad = true; break; }
+                    }
+                    if (astBad) { row.push(''); rawRow.push(null); rowFullySolved = false; continue; }
+                }
                 const value = getColumnValue(col);
                 if (value !== undefined) {
                     row.push(formatVariableValue(value, col.format, col.fullPrecision, formatOpts));

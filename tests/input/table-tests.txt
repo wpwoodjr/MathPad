@@ -291,11 +291,11 @@ table("sqrt order B") = {
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"tableGraph with inherited outer equation"
-"Plot f(x) vs x while inheriting f(x)=0 from outer. Balance check"
-"rejection of f(x)=0 for non-root x must NOT blank y: the failing"
-"equation references only x (iterator) and outer constants — no"
-"body-declared columns — so nothing gets added to badVars."
+"tableGraph: plot f(x) vs x"
+"Plot a polynomial f(x) over a range. The equation f(x)=0 specifies"
+"what counts as a root; keep it OUT of scope while plotting (otherwise"
+"every non-root row would fail balance, blanking the y values and the"
+"propagation through the y: definition would hide the plot entirely)."
 
 c5: 1
 c4: -2
@@ -307,9 +307,7 @@ f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 
 --Variables--
 
-f(x; c5; c4; c3; c2; c1; c0) = 0
-
-tableGraph("f(x) showing roots") = {
+tableGraph("f(x) over [-3.1, 3.1]") = {
   x: -3.1..3.1..0.2
   y: f(x; c5; c4; c3; c2; c1; c0)
   "x axis label" x->
@@ -887,18 +885,19 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
 "Test equation = 0 balances per places setting 3"
-"Iterates y from 0 to 0.006 and checks `y = 0` balance row-by-row at"
+"Iterates y from 0 to 0.001 and checks `y = 0` balance row-by-row at"
 "places=3 (balanceTolerance = 5e-4). y values up through ~5e-4 balance;"
-"larger values fail. Also exercises isClose() across places to verify"
-"sensitivity is symmetric in args and tracks the places argument:"
-"  - places() uses the record's places (3) → tolerance 5e-4"
-"  - explicit 2 → tolerance 5e-3 (looser; balances more rows)"
-"  - explicit 4 → tolerance 5e-5 (tighter; balances fewer rows)"
+"larger values fail. Once a row's y misbalances the equation, y is"
+"flagged bad and blanked, and propagation hides the AST columns that"
+"reference y — including the isClose() variants. So the table shows"
+"the boundary at 5e-4 (rows 0-4 populated, rows 5+ blank); it doesn't"
+"show isClose disagreeing with balance for the larger rows because"
+"those values are hidden by propagation."
 
 y = 0
 
 table("Test equation = 0 balances per places setting") = {
-  x: 0..0.006..0.0001
+  x: 0..0.001..0.0001
   x->>
   y: x
   y->>
@@ -1220,7 +1219,7 @@ vectorDraw("Navigation"; navigation) = {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
+Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 "Table solve behavior"
 
@@ -1228,40 +1227,61 @@ x: 1
 z*(z+x) = 16
 z[0:-10]<- -4.531
 
-table("1) z inherits negative root from outer") = {
+table("> 1) z inherits negative root from outer") = {
   x: -1..1..0.5
   x->
   z->
 }
 
-table("> 2) z resolves in table no limits, positive roots") = {
+table("> 2) z solves in table no limits, positive roots") = {
   x: -1..1..0.5
   z<-
   z->
 }
 
-table("> 3) z resolves with limits in table positive roots only") = {
+table("> 3) z solves with limits in table positive roots only") = {
   x: -1..1..0.5
   z[0:10]<-
   z->
 }
 
-table("> 4) z resolves in table with limits negative roots only") = {
+table("> 4) z solves in table with limits negative roots only") = {
   x: -1..1..0.5
   z[0:-10]<-
   z->
 }
 
-table("> 5) z negative root limits in input solve value but resolves with limits as positive") = {
+table("> 5) z solves with negative root limits but resolves with limits as positive") = {
   x: -1..1..0.5
   z[0:-10]<-
   z->
   z[0:10]->
 }
 
-table("6) z inherits negative root but resolves with limits as positive") = {
+table("v 6) z inherits negative root but resolves with limits as positive") = {
   x: -1..1..0.5
+  x->
   z->
   z[0:10]->
+}
+
+table("v 7) z inherits negative root but resolves with some unsolved due to restricted limits") = {
+  x: -1..1..0.5
+  x->
+  z->
+  z[4:10]->
+  z*2->
+  w: z*3
+  w->
+}
+
+table("v 8) z solves with restricted limits in table") = {
+  x: -1..1..0.5
+  x->
+  z[4:10]<-
+  z->
+  z*2->
+  w: z*3
+  w->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

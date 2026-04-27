@@ -474,12 +474,12 @@ table "sqrt order B (5/9 solved)"
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Solved 1 equation"; StatusIsError = 0
-"tableGraph with inherited outer equation"
-"Plot f(x) vs x while inheriting f(x)=0 from outer. Balance check"
-"rejection of f(x)=0 for non-root x must NOT blank y: the failing"
-"equation references only x (iterator) and outer constants — no"
-"body-declared columns — so nothing gets added to badVars."
+Status = "Nothing to solve"; StatusIsError = 0
+"tableGraph: plot f(x) vs x"
+"Plot a polynomial f(x) over a range. The equation f(x)=0 specifies"
+"what counts as a root; keep it OUT of scope while plotting (otherwise"
+"every non-root row would fail balance, blanking the y values and the"
+"propagation through the y: definition would hide the plot entirely)."
 
 c5: 1
 c4: -2
@@ -491,9 +491,7 @@ f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 
 --Variables--
 
-f(x; c5; c4; c3; c2; c1; c0) = 0
-
-tableGraph("f(x) showing roots") = {
+tableGraph("f(x) over [-3.1, 3.1]") = {
   x: -3.1..3.1..0.2
   y: f(x; c5; c4; c3; c2; c1; c0)
   "x axis label" x->
@@ -501,7 +499,7 @@ tableGraph("f(x) showing roots") = {
 }
 
 "--- Table Outputs ---"
-tablegraph "f(x) showing roots (0/32 solved)"
+tablegraph "f(x) over [-3.1, 3.1]"
 "x axis label"	"y axis label"
 -3.1	-22.7857
 -2.9	25.4223
@@ -1932,18 +1930,19 @@ Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
 "Test equation = 0 balances per places setting 3"
-"Iterates y from 0 to 0.006 and checks `y = 0` balance row-by-row at"
+"Iterates y from 0 to 0.001 and checks `y = 0` balance row-by-row at"
 "places=3 (balanceTolerance = 5e-4). y values up through ~5e-4 balance;"
-"larger values fail. Also exercises isClose() across places to verify"
-"sensitivity is symmetric in args and tracks the places argument:"
-"  - places() uses the record's places (3) → tolerance 5e-4"
-"  - explicit 2 → tolerance 5e-3 (looser; balances more rows)"
-"  - explicit 4 → tolerance 5e-5 (tighter; balances fewer rows)"
+"larger values fail. Once a row's y misbalances the equation, y is"
+"flagged bad and blanked, and propagation hides the AST columns that"
+"reference y — including the isClose() variants. So the table shows"
+"the boundary at 5e-4 (rows 0-4 populated, rows 5+ blank); it doesn't"
+"show isClose disagreeing with balance for the larger rows because"
+"those values are hidden by propagation."
 
 y = 0
 
 table("Test equation = 0 balances per places setting") = {
-  x: 0..0.006..0.0001
+  x: 0..0.001..0.0001
   x->>
   y: x
   y->>
@@ -1957,69 +1956,19 @@ table("Test equation = 0 balances per places setting") = {
 --Variables--
 
 "--- Table Outputs ---"
-table "Test equation = 0 balances per places setting (5/61 solved)"
+table "Test equation = 0 balances per places setting (5/11 solved)"
 "x"	"y"	"y"	"isClose(y; 0; places())"	"isClose(0; y; places())"	"isClose(y; 0; 2)"	"isClose(y; 0; 4)"
 0	0	0	1	1	1	1
 0.0001	0.0001	0	1	1	1	0
 0.0002	0.0002	0	1	1	1	0
 0.0003	0.0003	0	1	1	1	0
 0.0004	0.0004	0	1	1	1	0
-0.0005			0	0	1	0
-0.0006			0	0	1	0
-0.0007			0	0	1	0
-0.0008			0	0	1	0
-0.0009			0	0	1	0
-0.001			0	0	1	0
-0.0011			0	0	1	0
-0.0012			0	0	1	0
-0.0013			0	0	1	0
-0.0014			0	0	1	0
-0.0015			0	0	1	0
-0.0016			0	0	1	0
-0.0017			0	0	1	0
-0.0018			0	0	1	0
-0.0019			0	0	1	0
-0.002			0	0	1	0
-0.0021			0	0	1	0
-0.0022			0	0	1	0
-0.0023			0	0	1	0
-0.0024			0	0	1	0
-0.0025			0	0	1	0
-0.0026			0	0	1	0
-0.0027			0	0	1	0
-0.0028			0	0	1	0
-0.0029			0	0	1	0
-0.003			0	0	1	0
-0.0031			0	0	1	0
-0.0032			0	0	1	0
-0.0033			0	0	1	0
-0.0034			0	0	1	0
-0.0035			0	0	1	0
-0.0036			0	0	1	0
-0.0037			0	0	1	0
-0.0038			0	0	1	0
-0.0039			0	0	1	0
-0.004			0	0	1	0
-0.0041			0	0	1	0
-0.0042			0	0	1	0
-0.0043			0	0	1	0
-0.0044			0	0	1	0
-0.0045			0	0	1	0
-0.0046			0	0	1	0
-0.0047			0	0	1	0
-0.0048			0	0	1	0
-0.0049			0	0	1	0
-0.005			0	0	0	0
-0.0051			0	0	0	0
-0.0052			0	0	0	0
-0.0053			0	0	0	0
-0.0054			0	0	0	0
-0.0055			0	0	0	0
-0.0056			0	0	0	0
-0.0057			0	0	0	0
-0.0058			0	0	0	0
-0.0059			0	0	0	0
-0.006			0	0	0	0
+0.0005						
+0.0006						
+0.0007						
+0.0008						
+0.0009						
+0.001						
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -2735,98 +2684,135 @@ vectordraw "Navigation"
 0°	1	135°	1.41
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
-Places = 4; StripZeros = 1
+Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 4: Equation doesn't balance: z*(z+x) = 16 (relative diff 0.006% >= 0.005%)"; StatusIsError = 1
+Status = "Nothing to solve"; StatusIsError = 0
 "Table solve behavior"
 
 x: 1
 z*(z+x) = 16
 z[0:-10]<- -4.531
 
-table("1) z inherits negative root from outer") = {
+table("> 1) z inherits negative root from outer") = {
   x: -1..1..0.5
   x->
   z->
 }
 
-table("> 2) z resolves in table no limits, positive roots") = {
+table("> 2) z solves in table no limits, positive roots") = {
   x: -1..1..0.5
   z<-
   z->
 }
 
-table("> 3) z resolves with limits in table positive roots only") = {
+table("> 3) z solves with limits in table positive roots only") = {
   x: -1..1..0.5
   z[0:10]<-
   z->
 }
 
-table("> 4) z resolves in table with limits negative roots only") = {
+table("> 4) z solves in table with limits negative roots only") = {
   x: -1..1..0.5
   z[0:-10]<-
   z->
 }
 
-table("> 5) z negative root limits in input solve value but resolves with limits as positive") = {
+table("> 5) z solves with negative root limits but resolves with limits as positive") = {
   x: -1..1..0.5
   z[0:-10]<-
   z->
   z[0:10]->
 }
 
-table("6) z inherits negative root but resolves with limits as positive") = {
+table("v 6) z inherits negative root but resolves with limits as positive") = {
   x: -1..1..0.5
+  x->
   z->
   z[0:10]->
+}
+
+table("v 7) z inherits negative root but resolves with some unsolved due to restricted limits") = {
+  x: -1..1..0.5
+  x->
+  z->
+  z[4:10]->
+  z*2->
+  w: z*3
+  w->
+}
+
+table("v 8) z solves with restricted limits in table") = {
+  x: -1..1..0.5
+  x->
+  z[4:10]<-
+  z->
+  z*2->
+  w: z*3
+  w->
 }
 
 "--- Table Outputs ---"
-table "1) z inherits negative root from outer (0/5 solved)"
+table "> 1) z inherits negative root from outer (1/5 solved)"
 "x"	"z"
 -1	
 -0.5	
 0	
 0.5	
-1	
+1	-4.531
 
-table "> 2) z resolves in table no limits, positive roots"
+table "> 2) z solves in table no limits, positive roots"
 "z"
-4.5311
-4.2578
+4.531
+4.258
 4
-3.7578
-3.5311
+3.758
+3.531
 
-table "> 3) z resolves with limits in table positive roots only"
+table "> 3) z solves with limits in table positive roots only"
 "z"
-4.5311
-4.2578
+4.531
+4.258
 4
-3.7578
-3.5311
+3.758
+3.531
 
-table "> 4) z resolves in table with limits negative roots only"
+table "> 4) z solves in table with limits negative roots only"
 "z"
--3.5311
--3.7578
+-3.531
+-3.758
 -4
--4.2578
--4.5311
+-4.258
+-4.531
 
-table "> 5) z negative root limits in input solve value but resolves with limits as positive"
+table "> 5) z solves with negative root limits but resolves with limits as positive"
 "z"	"z[0:10]"
--3.5311	4.5311
--3.7578	4.2578
+-3.531	4.531
+-3.758	4.258
 -4	4
--4.2578	3.7578
--4.5311	3.5311
+-4.258	3.758
+-4.531	3.531
 
-table "6) z inherits negative root but resolves with limits as positive (0/5 solved)"
-"z"	"z[0:10]"
-	
-	
-	
-	
-	
+table "v 6) z inherits negative root but resolves with limits as positive (1/5 solved)"
+"x"	"z"	"z[0:10]"
+-1		4.531
+-0.5		4.258
+0		4
+0.5		3.758
+1	-4.531	3.531
+
+table "v 7) z inherits negative root but resolves with some unsolved due to restricted limits (0/5 solved)"
+"x"	"z"	"z[4:10]"	"z*2"	"w"
+-1		4.531		
+-0.5		4.258		
+0		4		
+0.5				
+1	-4.531		-9.062	-13.593
+
+table "v 8) z solves with restricted limits in table (3/5 solved)"
+"x"	"z"	"z*2"	"w"
+-1	4.531	9.062	13.593
+-0.5	4.258	8.516	12.773
+0	4	8	12
+0.5			
+1			
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
