@@ -1967,16 +1967,25 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     const equations = bodyEqs.equations.length > 0 ? bodyEqs.equations : (outerEquations || []);
     preParseEquations(equations); // no-op if outer equations already parsed
 
-    // Pre-parse definition expressions
+    // Pre-parse definition expressions and cache each one's referenced var
+    // names — the badVars propagation loop walks defASTs once per fixpoint
+    // pass per row, and findVariablesInAST allocates a fresh Set every call.
     const defASTs = [];
     for (const def of definitions) {
-        if (!def.exprText) { defASTs.push({ name: def.name, ast: null }); continue; }
-        try { defASTs.push({ name: def.name, ast: parseExpression(def.exprText.trim()) }); }
-        catch (e) { defASTs.push({ name: def.name, ast: null }); }
+        if (!def.exprText) { defASTs.push({ name: def.name, ast: null, vars: null }); continue; }
+        try {
+            const ast = parseExpression(def.exprText.trim());
+            defASTs.push({ name: def.name, ast, vars: findVariablesInAST(ast) });
+        }
+        catch (e) { defASTs.push({ name: def.name, ast: null, vars: null }); }
     }
     // Add unknowns as bare entries (no AST)
     for (const unk of unknowns) {
-        defASTs.push({ name: unk.name, ast: null });
+        defASTs.push({ name: unk.name, ast: null, vars: null });
+    }
+    // Same for AST output columns — findVariablesInAST is hit per row.
+    for (const col of columns) {
+        if (col.ast) col.astVars = findVariablesInAST(col.ast);
     }
 
     // Pre-evaluate body definitions needed for iterator bounds
@@ -2215,9 +2224,9 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                     }
                 }
             }
-            for (const { name, ast } of defASTs) {
-                if (!ast || badVars.has(name) || !isBlankable(name)) continue;
-                for (const v of findVariablesInAST(ast)) {
+            for (const { name, vars } of defASTs) {
+                if (!vars || badVars.has(name) || !isBlankable(name)) continue;
+                for (const v of vars) {
                     if (badVars.has(v)) {
                         badVars.add(name);
                         changed = true;
@@ -2433,7 +2442,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                 // would otherwise leak its value (z*2 = -9.062 → user infers z).
                 if (col.ast) {
                     let astBad = false;
-                    for (const v of findVariablesInAST(col.ast)) {
+                    for (const v of col.astVars) {
                         if (badVars.has(v)) { astBad = true; break; }
                     }
                     if (astBad) { row.push(''); rawRow.push(null); rowFullySolved = false; continue; }
