@@ -58,20 +58,20 @@ const DEFAULT_SETTINGS_RECORD = {
  * Default data structure
  */
 function createDefaultData() {
-    // Generate Retirement record ID first so we can set it as the initial record
-    const retirementRecordId = generateId();
+    // Generate Loan record ID first so we can set it as the initial record
+    const loanRecordId = generateId();
 
-    return {
+    return backfillRecordTimestamps({
         version: STORAGE_VERSION,
         records: [
             {
-                id: retirementRecordId,
+                id: generateId(),
                 title: 'Example: Retirement Calculator',
                 text: `"Retirement Calculator"
 
 --Functions--
 "Time Value of Money"
-pmt(pv; rate; n; fv) = (pv - fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+pmt2(pv; rate; n; fv) = (pv - fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 
 "Total accumulation of a rate applied to a balance which increases by gain% every period"
 {
@@ -95,47 +95,47 @@ year1 = pv * pmtRate / 12
 yearN = pv * (1 + gain)**(years - 1) * pmtRate / 12
 
 "Fixed payments"
-fixedPmt = pmt(pv; return - fees; years; fv) / 12
+fixedPmt = pmt2(pv; return - fees; years; fv) / 12
 totFPmt = fixedPmt * years * 12
 totFFees = fees(pv; fv; totFPmt; return; fees)
 
 --Variables--
 "*Calculates fixed or variable monthly retirement withdrawals"
-"Enter present value, years, gain (or future value), fees, and return; then click the Solve button.  Correct orange results by pressing \u27F2 next to one of the orange values."
+"Enter present value, years, gain (or future value), fees, and annual return; then click the Solve button.  Correct orange results by pressing \u27F2 next to one of the orange values."
 
 
 
 "Present value of retirement account(s):"
-      pv $<- $1,000,000
+pv $<- $1,000,000
 
 "Life expectancy:"
-   years <- 20
+years <- 20
 
 "Enter net annual account(s) gain or future value:"
-    gain %<- 2%
-      fv $<-
+gain %<- 1%
+fv $<-
 
 
 "Annual management fees (percentage):"
-    fees %<- 0.5%
+fees %<- 0.65%
 
 "Total expected annual return:"
-  return %<- 6%
+return %<- 6.65%
 
 
 "*Variable payments (grows with balance each year)"
 
 "Payment rate:"
- pmtRate %<-
+pmtRate %<- 5%
 
 "First year monthly payments:"
-   year1 $->
+year1 $->
 
 "Last year monthly payments:"
-   yearN $->
+yearN $->
 
 "Total of variable payments:"
- totVPmt $->
+totVPmt $->
 
 "Total fees paid:"
 totVFees $->
@@ -147,7 +147,7 @@ totVFees $->
 fixedPmt $->
 
 "Total of fixed payments"
- totFPmt $->
+totFPmt $->
 
 "Total fees paid"
 totFFees $->
@@ -164,63 +164,107 @@ totFFees $->
 
             },
             {
-                id: generateId(),
-                title: 'Example: TVM',
-                text: `"Loan calculator with tables"
+                id: loanRecordId,
+                title: 'Example: Loan Calculator',
+                text: `"Loan calculator"
 
---Formulas--
-pmt(pv; fv; rate; n; pmtDue) = -(pv + fv/(1 + rate)**n)*rate / ((1 - (1 + rate)**-n)*(1 + rate)**pmtDue)
+--Functions--
+pmt2(pv; fv; rate; n; pmtDue) = -(pv + fv/(1 + rate)**n)*rate / ((1 - (1 + rate)**-n)*(1 + rate)**pmtDue)
 
 --Equations--
-pmt = pmt(pv; fv; r; years*pmtsYr; pmtDue)
-// r<- vs r: vs r = vs no r
+// these variables never get orange highlighting because they are "solved" here
+pmtDue = pmtDue
+cmpndsYr = cmpndsYr
+pmtsYr = pmtsYr
+
+// r is substituted into later equations
 r = (1 + rate/cmpndsYr)**(cmpndsYr/pmtsYr) - 1
 
+// all vars below may get orange highlighting (except r which is not an input var)
+pmt = pmt2(pv; fv; r; years*pmtsYr; pmtDue)
+pmt + extraPmt = pmt2(pv; fv; r; actYears*pmtsYr; pmtDue)
+
+--Hidden Variables--
+lastPmt: round(actYears*pmtsYr - pmtDue)
+totPmt: pmt + extraPmt
+begin: 1
+end: 0
+
+// Begin variables (top) panel
 --Variables--
-"*Enter all but one values, then click solve"
+"*Update values, then click solve or the solve ⟲ icon next to a highlighted variable"
+"For example, set Present Value to $200,000 and press the solve ⟲ icon next to Payment"
 
-pv $: $100,000     "present value (loan or annuity)"
-fv $: $0           "future value (balloon payment)"
-rate %: 6.125%     "annual interest rate %"
-years : 30         "number of years"
-pmtsYr: 12         "payments per year"
-cmpndsYr: 12       "compounds per year"
-pmt $:             "payment"
-pmtDue: 0          "pmt due - 0 end of period, 1 begin period"
+Present Value pv $: $100,000
+Future Value fv $: $0              "(balloon payment)"
+Annual Rate rate %: 6.125%
+Years years : 30
+Payment pmt $:
 
----
 
-table("> Amortization Schedule for \\years\\ year(s) at \\rate%\\") = {
-  lastPmt: years*pmtsYr - pmtDue
-  paymentNum: 0..lastPmt
-  interest: if(paymentNum == 0; 0; round(-balance~ * r; 2)) // round to cents
-  principal: if(paymentNum == 0; pmtDue*pmt; if(paymentNum == lastPmt; -balance~; pmt - interest))
-  balance: if(paymentNum == 0; pv + pmtDue*pmt; balance~ + principal)
-  year: floor((paymentNum - 1)/pmtsYr) + 1
+Extra Payment extraPmt $: $0        "Extra principal payment per period"
+Actual Years actYears : years            "Actual years given extra principal payment"
+
+
+Payments/Year pmtsYr: 12
+Compounds/Year cmpndsYr: pmtsYr          "generally equals payments/year"
+Annuity Due pmtDue[0..1]: end            "end or begin of period"
+
+
+
+"*Graphs and tables"
+
+tableGraph("v Balance over \\actYears\\ year(s) at \\rate%\\, payment = \\pmt$\\, extra payment = \\extraPmt$\\") = {
+  pmtNum: 0..lastPmt
+  interest: if(pmtNum == 0; 0; round(-balance~ * r; 2)) // round to cents
+  totInterest: if(pmtNum == 0; 0; totInterest~ + interest)
+  principal: if(pmtNum == 0; pmtDue*totPmt; if(pmtNum == lastPmt; -balance~; totPmt - interest))
+  balance: if(pmtNum == 0; pv + pmtDue*totPmt; balance~ + principal)
+  year: (pmtNum)/pmtsYr
+  "Year" year->
+  "Principal Balance" balance$->
+  "Total Interest" -totInterest$->
+}
+
+
+
+grid("v Payment for \\pv$\\ loan at various rates and loan lengths") = {
+  // need to repeat equations to remove dependence on extra payments
+  pmt = pmt2(pv; fv; r; years*pmtsYr; pmtDue)
+  r = (1 + rate/cmpndsYr)**(cmpndsYr/pmtsYr) - 1
+  rate: rate-0.5%..rate+0.5%..0.0625%
+  years: 5..30..5
+  pmt<-
+  Rate rate%->
+  Years years->
+  Payment pmt$->
+}
+
+
+
+table("v Amortization Schedule for \\actYears\\ year(s) at \\rate%\\, extra payment = \\extraPmt$\\") = {
+  pmtNum: 0..lastPmt
+  interest: if(pmtNum == 0; 0; round(-balance~ * r; 2)) // round to cents
+  totInterest: if(pmtNum == 0; 0; totInterest~ + interest)
+  principal: if(pmtNum == 0; pmtDue*totPmt; if(pmtNum == lastPmt; -balance~; totPmt - interest))
+  balance: if(pmtNum == 0; pv + pmtDue*totPmt; balance~ + principal)
+  year: floor((pmtNum - 1)/pmtsYr) + 1
   payment: principal + interest
 
-  "Pmt#" paymentNum->
+  "Pmt#" pmtNum->
   "Year" year->
   "Payment" payment$->
   "Principal" principal$->
   "Interest" interest$->
   "Balance" balance$->
+  "Total Interest" totInterest$->
 }
 
-
----
-
-grid("v Payment for \\pv$\\ loan at various rates and loan lengths") = {
-  rate: rate-0.5%..rate+0.5%..0.0625%
-  years: 5..30..5
-  pmt<-
-  rate%->
-  years->
-  pmt$->
-}
+"*Notes:"
+"Values that are interdependent may appear orange after solving.  This indicates that one of them must be adjusted to balance with the others.  Click ⟲ next to an orange value to adjust it.  All green means all values are balanced."
 `,
                 category: 'Finance',
-                places: 2,
+                places: 4,
                 stripZeros: true,
                 groupDigits: false,
                 format: 'float',
@@ -292,32 +336,35 @@ x2 = (-b - sqrt(disc)) / (2*a)
                 title: 'Example: Fifth Degree Polynomial',
                 text: `"Fifth degree polynomial"
 
+Coefficients
 c5: 1
 c4: -2
 c3: -10
 c2: 20
 c1: 9
 c0: -14
+
+Polynomial function
 f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 
 --Variables--
+
 "*Press Solve to find all 5 roots and graph the function"
 
-
+Root-finding equation to be solved
 f(x; c5; c4; c3; c2; c1; c0) = 0
 
-x->
-
-x[2:2.5]->                    "search for solution in range 2 to 2.5"
-
-x[2.5:3]->                    "-> solves to record's default precision"
-
-x[-1:0]->>                    "->> provides full precision"
-
+Roots
+x->                           "Default root near zero"
+x[2:2.5]->                    "Search for root in range 2 to 2.5"
+x[2.5:3]->                    "-> Solves to record's default precision"
+x[-1:0]->>                    "->> Shows full precision"
 x[-4:-2]->
 
 tableGraph("f(x) showing roots") = {
   x: -3.1..3.1..0.2
+  // this equation overrides the root-finding one above in the main body
+  // otherwise there would be solve failures when f(x) != 0
   y = f(x; c5; c4; c3; c2; c1; c0)
   "x axis label" x->
   "y axis label" y->
@@ -451,9 +498,9 @@ disc(a;b;c) = b**2 - 4*a*c`,
         ],
         categories: ['Unfiled', 'Finance', 'Math', 'Science', 'Reference', 'Personal'],
         settings: {
-            lastRecordId: retirementRecordId
+            lastRecordId: loanRecordId
         }
-    };
+    });
 }
 
 /**

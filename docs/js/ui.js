@@ -612,9 +612,16 @@ function restoreDividerHeight(recordId) {
         const header = variablesPanel.querySelector('.variables-header');
         const headerHeight = header ? header.offsetHeight : 0;
         const contentHeight = (table ? table.scrollHeight : 0) + headerHeight;
+        // Tables/grids/vectorDraws render only after the first solve, so on
+        // first open contentHeight only covers the variable rows. If the
+        // record has table definitions, leave 100px of headroom so some of
+        // the eventually-rendered table peeks below the variables instead of
+        // sitting flush at the divider.
+        const tableDefs = findTableDefinitions(record.text, editorInfo.editor.parserTokens);
+        const extra = (tableDefs && tableDefs.length > 0) ? 100 : 0;
         const minHeight = containerHeight * 0.25;
         const maxHeight = containerHeight * 0.75;
-        const fitHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight));
+        const fitHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight + extra));
         variablesPanel.style.height = fitHeight + 'px';
         record.dividerHeight = fitHeight;
         debouncedSave(UI.data);
@@ -1425,9 +1432,11 @@ function handleReset() {
         renderTabBar();
         renderDetailsPanel();
 
-        // Open the first record
+        // Open the default record (lastRecordId set by createDefaultData), or the first one
         if (UI.data.records.length > 0) {
-            openRecord(UI.data.records[0].id);
+            const defaultId = UI.data.settings && UI.data.settings.lastRecordId;
+            const initialId = (defaultId && findRecord(UI.data, defaultId)) ? defaultId : UI.data.records[0].id;
+            openRecord(initialId);
         }
 
         setStatus('Reset to default records', false, false);
