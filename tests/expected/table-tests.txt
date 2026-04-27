@@ -2816,3 +2816,34 @@ table "v 8) z solves with restricted limits in table (3/5 solved)"
 0.5			
 1			
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Nothing to solve"; StatusIsError = 0
+"Independent equations stay independent under per-cell blanking"
+"z is solved by `z = 4` (always succeeds). The second equation `2*x = 2`"
+"only balances at x=1 — for other rows it fails balance, but it shares"
+"no variables with z's equation. z stays populated for all rows; the"
+"(N/M solved) indicator honestly reports that only x=1 had everything"
+"balance. Earlier the for-unknowns loop in Option B blanked ALL body"
+"unknowns whenever ANY eq failed, hiding z too; the propagation loop"
+"now does the right thing by only chaining through shared variables."
+
+table("Independent unknown vs failing iterator-only eq") = {
+  x: -1..1..0.5
+  x->
+  z<-
+  z = 4
+  2*x = 2
+  z->
+}
+
+"--- Table Outputs ---"
+table "Independent unknown vs failing iterator-only eq (1/5 solved)"
+"x"	"z"
+-1	4
+-0.5	4
+0	4
+0.5	4
+1	4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

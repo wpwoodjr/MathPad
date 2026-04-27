@@ -1979,8 +1979,6 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         defASTs.push({ name: unk.name, ast: null });
     }
 
-    const defNames = new Set(defASTs.filter(d => d.ast).map(d => d.name));
-
     // Pre-evaluate body definitions needed for iterator bounds
     // (e.g., lastPmt: years*pmtsYr - pmtDue used in paymentNum: 0..lastPmt)
     for (const { name, ast } of defASTs) {
@@ -2172,8 +2170,9 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         // because a row can fail balance without any var to blame (e.g. the
         // user's outer INPUTs and the iterator together don't satisfy an
         // equation). The row still counts as unsolved — we just don't hide
-        // any column. When there IS a body-derived var in the failing eq,
-        // blank it (and body unknowns).
+        // any column. Vars in the failing equation get blanked (except
+        // iterators); the propagation loop below transitively reaches
+        // unknowns connected through shared variables.
         let balanceFailed = false;
         for (const beq of balanceEquations) {
             try {
@@ -2185,7 +2184,6 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                     : checkBalance(leftVal, rightVal, balancePlaces);
                 if (!result.balanced) {
                     balanceFailed = true;
-                    for (const unk of unknowns) badVars.add(unk.name);
                     for (const v of beq.eqVars) {
                         if (isBlankable(v)) badVars.add(v);
                     }
