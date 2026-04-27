@@ -1705,7 +1705,16 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
     const declarations = discovery.declarations;
     const errors = [...(context.functionErrors || []), ...discovery.errors];
 
-    // Save pre-solve variable state for tables (user declarations only)
+    // Save pre-solve variable state for tables. Captured BEFORE the outer
+    // equation solve so that equation-solved intermediates (e.g. `adjTemp`
+    // falling out of a chain of equations, or any unknown Brent's resolves
+    // for an OUTPUT decl) do NOT leak into the per-cell context — those are
+    // outer-iteration-specific and would be stale if the table iterates a
+    // var they depend on. Tables get only outer's input decls (`v: 5`,
+    // `v<- 5`, etc.); input decls with expression values (`v: x*2`) get
+    // synced back below after solveEquations evaluates them. This matches
+    // the design rule: input decls are constraints inherited by tables;
+    // intermediates and OUTPUT-decl results are not.
     const preSolveVars = new Map(context.variables);
 
     // Trace discovered variables (grouped by whether they have a known value)
