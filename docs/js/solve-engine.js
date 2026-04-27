@@ -20,34 +20,8 @@ function buildVariablesMap(declarations) {
     return map;
 }
 
-/**
- * Find variables in an AST
- */
-function findVariablesInAST(node) {
-    const vars = new Set();
-
-    function walk(n) {
-        if (!n) return;
-        switch (n.type) {
-            case 'VARIABLE':
-                vars.add(n.name);
-                break;
-            case 'BINARY_OP':
-                walk(n.left);
-                walk(n.right);
-                break;
-            case 'UNARY_OP':
-                walk(n.operand);
-                break;
-            case 'FUNCTION_CALL':
-                n.args.forEach(walk);
-                break;
-        }
-    }
-
-    walk(node);
-    return vars;
-}
+// findVariablesInAST is provided by solver.js (loaded earlier in index.html;
+// re-exported via tests/run-tests.js for Node) — no local copy needed here.
 
 /**
  * Pre-parse equation ASTs onto equation objects (call once, reuse everywhere)

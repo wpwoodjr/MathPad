@@ -776,7 +776,7 @@ function detectCycle(variable, directDeps, dependencies) {
 }
 
 /**
- * Find variables in an AST (local copy for solver module)
+ * Find variables in an AST
  */
 function findVariablesInAST(node) {
     const vars = new Set();

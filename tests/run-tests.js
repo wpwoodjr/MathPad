@@ -74,6 +74,7 @@ function loadModules() {
     global.SolverError = solver.SolverError;
     global.brent = solver.brent;
     global.solveEquation = solver.solveEquation;
+    global.findVariablesInAST = solver.findVariablesInAST;
     global.isDefinitionEquation = solver.isDefinitionEquation;
     global.deriveSubstitution = solver.deriveSubstitution;
     global.buildSubstitutionMap = solver.buildSubstitutionMap;
