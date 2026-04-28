@@ -1248,6 +1248,52 @@ class VariablesPanel {
         const groupingIdxSet = new Set(groupingCols.map(g => g.colIdx));
         const ySeriesCols = yCols.filter(c => !groupingIdxSet.has(c));
 
+        // Auto-promote a Y-series column to grouping when it cycles in lockstep
+        // with an inner iterator that has no output of its own. Example:
+        // `nHours: 1..4..0.25` (no `nHours->`) + `hours = nHours*3600` +
+        // `Hours hours@t->` — `hours` isn't an iterator name, but its values
+        // form the same regular grid as `nHours`, so it should drive grouping
+        // instead of being plotted as a Y-series. Only triggers when no name-
+        // based grouping was found, exactly one column qualifies, and at least
+        // one Y-series remains.
+        if (groupingCols.length === 0 && ySeriesCols.length >= 2 && table.rawRows.length > 0) {
+            const xGroups = new Map();
+            for (const row of table.rawRows) {
+                const x = row[xCol];
+                if (!xGroups.has(x)) xGroups.set(x, []);
+                xGroups.get(x).push(row);
+            }
+            const xKeys = [...xGroups.keys()];
+            if (xKeys.length > 1) {
+                const candidates = [];
+                for (const yc of ySeriesCols) {
+                    const sets = xKeys.map(x =>
+                        new Set(xGroups.get(x).map(r => r[yc]).filter(v => v != null && isFinite(v)))
+                    );
+                    if (sets[0].size < 2) continue;
+                    const ref = sets[0];
+                    const same = sets.every(s => s.size === ref.size && [...s].every(v => ref.has(v)));
+                    if (same) candidates.push(yc);
+                }
+                if (candidates.length === 1) {
+                    const yc = candidates[0];
+                    groupingCols.push({ colIdx: yc, col: table.columns[yc] });
+                    groupingIdxSet.add(yc);
+                    ySeriesCols.splice(ySeriesCols.indexOf(yc), 1);
+                }
+            }
+        }
+
+        // Compact legend (matches gridGraph) when there's exactly one grouping
+        // column and one Y series: render the column header as a bold prefix
+        // ("Watts:") and each line label is just the value ("0", "50", ...).
+        // Multi-grouping or multi-Y-series stays explicit ("Watts = 0, R = 1.4").
+        const compactLegend = groupingCols.length === 1 && ySeriesCols.length === 1;
+        let legendPrefix = '';
+        if (compactLegend) {
+            legendPrefix = groupingCols[0].col.header || groupingCols[0].col.name;
+        }
+
         const lines = [];
         if (groupingCols.length > 0 && ySeriesCols.length > 0) {
             const groups = new Map();
@@ -1265,7 +1311,7 @@ class VariablesPanel {
                     const formatted = v != null && isFinite(v)
                         ? formatVariableValue(v, g.col.format, g.col.fullPrecision, fmt)
                         : String(v);
-                    return `${header} = ${formatted}`;
+                    return compactLegend ? formatted : `${header} = ${formatted}`;
                 }).join(', ');
                 for (const yc of ySeriesCols) {
                     const yColName = table.columns[yc].header || table.columns[yc].name;
@@ -1304,12 +1350,14 @@ class VariablesPanel {
         let plotW = width - margin.left - margin.right;
         let plotH = height - margin.top - margin.bottom;
 
-        // Data range across all y columns
+        // Data range across Y-series columns only — grouping columns hold
+        // iterator values (one line per group), not points to plot, so their
+        // range shouldn't stretch the y-axis.
         let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
         for (const row of table.rawRows) {
             const x = row[xCol];
             if (x != null && isFinite(x)) { if (x < xMin) xMin = x; if (x > xMax) xMax = x; }
-            for (const yc of yCols) {
+            for (const yc of ySeriesCols) {
                 const y = row[yc];
                 if (y != null && isFinite(y)) { if (y < yMin) yMin = y; if (y > yMax) yMax = y; }
             }
@@ -1343,11 +1391,21 @@ class VariablesPanel {
             let legendY = 20;
             const legendLineHeight = 16;
             const legendMaxX = width - margin.right;
+            if (legendPrefix) {
+                const text = document.createElementNS(ns, 'text');
+                text.setAttribute('x', legendX); text.setAttribute('y', legendY);
+                text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '11');
+                text.setAttribute('font-weight', 'bold');
+                text.textContent = legendPrefix + ':';
+                svg.appendChild(text);
+                legendX += legendPrefix.length * 7 + 10;
+            }
+            const legendIndent = legendX;
             for (let i = 0; i < lines.length; i++) {
                 const label = lines[i].label;
                 const itemWidth = label.length * 6 + 25;
-                if (legendX + itemWidth > legendMaxX && legendX > margin.left) {
-                    legendX = margin.left;
+                if (legendX + itemWidth > legendMaxX && legendX > legendIndent) {
+                    legendX = legendIndent;
                     legendY += legendLineHeight;
                 }
                 const color = colors[i % colors.length];

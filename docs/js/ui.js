@@ -89,7 +89,11 @@ function initUI(data) {
                 openRecord(lastRecordId);
             }
         } else {
-            openRecord(data.records[0].id);
+            // No saved tabs — open lastRecordId if valid (set by
+            // createDefaultData on fresh installs), else first record.
+            const initialId = (lastRecordId && findRecord(data, lastRecordId))
+                ? lastRecordId : data.records[0].id;
+            openRecord(initialId);
         }
     }
 
@@ -497,7 +501,9 @@ function createEditorForRecord(record) {
                 const stripped = stripStaleSections(value);
                 if (stripped !== value) {
                     editor.saveToHistoryNow();
-                    editor.setValue(stripped, false);
+                    // Leave a single trailing newline so the cursor doesn't
+                    // jump up against the now-removed section's marker.
+                    editor.setValue(stripped.trimEnd() + '\n', false);
                 }
                 variablesManager.setTableData(null);
                 // Cache cleared state so redo restores it correctly

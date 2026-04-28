@@ -280,12 +280,9 @@ table("v Amortization Schedule for \\actYears\\ year(s) at \\rate%\\, extra paym
 --Variables--
 "*Press Solve to solve the equation. Try different values for a, b, and c."
 
-a: 1
-b: -5
-c: 6
-disc->
-x1->
-x2->
+a: -1
+b: 6
+c: 4
 
 
 "*Here are the equations:"
@@ -293,6 +290,18 @@ x2->
 disc = b**2 - 4*a*c
 x1 = (-b + sqrt(disc)) / (2*a)
 x2 = (-b - sqrt(disc)) / (2*a)
+
+disc->
+x1->
+x2->
+
+
+tableGraph("Quadratic equation \\a\\*x^2 + \\b\\x + \\c\\") = {
+  x: min(x1; x2)-1..max(x1; x2)+1..0.1
+  y: a*x**2 + b*x + c
+  x->
+  y->
+}
 `,
                 category: 'Math',
                 places: 2,
@@ -385,10 +394,34 @@ tableGraph("f(x) showing roots") = {
 v = i*r
 w = v*i
 
-v: 40       "volts"
-i: 5        "amps"
+--Variables--
+"*Enter any two then press solve for the other two"
+
+
+v:          "volts"
+i:          "amps"
 r: 8        "ohms"
-w: 200      "watts"`,
+w: 200      "watts"
+
+tableGraph("v Watts vs amps at typical speaker resistances") = {
+  r: 2..10..2
+  w: 20..400..10
+  v<-
+  i<-
+  Watts w->
+  Ohms r->
+  Amps i->
+}
+tableGraph("v Watts vs volts at typical speaker resistances") = {
+  r: 2..10..2
+  w: 20..400..10
+  v<-
+  i<-
+  Watts w->
+  Ohms r->
+  Volts v->
+}
+`,
                 category: 'Science',
                 places: 2,
                 stripZeros: true,

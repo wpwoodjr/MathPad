@@ -1417,3 +1417,68 @@ table("z[0:100] doesn't re-solve when body has y<- alongside") = {
   x + y**3->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+"Iterator bounds reject NaN and Infinity"
+"NaN comes from 0/0; Infinity from 1/0. Both should produce a clear"
+"'bounds must be finite' error and skip the table rather than try to"
+"iterate (which would either spin forever or silently produce nothing)."
+
+zero: 0
+one: 1
+
+table("NaN start (0/0)") = {
+  x: zero/zero..5
+  x->
+}
+
+table("Infinity end (1/0)") = {
+  x: 0..one/zero
+  x->
+}
+
+table("NaN step (0/0)") = {
+  x: 0..5..zero/zero
+  x->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 1; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+"tableGraph and gridGraph emit equivalent data for 2 iterators"
+"Same body, two renderers. Both should produce R values across (i, w)."
+""
+"Regression for: tableGraph y-axis was being driven by the grouping"
+"column's range (Watts: 0..400) instead of just the Y-series (R: 0..11.1)."
+"That was an SVG-rendering bug not visible in this text output, but the"
+"raw data should be the same — gridGraph already restricts y-range to"
+"cell values, tableGraph now restricts y-range to ySeriesCols only."
+
+v = i*r
+w = v*i
+
+v<- 1.2
+i<- 1
+r<- 1.2
+w<- 1.2
+
+tableGraph("v table Watts given I and R") = {
+  i: 6..10..0.5
+  w: 0..400..50
+  v<-
+  r<-
+  I i->
+  Watts w->
+  R r->
+}
+gridGraph("v table Watts given I and R") = {
+  i: 6..10..0.5
+  w: 0..400..50
+  v<-
+  r<-
+  I i->
+  Watts w->
+  R r->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -2019,6 +2019,10 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                 errors.push(`Line ${tableDef.startLine}: Table step cannot be zero for '${iter.name}'`);
                 return emptyResult();
             }
+            if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isFinite(step)) {
+                errors.push(`Line ${tableDef.startLine}: Table bounds for '${iter.name}' must be finite (got start=${start}, end=${end}, step=${step})`);
+                return emptyResult();
+            }
             evaledIterators.push({ ...iter, start, end, step });
         } catch (e) {
             errors.push(`Line ${tableDef.startLine}: Table bounds error for '${iter.name}' — ${e.message}`);
