@@ -1128,6 +1128,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     // Check equation balance and build highlighting status
     const equationVarStatus = new Map();
     let firstFailedEq = null;
+    let balancedAny = false;  // any equation we could actually balance-check (and that balanced)
     const definitionDeps = new Map(); // undeclared var → RHS vars (for highlighting expansion)
     for (const eq of equations) {
         try {
@@ -1179,6 +1180,8 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                         errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (absolute diff ${diff} >= ${result.tolerance})`);
                     }
                     if (!firstFailedEq) firstFailedEq = eq;
+                } else {
+                    balancedAny = true;
                 }
             }
         } catch (e) {
@@ -1218,7 +1221,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 equationVarStatus.set(v, 'unsolved');
             }
         }
-    } else {
+    } else if (balancedAny) {
+        // Only mark vars green when at least one equation actually balanced.
+        // Without this, a record like Ohm's Law with one input filled in
+        // (rest blank) would skip all balance checks (every equation has
+        // unknowns) and falsely paint everything green.
         for (const eq of equations) {
             if (!eq.leftAST || !eq.rightAST) continue;
             for (const v of expandVars(eq.allVars)) {

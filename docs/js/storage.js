@@ -403,6 +403,11 @@ i:          "amps"
 r: 8        "ohms"
 w: 200      "watts"
 
+
+
+
+"*Graphs "
+
 tableGraph("v Watts vs amps at typical speaker resistances") = {
   r: 2..10..2
   w: 20..400..10
@@ -412,6 +417,7 @@ tableGraph("v Watts vs amps at typical speaker resistances") = {
   Ohms r->
   Amps i->
 }
+
 tableGraph("v Watts vs volts at typical speaker resistances") = {
   r: 2..10..2
   w: 20..400..10
