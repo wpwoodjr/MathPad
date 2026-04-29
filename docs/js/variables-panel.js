@@ -888,7 +888,15 @@ class VariablesPanel {
             'grid': 'gridGraph',
             'gridgraph': 'grid',
         }[(table.keyword || '').toLowerCase()];
-        if (swapTarget && this.editor && table.startLine != null) {
+        // Hide the swap-to-graph toggle when the data wouldn't make a useful
+        // line graph (need ≥2 X-axis points). Always allow swap-to-data.
+        let allowSwap = swapTarget && this.editor && table.startLine != null;
+        if (allowSwap && swapTarget === 'tableGraph') {
+            allowSwap = (table.rows && table.rows.length >= 2);
+        } else if (allowSwap && swapTarget === 'gridGraph') {
+            allowSwap = (table.rowValues && table.rowValues.length >= 2);
+        }
+        if (allowSwap) {
             const toggleBtn = document.createElement('span');
             toggleBtn.className = 'table-view-toggle';
             const targetLabel = swapTarget.endsWith('Graph')
