@@ -438,6 +438,42 @@ tableGraph("v Watts vs volts at typical speaker resistances") = {
             },
             {
                 id: generateId(),
+                title: 'Example: Body Mass Index',
+                text: `"Body Mass Index"
+
+--Variables--
+"*Click Solve to see graphs of BMI by height and weight"
+
+
+gridGraph("BMI by height (in) & weight (lb)") = {
+  bmi = 703 * weight / height**2   "the equation solved at every cell"
+  height: 60..78..2                "X-axis iterator: 60–78 in, step 2"
+  bmi: 10..45..5                   "line iterator: one curve per BMI value"
+  Height (in) height->             "1st output → X-axis label"
+  BMI bmi->                        "2nd output → legend (one entry per line)"
+  Weight (lb) weight->             "3rd output → Y-axis (the value plotted)"
+}
+
+
+gridGraph("v BMI by height (m) & weight (kg)") = {
+  bmi = weight / height**2         "the equation solved at every cell"
+  height: 1.50..2.00..0.05         "X-axis iterator: 1.50–2.00 m, step 5 cm"
+  bmi: 10..45..5                   "line iterator: one curve per BMI value"
+  Height (m) height->              "1st output → X-axis label"
+  BMI bmi->                        "2nd output → legend (one entry per line)"
+  Weight (kg) weight->             "3rd output → Y-axis (the value plotted)"
+}
+`,
+                category: 'Medical',
+                places: 2,
+                stripZeros: true,
+                groupDigits: false,
+                format: 'float',
+                degreesMode: false,
+
+            },
+            {
+                id: generateId(),
                 title: 'Example: Basel Series',
                 text: `"Basel Series"
   "Recursive and non-recursive solutions"
@@ -535,7 +571,7 @@ disc(a;b;c) = b**2 - 4*a*c`,
             },
             { id: generateId(), ...DEFAULT_SETTINGS_RECORD }
         ],
-        categories: ['Unfiled', 'Finance', 'Math', 'Science', 'Reference', 'Personal'],
+        categories: ['Unfiled', 'Finance', 'Math', 'Medical', 'Science', 'Reference', 'Personal'],
         settings: {
             lastRecordId: loanRecordId
         }
