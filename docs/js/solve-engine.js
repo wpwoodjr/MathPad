@@ -2528,15 +2528,18 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
     const isGridGraph = tableDef.keyword === 'gridgraph';
     const grid = [];
-    const rawGrid = [];
-    const rawRowHeaderValues = [];
-    const rawColHeaderValues = [];
+    // For gridGraph: flat rows of [rowHdr, colHdr, cellVal] for _renderGraph.
+    // Col headers (captured at r=0) are reused across rows, so kept as a 1D
+    // array. Row headers (captured at c=0) only need to live across the
+    // current row's c-loop, so a single scalar suffices.
+    const rawRows = isGridGraph ? [] : null;
+    const rawColHeaderValues = isGridGraph ? [] : null;
     const formattedRowValues = [];
     const formattedColValues = [];
     let goodCells = 0, totalCells = 0;
     for (let r = 0; r < rowValues.length; r++) {
         const gridRow = [];
-        const rawGridRow = [];
+        let currentRowHdr = null;
         for (let c = 0; c < colValues.length; c++) {
             context.preSolveValues = new Map();
             const { badVars, balanceFailed } = evaluateCell([
@@ -2548,14 +2551,14 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             if (c === 0) {
                 const v = rowHeaderCol ? getColValue(rowHeaderCol) : undefined;
                 const rawV = v !== undefined ? v : rowValues[r];
-                rawRowHeaderValues.push(rawV);
+                currentRowHdr = rawV;
                 formattedRowValues.push(formatVariableValue(rawV, iter1Format, iter1FullPrec, formatOpts));
             }
             // Column headers: use second output value from first row
             if (r === 0) {
                 const v = colHeaderCol ? getColValue(colHeaderCol) : undefined;
                 const rawV = v !== undefined ? v : colValues[c];
-                rawColHeaderValues.push(rawV);
+                if (isGridGraph) rawColHeaderValues.push(rawV);
                 formattedColValues.push(formatVariableValue(rawV, iter2Format, iter2FullPrec, formatOpts));
             }
 
@@ -2566,38 +2569,51 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             // resolveWithLimits both produce blank cells).
             let cellSolved = !balanceFailed && badVars.size === 0
                 && unknowns.every(u => context.hasVariable(u.name));
+            let cellRaw = null;
             if (cellVar && !badVars.has(cellVar.name)) {
                 const value = getColValue(cellVar);
                 if (value !== undefined) {
                     gridRow.push(formatVariableValue(value, cellVar.format, cellVar.fullPrecision, formatOpts));
-                    rawGridRow.push(value);
+                    cellRaw = value;
                 } else {
-                    gridRow.push(''); rawGridRow.push(null);
+                    gridRow.push('');
                     cellSolved = false;
                 }
             } else {
-                gridRow.push(''); rawGridRow.push(null);
+                gridRow.push('');
                 cellSolved = false;
             }
             if (cellSolved) goodCells++;
+            if (isGridGraph) {
+                rawRows.push([currentRowHdr, rawColHeaderValues[c], cellRaw]);
+            }
         }
         grid.push(gridRow);
-        rawGrid.push(rawGridRow);
     }
 
     const type = isGridGraph ? 'gridGraph' : 'grid';
     const solveInfo = goodCells < totalCells ? { solved: goodCells, total: totalCells } : null;
-    return {
+    const result = {
         type, keyword, title: expandedTitle, solveInfo,
         iter1Label, iter2Label,
         rowValues: formattedRowValues,
         colValues: formattedColValues,
-        rawRowHeaderValues, rawColHeaderValues, rawGrid,
         columns, formatOpts,
         cellHeader: cellVar ? cellVar.header : '',
         grid, fontSize,
         startLine: tableDef.startLine, endLine: tableDef.endLine, errors
     };
+    // For gridGraph, route through _renderGraph by emitting tableGraph's flat
+    // rawRows shape. Force col 1 (col-header) as the grouping column by
+    // including its name in iteratorNames — preserves gridGraph's positional
+    // contract regardless of whether col 1's variable is itself an iterator
+    // (e.g. `Hours hours@t->` where hours is a derived value, not the inner
+    // iterator nHours).
+    if (isGridGraph) {
+        result.rawRows = rawRows;
+        result.iteratorNames = columns.length > 1 ? [columns[1].name] : [];
+    }
+    return result;
 }
 
 

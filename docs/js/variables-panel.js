@@ -941,7 +941,10 @@ class VariablesPanel {
                 continue;
             }
             if (table.type === 'gridGraph') {
-                this._renderGridGraph(table);
+                // Route gridGraph through tableGraph's _renderGraph — solve-engine
+                // emits a flat rawRows shape and forces col 1 as the grouping
+                // column to preserve gridGraph's positional contract.
+                this._renderGraph(table);
                 continue;
             }
             if (table.type === 'vectorDraw') {
@@ -1040,167 +1043,6 @@ class VariablesPanel {
     }
 
     /**
-     * Render an SVG multi-line graph from gridGraph data.
-     * X-axis: row header values (first output), lines: one per column (second output), Y-axis: cell values (third output)
-     */
-    _renderGridGraph(table) {
-        if (!table.rawGrid || table.rawGrid.length === 0 || table.rawColHeaderValues.length === 0) return;
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'variable-row variable-table-container';
-        wrapper.dataset.lineIndex = table.startLine - 1;
-        wrapper.dataset.type = 'table';
-
-        const titleEl = this._createTableTitle(table, wrapper);
-        if (titleEl) wrapper.appendChild(titleEl);
-
-        const numRows = table.rawGrid.length;
-        const numCols = table.rawColHeaderValues.length;
-        const xValues = table.rawRowHeaderValues;
-
-        // Color palette
-        const colors = ['#4fc1ff', '#ff6b6b', '#51cf66', '#ffd43b', '#cc5de8', '#ff922b', '#20c997',
-                         '#748ffc', '#f783ac', '#a9e34b', '#66d9e8', '#e599f7'];
-
-        // Compute data range
-        let yMin = Infinity, yMax = -Infinity, xMin = Infinity, xMax = -Infinity;
-        for (let r = 0; r < numRows; r++) {
-            const x = xValues[r];
-            if (x != null && isFinite(x)) { if (x < xMin) xMin = x; if (x > xMax) xMax = x; }
-            for (let c = 0; c < numCols; c++) {
-                const y = table.rawGrid[r][c];
-                if (y != null && isFinite(y)) { if (y < yMin) yMin = y; if (y > yMax) yMax = y; }
-            }
-        }
-        if (!isFinite(xMin) || !isFinite(yMin)) { this.insertRowInOrder(wrapper, table.startLine - 1); return; }
-        const yPad = (yMax - yMin) * 0.05 || 1;
-        yMin -= yPad; yMax += yPad;
-
-        // Graph dimensions — legend above plot area
-        const width = 550;
-        let height = 384;
-        const legendHeight = 28;
-        const margin = { top: legendHeight + 5, right: 20, bottom: 45, left: 60 };
-        const plotW = width - margin.left - margin.right;
-        let plotH = height - margin.top - margin.bottom;
-
-        const sx = (x) => margin.left + (x - xMin) / (xMax - xMin) * plotW;
-        const sy = (y) => margin.top + (1 - (y - yMin) / (yMax - yMin)) * plotH;
-
-        const ns = 'http://www.w3.org/2000/svg';
-        const svg = document.createElementNS(ns, 'svg');
-        svg.setAttribute('class', 'mathpad-graph');
-        svg.style.width = '100%';
-        svg.style.maxWidth = width + 'px';
-
-        // Determine axis formats and adjust left margin for y-axis label width
-        const xCol0 = table.columns.length > 0 ? table.columns[0] : {};
-        const yCol0 = table.columns.length > 2 ? table.columns[2] : {};
-        const xFmt = (v) => xCol0.format ? formatVariableValue(v, xCol0.format, xCol0.fullPrecision, table.formatOpts || {}) : this._formatTickLabel(v);
-        const yFmt = (v) => yCol0.format ? formatVariableValue(v, yCol0.format, yCol0.fullPrecision, table.formatOpts || {}) : this._formatTickLabel(v);
-        const yTicks = this._niceTicks(yMin, yMax, 8, yCol0.format);
-        const maxYLabel = Math.max(...yTicks.map(t => yFmt(t).length));
-        const neededLeft = maxYLabel * 7 + 15;
-        if (neededLeft > margin.left) margin.left = neededLeft;
-
-        // Legend (horizontal, above plot — wraps to next line if too wide)
-        const legendTitle = table.iter2Label || '';
-        let legendX = margin.left;
-        let legendY = 20;
-        const legendLineHeight = 16;
-        const legendMaxX = width - margin.right;
-        if (legendTitle) {
-            const text = document.createElementNS(ns, 'text');
-            text.setAttribute('x', legendX); text.setAttribute('y', legendY);
-            text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '11');
-            text.setAttribute('font-weight', 'bold');
-            text.textContent = legendTitle + ':';
-            svg.appendChild(text);
-            legendX += legendTitle.length * 7 + 10;
-        }
-        const legendIndent = legendX; // first key position — wrap lines align here
-        for (let c = 0; c < numCols; c++) {
-            const label = table.colValues[c] || String(c);
-            const itemWidth = label.length * 6 + 25;
-            if (legendX + itemWidth > legendMaxX && legendX > legendIndent) {
-                legendX = legendIndent;
-                legendY += legendLineHeight;
-            }
-            const color = colors[c % colors.length];
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', legendX); line.setAttribute('x2', legendX + 12);
-            line.setAttribute('y1', legendY - 4); line.setAttribute('y2', legendY - 4);
-            line.setAttribute('stroke', color); line.setAttribute('stroke-width', '2');
-            svg.appendChild(line);
-            const text = document.createElementNS(ns, 'text');
-            text.setAttribute('x', legendX + 16); text.setAttribute('y', legendY);
-            text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '10');
-            text.textContent = label;
-            svg.appendChild(text);
-            legendX += itemWidth;
-        }
-        // Adjust layout if legend wrapped to multiple lines
-        const legendRows = Math.ceil((legendY - 20) / legendLineHeight) + 1;
-        if (legendRows > 1) {
-            const extraHeight = (legendRows - 1) * legendLineHeight;
-            margin.top += extraHeight;
-            height += extraHeight;
-            plotH = height - margin.top - margin.bottom;
-        }
-        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-
-        const xTicks = this._niceTicks(xMin, xMax, 8, xCol0.format);
-        this._drawGraphAxes({ svg, ns, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines: true });
-
-        // Data lines — one per column
-        for (let c = 0; c < numCols; c++) {
-            let pathD = '';
-            let started = false;
-            for (let r = 0; r < numRows; r++) {
-                const x = xValues[r], y = table.rawGrid[r][c];
-                if (x == null || y == null || !isFinite(x) || !isFinite(y)) { started = false; continue; }
-                const px = sx(x), py = sy(y);
-                pathD += (started ? 'L' : 'M') + px.toFixed(2) + ',' + py.toFixed(2);
-                started = true;
-            }
-            if (pathD) {
-                const path = document.createElementNS(ns, 'path');
-                path.setAttribute('d', pathD);
-                path.setAttribute('fill', 'none');
-                path.setAttribute('stroke', colors[c % colors.length]);
-                path.setAttribute('stroke-width', '2');
-                path.setAttribute('stroke-linejoin', 'round');
-                svg.appendChild(path);
-            }
-        }
-
-        // Axis labels
-        const xLabel = table.iter1Label || '';
-        const yLabel = table.cellHeader || '';
-        if (xLabel) {
-            const text = document.createElementNS(ns, 'text');
-            text.setAttribute('x', margin.left + plotW / 2); text.setAttribute('y', height - 5);
-            text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'graph-text');
-            text.setAttribute('font-size', '12');
-            text.textContent = xLabel;
-            svg.appendChild(text);
-        }
-        if (yLabel) {
-            const text = document.createElementNS(ns, 'text');
-            text.setAttribute('x', 12); text.setAttribute('y', margin.top + plotH / 2);
-            text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'graph-text');
-            text.setAttribute('font-size', '12');
-            text.setAttribute('transform', `rotate(-90, 12, ${margin.top + plotH / 2})`);
-            text.textContent = yLabel;
-            svg.appendChild(text);
-        }
-
-        wrapper.appendChild(svg);
-        this.insertRowInOrder(wrapper, table.startLine - 1);
-        this._setStickyHeaderOffsets(wrapper);
-    }
-
-    /**
      * Render an SVG line graph from tableGraph data
      */
     _renderGraph(table) {
@@ -1244,6 +1086,14 @@ class VariablesPanel {
             if (col.name !== xColName && iteratorNames.has(col.name)) {
                 groupingCols.push({ colIdx: c, col });
             }
+        }
+        // Don't promote so many columns to grouping that nothing's left to plot.
+        // Catches the 2-column "iterator on Y axis" case (col 0 = X, col 1 =
+        // iterator output the user wants AS the Y series). Without this, all
+        // yCols get classified as grouping, ySeriesCols ends up empty, yMin
+        // stays Infinity, and _renderGraph silently early-returns with no SVG.
+        if (groupingCols.length >= yCols.length) {
+            groupingCols.pop();
         }
         const groupingIdxSet = new Set(groupingCols.map(g => g.colIdx));
         const ySeriesCols = yCols.filter(c => !groupingIdxSet.has(c));
@@ -1337,10 +1187,13 @@ class VariablesPanel {
             const col = table.columns[xCol];
             return col.format ? formatVariableValue(v, col.format, col.fullPrecision, table.formatOpts || {}) : this._formatTickLabel(v);
         };
-        const yFmt = (v) => {
-            const col = table.columns[yCols[0]];
-            return col.format ? formatVariableValue(v, col.format, col.fullPrecision, table.formatOpts || {}) : this._formatTickLabel(v);
-        };
+        // Y-axis format comes from the first Y-series column, not the first
+        // non-X column — when col 1 is a grouping column (e.g. gridGraph's
+        // forced col-1 grouping), its format would mis-format the Y ticks.
+        const yFmtCol = ySeriesCols.length > 0 ? table.columns[ySeriesCols[0]] : table.columns[yCols[0]];
+        const yFmt = (v) => yFmtCol.format
+            ? formatVariableValue(v, yFmtCol.format, yFmtCol.fullPrecision, table.formatOpts || {})
+            : this._formatTickLabel(v);
 
         // Graph dimensions
         const width = 550;
@@ -1377,7 +1230,7 @@ class VariablesPanel {
         svg.style.maxWidth = width + 'px';
 
         // Pre-compute y-axis margin from tick label width
-        const yTicks = this._niceTicks(yMin, yMax, 8, table.columns[yCols[0]].format);
+        const yTicks = this._niceTicks(yMin, yMax, 8, yFmtCol.format);
         const maxYLabel = Math.max(...yTicks.map(t => yFmt(t).length));
         const neededLeft = maxYLabel * 7 + 15;
         if (neededLeft > margin.left) {
