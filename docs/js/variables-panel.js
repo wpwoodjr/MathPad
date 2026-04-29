@@ -1134,16 +1134,13 @@ class VariablesPanel {
             }
         }
 
-        // Compact legend (matches gridGraph) when there's exactly one grouping
-        // column and one Y series: render the column header as a bold prefix
-        // ("Watts:") and each line label is just the value ("0", "50", ...).
-        // Multi-grouping or multi-Y-series stays explicit ("Watts = 0, R = 1.4").
-        const compactLegend = groupingCols.length === 1 && ySeriesCols.length === 1;
-        let legendPrefix = '';
-        if (compactLegend) {
-            legendPrefix = groupingCols[0].col.header || groupingCols[0].col.name;
-        }
-
+        // Legend partitioned by Y series. Each first-in-series line carries
+        // a bold rowPrefix; subsequent lines in the same series contribute
+        // value-only items.
+        //   single Y series  → prefix "y, z:" then items "0, 0", "0, 3", ...
+        //   multi  Y series  → prefix "First (y, z):" / "Second (y, z):"
+        //                       per series, items as value tuples
+        // No grouping cols: one line per Y col, no prefix (label = Y name).
         const lines = [];
         if (groupingCols.length > 0 && ySeriesCols.length > 0) {
             const groups = new Map();
@@ -1154,19 +1151,22 @@ class VariablesPanel {
                 groups.get(key).rowIndexes.push(r);
             }
             const fmt = table.formatOpts || {};
-            for (const group of groups.values()) {
-                const groupLabel = groupingCols.map((g, i) => {
-                    const header = g.col.header || g.col.name;
-                    const v = group.values[i];
-                    const formatted = v != null && isFinite(v)
-                        ? formatVariableValue(v, g.col.format, g.col.fullPrecision, fmt)
-                        : String(v);
-                    return compactLegend ? formatted : `${header} = ${formatted}`;
-                }).join(', ');
-                for (const yc of ySeriesCols) {
-                    const yColName = table.columns[yc].header || table.columns[yc].name;
-                    const label = ySeriesCols.length > 1 ? `${yColName} (${groupLabel})` : groupLabel;
-                    lines.push({ label, yc, rowIndexes: group.rowIndexes });
+            const groupHeaders = groupingCols.map(g => g.col.header || g.col.name).join(', ');
+            for (const yc of ySeriesCols) {
+                const yColName = table.columns[yc].header || table.columns[yc].name;
+                let firstInSeries = true;
+                for (const group of groups.values()) {
+                    const valueLabel = groupingCols.map((g, i) => {
+                        const v = group.values[i];
+                        return v != null && isFinite(v)
+                            ? formatVariableValue(v, g.col.format, g.col.fullPrecision, fmt)
+                            : String(v);
+                    }).join(', ');
+                    const rowPrefix = firstInSeries
+                        ? (ySeriesCols.length > 1 ? `${yColName} (${groupHeaders}):` : `${groupHeaders}:`)
+                        : null;
+                    firstInSeries = false;
+                    lines.push({ label: valueLabel, yc, rowIndexes: group.rowIndexes, rowPrefix });
                 }
             }
         } else {
@@ -1176,7 +1176,8 @@ class VariablesPanel {
                 lines.push({
                     label: table.columns[yc].header || table.columns[yc].name,
                     yc,
-                    rowIndexes: table.rawRows.map((_, i) => i)
+                    rowIndexes: table.rawRows.map((_, i) => i),
+                    rowPrefix: null
                 });
             }
         }
@@ -1244,21 +1245,25 @@ class VariablesPanel {
             let legendY = 20;
             const legendLineHeight = 16;
             const legendMaxX = width - margin.right;
-            if (legendPrefix) {
-                const text = document.createElementNS(ns, 'text');
-                text.setAttribute('x', legendX); text.setAttribute('y', legendY);
-                text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '11');
-                text.setAttribute('font-weight', 'bold');
-                text.textContent = legendPrefix + ':';
-                svg.appendChild(text);
-                legendX += legendPrefix.length * 7 + 10;
-            }
-            const legendIndent = legendX;
+            let rowIndent = margin.left;
             for (let i = 0; i < lines.length; i++) {
-                const label = lines[i].label;
+                const lineMeta = lines[i];
+                if (lineMeta.rowPrefix) {
+                    if (i > 0) { legendY += legendLineHeight; }
+                    legendX = margin.left;
+                    const text = document.createElementNS(ns, 'text');
+                    text.setAttribute('x', legendX); text.setAttribute('y', legendY);
+                    text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '11');
+                    text.setAttribute('font-weight', 'bold');
+                    text.textContent = lineMeta.rowPrefix;
+                    svg.appendChild(text);
+                    legendX += lineMeta.rowPrefix.length * 7 + 10;
+                    rowIndent = legendX;
+                }
+                const label = lineMeta.label;
                 const itemWidth = label.length * 6 + 25;
-                if (legendX + itemWidth > legendMaxX && legendX > legendIndent) {
-                    legendX = legendIndent;
+                if (legendX + itemWidth > legendMaxX && legendX > rowIndent) {
+                    legendX = rowIndent;
                     legendY += legendLineHeight;
                 }
                 const color = colors[i % colors.length];
