@@ -929,9 +929,17 @@ class VariablesPanel {
                 const lineIdx = table.startLine - 1;
                 const line = lines[lineIdx];
                 if (!line) return;
-                const m = line.match(/^(\s*)(table|grid|tablegraph|gridgraph)(\s*\()/i);
+                // Match keyword + opening paren + quoted title in one shot so
+                // we can swap the keyword AND ensure the title is uncollapsed
+                // (replace ">" prefix with "v ") in the same edit.
+                const m = line.match(/^(\s*)(table|grid|tablegraph|gridgraph)(\s*\(\s*")(.*?)("\s*[;)])/i);
                 if (!m) return;
-                lines[lineIdx] = m[1] + swapTarget + m[3] + line.substring(m[0].length);
+                let srcTitle = m[4];
+                if (srcTitle.charAt(0) === '>') {
+                    srcTitle = 'v ' + srcTitle.substring(1).trimStart();
+                }
+                const newPrefix = m[1] + swapTarget + m[3] + srcTitle + m[5];
+                lines[lineIdx] = newPrefix + line.substring(m[0].length);
                 // Push the keyword change as a single undo entry, then ask
                 // solve to mutate that same entry (undoable=false on solve)
                 // so one Ctrl+Z reverts both keyword and re-solve at once.

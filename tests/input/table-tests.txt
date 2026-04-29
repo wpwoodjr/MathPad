@@ -1482,3 +1482,16 @@ gridGraph("v table Watts given I and R") = {
   R r->
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+"tableGraph errors when no iterator is declared as an output column"
+"Without an iter-> declaration, the graph has no X axis to plot"
+"against. Should surface a clear error rather than render nothing."
+
+tableGraph("test") = {
+  x: 1..10
+  y: 1..2.5..0.25
+  x**y->
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
