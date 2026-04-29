@@ -4,9 +4,13 @@
 
 /**
  * Syntax-highlight a label text string, returning HTML
+ * @param {string} text - The label text
+ * @param {Object} options - Forwarded to tokenizeMathPad (referenceConstants,
+ *   referenceFunctions). Without these, identifiers like `e` or `pi` would
+ *   highlight as plain variables instead of builtins.
  */
-function highlightLabelText(text) {
-    const { tokens } = tokenizeMathPad(text);
+function highlightLabelText(text, options = {}) {
+    const { tokens } = tokenizeMathPad(text, options);
     let html = '';
     let lastPos = 0;
     for (const token of tokens) {
@@ -344,8 +348,13 @@ class VariablesPanel {
                 }
                 label.style.whiteSpace = 'pre-wrap';
                 if (!info.isQuoted) {
-                    // Syntax-highlight non-quoted labels (equations, expressions)
-                    label.innerHTML = highlightLabelText(labelText);
+                    // Syntax-highlight non-quoted labels (equations, expressions).
+                    // Pass reference info so builtins (e, pi, ...) and reference
+                    // functions are styled as builtin, not plain variables.
+                    label.innerHTML = highlightLabelText(labelText, {
+                        referenceConstants: this.editor.referenceConstants,
+                        referenceFunctions: this.editor.referenceFunctions
+                    });
                 } else {
                     label.textContent = labelText;
                 }
