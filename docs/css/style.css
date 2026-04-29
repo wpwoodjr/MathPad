@@ -1543,6 +1543,19 @@ body.sidebar-resizing * {
     opacity: 0.7;
 }
 
+.table-view-toggle {
+    font-size: 0.85em;
+    opacity: 0.6;
+    margin-right: 0.75em;
+    cursor: pointer;
+    user-select: none;
+}
+
+.table-view-toggle:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
 .variable-table-container {
     display: block;
     padding: 4px 8px;

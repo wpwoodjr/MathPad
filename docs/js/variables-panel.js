@@ -877,14 +877,55 @@ class VariablesPanel {
 
         const titleEl = document.createElement('div');
         titleEl.className = 'mathpad-table-title' + (collapsed ? ' collapsed' : '');
-        titleEl.textContent = displayTitle;
+        titleEl.style.fontSize = (table.fontSize || 14) + 'px';
+
+        // View-toggle button (placed BEFORE the title text so horizontal
+        // scroll doesn't push it off-screen): swaps source keyword between
+        // table↔tableGraph or grid↔gridGraph. Persisted in the source itself.
+        const swapTarget = {
+            'table': 'tableGraph',
+            'tablegraph': 'table',
+            'grid': 'gridGraph',
+            'gridgraph': 'grid',
+        }[(table.keyword || '').toLowerCase()];
+        if (swapTarget && this.editor && table.startLine != null) {
+            const toggleBtn = document.createElement('span');
+            toggleBtn.className = 'table-view-toggle';
+            const targetLabel = swapTarget.endsWith('Graph')
+                ? 'graph'
+                : (swapTarget === 'grid' ? 'grid' : 'table');
+            toggleBtn.textContent = `as ${targetLabel}`;
+            toggleBtn.title = `Show as ${swapTarget}`;
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const text = this.editor.getValue();
+                const lines = text.split('\n');
+                const lineIdx = table.startLine - 1;
+                const line = lines[lineIdx];
+                if (!line) return;
+                const m = line.match(/^(\s*)(table|grid|tablegraph|gridgraph)(\s*\()/i);
+                if (!m) return;
+                lines[lineIdx] = m[1] + swapTarget + m[3] + line.substring(m[0].length);
+                // Push the keyword change as a single undo entry, then ask
+                // solve to mutate that same entry (undoable=false on solve)
+                // so one Ctrl+Z reverts both keyword and re-solve at once.
+                this.editor.setValue(lines.join('\n'), true);
+                if (this.solveCallback) this.solveCallback(false, false);
+            });
+            titleEl.appendChild(toggleBtn);
+        }
+
+        const titleText = document.createElement('span');
+        titleText.className = 'mathpad-table-title-text';
+        titleText.textContent = displayTitle;
+        titleEl.appendChild(titleText);
+
         if (table.solveInfo) {
             const indicator = document.createElement('span');
             indicator.className = 'table-solve-info';
             indicator.textContent = ` (${table.solveInfo.solved}/${table.solveInfo.total} solved)`;
             titleEl.appendChild(indicator);
         }
-        titleEl.style.fontSize = (table.fontSize || 14) + 'px';
 
         // Hide table/graph if collapsed
         if (collapsed) {
