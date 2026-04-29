@@ -1644,8 +1644,11 @@ function appendReferencesSection(text, context) {
 /**
  * Main solve function - orchestrates discovery, solving, and formatting
  * @param {boolean} traceMode - If true, collect a user-visible solve trace
+ * @param {boolean} includeTableOutputs - If true, append "--- Table Outputs ---"
+ *   section to the text. Defaults off so the section is opt-in per solve
+ *   (e.g. via Shift+Solve).
  */
-function solveRecord(text, context, record, parserTokens, skipTables = false, traceMode = false) {
+function solveRecord(text, context, record, parserTokens, skipTables = false, traceMode = false, includeTableOutputs = false) {
     // Set up trace buffer for this solve (outer only — paused during table eval)
     const prevTraceBuffer = _traceBuffer;
     if (traceMode) _traceBuffer = [];
@@ -1833,7 +1836,9 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
     if (trace && trace.length > 0) {
         text = appendTraceSection(text, trace);
     }
-    text = appendTableOutputsSection(text, tables);
+    if (includeTableOutputs) {
+        text = appendTableOutputsSection(text, tables);
+    }
 
     // Restore previous trace buffer
     _traceBuffer = prevTraceBuffer;

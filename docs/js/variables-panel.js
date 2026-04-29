@@ -474,10 +474,11 @@ class VariablesPanel {
                 // Clear tracking and trigger solve
                 // When cleared: non-undoable so undo collapses clear+solve into one step
                 // When not cleared: undoable so solve gets its own undo entry
-                // Ctrl+click enables the solve trace output
+                // Ctrl+click enables the solve trace output;
+                // Shift+click appends the "--- Table Outputs ---" text section
                 this.lastEditedVar = null;
                 if (this.solveCallback) {
-                    this.solveCallback(!cleared, !!e.ctrlKey);
+                    this.solveCallback(!cleared, !!e.ctrlKey, !!e.shiftKey);
                 }
             });
             row.appendChild(solveBtn);

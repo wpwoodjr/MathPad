@@ -25,14 +25,16 @@ const traceMode = testName === 'trace-tests';
 for (const record of data.records) {
     const allTokens = new Tokenizer(record.text).tokenize();
     const context = createEvalContext(record, parsedConstants, parsedFunctions, record.text, allTokens);
-    const result = solveRecord(record.text, context, record, allTokens, true, traceMode);
+    // Tests always include the table-outputs section (production defaults
+    // to off — opt-in via Shift+Solve).
+    const result = solveRecord(record.text, context, record, allTokens, true, traceMode, true);
     record.text = result.text;
 
     // Re-solve formatted output: idempotency check, rounding detection, table evaluation
     const verifyTokens = new Tokenizer(record.text).tokenize();
     const verifyContext = createEvalContext(record, parsedConstants, parsedFunctions, record.text, verifyTokens);
     verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
-    const verifyResult = solveRecord(record.text, verifyContext, record, verifyTokens);
+    const verifyResult = solveRecord(record.text, verifyContext, record, verifyTokens, false, false, true);
     record.text = verifyResult.text;
     // Re-append trace from first pass (re-solve strips it — matches handleSolve in ui.js)
     if (traceMode && result.trace && result.trace.length > 0) {

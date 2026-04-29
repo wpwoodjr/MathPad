@@ -537,8 +537,8 @@ function createEditorForRecord(record) {
         }
     });
 
-    variablesManager.onSolve((undoable, traceMode) => {
-        handleSolve(undoable, traceMode);
+    variablesManager.onSolve((undoable, traceMode, includeTableOutputs) => {
+        handleSolve(undoable, traceMode, includeTableOutputs);
     });
 
     variablesManager.onBlur(() => {
@@ -1247,7 +1247,7 @@ function setupEventListeners() {
         // Clear skip flag set by mousedown in case no blur happened in between
         const info = UI.editors.get(UI.currentRecordId);
         if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = false;
-        handleSolve(true, !!(e && e.ctrlKey));
+        handleSolve(true, !!(e && e.ctrlKey), !!(e && e.shiftKey));
     });
 
     // Clear Input button — same skip-blur-solve pattern as Solve: the blur
@@ -1287,10 +1287,11 @@ function setupEventListeners() {
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        // Ctrl/Cmd + Enter to solve
+        // Ctrl/Cmd + Enter to solve. Shift adds the "--- Table Outputs ---"
+        // text section; combinable with Ctrl-trace via the Solve button.
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
-            handleSolve();
+            handleSolve(true, false, e.shiftKey);
         }
         // Ctrl/Cmd + Shift + S to clear
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 's' || e.key === 'S')) {
@@ -1452,7 +1453,7 @@ function handleReset() {
 /**
  * Handle solve
  */
-function handleSolve(undoable = true, traceMode = false) {
+function handleSolve(undoable = true, traceMode = false, includeTableOutputs = false) {
     if (!UI.currentRecordId) {
         setStatus('No record selected', true);
         return;
@@ -1487,7 +1488,7 @@ function handleSolve(undoable = true, traceMode = false) {
         // Solve the record (captures pre-solve values and clears outputs internally)
         // First pass always skips tables — re-solve below computes them once
         // Trace flag enables a "--- Solve Trace ---" section for the outer solve
-        const result = solveRecord(text, context, record, parserTokens, true, traceMode);
+        const result = solveRecord(text, context, record, parserTokens, true, traceMode, includeTableOutputs);
         text = result.text;
 
         // Re-solve formatted output: idempotency check, rounding detection, table evaluation,
@@ -1498,7 +1499,7 @@ function handleSolve(undoable = true, traceMode = false) {
             editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
             text, verifyTokens);
         verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
-        const verifyResult = solveRecord(text, verifyContext, record, verifyTokens);
+        const verifyResult = solveRecord(text, verifyContext, record, verifyTokens, false, false, includeTableOutputs);
         text = verifyResult.text;
 
         // Re-append solve trace from first pass (re-solve strips it)
