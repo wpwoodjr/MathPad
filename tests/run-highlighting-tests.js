@@ -1604,6 +1604,22 @@ function runAllTests() {
                 ['$->', 'punctuation'],
                 ['100.00₽', 'number']
             ]
+        },
+        // --Variables-- section marker is highlighted as a single special token
+        {
+            name: '--Variables-- section marker',
+            line: '--Variables--',
+            assertions: [
+                ['--Variables--', 'section-marker']
+            ]
+        },
+        // --Variables-- inside a // line comment stays a comment, not a marker
+        {
+            name: '--Variables-- inside // line comment is not a section marker',
+            line: '// fix --Variables-- highlighting',
+            assertions: [
+                ['// fix --Variables-- highlighting', 'comment']
+            ]
         }
     ];
 

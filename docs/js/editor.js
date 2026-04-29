@@ -189,6 +189,27 @@ function tokenizeMathPad(text, options = {}) {
         }
     }
 
+    // Highlight the "--Variables--" section marker as a single token,
+    // overriding the per-character operator/identifier tokens. Treats the
+    // whole marker as one styled span so CSS can give it a distinct look
+    // (matching the special role it plays in the vars panel). Skip matches
+    // inside actual comment tokens (// line comments, "..." quoted comments)
+    // so a comment mentioning "--Variables--" doesn't get the special look.
+    // Don't filter by labelRegions/commentRegions — a plain-text line of
+    // just "--Variables--" registers as a label region, but we WANT to
+    // highlight it specially in that case.
+    const markerRe = /--Variables--/g;
+    let m;
+    while ((m = markerRe.exec(text)) !== null) {
+        const start = m.index, end = start + m[0].length;
+        if (quotedCommentRegions.some(r => start < r.end && end > r.start)) continue;
+        // Remove any tokens that fall inside the marker
+        for (let i = tokens.length - 1; i >= 0; i--) {
+            if (tokens[i].from < end && tokens[i].to > start) tokens.splice(i, 1);
+        }
+        tokens.push({ from: start, to: end, type: 'section-marker' });
+    }
+
     // Sort tokens by position
     tokens.sort((a, b) => a.from - b.from);
 

@@ -25,7 +25,7 @@
     --error-color: #f44747;
     --warning-color: #cca700;
     --success-color: #4ec9b0;
-    --star-label-color: #57ffa3;
+    --star-label-color: #57c1ff;
 
     /* Syntax highlighting */
     --syn-number: #b5cea8;
@@ -40,6 +40,7 @@
     --syn-bracket: #ffd700;
     --syn-brace: #da70d6;
     --syn-punctuation: #20ebc2;
+    --vars-label-color: #c97064da;  /* warm burgundy for vars-panel label rows */
 
     /* Editor */
     --caret-color: #d4d4d4;
@@ -83,7 +84,7 @@
     --error-color: #e51400;
     --warning-color: #bf8803;
     --success-color: #16825d;
-    --star-label-color: #007d38;
+    --star-label-color: #006172;
 
     /* Syntax highlighting */
     --syn-number: #098658;
@@ -98,6 +99,7 @@
     --syn-bracket: #d4a017;
     --syn-brace: #af00db;
     --syn-punctuation: #36786a;
+    --vars-label-color: #7c2828;  /* warm burgundy for vars-panel label rows */
 
     /* Editor */
     --caret-color: #1e1e1e;
@@ -692,6 +694,14 @@ button {
 
 .tok-error {
     color: var(--error-color);
+}
+
+.tok-section-marker {
+    color: var(--syn-keyword);
+    font-weight: bold;
+    background: var(--bg-hover);
+    padding: 0 4px;
+    border-radius: 3px;
 }
 
 /* Details Panel */
@@ -1496,7 +1506,7 @@ body.sidebar-resizing * {
     flex-shrink: 1;
     white-space: normal;
     word-wrap: break-word;
-    color: var(--syn-variable);
+    color: var(--vars-label-color);
 }
 
 .variable-row[data-type="label"].variable-label-spacer {
