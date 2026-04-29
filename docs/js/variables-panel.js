@@ -88,10 +88,19 @@ class VariablesPanel {
      * Shows one row per declaration line and expression output
      */
     updateFromText(text) {
-        // Table Outputs section is excluded from the panel.
-        // References and Solve Trace use "*---" label headers and render as
-        // labeled sections in the panel. Trace often comes AFTER Table Outputs,
-        // so we use a range: [tableOutputLineIndex, traceSectionLineIndex) is excluded.
+        // Detect --Variables-- section marker
+        const varsSectionStart = text.indexOf('--Variables--');
+        const varsSectionLineIndex = varsSectionStart >= 0
+            ? text.substring(0, varsSectionStart).split('\n').length - 1
+            : -1; // -1 means no marker → current behavior
+
+        // Table Outputs section is always excluded from the panel.
+        // References section is excluded by default. It's shown only when
+        // BOTH Ctrl+Solve was used (Trace section in text is the signal) AND
+        // --Variables-- is present (so the header line can render as a
+        // labeled section). Solve Trace itself always renders as a label.
+        // Append order in solveRecord: refs → tableOutputs → trace, so refs
+        // and tableOutputs are contiguous and end at the trace marker.
         const tableOutputStart = text.indexOf('"--- Table Outputs ---"');
         const tableOutputLineIndex = tableOutputStart >= 0
             ? text.substring(0, tableOutputStart).split('\n').length - 1
@@ -100,12 +109,11 @@ class VariablesPanel {
         const traceSectionLineIndex = traceMatch
             ? text.substring(0, traceMatch.index).split('\n').length - 1
             : Infinity;
-
-        // Detect --Variables-- section marker
-        const varsSectionStart = text.indexOf('--Variables--');
-        const varsSectionLineIndex = varsSectionStart >= 0
-            ? text.substring(0, varsSectionStart).split('\n').length - 1
-            : -1; // -1 means no marker → current behavior
+        const refsMatch = text.match(/"\*?--- Reference Constants and Functions ---"/);
+        const showRefs = traceMatch && varsSectionLineIndex >= 0;
+        const refsSectionLineIndex = (refsMatch && !showRefs)
+            ? text.substring(0, refsMatch.index).split('\n').length - 1
+            : Infinity;
 
         this.varsSectionLineIndex = varsSectionLineIndex;
 
@@ -154,11 +162,11 @@ class VariablesPanel {
             }
         }
 
-        // Remove Table Outputs section items from panel (shown in formulas only).
-        // References and Solve Trace are kept — they're labeled sections.
-        // Trace section after Table Outputs still displays.
+        // Remove References + Table Outputs section items from panel (shown in
+        // formulas only). Trace section after them is preserved.
+        const excludeStart = Math.min(refsSectionLineIndex, tableOutputLineIndex);
         for (const lineIndex of [...newDeclMap.keys()]) {
-            if (lineIndex >= tableOutputLineIndex && lineIndex < traceSectionLineIndex) {
+            if (lineIndex >= excludeStart && lineIndex < traceSectionLineIndex) {
                 newDeclMap.delete(lineIndex);
             }
         }
@@ -194,8 +202,8 @@ class VariablesPanel {
             const lines = text.split('\n');
             for (let i = varsSectionLineIndex + 1; i < lines.length; i++) {
                 if (newDeclMap.has(i)) continue; // Already a declaration
-                // In Table Outputs section (but not Solve Trace section after it)
-                if (i >= tableOutputLineIndex && i < traceSectionLineIndex) continue;
+                // In References or Table Outputs section (but not Solve Trace after them)
+                if (i >= excludeStart && i < traceSectionLineIndex) continue;
                 if (consumedLines.has(i)) continue; // Part of a multi-line comment
                 if (tableSkipLines.has(i + 1)) continue; // Inside table definition
 

@@ -17,8 +17,10 @@ const editorBuiltinFunctions = new Set(Object.keys(builtinFunctions));
 function tokenizeMathPad(text, options = {}) {
     const { referenceConstants = new Set(), referenceFunctions = new Set() } = options;
 
-    // Strip the reference section first so definitions there aren't treated as local
-    const strippedText = text.replace(/\n*"--- Reference Constants and Functions ---"[\s\S]*$/, '');
+    // Strip the reference section first so definitions there aren't treated as local.
+    // The header is emitted with a leading "*" (see appendReferencesSection in
+    // solve-engine.js), so the regex needs "\*?" to match it.
+    const strippedText = text.replace(/\n*"\*?--- Reference Constants and Functions ---"[\s\S]*$/, '');
 
     // Tokenize first to find quoted comments (they take precedence)
     const tokenizer = new Tokenizer(text);
