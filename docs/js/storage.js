@@ -58,12 +58,62 @@ const DEFAULT_SETTINGS_RECORD = {
  * Default data structure
  */
 function createDefaultData() {
-    // Generate Loan record ID first so we can set it as the initial record
-    const loanRecordId = generateId();
+    // Generate Welcome record ID first so we can set it as the initial record
+    const welcomeRecordId = generateId();
 
     return backfillRecordTimestamps({
         version: STORAGE_VERSION,
         records: [
+            {
+                id: welcomeRecordId,
+                title: 'Welcome',
+                text: `"Welcome"
+
+--Variables--
+
+"*Welcome to MathPad!"
+
+"MathPad was originally created by Rick Huebner for PalmOS PDAs (circa 1997-2000).  Quoting from the original documentation: MathPad is a tool for solving and storing mathematical equations in standard algebraic syntax ... if you write down an equation and tap the Solve button, it computes the answer and fills it in for you. These equations can be simple math expressions like 2+2=, or algebraic expressions using variables such as:"
+
+  sqrt(x+4) / acos(0.7) = y**3
+
+Press the Solve button (above) to see the value of x when y is 0.53 and also a graph of the equation
+
+  x->
+  y: 0.53
+
+tableGraph("v sqrt(x+4) / acos(0.7) = y**3") = {
+  x: -2.5..4.5..0.5
+  y<-
+  x->
+  y->
+}
+
+
+"*MathPad for web"
+
+"I've always loved MathPad but never found anything to replace it's combination of simplicity and power.  This is a modern web-based reimplementation.  Most original MathPad records should still work.  Some new features include:
+
+  * Tables, grids, and graphs
+  * Vector diagrams - polar, navigation, and cartesian
+  * Split panes - variables pane for data entry/display, formulas pane for definitions
+  * Solver with recursive backtracking and algebraic substitution
+  * Format suffixes — $ (money), % (percent), ° (mod-aware degrees), @d (date), @t (duration)
+  * Degrees/radians mod-aware equality operator °=
+  * Written with pure client-side JavaScript
+  * Auto saves to local storage
+  * Google Drive integration (in testing)
+
+Try some of the examples and have fun!
+
+On mobile, the examples are under the hamburger icon at top left."`,
+                category: 'Tutorial',
+                places: 1,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+            },
             {
                 id: generateId(),
                 title: 'Example: Retirement Calculator',
@@ -164,7 +214,7 @@ totFFees $->
 
             },
             {
-                id: loanRecordId,
+                id: generateId(),
                 title: 'Example: Loan Calculator',
                 text: `"Loan calculator"
 
@@ -571,9 +621,9 @@ disc(a;b;c) = b**2 - 4*a*c`,
             },
             { id: generateId(), ...DEFAULT_SETTINGS_RECORD }
         ],
-        categories: ['Unfiled', 'Finance', 'Math', 'Medical', 'Science', 'Reference', 'Personal'],
+        categories: ['Tutorial', 'Unfiled', 'Finance', 'Math', 'Medical', 'Science', 'Reference', 'Personal'],
         settings: {
-            lastRecordId: loanRecordId
+            lastRecordId: welcomeRecordId
         }
     });
 }

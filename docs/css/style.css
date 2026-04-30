@@ -40,7 +40,7 @@
     --syn-bracket: #ffd700;
     --syn-brace: #da70d6;
     --syn-punctuation: #20ebc2;
-    --vars-label-color: #c97064da;  /* warm burgundy for vars-panel label rows */
+    --vars-label-color: #1baef1;
 
     /* Editor */
     --caret-color: #d4d4d4;
@@ -84,7 +84,7 @@
     --error-color: #e51400;
     --warning-color: #bf8803;
     --success-color: #16825d;
-    --star-label-color: #006172;
+    --star-label-color: #0277fdd3;
 
     /* Syntax highlighting */
     --syn-number: #098658;
@@ -99,7 +99,7 @@
     --syn-bracket: #d4a017;
     --syn-brace: #af00db;
     --syn-punctuation: #36786a;
-    --vars-label-color: #7c2828;  /* warm burgundy for vars-panel label rows */
+    --vars-label-color: #1b8af1c9;
 
     /* Editor */
     --caret-color: #1e1e1e;
