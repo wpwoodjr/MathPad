@@ -3180,10 +3180,10 @@ gridgraph "v table Watts given I and R"
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 5: tableGraph needs an X-axis output — add x-> or y->"; StatusIsError = 1
-"tableGraph errors when no iterator is declared as an output column"
-"Without an iter-> declaration, the graph has no X axis to plot"
-"against. Should surface a clear error rather than render nothing."
+Status = "Line 5: tableGraph needs at least 2 output columns (X-axis + Y-series) — add x-> or y->"; StatusIsError = 1
+"tableGraph errors when fewer than 2 output columns"
+"Need ≥2 cols (X + Y) to plot. Should surface a clear error"
+"rather than render nothing."
 
 tableGraph("test") = {
   x: 1..10

@@ -2397,17 +2397,12 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
             return emptyResult();
         }
 
-        // tableGraph needs an X-axis column. The user must declare at least
-        // one iterator as an output (`x->`) so it shows up as col 0 in the
-        // data — otherwise the graph has no X axis to plot against.
-        if (tableDef.keyword === 'tablegraph') {
-            const declaredColNames = new Set(columns.map(c => c.name));
-            const anyIterDeclared = evaledIterators.some(it => declaredColNames.has(it.name));
-            if (!anyIterDeclared) {
-                const iterList = evaledIterators.map(it => `${it.name}->`).join(' or ');
-                errors.push(`Line ${tableDef.startLine}: tableGraph needs an X-axis output — add ${iterList}`);
-                return emptyResult();
-            }
+        // tableGraph needs ≥2 output columns (col 0 = X-axis, col 1+ = Y).
+        // Any declared output works as X — it doesn't have to be the iterator.
+        if (tableDef.keyword === 'tablegraph' && columns.length < 2) {
+            const iterList = evaledIterators.map(it => `${it.name}->`).join(' or ');
+            errors.push(`Line ${tableDef.startLine}: tableGraph needs at least 2 output columns (X-axis + Y-series) — add ${iterList || 'an output'}`);
+            return emptyResult();
         }
 
         const rows = [];
