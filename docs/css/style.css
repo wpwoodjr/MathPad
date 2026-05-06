@@ -61,52 +61,52 @@
     --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
-/* Light Theme - VS Code Light style */
+/* Light Theme - faint lime cream */
 [data-theme="light"] {
     /* Colors */
-    --bg-primary: #ffffff;
-    --bg-secondary: #f3f3f3;
-    --bg-tertiary: #ececec;
-    --bg-hover: #e0e0e0;
-    --bg-active: #0060c0;
+    --bg-primary: #f8ffed;
+    --bg-secondary: #eff5e4;
+    --bg-tertiary: #e6ecdb;
+    --bg-hover: #dde3d2;
+    --bg-active: #1f2810;
 
-    --text-primary: #1e1e1e;
-    --text-secondary: #616161;
-    --text-muted: #ababab;
+    --text-primary: #1f2810;
+    --text-secondary: #3a4a25;
+    --text-muted: #5a6840;
 
-    --border-color: #d4d4d4;
-    --border-light: #e0e0e0;
+    --border-color: #c8d0b0;
+    --border-light: #d8e0c2;
 
-    --accent-primary: #007acc;
-    --accent-hover: #0062a3;
-    --accent-active: #004e82;
+    --accent-primary: #4a5a30;
+    --accent-hover: #3a4a25;
+    --accent-active: #2a3a18;
 
-    --error-color: #e51400;
-    --warning-color: #bf8803;
-    --success-color: #16825d;
-    --star-label-color: #0277fdd3;
+    --error-color: #b02818;
+    --warning-color: #8a5a10;
+    --success-color: #2a5520;
+    --star-label-color: #2a4a78;
 
     /* Syntax highlighting */
-    --syn-number: #098658;
-    --syn-string: #a31515;
-    --syn-comment: #008000;
-    --syn-keyword: #0000ff;
-    --syn-function: #795e26;
-    --syn-builtin: #af00db;
-    --syn-variable: #001080;
-    --syn-variable-def: #0070c1;
-    --syn-operator: #1e1e1e;
-    --syn-bracket: #d4a017;
-    --syn-brace: #af00db;
-    --syn-punctuation: #36786a;
-    --vars-label-color: #1b8af1c9;
+    --syn-number: #2a5520;
+    --syn-string: #8a3018;
+    --syn-comment: #6a8055;
+    --syn-keyword: #1a2a78;
+    --syn-function: #6a4a10;
+    --syn-builtin: #6a1a78;
+    --syn-variable: #15257a;
+    --syn-variable-def: #1f4090;
+    --syn-operator: #1f2810;
+    --syn-bracket: #8a5a10;
+    --syn-brace: #6a1a78;
+    --syn-punctuation: #1f6a45;
+    --vars-label-color: #1f4078;
 
     /* Editor */
-    --caret-color: #1e1e1e;
-    --selection-bg: rgba(0, 122, 204, 0.25);
+    --caret-color: #1f2810;
+    --selection-bg: rgba(58, 77, 16, 0.22);
 
     /* Overlays */
-    --overlay-bg: rgba(0, 0, 0, 0.3);
+    --overlay-bg: rgba(31, 40, 16, 0.32);
 }
 
 /* Theme toggle button */

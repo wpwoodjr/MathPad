@@ -147,17 +147,17 @@ node tests/gen-expected.js TESTNAME
 ```
 app.js (entry point, ~200 lines)
   ↓
-ui.js (main orchestration, ~1830 lines)
-  ├→ storage.js (localStorage, import/export, ~930 lines)
+ui.js (main orchestration, ~1850 lines)
+  ├→ storage.js (localStorage, import/export, ~1210 lines)
   ├→ drive.js (Google Drive sync, ~990 lines)
-  ├→ editor.js (syntax highlighting editor, ~1310 lines)
-  ├→ variables-panel.js (structured variable display, ~1010 lines)
-  ├→ solve-engine.js (solving + table/grid eval, ~1210 lines)
-  │     ├→ solver.js (Brent's algorithm, ~790 lines)
-  │     ├→ evaluator.js (expression eval, 50+ builtins, ~870 lines)
-  │     └→ variables.js (variable parsing + table detection, ~1280 lines)
-  ├→ parser.js (tokenizer & AST, ~1050 lines)
-  ├→ line-parser.js (token-based line parsing, ~710 lines)
+  ├→ editor.js (syntax highlighting editor, ~1370 lines)
+  ├→ variables-panel.js (structured variable display, ~2100 lines)
+  ├→ solve-engine.js (solving + table/grid eval, ~2645 lines)
+  │     ├→ solver.js (Brent's algorithm, ~840 lines)
+  │     ├→ evaluator.js (expression eval, 50+ builtins, ~945 lines)
+  │     └→ variables.js (variable parsing + table detection, ~1260 lines)
+  ├→ parser.js (tokenizer & AST, ~1090 lines)
+  ├→ line-parser.js (token-based line parsing, ~770 lines)
   └→ theme.js (light/dark toggle, ~110 lines)
 ```
 
