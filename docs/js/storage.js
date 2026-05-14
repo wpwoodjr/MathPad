@@ -77,7 +77,7 @@ function createDefaultData() {
 
   sqrt(x+4) / acos(0.7) = y**3
 
-Press the Solve button (above) to see the value of x when y is 0.53 and also a graph of the equation (hint - you can expand this panel by dragging the divider below)
+"Press the Solve button (above) to see the value of x when y is 0.53 and also a graph of the equation (hint - you can expand this panel by dragging the divider above 'FORMULAS' below)."
 
   x->
   y: 0.53

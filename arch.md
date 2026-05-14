@@ -165,13 +165,21 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
           (loadData / reloadUIWithData / handleImport call backfillRecordTimestamps)
 
     Modified:
-        - Updates ONLY on direct user input to the textarea (typing, Tab indent, Ctrl+/ comment)
-        - Does NOT update on solve, clear, vars panel input, or programmatic changes
+        - Updates on user-initiated changes:
+            (a) direct user input to the textarea (typing, Tab indent, Ctrl+/ comment),
+            (b) title rename (renameRecord),
+            (c) details-panel field changes (updateRecordDetail — category, places,
+                format, stripZeros, groupDigits, degreesMode, currencySymbol).
+        - Does NOT update on solve, clear, vars-panel value edits, or other
+          programmatic setValue paths.
         - New records and duplicates start with modified=null (displays as "—")
-        - Driven by the userInput parameter on editor.notifyChange:
+        - Textarea path: driven by the userInput parameter on editor.notifyChange:
             notifyChange(metadata, undoRedo, userInput, modifiedAt)
-        - userInput=true is passed by onInput (typing) and replaceRange (Tab/Ctrl+/)
-        - userInput=false (default) for setValue (solve, clear, vars panel, programmatic)
+          userInput=true is passed by onInput (typing) and replaceRange (Tab/Ctrl+/);
+          userInput=false (default) for setValue (solve, clear, vars panel, programmatic).
+        - Non-textarea paths (rename, details panel) call bumpRecordModified(record)
+          which sets record.modified = Date.now() and refreshes the details panel's
+          "Modified" line in place (no full re-render).
 
     Per-undo-state preservation:
         - Each undo state stores a modifiedAt field

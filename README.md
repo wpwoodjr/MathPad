@@ -31,11 +31,11 @@ Or open `docs/index.html` locally in a browser. No build step required.
 - **Syntax-highlighted editor** with line numbers and real-time token coloring
 - **Variables panel** — structured view of all variables with editable inputs, equation balance highlighting (green/orange/red), and flash animation on value changes
 - **Undo/redo** — full undo history with Ctrl+Z / Ctrl+Y, restores solve results, status, and per-state modification time. Tab indent / Shift+Tab outdent / Ctrl+/ comment toggle, all undoable.
-- **Created/Modified tracking** — record creation and last-edit timestamps shown in the details panel. Modified updates only on direct typing (not solve, clear, or vars panel input).
+- **Created/Modified tracking** — record creation and last-edit timestamps shown in the details panel. Modified updates on direct typing, title rename, and details-panel setting changes (not solve, clear, or vars-panel value edits).
 - **Split-pane layout** — resizable variables panel above the formulas editor
 - **Resizable sidebar** — drag to adjust sidebar width, persisted across sessions
-- **Multiple tabs** — work on several records simultaneously
-- **Dark/light theme** — auto-detects system preference, toggle with one click
+- **Multiple tabs** — work on several records simultaneously; sidebar single-click opens a preview tab (italic), and any edit or double-click pins it
+- **Light/dark theme** — light by default, toggle with one click; your choice persists across sessions
 
 ### Number Formatting
 
@@ -75,11 +75,7 @@ An equation is any line with `=` between two expressions. If all variables have 
 | `a = b` | Standard equation — balance check or solve for unknown |
 | `a °= b` | Degree equality — compares mod 360 (or mod 2π in radians mode), so `359.99 °= 0.01` balances |
 
-The `°=` operator also works as a logical comparison in expressions, returning 1 (true) or 0 (false):
-
-```
-if(heading °= targetHeading; "on course"; "off course")
-```
+`°=` is only valid at the top level of an equation line (for balance checks and Brent's solving); it is not a general expression operator.
 
 ### Algebraic Substitution
 
@@ -248,7 +244,7 @@ Each variable has a ⟲ icon that clears it and solves, making it easy to comput
 ## Technical Details
 
 - Pure client-side JavaScript — no build system, no frameworks, no server
-- ~14,500 lines of JS across 13 modules
+- ~15,500 lines of JS across 13 modules
 - Brent's root-finding algorithm with adaptive bracketing, known-scale heuristics, and singularity/pole rejection
 - Recursive backtracking solver with deterministic-advance phases (direct-eval, substitution building, sweep subs) and three kinds of branching candidates (direct-eval alternates, sweep-0 natural 1-unknown, sweep-1 subset-enumerated substitution combos); falls back to most-progressed snapshot when no balanced branch found
 - Equation-graph partitioning into independent components (union-find over shared vars, limit refs, body-def refs) to avoid cartesian-product blow-up on disjoint sub-systems

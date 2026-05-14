@@ -10,6 +10,7 @@ const UIState = {
     data: null,              // Persisted data from storage
     currentRecordId: null,   // Currently active record
     openTabs: [],            // List of open tab record IDs
+    previewTabId: null,      // VS Code-style preview tab (italic, not persisted, replaced on next preview open)
     visitHistory: [],        // Recently visited record IDs (most recent last)
     editors: new Map(),      // Map of recordId -> editor info
     collapsedCategories: new Set() // Collapsed category names in sidebar (loaded from data.settings)
@@ -26,6 +27,8 @@ const UI = {
     set currentRecordId(v) { UIState.currentRecordId = v; },
     get openTabs() { return UIState.openTabs; },
     set openTabs(v) { UIState.openTabs = v; },
+    get previewTabId() { return UIState.previewTabId; },
+    set previewTabId(v) { UIState.previewTabId = v; },
     get editors() { return UIState.editors; },
     set editors(v) { UIState.editors = v; },
     get collapsedCategories() { return UIState.collapsedCategories; },
@@ -155,8 +158,8 @@ function renderSidebar(useSavedScroll = false) {
             html += `
                 <div class="record-item ${isActive ? 'active' : ''} ${isSpecial ? 'special' : ''}"
                      data-record-id="${record.id}"
-                     onclick="openRecord('${record.id}')"
-                     ondblclick="renameRecord('${record.id}')">
+                     onclick="openRecord('${record.id}', {preview:true})"
+                     ondblclick="promotePreview('${record.id}'); renameRecord('${record.id}')">
                     ${isSpecial ? '★ ' : ''}${escapeHtmlText(record.title || 'Untitled')}
                 </div>
             `;
@@ -250,10 +253,12 @@ function renderTabBar() {
         if (!record) continue;
 
         const isActive = recordId === UI.currentRecordId;
+        const isPreview = recordId === UI.previewTabId;
         html += `
-            <div class="tab ${isActive ? 'active' : ''}"
+            <div class="tab ${isActive ? 'active' : ''} ${isPreview ? 'preview' : ''}"
                  data-record-id="${recordId}"
-                 onclick="switchToTab('${recordId}')">
+                 onclick="switchToTab('${recordId}')"
+                 ondblclick="promotePreview('${recordId}')">
                 <span class="tab-title">${escapeHtmlText(record.title || 'Untitled')}</span>
                 <span class="tab-close" onclick="event.stopPropagation(); closeTab('${recordId}')">&times;</span>
             </div>
@@ -270,18 +275,75 @@ function renderTabBar() {
 }
 
 /**
- * Open a record
+ * Persist openTabs to settings, excluding the preview tab (VS Code-style:
+ * previews don't survive reload).
  */
-function openRecord(recordId) {
+function saveOpenTabsToSettings() {
+    UI.data.settings.openTabs = UI.openTabs.filter(id => id !== UI.previewTabId);
+}
+
+/**
+ * Stamp record.modified = now and refresh the details panel display
+ * if this record is currently shown. Used by non-editor edit paths
+ * (rename, details-panel field changes); the editor's onChange handler
+ * has its own stamping logic for typing/undo/redo.
+ */
+function bumpRecordModified(record) {
+    record.modified = Date.now();
+    if (record.id === UI.currentRecordId) {
+        const modEl = document.getElementById('detail-modified');
+        if (modEl) {
+            const newText = formatRecordDate(record.modified);
+            if (modEl.textContent !== newText) modEl.textContent = newText;
+        }
+    }
+}
+
+/**
+ * Promote the preview tab to a persistent tab (or no-op if recordId
+ * isn't the preview). Called when the user makes a change to the record.
+ */
+function promotePreview(recordId) {
+    if (UI.previewTabId !== recordId) return;
+    UI.previewTabId = null;
+    saveOpenTabsToSettings();
+    debouncedSave(UI.data);
+    renderTabBar();
+}
+
+/**
+ * Open a record. By default the tab is persistent; pass {preview:true}
+ * to open in the single VS Code-style preview slot (italic, replaces the
+ * existing preview if any). Switching to an already-open record never
+ * changes preview state.
+ */
+function openRecord(recordId, { preview = false } = {}) {
     const record = findRecord(UI.data, recordId);
     if (!record) return;
 
     // Close sidebar on mobile
     closeSidebar();
 
-    // Add to open tabs if not already there
-    if (!UI.openTabs.includes(recordId)) {
-        UI.openTabs.push(recordId);
+    const alreadyOpen = UI.openTabs.includes(recordId);
+    if (!alreadyOpen) {
+        if (preview && UI.previewTabId !== null) {
+            // Replace the existing preview in place, destroy its editor and
+            // drop it from visit history (matches VS Code: the prior preview
+            // is gone, not just hidden).
+            const prevId = UI.previewTabId;
+            const slot = UI.openTabs.indexOf(prevId);
+            UI.openTabs[slot] = recordId;
+            if (UI.editors.has(prevId)) {
+                const { container } = UI.editors.get(prevId);
+                container.remove();
+                UI.editors.delete(prevId);
+            }
+            const oldHist = UIState.visitHistory.indexOf(prevId);
+            if (oldHist !== -1) UIState.visitHistory.splice(oldHist, 1);
+        } else {
+            UI.openTabs.push(recordId);
+        }
+        UI.previewTabId = preview ? recordId : UI.previewTabId;
     }
 
     // Track visit history (remove if already present, push to end)
@@ -294,7 +356,7 @@ function openRecord(recordId) {
 
     // Save last viewed record and open tabs
     UI.data.settings.lastRecordId = recordId;
-    UI.data.settings.openTabs = [...UI.openTabs];
+    saveOpenTabsToSettings();
     debouncedSave(UI.data);
 
     // Create editor if not exists
@@ -451,6 +513,9 @@ function createEditorForRecord(record) {
     let syncFromVariables = false;
 
     editor.onChange((value, metadata, undoRedo, userInput, modifiedAt) => {
+        // Promote out of preview on any real text change — typing, solve,
+        // clear, vars-panel edits, undo/redo all flow through here.
+        if (record.text !== value) promotePreview(record.id);
         record.text = value;
         // Track modification time:
         //   - direct user input (typing, Tab, Ctrl+/) → now
@@ -699,8 +764,11 @@ function closeTab(recordId) {
     // Remove from open tabs
     UI.openTabs.splice(index, 1);
 
+    // Clear preview slot if this was the preview
+    if (UI.previewTabId === recordId) UI.previewTabId = null;
+
     // Save open tabs
-    UI.data.settings.openTabs = [...UI.openTabs];
+    saveOpenTabsToSettings();
     debouncedSave(UI.data);
 
     // Remove editor
@@ -847,6 +915,9 @@ function updateRecordDetail(field, value) {
     const record = findRecord(UI.data, UI.currentRecordId);
     if (!record) return;
 
+    // Editing settings is a user change — promote out of preview
+    promotePreview(record.id);
+
     // Handle adding a new category
     if (field === 'category' && value === '__new__') {
         const newCategory = prompt('Enter new category name:');
@@ -865,6 +936,7 @@ function updateRecordDetail(field, value) {
     }
 
     record[field] = value;
+    bumpRecordModified(record);
     debouncedSave(UI.data);
 
     if (field === 'category') {
@@ -920,6 +992,8 @@ function renameRecord(recordId) {
     const newTitle = prompt('Enter new name:', record.title);
     if (newTitle && newTitle !== record.title) {
         record.title = newTitle;
+        bumpRecordModified(record);
+        promotePreview(record.id);
         saveData(UI.data);
         renderSidebar();
         renderTabBar();
@@ -1788,6 +1862,7 @@ function reloadUIWithData(newData) {
     }
     UI.editors.clear();
     UI.openTabs = [];
+    UI.previewTabId = null;
     UI.currentRecordId = null;
 
     // Backfill missing timestamps with sentinel default
@@ -1824,6 +1899,7 @@ function reloadUIWithData(newData) {
 // Export functions to global scope for HTML onclick handlers
 window.toggleCategory = toggleCategory;
 window.openRecord = openRecord;
+window.promotePreview = promotePreview;
 window.renameRecord = renameRecord;
 window.switchToTab = switchToTab;
 window.closeTab = closeTab;

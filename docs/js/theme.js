@@ -32,7 +32,7 @@
         if (saved === 'light' || saved === 'dark') {
             return saved;
         }
-        return 'dark';
+        return 'light';
     }
 
     function applyTheme(theme) {

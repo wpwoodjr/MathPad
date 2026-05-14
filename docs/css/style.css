@@ -517,6 +517,10 @@ button {
     color: var(--text-primary);
 }
 
+.tab.preview .tab-title {
+    font-style: italic;
+}
+
 .tab-close {
     margin-left: 8px;
     width: 18px;
@@ -1446,6 +1450,18 @@ body.sidebar-resizing * {
 
 .variable-row.has-error .variable-value-input {
     border-color: var(--error-color);
+}
+
+[data-theme="light"] .variable-row.has-unsolved .variable-value-input {
+    box-shadow: 0 0 0 1px var(--warning-color);
+}
+
+[data-theme="light"] .variable-row.has-solved .variable-value-input {
+    box-shadow: 0 0 0 1px var(--success-color);
+}
+
+[data-theme="light"] .variable-row.has-error .variable-value-input {
+    box-shadow: 0 0 0 1px var(--error-color);
 }
 
 .variable-value-input {

@@ -21,10 +21,10 @@ node --check docs/js/ui.js
 node --check docs/js/drive.js
 # etc.
 
-# Run solver tests (27 tests)
+# Run solver tests (29 tests)
 node tests/run-tests.js
 
-# Run syntax highlighting tests (128 tests)
+# Run syntax highlighting tests (132 tests)
 node tests/run-highlighting-tests.js
 
 # Generate expected test output
@@ -35,8 +35,9 @@ node tests/gen-expected.js TESTNAME
 
 ### UI Layout
 - **Header**: Hamburger menu, title, action buttons (Solve, Clear, Undo ↶, Redo ↷), Drive controls, theme toggle, help (?), settings (⚙)
-- **Sidebar**: Collapsible category groups with record list; special records (Constants ★, Functions ★) at top; Import/Export/Reset and Help/Theme buttons at bottom; resizable width with drag divider (persistent); scrolls to current record on selection; resizable width with drag divider (persistent); scrolls to current record on selection
-- **Editor area**: Tab bar for multiple open records; split-pane with variables panel (top, resizable) and formulas editor (bottom) with syntax highlighting
+- **Sidebar**: Collapsible category groups with record list; special records (Constants ★, Functions ★) at top; Import/Export/Reset and Help/Theme buttons at bottom; resizable width with drag divider (persistent); scrolls to current record on selection
+- **Editor area**: Tab bar for multiple open records; split-pane with variables panel (top, resizable) and formulas editor (bottom) with syntax highlighting.
+- **Preview tabs** (VS Code-style): sidebar single-click opens a record in a single italicized preview slot — opening another preview replaces it (old editor destroyed). Preview is promoted to persistent on any record change (textarea edit via `record.text !== value` check in `editor.onChange`, title rename, details-panel field change). Preview tabs are excluded from `data.settings.openTabs` so they don't survive reload. Sidebar double-click promotes + renames; tab double-click promotes.
 - **Details panel**: Record settings (category, decimal places, format, strip zeros, group digits, degrees mode)
 - **Status bar**: Left shows per-record status; right shows Drive sync info (hidden below 768px, flashes on small screens)
 - **Mobile responsive**: Hamburger sidebar at 768px, icons move to sidebar at 560px, cloud icon for Sign In at 480px, compact layout at 410px
@@ -147,7 +148,7 @@ node tests/gen-expected.js TESTNAME
 ```
 app.js (entry point, ~200 lines)
   ↓
-ui.js (main orchestration, ~1850 lines)
+ui.js (main orchestration, ~1930 lines)
   ├→ storage.js (localStorage, import/export, ~1210 lines)
   ├→ drive.js (Google Drive sync, ~990 lines)
   ├→ editor.js (syntax highlighting editor, ~1370 lines)
@@ -161,7 +162,7 @@ ui.js (main orchestration, ~1850 lines)
   └→ theme.js (light/dark toggle, ~110 lines)
 ```
 
-Script load order in `index.html`: parser → line-parser → evaluator → solver → variables → storage → drive → editor → variables-panel → solve-engine → ui → app
+Script load order in `index.html`: theme → parser → line-parser → evaluator → solver → variables → storage → drive → editor → variables-panel → solve-engine → ui → app
 
 All modules use global scope (no ES modules, no build system). Test files use `require()` for Node.js compatibility.
 
@@ -195,13 +196,13 @@ All modules use global scope (no ES modules, no build system). Test files use `r
   shadowConstants: boolean,// parsed-and-ignored: documented intent was "output markers shadow reference constants when true", but no code currently reads this flag
   currencySymbol: string,  // currency symbol for $ format (default '$')
   created: number | null,  // Unix ms; sentinel default for legacy records
-  modified: number | null  // Unix ms; null until first textarea edit
+  modified: number | null  // Unix ms; null until first user edit (typing, rename, or settings change)
 }
 ```
 
 **Created/Modified tracking** (shown in details panel):
 - `created` is set on `createRecord` and duplication; backfilled from sentinel `Date.UTC(2026, 3, 1, 3, 14, 15, 926)` (April 1, 2026 03:14:15.926 UTC) for legacy records via `backfillRecordTimestamps()` in `loadData`/`reloadUIWithData`/`handleImport`
-- `modified` updates only on **direct user input to the textarea** (typing, Tab, Ctrl+/) — driven by `userInput` arg in `notifyChange`. Solve, clear, vars panel input, and other programmatic changes do NOT update it.
+- `modified` updates on user-initiated changes: direct textarea input (typing, Tab, Ctrl+/) via the `userInput` arg in `notifyChange`, **title rename** (`renameRecord`), and **details-panel field changes** (`updateRecordDetail` — category, places, format, stripZeros, groupDigits, degreesMode, currencySymbol). The latter two go through `bumpRecordModified()` which also refreshes the panel's "Modified" line in place. Solve, clear, vars-panel value edits, and other programmatic textarea changes do NOT update it.
 - **Per-undo-state `modifiedAt`**: each undo state stores the modified time at push time. Editor tracks `lastUserEditAt`; programmatic pushes inherit unchanged. Undo/redo restores `record.modified` from the popped state, so undoing across a solve preserves the user's actual last-edit time.
 - New records and duplicates start with `modified = null` (displays as "—")
 - Persisted to localStorage and Drive via JSON; export/import as `Created = "ISO8601"; Modified = "ISO8601"` line
@@ -258,7 +259,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 | `angle°: 400°` | Degrees | `°` before marker = degrees format (mod 360 on output); `400°` literal = 400 (no mod) |
 | `when@d: 4/1/2026` | Date format | `@d` before marker = date (locale format); `@d->>` includes time |
 | `dur@t: 1:30:00` | Duration format | `@t` before marker = duration H:MM:SS; `@t->>` includes fractional seconds |
-| `a °= b` | Degree equality | Mod-aware comparison (mod 360 or mod 2π per degreesMode): equation balance check or logical operator (returns 1/0) |
+| `a °= b` | Degree equality | Mod-aware equation operator (mod 360 or mod 2π per degreesMode) — top-level equation only, for balance checks and Brent's solving. Not a general expression operator. |
 | `expr$->` | Expression output | Format expression result as money |
 | `x~` | Pre-solve value | Strictly returns value before this solve started |
 | `x~?` | Existence check | 1 if x has a pre-solve value, 0 otherwise |
