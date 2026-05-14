@@ -697,7 +697,14 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                         if (typeof v !== 'number') continue;
                         if (Number.isNaN(v)) nanFallbacks.push({ sub, value: v });
                         else candidates.push({ sub, value: v });
-                    } catch (e) { /* skip */ }
+                    } catch (e) {
+                        // EvalError = "this sub doesn't apply" (skip silently).
+                        // Anything else (e.g. RangeError stack overflow from a
+                        // recursive user function) is a real failure — surface it.
+                        if (!(e instanceof EvalError)) {
+                            errors.push(`Line ${sub.sourceLine + 1}: ${e.message}`);
+                        }
+                    }
                 }
                 let chosen = null;
                 if (candidates.length === 1) {
@@ -849,7 +856,13 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 try {
                     const v = evaluate(sub.ast, context);
                     if (!Number.isNaN(v)) cands.push({ sub, value: v });
-                } catch (e) { /* skip */ }
+                } catch (e) {
+                    // Same policy as phase [3]: skip EvalError ("doesn't apply"),
+                    // surface anything else (stack overflow, real bugs).
+                    if (!(e instanceof EvalError)) {
+                        errors.push(`Line ${sub.sourceLine + 1}: ${e.message}`);
+                    }
+                }
             }
             if (cands.length < 2) continue; // [3] already resolved (1) or deferred (0)
             for (const { sub, value } of cands) {

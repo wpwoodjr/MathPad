@@ -1,0 +1,16 @@
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Wallis approximation of pi — stack overflow at deep recursion"
+"Regression for the silent-skip-vs-surface asymmetry in solve-engine.js:"
+"the equation path (w = ...) used to swallow RangeError in phase [3]"
+"while the expression-output path (...->>) always surfaced it."
+"Both must now report 'Maximum call stack size exceeded'."
+
+wallis(n) = if(n>0; wallis(n-1)*2*n/(2*n-1)*2*n/(2*n+1); 1)
+
+n: 6000
+w = 2*wallis(n)
+2*wallis(n)->>
+w->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

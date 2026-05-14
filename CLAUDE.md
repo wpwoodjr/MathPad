@@ -21,7 +21,7 @@ node --check docs/js/ui.js
 node --check docs/js/drive.js
 # etc.
 
-# Run solver tests (29 tests)
+# Run solver tests (30 tests)
 node tests/run-tests.js
 
 # Run syntax highlighting tests (132 tests)
