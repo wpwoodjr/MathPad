@@ -257,7 +257,7 @@ grid "test variable limit solving (36/48 solved)"
 0	0	0		0	0	0
 1	0	0	0			0
 2	0	0	0			0
-3	0	0	0	0	0
+3	0	0	0	0	0	
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -926,4 +926,40 @@ x*x = 16
 --Variables--
 x[-10:0]<- -4
 x-> -4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Line 12: Equation doesn't balance: a/sin(A) = b/sin(B) (relative diff 48.1% >= 0.5%)\nLine 13: Equation doesn't balance: c/sin(C) = a/sin(A) (relative diff 48.1% >= 0.5%)\nLine 14: Equation doesn't balance: a*a = b*b + c*c - 2*b*c*cos(A) (relative diff 73.1% >= 0.5%)\nLine 15: Equation doesn't balance: b*b = a*a + c*c - 2*a*c*cos(B) (relative diff 9.9% >= 0.5%)\nLine 16: Equation doesn't balance: c*c = a*a + b*b - 2*a*b*cos(C) (relative diff 9.1% >= 0.5%)"; StatusIsError = 1
+"Naturalness tiebreak: keep b=speed over derived sine-law value"
+"Over-determined law-of-sines/cosines triangle whose inputs do not form"
+"a valid triangle, so no branch balances. b has two fully-known subs:"
+"b=speed (natural direct assignment, =10) and b=a*sin(B)/sin(A) (sine"
+"law, ~5.19). saveCandidate's naturalness tiebreak must keep the"
+"snapshot where the user's b=speed assignment holds (b=10) so error"
+"attribution points at the relational equations, not the input. Without"
+"the tiebreak the solver fell back to b~5.19 and blamed b=speed."
+
+--Equations--
+A + B + C = 180
+a/sin(A) = b/sin(B)
+c/sin(C) = a/sin(A)
+a*a = b*b + c*c - 2*b*c*cos(A)
+b*b = a*a + c*c - 2*a*c*cos(B)
+c*c = a*a + b*b - 2*a*b*cos(C)
+A °= cmg - cts
+B °= set - cmg
+C °= 180 - (set - cts)
+a = drift
+b = speed
+c = smg
+c: c
+
+--Variables--
+smg: 9.014
+cmg °: 0°
+speed: 10
+cts °: 350°
+drift: 1
+set °: 115.639°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

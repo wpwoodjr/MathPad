@@ -756,3 +756,38 @@ x*x = 16
 x[-10:0]<-
 x->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
+"Naturalness tiebreak: keep b=speed over derived sine-law value"
+"Over-determined law-of-sines/cosines triangle whose inputs do not form"
+"a valid triangle, so no branch balances. b has two fully-known subs:"
+"b=speed (natural direct assignment, =10) and b=a*sin(B)/sin(A) (sine"
+"law, ~5.19). saveCandidate's naturalness tiebreak must keep the"
+"snapshot where the user's b=speed assignment holds (b=10) so error"
+"attribution points at the relational equations, not the input. Without"
+"the tiebreak the solver fell back to b~5.19 and blamed b=speed."
+
+--Equations--
+A + B + C = 180
+a/sin(A) = b/sin(B)
+c/sin(C) = a/sin(A)
+a*a = b*b + c*c - 2*b*c*cos(A)
+b*b = a*a + c*c - 2*a*c*cos(B)
+c*c = a*a + b*b - 2*a*b*cos(C)
+A °= cmg - cts
+B °= set - cmg
+C °= 180 - (set - cts)
+a = drift
+b = speed
+c = smg
+c: c
+
+--Variables--
+smg: 9.014
+cmg °: 0°
+speed: 10
+cts °: 350°
+drift: 1
+set °: 115.639°
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

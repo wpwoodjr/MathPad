@@ -40,11 +40,16 @@ function preParseEquations(equations) {
             } else {
                 eq.allVars = new Set();
             }
+            // Precompute the "natural" definition shape (bare-variable LHS,
+            // e.g. `b = speed`) once. Used by the saveCandidate naturalness
+            // tiebreaker; null for relational equations like a/sin(A)=b/sin(B).
+            eq.definition = isDefinitionEquation(eq.leftText, eq.rightText, eq.rightAST);
             eq.parseError = null;
         } catch (e) {
             eq.leftAST = null;
             eq.rightAST = null;
             eq.allVars = new Set();
+            eq.definition = null;
             eq.parseError = e.message;
         }
     }
@@ -999,10 +1004,41 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     // On top-level failure, we restore bestCandidate before post-solve error
     // reporting so values and solveFailures reflect the actual best-effort state.
     let bestCandidate = null;
+    // Count "natural" definition equations (LHS is a bare variable, e.g.
+    // `b = speed`) that are satisfied in the given context. Used only as a
+    // tiebreaker when two fallback snapshots bind the same number of
+    // variables: prefer the one that keeps the user's direct assignments
+    // intact over one where a relational equation silently re-derived the
+    // same variable. Relational equations like `a/sin(A) = b/sin(B)` have a
+    // non-bare LHS so isDefinitionEquation returns null — they don't count.
+    function naturalnessScore(ctx) {
+        let n = 0;
+        for (const eq of equations) {
+            const def = eq.definition;
+            if (!def || !ctx.hasVariable(def.variable)) continue;
+            try {
+                const lv = ctx.getVariable(def.variable);
+                const rv = evaluate(eq.rightAST, ctx);
+                if (typeof lv !== 'number' || typeof rv !== 'number') continue;
+                const res = eq.modN
+                    ? modCheckBalance(lv, rv, record.degreesMode ? 360 : 2 * Math.PI, places)
+                    : checkBalance(lv, rv, places);
+                if (res.balanced) n++;
+            } catch (e) { /* skip */ }
+        }
+        return n;
+    }
     function saveCandidate(depth, reason) {
-        if (bestCandidate && bestCandidate.variables.size >= context.variables.size) return;
+        if (bestCandidate) {
+            const oldSize = bestCandidate.variables.size;
+            const newSize = context.variables.size;
+            if (oldSize > newSize) return;
+            if (oldSize === newSize &&
+                bestCandidate.naturalness >= naturalnessScore(context)) return;
+        }
         bestCandidate = snapshotState(context, solveFailures, unsolvedEquations,
                                       erroredEquations, computedValues, errors, solved);
+        bestCandidate.naturalness = naturalnessScore(context);
         _trace(`  · candidate (depth ${depth}): ${reason}`);
     }
 
