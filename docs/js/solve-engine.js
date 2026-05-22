@@ -1187,6 +1187,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 definitionDeps.set(eq.leftAST.name, findVariablesInAST(eq.rightAST));
             }
             if (erroredEquations.has(eq.startLine)) continue;
+            // Stop balance-checking once one equation has failed — keep just
+            // a single "doesn't balance" error to focus the user on one issue
+            // at a time. Definition tracking above (definitionDeps) still
+            // runs for every equation so expandVars works on the full record.
+            if (firstFailedEq) continue;
 
             const unknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
 
@@ -1251,24 +1256,36 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         return expanded;
     }
 
-    // Apply highlighting: all balanced → all green.
-    // Any failure → orange on failing eq's expanded vars, except vars balanced earlier. No green.
+    // Apply highlighting:
+    //   any failure  → for each var in the first failing equation:
+    //                    - if it balanced in an earlier equation
+    //                      (priorBalanced) → 'partial': "passed earlier
+    //                      balance checks but not this one" (yellow-ish)
+    //                    - otherwise → 'unsolved' (orange)
+    //                  Vars in priorBalanced but NOT in firstFailedEq stay
+    //                  un-marked (genuinely shielded — no conflict surfaced).
+    //   all balanced → all green (only when at least one equation actually
+    //                  balance-checked — guards against half-filled records).
     if (firstFailedEq) {
-        // Collect declared vars from real equations (not undeclared definitions) that balanced before the failure
+        // Second pass to collect priorBalanced — must run AFTER the balance
+        // loop because definitionDeps is built in document order during it,
+        // so expanding an earlier equation's allVars only resolves to
+        // declared rows once all the later `a = drift`-style definitions
+        // have populated definitionDeps. (The committed baseline used the
+        // same two-pass structure for this reason.)
         const priorBalanced = new Set();
         for (const eq of equations) {
             if (eq === firstFailedEq) break;
             if (!eq.leftAST || !eq.rightAST) continue;
             if (erroredEquations.has(eq.startLine)) continue;
-            if (definitionDeps.has(eq.leftAST.name)) continue; // skip undeclared-var definitions
+            if (definitionDeps.has(eq.leftAST.name)) continue; // skip undeclared-var defs
             for (const v of expandVars(eq.allVars)) {
                 if (variables.has(v)) priorBalanced.add(v);
             }
         }
         for (const v of expandVars(firstFailedEq.allVars)) {
-            if (variables.has(v) && !priorBalanced.has(v)) {
-                equationVarStatus.set(v, 'unsolved');
-            }
+            if (!variables.has(v)) continue;
+            equationVarStatus.set(v, priorBalanced.has(v) ? 'partial' : 'unsolved');
         }
     } else if (balancedAny) {
         // Only mark vars green when at least one equation actually balanced.
@@ -1895,9 +1912,20 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
     // Dedup errors: main solve and each slow-path re-solve can produce
     // overlapping messages (e.g. the same balance error surfacing from
     // multiple OUTPUT-with-limits re-solves, or a slow-path message
-    // identical to one already pushed by main solve). Preserve first-
-    // occurrence order; drop exact duplicates.
+    // identical to one already pushed by main solve). Drop exact duplicates,
+    // then sort by source-line number so the displayed order matches the
+    // top-to-bottom order of the gutter markers in the editor. Errors
+    // without a `Line N:` prefix (none currently, but defensive) sort last.
+    // Array.prototype.sort is stable, so two errors on the same line keep
+    // their original insertion order.
     const dedupedErrors = [...new Set(errors)];
+    dedupedErrors.sort((a, b) => {
+        const ma = a.match(/^Line (\d+):/);
+        const mb = b.match(/^Line (\d+):/);
+        const na = ma ? parseInt(ma[1], 10) : Infinity;
+        const nb = mb ? parseInt(mb[1], 10) : Infinity;
+        return na - nb;
+    });
 
     return { text, solved: solveResult.solved, errors: dedupedErrors, equationVarStatus: solveResult.equationVarStatus, tables, trace };
 }

@@ -647,15 +647,18 @@ x->
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Partitioning test (six independent components)"
-"Six independent variables, each with a contradictory equation pair."
-"Without partitioning the backtracker explodes — every variable has 2"
-"directEval alternates and 2 sweep1 alternates (substitution combos),"
-"and the recursion nests them as a cartesian product across variables."
-"In practice this means tens of thousands of solve attempts before the"
-"backtracker exhausts. With partitioning each variable solves in its"
-"own 1-var sub-system (~4 attempts each, 24 total)."
-"a4[0:a3] limit-depends on a3, so they share a component."
+"Partitioning test (five components — a4[0:a3] absorbs into a3's)"
+"Six contradictory variable pairs; five connected components after the"
+"a4[0:a3] limit edge unions a3 and a4. Without partitioning the"
+"backtracker explodes — every variable has 2 directEval alternates and"
+"2 sweep1 alternates (substitution combos), and the recursion nests"
+"them as a cartesian product across variables. In practice this means"
+"tens of thousands of solve attempts before the backtracker exhausts."
+"With partitioning each component solves in its own sub-system (~4"
+"attempts each)."
+"solveEquations stops balance-checking after the first failure per"
+"component, so the {a3,a4} component contributes only one balance"
+"error (a3 = 120) — five 'doesn't balance' messages total, not six."
 
 b = -120
 b = 120

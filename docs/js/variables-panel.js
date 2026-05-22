@@ -809,6 +809,12 @@ class VariablesPanel {
                 if (!row) continue;
                 if (status === 'unsolved') {
                     row.classList.add('has-unsolved');
+                } else if (status === 'partial') {
+                    // Var balanced in an earlier equation but also appears
+                    // in the failing one — "passed earlier balance checks
+                    // but not this one." Distinct from plain orange so the
+                    // user can tell where to investigate.
+                    row.classList.add('has-partial');
                 } else {
                     row.classList.add('has-solved');
                 }
@@ -848,6 +854,9 @@ class VariablesPanel {
         }
         for (const row of this.container.querySelectorAll('.variable-row.has-unsolved')) {
             row.classList.remove('has-unsolved');
+        }
+        for (const row of this.container.querySelectorAll('.variable-row.has-partial')) {
+            row.classList.remove('has-partial');
         }
     }
 

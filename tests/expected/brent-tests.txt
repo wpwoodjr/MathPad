@@ -769,7 +769,7 @@ b[0:30] ->
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 11: Equation doesn't balance: b = 120 (relative diff 200% >= 0.005%)\nLine 15: Equation doesn't balance: a3 = -120 (relative diff 200% >= 0.005%)\nLine 12: Could not find a value for 'b' in range [0:300] consistent with all equations"; StatusIsError = 1
+Status = "Line 11: Equation doesn't balance: b = 120 (relative diff 200% >= 0.005%)\nLine 12: Could not find a value for 'b' in range [0:300] consistent with all equations\nLine 15: Equation doesn't balance: a3 = -120 (relative diff 200% >= 0.005%)"; StatusIsError = 1
 "bestCandidate captures most-progressed state, not first-eager save"
 "b's slow-path: direct-eval sets a4=120 at depth 1, then phase 5 tries"
 "b=-120 first (from `b = -120` sub, first line). Limits [0:300] reject"
@@ -814,16 +814,19 @@ x-> 400
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 12: Equation doesn't balance: b = 120 (relative diff 200% >= 0.005%)\nLine 16: Equation doesn't balance: a = -120 (relative diff 200% >= 0.005%)\nLine 20: Equation doesn't balance: a1 = -120 (relative diff 200% >= 0.005%)\nLine 24: Equation doesn't balance: a2 = -120 (relative diff 200% >= 0.005%)\nLine 28: Equation doesn't balance: a3 = -120 (relative diff 200% >= 0.005%)\nLine 32: Equation doesn't balance: a4 = -120 (relative diff 200% >= 0.005%)\nLine 13: Could not find a value for 'b' in range [0:300] consistent with all equations"; StatusIsError = 1
-"Partitioning test (six independent components)"
-"Six independent variables, each with a contradictory equation pair."
-"Without partitioning the backtracker explodes — every variable has 2"
-"directEval alternates and 2 sweep1 alternates (substitution combos),"
-"and the recursion nests them as a cartesian product across variables."
-"In practice this means tens of thousands of solve attempts before the"
-"backtracker exhausts. With partitioning each variable solves in its"
-"own 1-var sub-system (~4 attempts each, 24 total)."
-"a4[0:a3] limit-depends on a3, so they share a component."
+Status = "Line 15: Equation doesn't balance: b = 120 (relative diff 200% >= 0.005%)\nLine 16: Could not find a value for 'b' in range [0:300] consistent with all equations\nLine 19: Equation doesn't balance: a = -120 (relative diff 200% >= 0.005%)\nLine 23: Equation doesn't balance: a1 = -120 (relative diff 200% >= 0.005%)\nLine 27: Equation doesn't balance: a2 = -120 (relative diff 200% >= 0.005%)\nLine 31: Equation doesn't balance: a3 = -120 (relative diff 200% >= 0.005%)"; StatusIsError = 1
+"Partitioning test (five components — a4[0:a3] absorbs into a3's)"
+"Six contradictory variable pairs; five connected components after the"
+"a4[0:a3] limit edge unions a3 and a4. Without partitioning the"
+"backtracker explodes — every variable has 2 directEval alternates and"
+"2 sweep1 alternates (substitution combos), and the recursion nests"
+"them as a cartesian product across variables. In practice this means"
+"tens of thousands of solve attempts before the backtracker exhausts."
+"With partitioning each component solves in its own sub-system (~4"
+"attempts each)."
+"solveEquations stops balance-checking after the first failure per"
+"component, so the {a3,a4} component contributes only one balance"
+"error (a3 = 120) — five 'doesn't balance' messages total, not six."
 
 b = -120
 b = 120
@@ -930,7 +933,7 @@ x-> -4
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
-Status = "Line 12: Equation doesn't balance: a/sin(A) = b/sin(B) (relative diff 48.1% >= 0.5%)\nLine 13: Equation doesn't balance: c/sin(C) = a/sin(A) (relative diff 48.1% >= 0.5%)\nLine 14: Equation doesn't balance: a*a = b*b + c*c - 2*b*c*cos(A) (relative diff 73.1% >= 0.5%)\nLine 15: Equation doesn't balance: b*b = a*a + c*c - 2*a*c*cos(B) (relative diff 9.9% >= 0.5%)\nLine 16: Equation doesn't balance: c*c = a*a + b*b - 2*a*b*cos(C) (relative diff 9.1% >= 0.5%)"; StatusIsError = 1
+Status = "Line 12: Equation doesn't balance: a/sin(A) = b/sin(B) (relative diff 48.1% >= 0.5%)"; StatusIsError = 1
 "Naturalness tiebreak: keep b=speed over derived sine-law value"
 "Over-determined law-of-sines/cosines triangle whose inputs do not form"
 "a valid triangle, so no branch balances. b has two fully-known subs:"

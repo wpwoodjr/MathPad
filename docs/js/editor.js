@@ -596,6 +596,11 @@ class SimpleEditor {
         // Programmatic pushes (solve, etc.) inherit this value unchanged.
         this.lastUserEditAt = null;
 
+        // Set of 0-based line indices that currently have errors (any kind:
+        // balance, value, root, limit, etc.). Drives the line-number gutter
+        // marker — every line with an entry gets a ▸ in the gutter.
+        this.errorLines = new Set();
+
         this.element = document.createElement('div');
         this.element.className = 'simple-editor';
 
@@ -1235,15 +1240,34 @@ class SimpleEditor {
 
     updateLineNumbers() {
         const lines = this.textarea.value.split('\n');
+        const errorLines = this.errorLines;
         let html = '';
 
         // Measure each line's rendered height to handle wrapping
         for (let i = 0; i < lines.length; i++) {
             const height = this.measureTextHeight(lines[i]);
-            html += `<div class="line-number" style="height:${height}px">${i + 1}</div>`;
+            const cls = errorLines.has(i) ? 'line-number has-error' : 'line-number';
+            html += `<div class="${cls}" style="height:${height}px">${i + 1}</div>`;
         }
         this.lineNumbers.innerHTML = html;
         this.lineNumbers.scrollTop = this.textarea.scrollTop;
+    }
+
+    /**
+     * Set (or clear, with null/empty) the set of 0-based line indices that
+     * currently have errors. Re-renders the line-number gutter so markers
+     * appear/move/disappear. Accepts a Set, an Array, or null.
+     */
+    setErrorLines(lines) {
+        const next = lines instanceof Set ? lines : new Set(lines || []);
+        // Cheap diff: same size and every member matches → no change.
+        if (next.size === this.errorLines.size) {
+            let same = true;
+            for (const v of next) if (!this.errorLines.has(v)) { same = false; break; }
+            if (same) return;
+        }
+        this.errorLines = next;
+        this.updateLineNumbers();
     }
 
     /**

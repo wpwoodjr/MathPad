@@ -25,6 +25,7 @@
     --error-color: #f44747;
     --warning-color: #cca700;
     --success-color: #4ec9b0;
+    --partial-color: #7a8a95;
     --star-label-color: #57c1ff;
 
     /* Syntax highlighting */
@@ -82,8 +83,9 @@
     --accent-active: #2a3a18;
 
     --error-color: #b02818;
-    --warning-color: #8a5a10;
-    --success-color: #2a5520;
+    --warning-color: #c97400;
+    --success-color: #1f8a2e;
+    --partial-color: #4a5a68;
     --star-label-color: #2a4a78;
 
     /* Syntax highlighting */
@@ -583,6 +585,20 @@ button {
     display: flex;
     align-items: flex-start;
     box-sizing: border-box;
+    position: relative;
+}
+
+.line-number.has-error {
+    color: var(--warning-color);
+    font-weight: 600;
+}
+
+.line-number.has-error::before {
+    content: "▸";
+    position: absolute;
+    left: 2px;
+    top: 0;
+    color: var(--warning-color);
 }
 
 .editor-area {
@@ -1452,17 +1468,14 @@ body.sidebar-resizing * {
     border-color: var(--error-color);
 }
 
-[data-theme="light"] .variable-row.has-unsolved .variable-value-input {
-    box-shadow: 0 0 0 1px var(--warning-color);
+.variable-row.has-partial .variable-name {
+    color: var(--partial-color);
 }
 
-[data-theme="light"] .variable-row.has-solved .variable-value-input {
-    box-shadow: 0 0 0 1px var(--success-color);
+.variable-row.has-partial .variable-value-input {
+    border-color: var(--partial-color);
 }
 
-[data-theme="light"] .variable-row.has-error .variable-value-input {
-    box-shadow: 0 0 0 1px var(--error-color);
-}
 
 .variable-value-input {
     flex: 1;

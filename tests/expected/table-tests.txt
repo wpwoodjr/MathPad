@@ -418,7 +418,7 @@ table "Multi-output limits"
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 9: Equation doesn't balance: x = sqrt(y) (left = NaN, right = NaN)\nLine 10: Equation doesn't balance: z = x (left = NaN, right = NaN)"; StatusIsError = 1
+Status = "Line 9: Equation doesn't balance: x = sqrt(y) (left = NaN, right = NaN)"; StatusIsError = 1
 "Balance-check accumulates vars across all failing equations"
 "Reordering equations must not change which columns get blanked."
 "For y<0, sqrt(y)=NaN propagates through subs: x=NaN, z=NaN."

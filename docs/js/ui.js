@@ -283,6 +283,22 @@ function saveOpenTabsToSettings() {
 }
 
 /**
+ * Parse 0-based line indices out of an errors array. Each error string
+ * starts with "Line N: ..." per the solver's convention; everything
+ * else is ignored. Used to mark every error-bearing line in the editor
+ * gutter regardless of error kind (balance, value, root, limit, etc.).
+ */
+function findErrorLines(errors) {
+    const lines = new Set();
+    if (!errors) return lines;
+    for (const e of errors) {
+        const m = e.match(/^Line (\d+):/);
+        if (m) lines.add(parseInt(m[1], 10) - 1);
+    }
+    return lines;
+}
+
+/**
  * Stamp record.modified = now and refresh the details panel display
  * if this record is currently shown. Used by non-editor edit paths
  * (rename, details-panel field changes); the editor's onChange handler
@@ -550,8 +566,10 @@ function createEditorForRecord(record) {
             if (metadata) {
                 if (metadata.errors || metadata.equationVarStatus) {
                     variablesManager.setErrors(metadata.errors, metadata.equationVarStatus);
+                    editor.setErrorLines(findErrorLines(metadata.errors));
                 } else {
                     variablesManager.clearErrors();
+                    editor.setErrorLines(null);
                 }
                 variablesManager.setTableData(metadata.tables || null);
                 if (metadata.statusMessage != null) {
@@ -563,6 +581,7 @@ function createEditorForRecord(record) {
             // the previous solve's output is no longer in sync with the source.
             if (userInput) {
                 variablesManager.clearErrors();
+                editor.setErrorLines(null);
                 const stripped = stripStaleSections(value);
                 if (stripped !== value) {
                     editor.saveToHistoryNow();
@@ -1634,6 +1653,7 @@ function handleSolve(undoable = true, traceMode = false, includeTableOutputs = f
 
         // Set error/equation highlights and clear edit tracking
         editorInfo.variablesManager.setErrors(errors, equationVarStatus);
+        editorInfo.editor.setErrorLines(findErrorLines(errors));
         editorInfo.variablesManager.clearLastEdited();
 
         // Display table results
@@ -1689,6 +1709,7 @@ function handleClearInput() {
 
     // Always clear error highlights and table data
     editorInfo.variablesManager.clearErrors();
+    editorInfo.editor.setErrorLines(null);
     editorInfo.variablesManager.clearLastEdited();
     editorInfo.variablesManager.setTableData(null);
 

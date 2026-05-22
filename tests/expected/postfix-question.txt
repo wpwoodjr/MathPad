@@ -124,7 +124,7 @@ x-> 18
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 11: Variable 'b' has no pre-solve value\nLine 21: Variable 'd2' has no pre-solve value\nLine 44: Undefined variable: out3\nLine 45: Undefined variable: out3\nLine 48: Variable 'out4' has no pre-solve value\nLine 35: Variable 'out2' has no value to output"; StatusIsError = 1
+Status = "Line 11: Variable 'b' has no pre-solve value\nLine 21: Variable 'd2' has no pre-solve value\nLine 35: Variable 'out2' has no value to output\nLine 44: Undefined variable: out3\nLine 45: Undefined variable: out3\nLine 48: Variable 'out4' has no pre-solve value"; StatusIsError = 1
 "~? tests"
 a = 2*b
 a: 3
