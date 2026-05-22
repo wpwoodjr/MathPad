@@ -310,6 +310,20 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
         const value = valueInLimits(raw);
         if (value !== undefined) return { value, reason: null, errors };
     }
+    // Slow path produced no value and no balance error — the under-determined
+    // case (e.g. `x = a + b` with b also unknown). solveEquations doesn't
+    // classify this as "too many unknowns" (isSkippableDefEquation skips
+    // bare-LHS definitions whose LHS is still unbound — they're handled via
+    // substitutions, not flagged as failures). Without explicit handling
+    // here the slow path would return empty errors and formatOutput's
+    // `__resolvevar_${lineIndex} === undefined` branch would skip silently
+    // ("re-solve failed; specific error already pushed" — but nothing was).
+    // Emit the same "no consistent value" message used for over-determined
+    // failures, which describes both cases accurately: the limit can't be
+    // satisfied because the equation system doesn't pin `varName` down.
+    if (errors.length === 0) {
+        return { value: undefined, reason: 'noRoot', errors: [noConsistentValueError()] };
+    }
     return { value: undefined, reason: 'noRoot', errors };
 }
 
@@ -1179,12 +1193,16 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     let firstFailedEq = null;
     let balancedAny = false;  // any equation we could actually balance-check (and that balanced)
     const definitionDeps = new Map(); // undeclared var → RHS vars (for highlighting expansion)
+    const definedByEq = new Map();    // undeclared var → the FIRST equation that introduced it (its definition).
+                                       // Subsequent equations with the same bare-undeclared LHS are real
+                                       // constraints (their balance is meaningful), not trivial definitions.
     for (const eq of equations) {
         try {
             if (!eq.leftAST || !eq.rightAST) continue;
             // Track undeclared-var definitions for highlighting expansion
             if (eq.leftAST.type === 'VARIABLE' && !variables.has(eq.leftAST.name) && !definitionDeps.has(eq.leftAST.name)) {
                 definitionDeps.set(eq.leftAST.name, findVariablesInAST(eq.rightAST));
+                definedByEq.set(eq.leftAST.name, eq);
             }
             if (erroredEquations.has(eq.startLine)) continue;
             // Stop balance-checking once one equation has failed — keep just
@@ -1278,7 +1296,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             if (eq === firstFailedEq) break;
             if (!eq.leftAST || !eq.rightAST) continue;
             if (erroredEquations.has(eq.startLine)) continue;
-            if (definitionDeps.has(eq.leftAST.name)) continue; // skip undeclared-var defs
+            // Skip the ORIGINATING definition for each undeclared var (it
+            // balances trivially because the solver assigned the var from
+            // this equation's RHS). Subsequent equations with the same
+            // bare-undeclared LHS are real constraints — keep them.
+            if (definedByEq.get(eq.leftAST.name) === eq) continue;
             for (const v of expandVars(eq.allVars)) {
                 if (variables.has(v)) priorBalanced.add(v);
             }

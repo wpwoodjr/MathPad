@@ -999,3 +999,56 @@ cts °: 350°
 drift: 1
 set °: 115.639°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 15: Could not find a value for 'x' in range [0:20] consistent with all equations"; StatusIsError = 1
+VarStatus = ""
+"Surface 'no consistent value' from OUTPUT-with-limits under-determined case"
+"x[0:20]-> demands x in [0:20], but x = a + b leaves both x and b"
+"unknown. solveEquations classifies this equation as a skippable bare-LHS"
+"definition (handled via substitutions, not 'too many unknowns'), Brent's"
+"never runs (no solveFailures), and the balance check is gated on"
+"no-unknowns. All three error paths skip → solveResult.errors is empty."
+"Before the fix, resolveWithLimits returned empty errors → formatOutput"
+"saw __resolvevar_${lineIndex}=undefined and skipped silently. Now the"
+"slow path emits 'Could not find a value' when it produces neither a"
+"value nor a balance error — same message as the over-determined case,"
+"accurate description of both: limit can't be satisfied by the system."
+
+a: 10
+x = a + b
+x[0:20]->
+
+--Variables--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 21: Equation doesn't balance: c = a + b (relative diff 9.091% >= 0.005%)"; StatusIsError = 1
+VarStatus = "a:partial, b:partial, c:unsolved"
+"definedByEq guard: same-LHS equations contribute to shield regardless of order"
+"x = 10 is the first bare-LHS occurrence so definedByEq tags it as x's"
+"definition (skipped from priorBalanced — its trivial balance proves"
+"nothing). x = a + b is the SECOND occurrence — a real constraint whose"
+"balance IS meaningful: combined with x = 10 it pins a + b == 10."
+"Its expandVars({x, a, b}) yields {a, b} (x's deps from definitionDeps['x']"
+"are empty since x = 10's RHS has no vars), so priorBalanced = {a, b}."
+"c = a + b then fails (11 != 10): c is fresh to the failure → unsolved;"
+"a, b were shielded by the second x-equation → partial."
+"Order doesn't matter: swapping to `x = a + b` then `x = 10` gives the"
+"same {a:partial, b:partial, c:unsolved} outcome — the originating eq"
+"and the constraint eq each contribute the same {a, b} to priorBalanced,"
+"one via definitionDeps['x']={a,b}, the other via own allVars."
+
+a: 5
+b: 5
+
+x = 10
+x = a + b
+
+c = a + b
+c: 11
+
+--Variables--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
