@@ -2,6 +2,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pmt:solved, pv:solved, yint:solved"
 "Time Value of Money"
 
 "Payment calculation"
@@ -21,6 +22,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pmt:solved, pv:solved, yint:solved"
 "Time Value of Money"
 
 "Payment calculation"
@@ -43,6 +45,7 @@ Category = "Finance"; Secret = 0
 Places = 6; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Equation doesn't balance: pmt = -(pv + fv / (1 + mint)**... (relative diff 0.00018% >= 0.00005%)"; StatusIsError = 1
+VarStatus = "fv:unsolved, n:unsolved, pmt:unsolved, pv:unsolved"
 "Solve with 6 decimal places - should fail balance check"
 
 "Payment calculation"
@@ -62,6 +65,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pmt:solved, pv:solved, yint:solved"
 "Same values with default tolerance - should pass"
 
 "Payment calculation"
@@ -81,6 +85,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Equation doesn't balance: pmt = -(pv + fv / (1 + mint)**... (relative diff 17.7% >= 0.5%)"; StatusIsError = 1
+VarStatus = "fv:unsolved, n:unsolved, pmt:unsolved, pv:unsolved, yint:unsolved"
 "TVM with wrong pmt - should fail balance check"
 
 "Payment calculation"
@@ -100,6 +105,7 @@ Category = "Finance"; Secret = 0
 Places = 8; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Equation doesn't balance: pmt = -(pv + fv / (1 + mint)**... (relative diff 8e-7% >= 5e-7%)"; StatusIsError = 1
+VarStatus = "fv:unsolved, n:unsolved, pmt:unsolved, pv:unsolved, yint:unsolved"
 "High precision (8 places) - exposes rounding error in $ values"
 
 "Payment calculation"
@@ -119,6 +125,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "fv:solved, pmt:solved, pv:solved, return:solved, years:solved"
 "Solve for pv with return and fv"
 
 "TVM calculation"
@@ -141,6 +148,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "fv:solved, gain:solved, pv:solved, years:solved"
 "Root at grid point (gain=0 when fv=pv)"
 
 fv = pv * (1 + gain)**years
@@ -154,6 +162,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "fv:solved, gain:solved, pv:solved, years:solved"
 "Root at lower bound (gain=-1 when fv=0)"
 
 fv = pv * (1 + gain)**years
@@ -167,6 +176,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "fv:solved, gain:solved, pv:solved, years:solved"
 "Root at upper bound (gain=1 when fv=2*pv)"
 
 fv = pv * (1 + gain)**years
@@ -180,6 +190,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "fv:solved, gain:solved, pv:solved, years:solved"
 "Root at test point without limits (gain=-1, no sign change)"
 
 fv = pv * (1 + gain)**years
@@ -193,6 +204,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved, y:solved"
 "Root at x=0 without limits, no sign change (y=x^2)"
 
 y = x**2
@@ -204,6 +216,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "fees:solved, fv:solved, pmt:solved, pv:solved, return:solved, years:solved"
 "Solve for years - TVM with singularity at n=0"
 
 "TVM calculation"
@@ -227,6 +240,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "fees:solved, fv:solved, gain:solved, pmt:solved, pv:solved, return:solved, years:solved"
 "Retirement Calculator (<<- test)"
 
 --Equations--

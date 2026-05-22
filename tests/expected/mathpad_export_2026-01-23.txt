@@ -2,6 +2,7 @@ Category = "Math"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "a:solved, b:solved, c:solved"
 "Quadratic equation solver"
 "ax^2 + bx + c = 0"
 
@@ -20,6 +21,7 @@ Category = "Reference"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 5: Too many unknowns (p, r, n, t)\nLine 14: Too many unknowns (a, b)\nLine 17: Too many unknowns (a, b)"; StatusIsError = 1
+VarStatus = ""
 "Functions"
 // Solving the Functions record treats fn defs as equations (expected errors)
 "User-defined functions"
@@ -43,6 +45,7 @@ Category = "Reference"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Constants"
 "Physical and mathematical constants"
 pi: 3.14159265358979
@@ -58,6 +61,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "diag:solved, ratio:solved"
 "01 Solver: ratio defined as variable"
 
   height/width = ratio
@@ -73,6 +77,7 @@ Category = "Finance"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pmt:solved, pv:solved, yint:solved"
 "Time Value of Money"
 
 "Payment calculation"
@@ -92,6 +97,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pv:solved, yint:solved"
 "02 Solver: mint on LHS"
 
 "Payment calculation"
@@ -111,6 +117,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pv:solved, yint:solved"
 "03 Solver: mint on RHS"
 
 "Time Value of Money calculation"
@@ -132,6 +139,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "diag:solved"
 "04 Solver: ratio defined as equation"
 
   height/width = ratio
@@ -147,6 +155,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "05 Solver: Circular dependency detected: height → height → width"
   height = width * 16/9
   width * height = 1000
@@ -158,6 +167,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pv:solved, yint:solved"
 "06 Solver: precision error if mint-> vs mint->>"
 
 "Payment calculation"
@@ -179,6 +189,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pv:solved, yint:solved"
 "01 Formula Pane: wrapping lines"
 "long line: skdj skdjskd skds djskd sjkd sjdks djks djskd sjkd sjkd sjdks djksd js hi there this is a test"
 
@@ -203,6 +214,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 6 equations"; StatusIsError = 0
+VarStatus = ""
 "07 Solver: Check all widths get solved"
 
 width * width * 16/9 = 1000
@@ -227,6 +239,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "diag:solved"
 "08 Solver: Solved with errors: Variable 'height' has no value to output"
 
   height/width = ratio
@@ -242,6 +255,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "01 Formatting"
 
 x$: 2.996
@@ -260,6 +274,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Equation doesn't balance: y=x+1 (absolute diff 2 >= 0.00005)"; StatusIsError = 1
+VarStatus = "x:partial"
 "01 Error: Solved with errors: Equation doesn't balance: x=y+1 (1 != 3)"
 
 x=y+1
@@ -273,6 +288,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "margin:solved"
 "09 Solver: Solved with errors: Equation doesn't balance: (height + margin) / width = 16/9 (0.4824172960000001 ≠ 1.7777777777777777)"
 
 margin: 0
@@ -286,6 +302,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "01 Variables Pane: Only shows a$-> in Variables pane, not a$->> - need better display"
 
 a$: $10.994
@@ -296,6 +313,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "diag:solved, ratio:solved"
 "02 Variables Pane: x is not populated in variables pane"
 
   height/width = ratio
@@ -313,6 +331,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 22: Variable 'x4' has no value to output"; StatusIsError = 1
+VarStatus = ""
 "01 Parsing: Check parsing phase for constant evals"
 
 a: 2*3
@@ -357,6 +376,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 6: Cannot evaluate \"xyzzy\" - Undefined variable: xyzzy"; StatusIsError = 1
+VarStatus = ""
 "03 Variables Pane: d not updating properly in Variables pane. updates on refresh of web page but not when typing the value in the formula pane"
 
 a: 2*3
@@ -368,6 +388,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "01 Constants: Value of pi is not updating after return from editing Constants record"
 "will only update on refresh"
 
@@ -385,6 +406,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "04 Variables Pane: Value of d in Variables pane is not updating properly"
 "when changing d:, d-> in variables pane does not update - as designed? Yes"
 
@@ -395,6 +417,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "02 Parsing: no error for x: dd if dd is defined after x"
 
 x: dd/2
@@ -404,6 +427,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "05 Variables Pane: Should see all 3 outputs in Variables panel.  -> and ->> outputs not editable, x: is"
 "Variables panel should show name of variable and marker (:, <-, ->>, etc)"
 
@@ -417,6 +441,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 6: Variable \"x\" is already defined\nLine 7: Variable \"x\" is already defined"; StatusIsError = 1
+VarStatus = ""
 "03 Parsing: A variable can't be defined more than once, x:: 34 and x<- are errors (see arch.md)"
 
 x: 3/2*8.11111111
@@ -429,6 +454,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pmt:solved, pv:solved, yint:solved"
 "10 Solver: clear pmt, then solve, then solve again, get:"
 "Solved with errors: Equation doesn't balance: mint = yint / 12 (0.005104166726620151 ≠ 0.005104166666666667)"
 "Time Value of Money"
@@ -450,6 +476,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "y:solved"
 "04 Parsing: LHS="
 
 y: 45
@@ -459,6 +486,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "06 Variables Pane: Updates to x: in the variables panel doesn't update formula"
 
 x: sqrt(76)
@@ -469,6 +497,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "07 Variables Pane: Moving and deleting lines in the formulas panel does not update the variables panel correctly"
 "after deleting the y: 3 line, the variables panel shows dd: 5 and y: 5"
 
@@ -480,6 +509,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "08 Variables Pane: Variables pane not properly formatted for ->"
 "not showing as 4 decimal places for g-> as expected per record default"
 "it is showing as full precision: →g->6.62610000000000e-34"
@@ -501,6 +531,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Variable 'a' has no value to output\nLine 6: Variable 'b' has no value to output"; StatusIsError = 1
+VarStatus = ""
 "11 Solver: a and b have no value to output - should be error?"
 
 a->
@@ -512,6 +543,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "06 Parsing: Check rates are handled properly"
 
 rate: 7.5
@@ -534,6 +566,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "09 Variables Pane: b not being cleared when clear it in variables pane"
 
 b: 2
@@ -543,6 +576,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pmt:solved, pv:solved, yint:solved"
 "12 Solver: yint is not calculated when solving"
 
 "Payment calculation"
@@ -562,6 +596,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "margin:solved"
 "13 Solver: Solved with errors: Variable 'height' has no value to output"
 
 margin: 0
@@ -575,6 +610,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "14 Solver: Solved with errors: Equation doesn't balance: height / width = 16/9 (3.4485002817314917e-7 ≠ 1.7777777777777777)"
 
 height / width = 16/9
@@ -587,6 +623,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "15 Solver: Solved with errors: Equation doesn't balance: height / width = 16/9 (3.4485002817314917e-7 ≠ 1.7777777777777777) (copy)"
 
 height / width = 16/9
@@ -599,6 +636,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "01 Shadowing: check there should be implicit shadowing"
 e: 3
 e->> 3
@@ -607,6 +645,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Default Settings"
 "New Record"
 "Template for new records"
@@ -616,6 +655,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "02 Shadowing: check there is shadowing"
 e: 3
 e->> 3
@@ -624,6 +664,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "y:solved"
 "01 Todo"
 
 "Equations like x+y= should be re-evaluated and cleared"
@@ -638,6 +679,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "01 Deg/Rad: degrees"
 
 a: cos(45)
@@ -647,6 +689,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "02 Deg/Rad: radians"
 
 a: cos(pi/4)

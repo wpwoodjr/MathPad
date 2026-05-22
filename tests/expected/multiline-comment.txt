@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = ""
 Selected = 1
 "Test 1: Multi-line comment containing code-like content"
 
@@ -16,6 +17,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved, y:solved"
 "Test 2: Multi-line comment before equation"
 
 "this comment has
@@ -30,6 +32,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test 3: Multi-line comment with expression output syntax"
 
 "this comment has
@@ -43,6 +46,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Comments"
 
 x:1

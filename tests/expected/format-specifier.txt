@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 30: Unexpected token after expression: FORMATTER '%'"; StatusIsError = 1
+VarStatus = ""
 Money format on expression output
 3+4$-> $7.00
 Expression with percent format
@@ -136,6 +137,7 @@ Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = ""
 Trailing zero stripping at places=0
 x: 10%
 x %-> 10%
@@ -146,6 +148,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "a:solved"
 Full precision with places=2
 a: -1.00000000025
 b = a*2
@@ -155,6 +158,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; CurrencySymbol = "¥"
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 Yen currency (0 decimal places)
 pmt$: ¥55.678
 pmt$-> ¥56
@@ -178,6 +182,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; CurrencySymbol = "₽"
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 Ruble suffix currency (symbol after number)
 pmt$: 55.678₽
 pmt$-> 55.68₽
@@ -201,6 +206,7 @@ Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Asymmetric-spacing rule on expression output"
 "Whitespace-symmetric `-` parses as binary subtraction (whole expression);"
 "asymmetric (space-before, no-space-after) parses as label + unary minus."

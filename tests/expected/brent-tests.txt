@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 5 equations"; StatusIsError = 0
+VarStatus = "boatSpeed:solved, currentHeadingOffBow:solved, currentSpeed:solved, desiredHeading:solved"
 "Test 1: Singularity at speedMadeGood=0 with wide range [0:1000]"
 "Tests binary search near singularity (speedMadeGood in denominator)"
 
@@ -24,6 +25,7 @@ Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 5 equations"; StatusIsError = 0
+VarStatus = "boatSpeed:solved, currentHeadingOffBow:solved, currentSpeed:solved, desiredHeading:solved"
 "Test 2: Root at boundary with head-on current [0:10]"
 "Tests near-zero detection at grid endpoint (smg essentially 0)"
 
@@ -46,6 +48,7 @@ Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 5 equations"; StatusIsError = 0
+VarStatus = "boatSpeed:solved, currentHeadingOffBow:solved, currentSpeed:solved, desiredHeading:solved"
 "Test 3: Singularity at speedMadeGood=0 with narrow range [0:100]"
 "Tests that normal bracket detection still works near singularity"
 
@@ -68,6 +71,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "hght:solved"
 "Test 4: Large known values extend search range beyond default 1e8"
 "Tests that solver finds root at ~3.7e34 using knownScale hint"
 
@@ -80,6 +84,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 7: Equation doesn't balance: sin(180-normalizedCHOB)/boatSp... (relative diff 123.536% >= 0.005%)"; StatusIsError = 1
+VarStatus = "boatSpeed:unsolved, currentSpeed:unsolved"
 "Test 5: Course heading with inconsistent inputs"
 "Input course: 8.1 constrains correction via extracted definition; sin equations don't balance"
 
@@ -106,6 +111,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 7: Could not find a root for 'x'"; StatusIsError = 1
+VarStatus = ""
 "Test 6: Tautology rejection - f(x)=0 for all x should not find a root"
 "Near-tangent detection must skip when best test point is already at zero"
 
@@ -118,6 +124,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = ""
 "Test 7: Near-tangent root detection finds root in narrow band"
 "Near-double-root quadratic: barely dips below zero between log points 1 and 10"
 
@@ -130,6 +137,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 4 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, leeway:solved, set:solved, smg:solved, speed:solved"
 "Test 8: Near-tangent in navigation - solve smg via quadratic with substituted set"
 "Quadratic smg equation has narrow sign change after set substitution"
 
@@ -172,6 +180,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = ""
 "Test 9: Pole at lower limit - root between singularity and first grid point"
 "1/y = 1000 has root at y=0.001, pole at y=0 (the lower limit)"
 
@@ -184,6 +193,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "Nominal value of x is 3, not -3"
 "Locks in Option A: OUTPUT limits are display-only, never constrain"
 "the main solve. x*x = 9 has roots ±3; main solve picks 3 (first-"
@@ -202,6 +212,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "c0:solved, c1:solved, c2:solved, c3:solved, c4:solved, c5:solved"
 "Fifth degree polynomial"
 
 c5: 1
@@ -263,6 +274,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 20: Could not find a root in range [2:2.5] for 'x'\nLine 22: Could not find a root in range [2.5:3] for 'x'"; StatusIsError = 1
+VarStatus = "c0:solved, c1:solved, c2:solved, c3:solved, c4:solved, c5:solved"
 "Fifth degree polynomial showing solve works when c5 <= 1"
 "Same polynomial as `Fifth degree polynomial` but with c5 = 1.1 instead"
 "of 1, so the polynomial loses its second positive root and several"
@@ -363,6 +375,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "c0:solved, c1:solved, c2:solved, c3:solved, c4:solved, c5:solved, x:solved"
 "x with input decl is nominal value"
 
 c5: 1
@@ -395,6 +408,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "cmpndsYr:solved, fv:solved, pmt:solved, pmtDue:solved, pmtsYr:solved, pv:solved, rate:solved, years:solved"
 "Loan calculator with cmpndsYr table"
 
 --Formulas--
@@ -533,6 +547,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "y:solved, z:solved"
 "Limits with chained deferred dependencies"
 "y² = z² = 16 each have roots ±4. z's limits [y:0] depend on y, y's"
 "limits [-x:0] depend on x. Iterative loop defers y and z until their"
@@ -552,6 +567,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = ""
 "Numeric limits auto-swap: Brent's path with reversed limits and step"
 "x*x = 9 needs Brent's. Limits [0:-5:-1] are reversed (high<low) with"
 "negative step. Solver auto-swaps to [-5:0] with step=1 and finds x=-3."
@@ -565,6 +581,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved"
 "Numeric limits auto-swap: substitution path with reversed limits"
 "x = 25 is a definition equation. Limits [50:0] are reversed."
 "Substitution evaluates 25, auto-swap normalizes limits to [0:50],"
@@ -579,6 +596,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, leeway:solved, set:solved, speed:solved"
 "Linear-range limits spanning past 360°"
 "cmg has limits [327.8:365.5] — a linear range that covers the arc from"
 "327.8° through 360°/0° to 5.5°. atan2 returns -0.008°; the `°=` equation's"
@@ -601,6 +619,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, leeway:solved, set:solved, speed:solved"
 "Linear-range limits spanning past 2π (radians mode)"
 "Same as the degrees test, but with limits in radians and degreesMode=0."
 "Limits [Radians(327.8):Radians(365.5)] — linear range covering the wrap."
@@ -622,6 +641,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 4 equations"; StatusIsError = 0
+VarStatus = ""
 "Linear limits across the 360° boundary"
 "sin = 0.1 has roots at 5.74° and 174.26° (mod 360°)."
 "All limits are linear with auto-swap; `°` on a declaration is purely"
@@ -644,6 +664,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
+VarStatus = ""
 "Linear limits across the 2π boundary (radians mode)"
 "Same as degrees test, but with limits in radians and degreesMode=0."
 "sin = 0.1 has roots ≈ 0.1002 rad and ≈ 3.0414 rad (mod 2π)."
@@ -663,6 +684,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 20: Computed value 240 is outside limits [-180, 180] for 'b'\nLine 22: Computed value 5 is outside limits [10, 370] for 'd'\nLine 23: Computed value 380 is outside limits [10, 370] for 'e'"; StatusIsError = 1
+VarStatus = ""
 "All angular limits are linear with auto-swap"
 "Limits never apply mod-M wraparound semantics — `°` on a declaration"
 "is purely display. Out-of-range values reject honestly regardless of"
@@ -691,6 +713,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 10: Equation doesn't balance: v = 1000 (relative diff 50% >= 0.005%)\nLine 13: Computed value 500 is outside limits [0, 100] for 'v'"; StatusIsError = 1
+VarStatus = ""
 "Kind 1 limit-rejection doesn't infinite-loop"
 "v has two fully-known subs (500 and 1000), both outside [0:100]."
 "[3] sees two candidates, defers to Kind 1 branching. Each branch"
@@ -709,6 +732,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 11: Equation doesn't balance: z = x (left = -Infinity, right = Infinity)\nLine 13: Equation doesn't balance: a = sqrt(b) (left = NaN, right = NaN)\nLine 17: Equation doesn't balance: 3 = Infinity (left = 3, right = Infinity)"; StatusIsError = 1
+VarStatus = "b:unsolved"
 "Infinity and NaN tests"
 
 --Variables--
@@ -731,6 +755,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "Demonstrates main solve produces y-> 30"
 "Main solve picks x=3 branch (y=30). OUTPUT-with-limits re-solves find"
 "x=-3 and y=-30 in their ranges. Plain y-> shows main-solve value."
@@ -748,6 +773,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 16: Could not find a value for 'b' in range [0:300] consistent with all equations\nLine 17: Could not find a root in range [0:30] for 'b'"; StatusIsError = 1
+VarStatus = ""
 "Slow-path reports no-root when Brent's finds a value that breaks other equations"
 "Main solve picks b=-120 from b=-120°; abs(-120)=120 balances."
 "b[0:300]-> slow path: Brent's on abs(b)=120 finds b=120 in [0,300],"
@@ -770,6 +796,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 11: Equation doesn't balance: b = 120 (relative diff 200% >= 0.005%)\nLine 12: Could not find a value for 'b' in range [0:300] consistent with all equations\nLine 15: Equation doesn't balance: a3 = -120 (relative diff 200% >= 0.005%)"; StatusIsError = 1
+VarStatus = ""
 "bestCandidate captures most-progressed state, not first-eager save"
 "b's slow-path: direct-eval sets a4=120 at depth 1, then phase 5 tries"
 "b=-120 first (from `b = -120` sub, first line). Limits [0:300] reject"
@@ -796,6 +823,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "b:solved"
 "Body def deps cross components"
 "Without partitioning's body-def-deps union, equations `b*x=12` and"
 "`rate*2=6` would form independent components {b,x} and {rate}."
@@ -815,6 +843,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 15: Equation doesn't balance: b = 120 (relative diff 200% >= 0.005%)\nLine 16: Could not find a value for 'b' in range [0:300] consistent with all equations\nLine 19: Equation doesn't balance: a = -120 (relative diff 200% >= 0.005%)\nLine 23: Equation doesn't balance: a1 = -120 (relative diff 200% >= 0.005%)\nLine 27: Equation doesn't balance: a2 = -120 (relative diff 200% >= 0.005%)\nLine 31: Equation doesn't balance: a3 = -120 (relative diff 200% >= 0.005%)"; StatusIsError = 1
+VarStatus = ""
 "Partitioning test (five components — a4[0:a3] absorbs into a3's)"
 "Six contradictory variable pairs; five connected components after the"
 "a4[0:a3] limit edge unions a3 and a4. Without partitioning the"
@@ -858,6 +887,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 4 equations"; StatusIsError = 0
+VarStatus = "a:solved, c:solved, x2:solved"
 "°= equation across marker / limit-range combinations"
 "Comprehensive coverage of `°=` interacting with display markers and"
 "limit ranges. All cases use mod-360 balance via `°=`, find -120 (or"
@@ -898,6 +928,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 12: Could not find a root for 'x'"; StatusIsError = 1
+VarStatus = ""
 "Surface 'Could not find a root' for OUTPUT-only vars"
 "x*x = -4 has no real solution. Brent's fails to bracket; the failure"
 "is recorded in solveFailures. Without explicit handling for OUTPUT-only"
@@ -917,6 +948,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved"
 "INPUT limits steer Brent's to a non-natural root"
 "x*x = 16 has two roots, ±4. Without limits Brent's would find +4"
 "(positive scan starts there). The INPUT limits [-10:0] constrain the"
@@ -934,6 +966,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 12: Equation doesn't balance: a/sin(A) = b/sin(B) (relative diff 48.1% >= 0.5%)"; StatusIsError = 1
+VarStatus = "cmg:partial, cts:partial, drift:unsolved, set:partial, speed:unsolved"
 "Naturalness tiebreak: keep b=speed over derived sine-law value"
 "Over-determined law-of-sines/cosines triangle whose inputs do not form"
 "a valid triangle, so no branch balances. b has two fully-known subs:"

@@ -2,6 +2,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Constants"
 pi: 3.14159265358979
 e: 2.71828182845905
@@ -10,6 +11,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Functions"
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -17,6 +19,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, smg:solved, speed:solved"
 "1. Find current (drift, set)"
 // Solved - same-vector pair
 
@@ -57,6 +60,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cts:solved, drift:solved, set:solved, speed:solved"
 "2. Find ground track (smg, cmg)"
 // Solved - same-vector pair
 
@@ -91,6 +95,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, drift:solved, set:solved, smg:solved"
 "3. Find boat velocity (speed, cts)"
 // Solved - same-vector pair
 
@@ -125,6 +130,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, drift:solved, set:solved, speed:solved"
 "4. Course to steer (find smg, cts)"
 // Solved - quadratic + definition
 
@@ -159,6 +165,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, set:solved"
 "5. Find smg, speed"
 // Solved - Brent's for magnitude
 
@@ -193,6 +200,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, set:solved, speed:solved"
 "6. Find smg, drift"
 // Solved - Brent's for magnitude
 
@@ -227,6 +235,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, speed:solved"
 "7. Find smg, set"
 // Solved - Brent's for magnitude
 
@@ -261,6 +270,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "drift:solved, set:solved, smg:solved, speed:solved"
 "8. Find cmg, cts"
 // Solved - Brent's finds intended root
 
@@ -295,6 +305,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cts:solved, drift:solved, set:solved, smg:solved"
 "9. Find cmg, speed"
 // Solved - Brent's for magnitude
 
@@ -329,6 +340,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cts:solved, set:solved, smg:solved, speed:solved"
 "10. Find cmg, drift"
 // Solved - Brent's for magnitude
 
@@ -363,6 +375,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cts:solved, drift:solved, smg:solved, speed:solved"
 "11. Find cmg, set"
 // Solved - alternate valid triangle
 
@@ -397,6 +410,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, set:solved, smg:solved, speed:solved"
 "12. Find cts, drift"
 // Solved - Brent's for magnitude
 
@@ -431,6 +445,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, set:solved, smg:solved"
 "13. Find speed, drift"
 // Solved - law of sines
 
@@ -465,6 +480,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, drift:solved, smg:solved, speed:solved"
 "14. Find cts, set"
 // Solved - alternate valid triangle (Brent's finds set, definition evaluates cts)
 
@@ -499,6 +515,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, smg:solved"
 "15. Find speed, set"
 // Solved - Brent's finds set (natural 1-unknown), definition evaluates speed
 
@@ -533,6 +550,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 14: Equation doesn't balance: set = mod(atan(smg*sin(cmg) - ... (absolute diff 359.9888 >= 0.0005)"; StatusIsError = 1
+VarStatus = "cmg:partial, cts:partial, leeway:partial, set:partial, smg:partial, speed:partial"
 "16. Re-solve with rounded values (places=3) - mod 360 balance error"
 // Re-solve test: first solve produced these rounded values
 // mod(atan(...); 360) gives 359.989° instead of 0° on re-solve → balance error
@@ -571,6 +589,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, leeway:solved, set:solved, smg:solved, speed:solved"
 "17. Re-solve with °= degree equality"
 
 // Leeway correction
@@ -607,6 +626,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 6: Unknown function: modClose\nLine 9: Unknown function: modClose"; StatusIsError = 1
+VarStatus = "cmg:solved, cts:solved, drift:solved, leeway:solved, set:solved, smg:solved, speed:solved"
 "18. Removed modClose should error in balance check"
 
 ws = speed*cos(leeway)
@@ -639,6 +659,7 @@ Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 5: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative diff 11.9% >= 0.5%)"; StatusIsError = 1
+VarStatus = "cmg:unsolved, drift:unsolved, leeway:unsolved, set:unsolved, smg:unsolved, speed:unsolved"
 "19. °= balance check at places=0 (regular = fails on set equation)"
 
 ws = speed*cos(leeway)
@@ -664,6 +685,7 @@ Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 6: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative diff 11.9% >= 0.5%)"; StatusIsError = 1
+VarStatus = "cmg:unsolved, drift:unsolved, leeway:unsolved, set:unsolved, smg:unsolved, speed:unsolved"
 "20. °= re-solve with rounded <- values (neighborhood normalization)"
 "Pre-baked rounded values from test 19"
 
@@ -690,6 +712,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, set:solved, smg:solved, speed:solved"
 "Navigation test"
 
 smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
@@ -980,6 +1003,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 6 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, set:solved, smg:solved, speed:solved"
 "Law of sines/cosines — recursive substitution finds cmg, drift"
 "Navigation formulated via intermediate variables A, B, C and a, b, c1"
 "rather than the unknowns cmg, drift directly. Without recursive"

@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 14; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
+VarStatus = ""
 "Mod boundary snap - result near divisor should snap to 0"
 
 a = 359.99999999999994
@@ -20,6 +21,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "mod() builtin - positive a, positive n"
 
 // Near n boundary (snaps to 0 via FP noise check)
@@ -38,6 +40,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "mod() builtin - negative a, positive n"
 
 // Wraps to positive
@@ -53,6 +56,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 26: Equation doesn't balance: i °= j (relative diff 2.8% >= 0.5%)\nLine 31: Equation doesn't balance: k °= l (relative diff 2.8% >= 0.5%)\nLine 36: Equation doesn't balance: m °= n (relative diff 2.8% >= 0.5%)\nLine 41: Equation doesn't balance: o °= p (relative diff 1.1% >= 0.5%)"; StatusIsError = 1
+VarStatus = "a:solved, b:solved, c:solved, d:solved, e:solved, f:solved, g:solved, h:solved, i:unsolved, j:unsolved, k:unsolved, l:unsolved, m:unsolved, n:unsolved, o:unsolved, p:unsolved"
 "Degree equality operator (°=) — mod-aware balance check"
 
 // Same angle, same representation — should balance
@@ -99,6 +103,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "°= with Brent's solver — solve for unknown"
 
 // Solve for x where x °= 350 (Brent should find x near 350)
@@ -113,6 +118,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = "a:solved, b:solved"
 "°= in braced equations"
 
 a: 359.99
@@ -123,6 +129,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "modIsClose as logical operator in expressions"
 
 // Boundary wrap — should be 1
@@ -151,6 +158,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 16: Equation doesn't balance: e °= f (relative diff 15.9% >= 0.5%)"; StatusIsError = 1
+VarStatus = "a:solved, b:solved, c:solved, d:solved, e:unsolved, f:unsolved"
 "°= in radians mode (mod 2*pi)"
 
 // Near 2*pi boundary — should balance
@@ -182,6 +190,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved"
 "°= with mod-aware Brent's — wrapping past 360°"
 
 // x + 20 = 370, which is 10° mod 360
@@ -195,6 +204,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "a:solved"
 "°= with mod-aware Brent's — atan discontinuity"
 
 // atan(b; -1) has a discontinuity at b=0: jumps from ~180° to ~-180°
@@ -208,6 +218,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "a:solved"
 "°= definition — with limits"
 
 // y °= 365 + a: direct eval gives y = 365, outside limits → Brent's finds y = 5
@@ -219,6 +230,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "a:solved"
 "°= definition — without limits"
 
 // Without limits, direct eval gives expression value (365)
@@ -230,6 +242,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "a:solved"
 "°= definition — non-standard limits"
 
 // Limits [360:480], direct eval gives 5 (outside limits) → Brent's finds y = 365
@@ -241,6 +254,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, drift:solved"
 "°= substitution system — two °= equations"
 
 // Two unknowns, two °= equations — needs substitutions to reduce
@@ -256,6 +270,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, drift:solved"
 "°= substitution system — wrap-around values"
 
 // Same structure but values cross 360° boundary
@@ -272,6 +287,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 7 equations"; StatusIsError = 0
+VarStatus = "a:solved, cmg:solved, drift:solved, salt:solved, smg:solved"
 "°= mod-aware Brent's — combined cases"
 
 a: 1
@@ -302,6 +318,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = ""
 "°= residual check — wide limits reject wrapping discontinuity"
 
 // Limits [-600:600]: direct eval gives 361, within limits
@@ -312,6 +329,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 6 equations"; StatusIsError = 0
+VarStatus = "a:solved, cmg:solved, drift:solved, salt:solved, smg:solved, x:solved"
 "°= mod-aware Brent's — radians mode"
 
 // Wrapping past 2*pi: x + 0.1 = 2*pi + 0.1 ≈ 6.3832

@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "a:solved, c:solved"
 "Test 1: Direct eval via substitution"
 // Shows [2] Substitution map and [3] direct eval
 a + b = c
@@ -51,6 +52,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "Test 2: Brent's with chained definition"
 // Shows sweep 0 natural 1-unknown (quadratic)
 // then break-on-solve restart evaluates y via direct eval
@@ -106,6 +108,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "area:solved"
 "Test 3: Sweep 1 with substituted equation"
 // Shows sweep 1: width → (area / height) substituted into 2*width + height = 20
 // The 'with:' line shows the equation AFTER substitution
@@ -165,6 +168,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "a:solved, b:solved, c:solved"
 "Test 4: Variable discovery — known vs unknown"
 // Shows the 'known:' and 'unknown:' sections in variable discovery
 a: 1
@@ -214,6 +218,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test 5: Input expressions"
 // Shows [1] Input expressions with 'name = expr = value' format
 // r2 depends on the solved r1, so it's deferred until iteration 2
@@ -246,6 +251,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, set:solved, smg:solved, speed:solved"
 "Test 6: Navigation — failure trace with equation shown"
 // Degenerate vector triangle: shows Sweep 1 FAILED on one equation,
 // then succeeds on another. Both attempts appear in the trace with
@@ -351,6 +357,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 7: Equation doesn't balance: a = sqrt(-b) (left = 6, right = NaN)"; StatusIsError = 1
+VarStatus = ""
 "Test 7: Sweep 1 alternate sub recovers from NaN substitution"
 // Demonstrates two improvements working together:
 // 1. Sweep 1 cartesian retry: first sub (a → sqrt(-b)) gives NaN when plugged
@@ -441,6 +448,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, set:solved, smg:solved, speed:solved"
 "Test 8: Sweep 1 verification rejects spurious root"
 // Navigation with law-of-sines at the BOTTOM. The first sweep-1 combo
 // (speed → sqrt form) substituted into the quadratic smg equation has a
@@ -539,6 +547,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, cts:solved, drift:solved, set:solved, smg:solved, speed:solved"
 "Test 9: Sweep 0 natural root picks wrong solution"
 // Navigation with law-of-sines at the TOP, solving for (cmg, drift).
 // Iter 1 sweep 0 finds cmg from line 6 (speed = smg*sin(cmg-set)/sin(cts-set))
@@ -728,6 +737,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "c:solved"
 "Test 10: Multi-sub map — symmetric derivation, both directions per equation"
 // Shows deriveSubstitutions yielding both directions for each equation:
 //   line 9  (a + b = c):  a → c-b  AND  b → c-a
@@ -810,6 +820,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = ""
 "Test 11: True size-2 sweep1 combo (multi-sub Kind 3)"
 // Engineered to exercise subset-enumerated Kind 3 at combo size 2 with
 // BOTH `with` lines visible in the trace. Two tricks:

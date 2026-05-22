@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 17: Could not find a root in range [0:2] for 'x'"; StatusIsError = 1
+VarStatus = ""
 "Slow-path finds honest no-root error via multi-sub z-direction"
 "Main solve finds x=2.236, z=4.472 (solution of the system)."
 "x[0:2]-> fast path rejects (2.236 not in [0,2]). Slow path promotes"
@@ -24,6 +25,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 18: Could not find a root in range [0:2] for 'x'"; StatusIsError = 1
+VarStatus = ""
 "Same system but with abs(x) reports honest 'no root' error"
 "Identical system to the record above, but with `abs(x) = z/2`"
 "instead of `x = z/2`. deriveSubstitution can't isolate x from"
@@ -47,6 +49,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 10: Equation doesn't balance: x = x + 1 (relative diff 41.42% >= 0.05%)"; StatusIsError = 1
+VarStatus = ""
 "Table transitive blanking: z derived from bad x should also blank"
 "Equations: x*x = y (solves x = sqrt(y)), x = x + 1 (always fails),"
 "x = z (propagates x to z). For each row iterating y, x is body-"
@@ -77,5 +80,5 @@ table "transitive (0/5 solved)"
 1		
 2		
 3		
-4
+4		
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

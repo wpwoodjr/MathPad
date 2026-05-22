@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 5 equations"; StatusIsError = 0
+VarStatus = "boatSpeed:solved, course:solved, currentHeadingOffBow:solved, currentSpeed:solved, desiredHeading:solved"
 "Course Heading (copy) (copy)"
 
 mod360CHOB = mod(currentHeadingOffBow; 360)
@@ -39,6 +40,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmg:solved, drift:solved, salt:solved, set:solved, speed:solved"
 "Course to Steer"
 
 --Equations--

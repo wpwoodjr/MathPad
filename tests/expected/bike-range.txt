@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "a:solved, averagePwr:solved, b:solved, batteryAdjFactor:solved, batteryCapacity:solved, c:solved, d:solved, hours:solved, limitPwr:solved, maxMotorPwr:solved, refTemp:solved, tempAdjFactor:solved, temperature:solved"
 "Bike Range - solve for temperature via intermediate adjustedTemp"
 
 --Formulas--
@@ -34,6 +35,7 @@ Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "a:solved, b:solved, battAdjFactor:solved, battCap:solved, c:solved, d:solved, hours:solved, limitPwr:solved, maxMotorPwr:solved, refTemp:solved, tempAdjFactor:solved, temperature:solved, userPwr:solved"
 "Non-definition form: derived sub inlined to avoid spurious root"
 
 --Formulas--
@@ -78,6 +80,7 @@ Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "a:solved, b:solved, battAdjFactor:solved, battCap:solved, c:solved, d:solved, hours:solved, limitPwr:solved, maxMotorPwr:solved, refTemp:solved, tempAdjFactor:solved, temperature:solved, userPwr:solved"
 "Non-definition form with peek: same result as without peek"
 
 --Formulas--

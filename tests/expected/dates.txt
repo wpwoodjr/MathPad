@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 Dates
 
 // now()@d->> 04-02-2026 09:11:32
@@ -40,6 +41,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "d1:solved, d3:solved, t1:solved, t2:solved"
 Dates 2
 
 d1@d: 4-1-2026
@@ -61,6 +63,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 Dates 3
 
 grid("hours grid test") = {
@@ -95,6 +98,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 Dates 4 - flexible duration input
 
 a@t: 2
@@ -116,6 +120,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 Dates 5 - rounding carry into minutes/hours
 
 // Without fractional output, seconds round to nearest. The carries should

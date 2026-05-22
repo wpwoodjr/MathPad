@@ -2,6 +2,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Constants"
 "Test constants for shadow tests"
 c: 299792458
@@ -12,6 +13,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Too many unknowns (a, b)"; StatusIsError = 1
+VarStatus = ""
 "Functions"
 // Solving the Functions record treats fn defs as equations (expected errors)
 "User-defined functions"
@@ -22,6 +24,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "d:solved, h:solved"
 "01 Shadow h - solve for height"
 
 w/h = 9/16
@@ -36,6 +39,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Equation doesn't balance: d = sqrt(w*w + h*h) (relative diff 100% >= 0.005%)"; StatusIsError = 1
+VarStatus = "d:unsolved"
 "01 No shadow h - solve for height"
 
 w/h = 9/16
@@ -54,6 +58,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = ""
 "02 No shadow - use Planck constant"
 
 x = h * 1e34
@@ -68,6 +73,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "03 Shadow e - override with local value"
 
 e: 3
@@ -77,6 +83,7 @@ Category = "Unfiled"; Secret = 0
 Places = 14; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "04 e: silently overrides constant e"
 
 e: 3
@@ -86,6 +93,7 @@ Category = "Unfiled"; Secret = 0; Selected = 1
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "h:solved"
 "Screen Size with e-> output"
 
 h/w = 16/9
@@ -108,6 +116,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "d:solved, h:solved"
 "Shadowing"
 
 h/w = 16/9
@@ -127,6 +136,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "test h-> outputs constant value (no shadow)"
 
 h-> 6.63e-34
@@ -140,6 +150,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "test h: with no value shadows constant"
 
 h:
@@ -148,6 +159,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "test a: e where e-> outputs constant value"
 
 a: e
@@ -163,6 +175,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Shadows are not position dependent"
 
 a: c
@@ -173,6 +186,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "shadow c+c-> expression output"
 
 c+c-> 599,584,916
@@ -186,6 +200,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "c+c-> and c-> output constant values"
 
 c+c-> 599,584,916
@@ -201,6 +216,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "no shadow c+c-> expression output"
 
 c+c-> 599,584,916
@@ -214,6 +230,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "c shown as a reference constant... a: 1 has something to do with it"
 
 isclose2(a; b; c) = abs(a-b)/max(abs(a); abs(b))
@@ -223,6 +240,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "multi-line braced fn def with param c should not show c in references"
 
 { myfn(a; b; c) =
@@ -233,6 +251,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "x:solved"
 "Function and constant shadowing with h (Planck constant)"
 
 h/w = 16/9
@@ -261,6 +280,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 13: Too many unknowns (w, y)"; StatusIsError = 1
+VarStatus = "e:solved"
 "fn and constant overriding and constant visibility"
 
 cos(x) = 0.5
@@ -287,6 +307,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "User function references constant from Constants record"
 "`lightDist(s) = c * s` is defined in the Functions record using `c`"
 "from the Constants record (speed of light). Functions are sealed"

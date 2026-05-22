@@ -2,6 +2,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Constants"
 c: 3*10**8
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -9,6 +10,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Constant expression evaluation"
 
 c-> 300,000,000
@@ -22,12 +24,14 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Need to fix export, re-import"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "w:solved"
 "01 percent parsing"
 
 w = 10%
@@ -41,6 +45,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Line 4: Unexpected token after expression: FORMATTER '$'"; StatusIsError = 1
+VarStatus = ""
 "01 Illegal variable name pmt$"
 
 pmt$: 4
@@ -50,6 +55,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "rate:solved"
 "03 modulo using mod() function"
 
 x = mod(rate; 3)
@@ -61,6 +67,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Line 4: Invalid constant \"hex#16\" - \"hex\" is not valid in base 16\nLine 5: Variable 'y' has no value to output"; StatusIsError = 1
+VarStatus = ""
 "01 Illegal constant hex#16"
 
   hex#16: 10
@@ -71,6 +78,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "01 base parsing, variable name is ff"
 
 ff#16: f#16
@@ -80,6 +88,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Line 10: Invalid constant \"hex#21\" - \"hex\" is not valid in base 21\nLine 11: Variable 'zz' has no value to output"; StatusIsError = 1
+VarStatus = "w:solved, y:solved"
 "01 constant evals"
 
 x = ff#16
@@ -102,6 +111,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Line 3: Cannot evaluate \"hex#88\" - Invalid base in \"hex#88\" - base must be between 2 and 36"; StatusIsError = 1
+VarStatus = ""
 "02 Illegal constant hex#88"
 
 r: hex#88
@@ -110,6 +120,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Expression with comparison operator output"
 
 relE: 0
@@ -120,6 +131,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Expression with function and comparison output"
 
 jsEPSILON: 7
@@ -129,6 +141,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Expression with unary minus after ** output"
 
 places: 4
@@ -138,6 +151,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Expression output with persistent marker =>"
 
 sqrt(4):> 2
@@ -146,6 +160,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "sci"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Persistent output with self-referencing variables (~ for stale)"
 
 pow2: pow2~*2

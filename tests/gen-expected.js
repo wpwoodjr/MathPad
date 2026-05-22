@@ -9,6 +9,7 @@ Object.assign(global, require(path.join(jsPath, "solver.js")));
 Object.assign(global, require(path.join(jsPath, "variables.js")));
 Object.assign(global, require(path.join(jsPath, "storage.js")));
 Object.assign(global, require(path.join(jsPath, "solve-engine.js")));
+const { formatVarStatus, injectVarStatusLines } = require("./var-status-utils.js");
 
 const testName = process.argv[2];
 if (!testName) { console.error("Usage: node tests/gen-expected.js TESTNAME"); process.exit(1); }
@@ -22,6 +23,7 @@ const functionsTokens = functionsRecord ? new Tokenizer(functionsRecord.text).to
 const parsedConstants = constantsRecord ? parseConstantsRecord(constantsRecord.text, constantsTokens) : null;
 const parsedFunctions = functionsRecord ? parseFunctionsRecord(functionsRecord.text, functionsTokens) : null;
 const traceMode = testName === 'trace-tests';
+const varStatusByRecord = [];
 for (const record of data.records) {
     const allTokens = new Tokenizer(record.text).tokenize();
     const context = createEvalContext(record, parsedConstants, parsedFunctions, record.text, allTokens);
@@ -49,7 +51,12 @@ for (const record of data.records) {
         record.status = result.solved > 0 ? "Solved " + result.solved + " equation" + (result.solved > 1 ? "s" : "") : "Nothing to solve";
         record.statusIsError = false;
     }
+
+    // Capture highlighting state for the expected file (one line per
+    // record, see var-status-utils.js).
+    varStatusByRecord.push(formatVarStatus(verifyResult.equationVarStatus));
 }
-const output = exportToText(data, { selectedRecordId: data.settings?.lastRecordId });
+const rawOutput = exportToText(data, { selectedRecordId: data.settings?.lastRecordId });
+const output = injectVarStatusLines(rawOutput, varStatusByRecord);
 fs.writeFileSync(path.join(__dirname, "expected", testName + ".txt"), output);
 console.log("Generated expected output for " + testName);

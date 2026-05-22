@@ -2,6 +2,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Constants"
 pi: 3.14159265358979
 e: 2.71828182845905
@@ -10,6 +11,7 @@ Category = "Reference"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Functions"
 ftoc(f) = (f - 32) * 5/9
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -17,6 +19,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = ""
 Selected = 1
 "Labels  and comments in Variables section"
 
@@ -57,6 +60,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "No reference section in vars panel"
 
 pi-> 3.14

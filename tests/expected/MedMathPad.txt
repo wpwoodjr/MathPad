@@ -2,6 +2,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "FiO2:solved, PaCO2:solved, PaO2:solved"
 "A-a Gradient"
 A-a Gradient
 	these equations calculate the alveolar oxygen tension (which can range from 100mm on RA to 673mm on 100% oxygen) and the alveolar-arterial oxygen gradient.
@@ -22,6 +23,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "Cl:solved, HCO3:solved, Na:solved"
 "Anion Gap"
 Anion Gap
 
@@ -39,6 +41,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "ht:solved, wt:solved"
 "BSA/BMI (metric)"
 BSA/BMI (metric)
 
@@ -60,6 +63,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 1; StripZeros = 0
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "ht:solved, wt:solved"
 "BSA/BMI"
 BSA/BMI
 
@@ -78,6 +82,7 @@ Category = "Drug doses"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
+VarStatus = "dose:solved, rate:solved, wt:solved"
 "Drips"
 Drips
 
@@ -108,6 +113,7 @@ Category = "Drug doses"; Secret = 0; Selected = 1
 Places = 1; StripZeros = 0
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 16 equations"; StatusIsError = 0
+VarStatus = "age:solved, wt:solved"
 "Emergency meds"
 Emergency meds
 
@@ -169,6 +175,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 2; StripZeros = 0
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "serumCr:solved, serumNa:solved, urineCr:solved, urineNa:solved"
 "FENa"
 FENa
 
@@ -187,6 +194,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "NaD:solved, NaS:solved, wt:solved"
 "Free Water Deficit"
 Free Water Deficit 
 
@@ -204,6 +212,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 0
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "BestMotorResponse:solved, BestOcularResponse:solved, BestVerbalResponse:solved"
 "Glasgow Coma Scale"
 Glasgow Coma Scale
 
@@ -238,6 +247,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 7 equations"; StatusIsError = 0
+VarStatus = "dehyration:solved, kg:solved"
 "Isotonic Dehydration"
 Isotonic Dehydration
 
@@ -267,6 +277,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
+VarStatus = "kg:solved"
 "Maintenance Fluids"
 Maintenance Fluids
 	these formulas will calculate a patient's maintenance fluid requirements.
@@ -290,6 +301,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "NaD:solved, NaS:solved, wt:solved"
 "Na Deficit"
 Na Deficit
 
@@ -307,6 +319,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 4 equations"; StatusIsError = 0
+VarStatus = "ht:solved, pf:solved"
 "Peak Flows"
 Peak Flows
      these equations will calculate a patient's predicted peak flow and their 
@@ -336,6 +349,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "BUN:solved, glucose:solved, Na:solved"
 "Plasma Osmolality"
 Plasma Osmolality
 
@@ -353,6 +367,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "Cr:solved, ht:solved, k:solved"
 "Schwartz Equation (CrCl)"
 Schwartz Equation (CrCl)
 	this equation allows an estimation of creatine clearance for patients with relatively normal body habitus.
@@ -377,6 +392,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "glu:solved, Na:solved"
 "Serum Na Corrected"
 Serum Na Corrected
 	serum sodium is factitiously decreased by 1.6 mEq/L for each 100mg/dl rise in glucose.
@@ -394,6 +410,7 @@ Category = "Medical Calc"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "immatures:solved, segs:solved, WBC:solved"
 "WBC Indices"
 WBC Indices
 	enter WBC as thousands, segs and immatures (including bands, metas, myelos, etc.) as a percent (example 57, NOT .57) and these eguations will solve for the following WBC Indices:
@@ -418,6 +435,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Default Settings"
 "New Record"
 "Template for new records"

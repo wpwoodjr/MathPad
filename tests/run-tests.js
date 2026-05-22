@@ -19,6 +19,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { formatVarStatus, injectVarStatusLines } = require('./var-status-utils.js');
 
 // Path to docs/js modules
 const jsPath = path.join(__dirname, '..', 'docs', 'js');
@@ -184,6 +185,7 @@ function solveAllRecords(data, traceMode = false) {
     const parsedConstants = constantsRecord ? parseConstantsRecord(constantsRecord.text, constantsTokens) : null;
     const parsedFunctions = functionsRecord ? parseFunctionsRecord(functionsRecord.text, functionsTokens) : null;
 
+    const varStatusByRecord = [];
     for (const record of records) {
         // Tokenize record text once, pass through to all consumers
         const allTokens = new Tokenizer(record.text).tokenize();
@@ -222,9 +224,13 @@ function solveAllRecords(data, traceMode = false) {
                 : 'Nothing to solve';
             record.statusIsError = false;
         }
+
+        // Capture highlighting state for comparison against the expected
+        // file's VarStatus line for this record.
+        varStatusByRecord.push(formatVarStatus(verifyResult.equationVarStatus));
     }
 
-    return data;
+    return { data, varStatusByRecord };
 }
 
 /**
@@ -259,18 +265,24 @@ function runTest(inputPath, expectedPath) {
 
     // Solve all records — enable trace mode for the trace-tests file
     const traceMode = testName === 'trace-tests';
+    let varStatusByRecord;
     try {
-        data = solveAllRecords(data, traceMode);
+        ({ data, varStatusByRecord } = solveAllRecords(data, traceMode));
     } catch (e) {
         return { name: testName, passed: false, error: `Solve failed: ${e.message}` };
     }
 
-    // Export result
+    // Export result, then inject per-record VarStatus lines that capture
+    // the highlighting state when it's non-default (any non-'solved' entry,
+    // or empty on a record with equations). All-green and equation-less
+    // records produce no VarStatus line.
     let actualText;
     try {
-        // Get selected record ID from settings (set during import from Selected = 1 flag)
         const selectedRecordId = data.settings?.lastRecordId;
-        actualText = exportToText(data, { selectedRecordId });
+        actualText = injectVarStatusLines(
+            exportToText(data, { selectedRecordId }),
+            varStatusByRecord
+        );
     } catch (e) {
         return { name: testName, passed: false, error: `Export failed: ${e.message}` };
     }

@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "hex1:solved, hex2:solved, hex3:solved, y:solved, z:solved"
 "Number base formatting"
 
 hex: 15

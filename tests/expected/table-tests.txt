@@ -2,6 +2,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test tables"
 
 --Variables--
@@ -32,6 +33,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test table with equation"
 
 --Variables--
@@ -57,6 +59,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test table equation doesn't balance"
 
 --Variables--
@@ -81,6 +84,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test table2"
 
 --Variables--
@@ -108,6 +112,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "refTemp:solved, tempAdjFactor:solved, temperature:solved"
 "Test table suppresses bad cells"
 
 --Variables--
@@ -154,6 +159,7 @@ Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "a:solved, averagePwr:solved, b:solved, batteryAdjFactor:solved, batteryCapacity:solved, c:solved, d:solved, hours:solved, limitPwr:solved, maxMotorPwr:solved, refTemp:solved, tempAdjFactor:solved, temperature:solved"
 "Bike Range"
 "Tables with pole in polynomial equation — solver finds real root past pole"
 "Bike range: table equations reference outer-declared adjustedTemp"
@@ -286,6 +292,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test tables 5"
 
 --Variables--
@@ -331,6 +338,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test tables 6"
 
 --Variables--
@@ -377,6 +385,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 6: No equation references 'z' — cannot apply limits"; StatusIsError = 1
+VarStatus = ""
 "Test tables 7"
 
 --Variables--
@@ -419,6 +428,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 9: Equation doesn't balance: x = sqrt(y) (left = NaN, right = NaN)"; StatusIsError = 1
+VarStatus = "y:unsolved"
 "Balance-check accumulates vars across all failing equations"
 "Reordering equations must not change which columns get blanked."
 "For y<0, sqrt(y)=NaN propagates through subs: x=NaN, z=NaN."
@@ -475,6 +485,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "tableGraph: plot f(x) vs x"
 "Plot a polynomial f(x) over a range. The equation f(x)=0 specifies"
 "what counts as a root; keep it OUT of scope while plotting (otherwise"
@@ -538,6 +549,7 @@ Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "a:solved, b:solved, battAdjFactor:solved, battCap:solved, c:solved, d:solved, hours:solved, limitPwr:solved, maxMotorPwr:solved, refTemp:solved, tempAdjFactor:solved, temperature:solved, userPwr:solved"
 "Bike Range"
 
 --Formulas--
@@ -662,6 +674,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 8: Table variable 'typo' is not used in any equation or output"; StatusIsError = 1
+VarStatus = ""
 "Test unused table variable warning"
 
 --Variables--
@@ -686,6 +699,7 @@ Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "a:solved, b:solved, battAdjFactor:solved, battCap:solved, c:solved, d:solved, hours:solved, limitPwr:solved, maxMotorPwr:solved, refTemp:solved, tempAdjFactor:solved, temperature:solved, userPwr:solved"
 "Test table inherits outer equations"
 
 --Formulas--
@@ -740,6 +754,7 @@ Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "a:solved, b:solved, battAdjFactor:solved, battCap:solved, c:solved, d:solved, hours:solved, limitPwr:solved, maxMotorPwr:solved, refTemp:solved, tempAdjFactor:solved, temperature:solved, userPwr:solved"
 "Test table with body equation overrides outer"
 
 --Formulas--
@@ -794,6 +809,7 @@ Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "a:solved, b:solved, battAdjFactor:solved, battCap:solved, c:solved, d:solved, hours:solved, limitPwr:solved, maxMotorPwr:solved, refTemp:solved, tempAdjFactor:solved, temperature:solved, userPwr:solved"
 "Test table inherits equations with intermediates"
 
 --Formulas--
@@ -845,6 +861,7 @@ Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "a:solved, b:solved, battAdjFactor:solved, battCap:solved, c:solved, d:solved, hours:solved, limitPwr:solved, maxMotorPwr:solved, refTemp:solved, tempAdjFactor:solved, temperature:solved, userPwr:solved"
 "Test peek at intermediate doesn't affect table solving"
 
 --Formulas--
@@ -897,6 +914,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "cmpndsYr:solved, fv:solved, pmt:solved, pmtDue:solved, pmtsYr:solved, pv:solved, rate:solved, years:solved"
 "Test body defs using equation-solved output"
 
 --Formulas--
@@ -940,6 +958,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test grid with formatted axes"
 
 --Formulas--
@@ -987,6 +1006,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test table title inline expansion"
 
 --Variables--
@@ -1011,6 +1031,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "cmpndsYr:solved, fv:solved, pmt:solved, pmtDue:solved, pmtsYr:solved, pv:solved, rate:solved, years:solved"
 "Test out of order dependencies in table body"
 "(balance before principal)"
 
@@ -1271,6 +1292,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved, y:solved"
 "Test dependency resolution after solve in outer solve and table"
 
 z = x**y
@@ -1304,6 +1326,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test out-of-order outer defs available in table"
 
 --Variables--
@@ -1329,6 +1352,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "cmpndsYr:solved, fv:solved, pmt:solved, pmtDue:solved, pmtsYr:solved, pv:solved, rate:solved, years:solved"
 "Loan calculator with amortization table"
 
 --Formulas--
@@ -1784,6 +1808,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 5: Variable \"x\" is already defined\nLine 7: Variable \"y\" is already defined\nLine 8: Variable \"y\" is already defined"; StatusIsError = 1
+VarStatus = ""
 "Dup decls in table"
 
 table("Dup decls") = {
@@ -1807,6 +1832,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 5: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative diff 0.14% >= 0.005%)"; StatusIsError = 1
+VarStatus = "cmg:unsolved, drift:unsolved, leeway:unsolved, set:unsolved, smg:unsolved, speed:unsolved"
 "Cleared declared var available to tables via preSolveVars"
 // When cmg is cleared and solved, tables that don't redeclare cmg
 // should still see the solved cmg value via preSolveVars (not be empty)
@@ -1848,6 +1874,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Table with ° format columns in radians mode"
 "In radians mode, ° format variables display mod 2π without ° symbol."
 "i*Radians(150) gives 2.618, 5.236, 7.854 rad. Last is > 2π so mods to 1.571."
@@ -1870,6 +1897,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Limits in column/row headers"
 "When an OUTPUT declaration in a table or grid has limits but no user-"
 "provided label, the auto-generated header includes the limits text."
@@ -1929,6 +1957,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = ""
 "Test equation = 0 balances per places setting 3"
 "Iterates y from 0 to 0.001 and checks `y = 0` balance row-by-row at"
 "places=3 (balanceTolerance = 5e-4). y values up through ~5e-4 balance;"
@@ -1974,6 +2003,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "vectorDraw indicator with OUTPUT-with-limits no-root"
 "Two vectors, second vector's end_mag has limits that exclude the"
 "actual value (emag2=5 not in [10:20]). Per-column resolveWithLimits"
@@ -2014,6 +2044,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test solve errors"
 "Compares INPUT-with-limits vs OUTPUT-with-limits behavior in"
 "grids/tables across cells where the constraint limit excludes the"
@@ -2100,6 +2131,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 34: Table bounds error for 'j' — Undefined variable: i"; StatusIsError = 1
+VarStatus = "a:solved, b:solved, c:solved"
 "Multi-iterator tables"
 "Tables with N iterators produce rows over the cartesian product."
 "First-declared iterator is the outermost loop (changes slowest);"
@@ -2183,6 +2215,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Multi-iterator tableGraph"
 "Grouping is opt-in: an inner iterator becomes a line-grouping variable"
 "only if it has a `iter->` output column. The column's label (e.g. `Y`"
@@ -2237,6 +2270,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Multi-iterator tables (3 iterators)"
 "Three iterators with grouping outputs in tableGraph (Y and W both"
 "label lines, so legend reads e.g. 'Y = 1.0, W = 1.5'). Same data"
@@ -2529,6 +2563,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 31: vectorDraw requires a type as the second argument (navigation, polar, or cartesian) — e.g. vectorDraw(\"Title\"; navigation)\nLine 38: vectorDraw type must be one of: navigation, polar, cartesian (got: 'bogus')"; StatusIsError = 1
+VarStatus = ""
 "vectorDraw type arg: navigation, polar, cartesian"
 "navigation: 0° = up (north), +° clockwise (bearing convention)"
 "polar:      0° = right (east), +° counter-clockwise (math convention)"
@@ -2593,6 +2628,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "vectorDraw end-pair semantics: cartesian = absolute, navigation/polar = relative"
 "All three records draw the same triangle: vector 1 up to (0,1),"
 "vector 2 right to (1,0), vector 3 connecting (0,1) to (1,0)."
@@ -2687,6 +2723,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved, z:solved"
 "Table solve behavior"
 
 x: 1
@@ -2867,6 +2904,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Independent equations stay independent under per-cell blanking"
 "z is solved by `z = 4` (always succeeds). The second equation `2*x = 2`"
 "only balances at x=1 — for other rows it fails balance, but it shares"
@@ -2898,6 +2936,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved, y:solved, z:solved"
 "Table inherits value for z-> from outer z<- but resolves z[0:6]->"
 
 x: 1
@@ -2926,6 +2965,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved, y:solved, z:solved"
 "Body equation overrides outer equation; outer z=5 inherited but stale"
 "Outer solves z = x + y**2 → z=5 at outer's x=1, y=2. The `z: z` line"
 "captures that 5 as an INPUT decl (via the bodyDefinitions sync)."
@@ -2967,6 +3007,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved, y:solved, z:solved"
 "Limits-column re-solve fails when body has another unknown in the eq"
 "Body decl `y<-` makes y a body unknown. Body solve uses inherited z=5"
 "to solve y per row via z = x + y**3 → y = (5-x)**(1/3): 1.71, 1.587,"
@@ -3016,6 +3057,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 9: Table bounds for 'x' must be finite (got start=NaN, end=5, step=-1)\nLine 14: Table bounds for 'x' must be finite (got start=0, end=Infinity, step=1)\nLine 19: Table bounds for 'x' must be finite (got start=0, end=5, step=NaN)"; StatusIsError = 1
+VarStatus = ""
 "Iterator bounds reject NaN and Infinity"
 "NaN comes from 0/0; Infinity from 1/0. Both should produce a clear"
 "'bounds must be finite' error and skip the table rather than try to"
@@ -3043,6 +3085,7 @@ Category = "Unfiled"; Secret = 0
 Places = 1; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = "i:solved, r:solved, v:solved, w:solved"
 "tableGraph and gridGraph emit equivalent data for 2 iterators"
 "Same body, two renderers. Both should produce R values across (i, w)."
 ""
@@ -3181,6 +3224,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 5: tableGraph needs at least 2 output columns (X-axis + Y-series) — add x-> or y->"; StatusIsError = 1
+VarStatus = ""
 "tableGraph errors when fewer than 2 output columns"
 "Need ≥2 cols (X + Y) to plot. Should surface a clear error"
 "rather than render nothing."

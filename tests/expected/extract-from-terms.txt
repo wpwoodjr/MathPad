@@ -2,6 +2,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Constants"
 pi: 3.14159265358979
 e: 2.71828182845905
@@ -10,6 +11,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Functions"
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -17,6 +19,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "Linear system: 3x + 2y = 13, x + 4y = 11"
 
 3 * x + 2 * y = 13
@@ -30,6 +33,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "Division numerator extraction"
 
 x / 3 + y / 2 = 7
@@ -43,6 +47,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "Division denominator extraction"
 
 6 / x + 12 / y = 7
@@ -56,6 +61,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "RHS extraction"
 
 13 = 3 * x + 2 * y
@@ -69,6 +75,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 8 equations"; StatusIsError = 0
+VarStatus = ""
 "All extraction forms"
 
 // Multiplication + subtraction

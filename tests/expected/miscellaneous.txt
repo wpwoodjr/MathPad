@@ -2,6 +2,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Constants"
 pi: 3.14159265358979
 e: 2.71828182845905
@@ -12,6 +13,7 @@ Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 2: Too many unknowns (a, b)"; StatusIsError = 1
+VarStatus = ""
 "Functions"
 // Solving the Functions record treats fn defs as equations (expected errors)
 hypot(a;b) = sqrt(a**2 + b**2) "hypotenuse"
@@ -20,6 +22,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Factorial"
 
 fac(n) = if(n <= 1; n; n*fac(n - 1))
@@ -35,6 +38,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Choose"
 
 x: Choose(3; 5; 10; 15; 20; 25)
@@ -44,6 +48,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 1; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "d:solved, h:solved"
 "Screen Size with c-> output"
 
 h/w = 16/9
@@ -66,6 +71,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved"
 "Braced Equations"
 
 Label: { x + 5 = y }
@@ -86,6 +92,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 1 equation"; StatusIsError = 0
+VarStatus = "x:solved"
 "Braced Equations on multiple lines"
 
 Label: { x + 5
@@ -109,6 +116,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 10: Variable 'y' has no value to output"; StatusIsError = 1
+VarStatus = "x:solved"
 "Multi-line braced equations with != and == operators"
 
 x: 5
@@ -124,6 +132,7 @@ Category = "Unfiled"; Secret = 0
 Places = 10; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Sum and Product functions"
 
 "Basel series: sum(1/n**2; n; 1; 2000)"
@@ -143,6 +152,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = ""
 "Expression Outputs"
 
 2**32 - 1 = 4294967295
@@ -169,6 +179,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pmt:solved, pv:solved, yint:solved"
 "Time Value of Money - Solve for yint"
 
 "Payment calculation"
@@ -188,6 +199,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "fv:solved, n:solved, pmt:solved, pv:solved, yint:solved"
 "Time Value of Money - Solve for yint with limits"
 
 "Payment calculation"
@@ -207,6 +219,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 6 equations"; StatusIsError = 0
+VarStatus = "c0:solved, c1:solved, c2:solved, c3:solved, c4:solved, c5:solved"
 "Fifth degree polynomial (test for f(x) = 0 being read as an equation, not fn definition)"
 
 c5: 1
@@ -248,6 +261,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 13: Could not find a root in range [10:20] for 'x1'"; StatusIsError = 1
+VarStatus = "c0:solved, c1:solved, c2:solved, c3:solved, c4:solved, c5:solved"
 "Fifth degree polynomial (error when no root in range)"
 
 c5: 1
@@ -266,6 +280,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 10: Computed value 0.061249916560760606 is outside limits [0, 0.01] for 'yint'"; StatusIsError = 1
+VarStatus = "fv:solved, n:solved, pmt:solved, pv:solved, yint:solved"
 "Time Value of Money - Limits too narrow (error expected)"
 
 "Payment calculation"
@@ -285,6 +300,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 6: Variable \"y\" is already defined\nLine 7: Variable \"y\" is already defined\nLine 15: Variable \"y\" is already defined\nLine 16: Variable \"y\" is already defined"; StatusIsError = 1
+VarStatus = "d:solved, h:solved"
 "Test text on line before equation output"
 
 Enter x<- 7
@@ -314,6 +330,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 6: Variable \"y\" is already defined\nLine 7: Variable \"y\" is already defined\nLine 15: Variable \"y\" is already defined\nLine 16: Variable \"y\" is already defined"; StatusIsError = 1
+VarStatus = ""
 "Test : and :: preserve value on expression output"
 
 Enter x: 7
@@ -335,6 +352,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "FiO2:solved, PaCO2:solved, PaO2:solved"
 "A-a Gradient"
     these equations calculate the alveolar oxygen tension (which can range from 100mm on RA to 673mm on 100% oxygen) and the alveolar-arterial oxygen gradient.
 
@@ -355,6 +373,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "ht:solved, wt:solved"
 "BSA/BMI"
 
 --Input--
@@ -372,6 +391,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 14: Equation doesn't balance: c = a + b (relative diff 100% >= 0.5%)"; StatusIsError = 1
+VarStatus = "a:unsolved, b:unsolved"
 "Label text with parentheses vs expressions"
 
 "Labels with parentheses - should be variable declarations"
@@ -396,6 +416,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 16: Equation doesn't balance: c = a + b (relative diff 100% >= 0.005%)"; StatusIsError = 1
+VarStatus = "a:unsolved, b:unsolved"
 "Label text torture test"
 
 "Labels with parentheses - should be variable declarations"
@@ -422,6 +443,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 5: Unexpected token after expression: NUMBER '4'"; StatusIsError = 1
+VarStatus = ""
 "Numeric literal expression outputs"
 
 5%+1-> 1.05
@@ -432,6 +454,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Base literal highlighting test"
 
 "Expected: ff=vardef, ff#16=literal(yellow)"
@@ -453,6 +476,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Undefined variable: a"; StatusIsError = 1
+VarStatus = ""
 "Test a*b with no values for a and b"
 
 a*b->
@@ -461,6 +485,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 5: Too many unknowns (a, b)"; StatusIsError = 1
+VarStatus = ""
 "Multi-line braced equations with builtin override"
 
 { xmax(a;b) = if(a>b; a; b) }
@@ -475,6 +500,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "NaN and Infinity tests"
 
 nn: NaN
@@ -488,6 +514,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Base format tests"
 
 ff: ff#16
@@ -504,6 +531,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test c-> outputs constant value"
 
 c-> 299792458
@@ -517,6 +545,7 @@ Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 11: Cannot evaluate \"C\" - Undefined variable: C\nLine 12: Variable 'd' has no value to output\nLine 14: Cannot evaluate \"H\" - Undefined variable: H\nLine 15: Variable 'g' has no value to output"; StatusIsError = 1
+VarStatus = ""
 "Constants are case-sensitive (c and h are constants, C and H are not)"
 
 "c and h resolve to constant values"
@@ -543,6 +572,7 @@ Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Cannot evaluate \"pi\" - Variable 'pi' has no value\nLine 5: Variable 'x' has no value to output\nLine 9: Cannot evaluate \"h\" - Variable 'h' has no value\nLine 10: Variable 'y' has no value to output"; StatusIsError = 1
+VarStatus = ""
 "Test pi: with no value shadows constant"
 
 pi:
@@ -558,6 +588,7 @@ Category = "Unfiled"; Secret = 0
 Places = 15; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Cannot evaluate \"pi\" - Variable 'pi' has no value\nLine 5: Variable 'x' has no value to output"; StatusIsError = 1
+VarStatus = ""
 "Test pi: with no value shadows constant (same as shadow on)"
 
 pi:
@@ -568,6 +599,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 4: Cannot evaluate \"y\" - Variable 'y' has no value\nLine 5: Variable 'x' has no value to output"; StatusIsError = 1
+VarStatus = ""
 "Test y has no value"
 
 y:
@@ -578,6 +610,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Money literal expressions"
 
 b: $.01+$.01
@@ -596,6 +629,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 13: Variable 'f' has no value to output"; StatusIsError = 1
+VarStatus = ""
 "Base literal tests"
 
 "Variable with base format suffix"
@@ -633,6 +667,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Trailing numeric text on output line"
 
 a: 1
@@ -642,6 +677,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "a:solved, b:solved, d:solved"
 "Test comments spacing to right of values"
 
 a: 12                "test"
@@ -657,6 +693,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Test true modulo"
 
 mod(10; 3)->> 1
@@ -672,6 +709,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "y:solved"
 "Incomplete equation with substitution"
 
 x = y + 1
@@ -682,6 +720,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
 "Round: symmetric half-away-from-zero, no FP midpoint errors"
 
 round(1.255; 2)->> 1.26
