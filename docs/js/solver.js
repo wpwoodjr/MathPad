@@ -266,9 +266,17 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null, { allRoots
         }
     }
 
-    // Find all brackets (and near-zeros) and solve each
+    // Find all brackets (and near-zeros) and solve each.
+    // hasNonZero filters out tautologies (f(x) ≡ 0): if no test point has a
+    // |fx| above fTol, the function is identically zero within numerical
+    // precision and the "near-zero at a test point" push below would
+    // otherwise pick up every test point's epsilon-scale residual as a
+    // spurious root. We require > fTol (not just !== 0) because subtraction-
+    // then-addition orderings can produce machine-epsilon residuals at some
+    // grid points even when the function is mathematically constant — those
+    // are noise, not real roots.
     const roots = [];
-    const hasNonZero = values.some(v => v.fx !== 0);
+    const hasNonZero = values.some(v => Math.abs(v.fx) > fTol);
     for (let i = 0; i < values.length; i++) {
         // Near-zero at a finite test point (skip if function is identically zero)
         if (isFinite(values[i].fx) && Math.abs(values[i].fx) <= fTol && hasNonZero) {

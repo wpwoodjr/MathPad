@@ -843,3 +843,28 @@ c: 11
 
 --Variables--
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Tautology rejection: floating-point residuals don't fake a root"
+"x = a + b and a + b = x are equivalent — 1 effective constraint and 2"
+"unknowns (under-determined). After substituting b → (x - a) into"
+"`a + b = x`, the equation becomes (a + (x - a)) = x — a mathematical"
+"tautology. Floating-point evaluation produces ~5e-16 residuals at"
+"test points where |x| << |a| due to subtraction-then-addition"
+"precision loss. Before the fix, hasNonZero (values.some(v =>"
+"v.fx !== 0)) accepted those epsilon residuals as 'non-zero', the"
+"near-zero detection (|fx| <= fTol) accepted every test point as a"
+"'near-zero root', and the solver returned the smallest positive"
+"test point (0.001 from logPoints) as x — a fake root seeded by the"
+"scan grid. Now hasNonZero requires |fx| > fTol so epsilon noise"
+"doesn't qualify; the tautology is correctly rejected."
+
+a: 10
+x = a + b
+a + b = x
+x->
+b->
+
+--Variables--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
