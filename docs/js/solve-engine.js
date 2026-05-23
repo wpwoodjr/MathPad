@@ -777,9 +777,8 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     //     propagate first. (The post-recursion classifier uses isFullyKnownDefEquation
     //     so genuinely under-determined cases still surface as "Too many unknowns".)
     function isSkippableDefEquation(eq, skipUnboundLHS = true) {
-        if (eq.modN) return false;
-        const def = isDefinitionEquation(eq.leftText, eq.rightText, eq.rightAST);
-        if (!def) return false;
+        if (eq.modN || !eq.definition) return false;
+        const def = eq.definition;
         const rhsUnknowns = [...findVariablesInAST(def.expressionAST)]
             .filter(v => !context.hasVariable(v));
         if (rhsUnknowns.length === 0) return true;
