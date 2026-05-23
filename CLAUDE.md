@@ -74,6 +74,7 @@ node tests/gen-expected.js TESTNAME
 - **Break-on-solve**: after a Kind 2/3 candidate applies, recursion re-runs `deterministicAdvance`, so definitions and direct-evals pick up the new value before further Brent's attempts
 - **Always re-solve**: first pass skips tables; re-solve runs unconditionally and computes them. Re-solve also gives a second chance when the first solve filled in cleared variables but had balance errors. Same logic in `run-tests.js` and `gen-expected.js`.
 - **OUTPUT-with-limits re-solve** (`resolveWithLimits`): each OUTPUT declaration with limits runs its own re-solve after main solve. Fast path if main-solve value already in limits; slow path builds modifiedDecls (prepend INPUT+limits for target) and calls full `solveEquations`. Slow-path errors surface to the user; results stored under `__resolvevar_${lineIndex}` keys. When the slow-path's solve produces balance errors (e.g. Brent's finds a value via one equation that another equation rejects), the wrapper reframes them as `"Could not find a value for X in range [lo:hi] consistent with all equations"` — blames the limit constraint rather than the user's equations, since the main solve's success proves the equations are consistent without the limit.
+- **Under-determined detection**: the post-recursion classifier reports `"Too many unknowns"` for any equation with ≥2 remaining unknowns — including bare-LHS definitions like `x = a + b` with `b` unknown (symmetric with `a + b = x`). Two predicates split the work: `isSkippableDefEquation` (mid-recursion in Kind 2/Kind 3) keeps skipping bare-LHS-unbound equations so substitutions can propagate; `isFullyKnownDefEquation` (post-recursion classifier, a thin wrapper passing `skipUnboundLHS=false`) is narrower — only skips when RHS is fully known. Lets genuinely under-determined cases surface without polluting traces with "too many unknowns" entries for staging definitions that resolve via Kind 1 direct-eval.
 - Results inserted back into text preserving comments and formatting
 - Error reporting with line numbers shown in status bar (dedup by string)
 
@@ -148,13 +149,13 @@ node tests/gen-expected.js TESTNAME
 ```
 app.js (entry point, ~200 lines)
   ↓
-ui.js (main orchestration, ~1930 lines)
-  ├→ storage.js (localStorage, import/export, ~1210 lines)
+ui.js (main orchestration, ~1950 lines)
+  ├→ storage.js (localStorage, import/export, ~1215 lines)
   ├→ drive.js (Google Drive sync, ~990 lines)
-  ├→ editor.js (syntax highlighting editor, ~1370 lines)
-  ├→ variables-panel.js (structured variable display, ~2100 lines)
-  ├→ solve-engine.js (solving + table/grid eval, ~2645 lines)
-  │     ├→ solver.js (Brent's algorithm, ~840 lines)
+  ├→ editor.js (syntax highlighting editor, ~1400 lines)
+  ├→ variables-panel.js (structured variable display, ~2105 lines)
+  ├→ solve-engine.js (solving + table/grid eval, ~2750 lines)
+  │     ├→ solver.js (Brent's algorithm, ~845 lines)
   │     ├→ evaluator.js (expression eval, 50+ builtins, ~945 lines)
   │     └→ variables.js (variable parsing + table detection, ~1260 lines)
   ├→ parser.js (tokenizer & AST, ~1090 lines)

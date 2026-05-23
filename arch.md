@@ -319,6 +319,27 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
                 solved variable, return { solved: false, limitsDeferred: true } and
                 retry on a later Advance pass.
 
+    ## Post-recursion classifier — "Too many unknowns"
+    After solveRecursive returns, iterate equations again. Any equation that
+    still has ≥2 unknowns and isn't already in erroredEquations is reported as
+    "Line N: Too many unknowns (var1, var2, ...)". Two definition-equation
+    predicates filter this pass:
+
+        isSkippableDefEquation(eq, skipUnboundLHS=true):
+            Used mid-recursion in Kind 2 and Kind 3. Skip when either RHS is
+            fully known (pure substitution, handled deterministically) or LHS
+            is unbound (bare definition staged for substitution propagation).
+            Keeps the trace clean — definitions waiting on Kind 1 direct-eval
+            don't log spurious "too many unknowns" entries per combo attempt.
+
+        isFullyKnownDefEquation(eq):
+            Thin wrapper passing skipUnboundLHS=false. Used by the post-
+            recursion classifier only. Skip only when RHS is fully known.
+            Bare-LHS equations whose RHS still has unknowns are reported,
+            making `x = a + b` (with b unknown) symmetric with `a + b = x` —
+            both surface "Too many unknowns" in genuinely under-determined
+            systems.
+
     ## OUTPUT-with-limits re-solve (resolveWithLimits in solve-engine.js)
     Main solve treats all OUTPUT limits as display-only. After main solve, each
     OUTPUT declaration with limits runs its own re-solve:
