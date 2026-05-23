@@ -772,26 +772,19 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
     // Definition-equation guard used by Kind 2 and Kind 3 during recursive solving.
     // Skip when either:
-    //   - RHS is fully known: pure substitution, no Brent's needed.
-    //   - LHS is unbound: don't Brent's a bare definition; let substitutions
-    //     propagate first. (The post-recursion classifier uses isFullyKnownDefEquation
-    //     so genuinely under-determined cases still surface as "Too many unknowns".)
-    function isSkippableDefEquation(eq, skipUnboundLHS = true) {
+    //   - RHS is fully known: pure substitution, no Brent's needed (Kind 1 direct-eval handles it).
+    //   - LHS is unbound: don't Brent's a bare definition; let substitutions propagate first.
+    // The post-recursion classifier doesn't need this filter — if RHS is fully known,
+    // direct-eval has already bound the LHS, so the equation has <2 remaining unknowns
+    // and is harmlessly skipped by the ≥2 check.
+    function isSkippableDefEquation(eq) {
         if (eq.modN || !eq.definition) return false;
         const def = eq.definition;
         const rhsUnknowns = [...findVariablesInAST(def.expressionAST)]
             .filter(v => !context.hasVariable(v));
         if (rhsUnknowns.length === 0) return true;
-        if (skipUnboundLHS && !context.hasVariable(def.variable)) return true;
+        if (!context.hasVariable(def.variable)) return true;
         return false;
-    }
-
-    // Post-recursion variant: only skip when RHS is fully known. Bare-LHS
-    // equations whose RHS still has unknowns are genuinely under-determined
-    // and should surface as "Too many unknowns" — matching the symmetric
-    // `a + b = x` form which already does.
-    function isFullyKnownDefEquation(eq) {
-        return isSkippableDefEquation(eq, false);
     }
 
     // Run Brent's on an equation with a given sub combo and yield each root as
@@ -1131,13 +1124,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     // (rootsFromBrents may have populated them from intermediate branching
     // attempts where the list-of-unknowns doesn't reflect the final state), then
     // repopulate based on the actual final state. Equations with ≥2 remaining
-    // unknowns get reported as "Too many unknowns". Skips definition equations
-    // whose LHS variable still isn't bound (they're handled via substitutions).
+    // unknowns get reported as "Too many unknowns".
     unsolvedEquations.clear();
     for (const eq of equations) {
         if (!eq.leftAST || !eq.rightAST) continue;
         if (erroredEquations.has(eq.startLine)) continue;
-        if (isFullyKnownDefEquation(eq)) continue;
         const eqUnknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
         if (eqUnknowns.length >= 2) {
             unsolvedEquations.set(eq.startLine, eqUnknowns);

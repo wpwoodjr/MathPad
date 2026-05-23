@@ -322,23 +322,19 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     ## Post-recursion classifier — "Too many unknowns"
     After solveRecursive returns, iterate equations again. Any equation that
     still has ≥2 unknowns and isn't already in erroredEquations is reported as
-    "Line N: Too many unknowns (var1, var2, ...)". Two definition-equation
-    predicates filter this pass:
+    "Line N: Too many unknowns (var1, var2, ...)". No definition-equation
+    filter is needed at this point: if RHS was fully known, Kind 1 direct-eval
+    has already bound the LHS, so eqUnknowns < 2 and the equation is harmlessly
+    skipped by the ≥2 check. If RHS still has unknowns, the equation genuinely
+    is under-determined and gets reported. This makes `x = a + b` (with b
+    unknown) symmetric with `a + b = x` — both surface "Too many unknowns".
 
-        isSkippableDefEquation(eq, skipUnboundLHS=true):
-            Used mid-recursion in Kind 2 and Kind 3. Skip when either RHS is
-            fully known (pure substitution, handled deterministically) or LHS
-            is unbound (bare definition staged for substitution propagation).
-            Keeps the trace clean — definitions waiting on Kind 1 direct-eval
-            don't log spurious "too many unknowns" entries per combo attempt.
-
-        isFullyKnownDefEquation(eq):
-            Thin wrapper passing skipUnboundLHS=false. Used by the post-
-            recursion classifier only. Skip only when RHS is fully known.
-            Bare-LHS equations whose RHS still has unknowns are reported,
-            making `x = a + b` (with b unknown) symmetric with `a + b = x` —
-            both surface "Too many unknowns" in genuinely under-determined
-            systems.
+    Mid-recursion (Kind 2 and Kind 3), the isSkippableDefEquation guard does
+    apply — it skips bare-LHS definitions either when RHS is fully known
+    (pure substitution, handled by direct-eval) or when LHS is unbound (bare
+    definition staged for substitution propagation). Keeps the trace clean —
+    definitions waiting on direct-eval don't log spurious "too many unknowns"
+    entries per combo attempt.
 
     ## OUTPUT-with-limits re-solve (resolveWithLimits in solve-engine.js)
     Main solve treats all OUTPUT limits as display-only. After main solve, each
