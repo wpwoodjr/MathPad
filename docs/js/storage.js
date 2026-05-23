@@ -92,7 +92,7 @@ tableGraph("v sqrt(x+4) / acos(0.7) = y**3") = {
 
 "*MathPad for web"
 
-"I've always loved MathPad but never found anything to replace it's combination of simplicity and power.  This is a modern web-based reimplementation.  Most original MathPad records should still work.  Some new features include:
+"I've always loved MathPad but never found anything to replace its combination of simplicity and power.  This is a modern web-based reimplementation.  Most original MathPad records should still work.  Some new features include:
 
   * Tables, grids, and graphs
   * Vector diagrams - polar, navigation, and cartesian
@@ -125,24 +125,19 @@ pmt2(pv; rate; n; fv) = (pv - fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 
 "Total accumulation of a rate applied to a balance which increases by gain% every period"
 {
-  tot(pv; gain; rate; periods) =
+  totAcc(pv; gain; rate; periods) =
     if(gain == 0; pv * rate * periods; pv * rate * ((1 + gain)**periods - 1) / gain)
-//     if(periods == 0; 0; pv * rate + tot(pv * (1 + gain); gain; rate; periods - 1))
 }
 
 "Total fees paid given total payment"
 fees(pv; fv; totPmt; return; fees) = fees * (totPmt + fv - pv) / (return - fees)
 
 --Equations--
-"Future value of account(s)"
-fv = pv * (1 + gain)**years
-
 "Variable payments"
-pmtRate = return - fees - gain
-totVPmt = tot(pv; gain; pmtRate; years)
+totVPmt = totAcc(pv; gain; yearlyPmtRate; years)
 totVFees = fees(pv; fv; totVPmt; return; fees)
-year1 = pv * pmtRate / 12
-yearN = pv * (1 + gain)**(years - 1) * pmtRate / 12
+year1 = pv * yearlyPmtRate / 12
+yearN = pv * (1 + gain)**(years - 1) * yearlyPmtRate / 12
 
 "Fixed payments"
 fixedPmt = pmt2(pv; return - fees; years; fv) / 12
@@ -150,63 +145,45 @@ totFPmt = fixedPmt * years * 12
 totFFees = fees(pv; fv; totFPmt; return; fees)
 
 --Variables--
-"*Calculates fixed or variable monthly retirement withdrawals"
-"Enter present value, years, gain (or future value), fees, and annual return; then click the Solve button.  Correct orange results by pressing \u27F2 next to one of the orange values."
+
+"*Calculates fixed and variable monthly retirement withdrawals"
+"Enter retirement account(s) present value, life expectancy, yearly gain (or future value), fees, and total annual return; then click the Solve button.  Correct any orange results by pressing \u27F2 next to one of the orange values."
 
 
-
-"Present value of retirement account(s):"
-pv $<- $1,000,000
-
-"Life expectancy:"
-years <- 20
-
-"Enter net annual account(s) gain or future value:"
-gain %<- 1%
-fv $<-
+---
+Future value of account(s) fv = pv * (1 + gain)**years
+---
+"Present value" pv $<- $1,000,000
+"Life expectancy" years <- 20
+"Yearly gain" gain %<- 1.125%
+"Future value" fv $<-
 
 
-"Annual management fees (percentage):"
-fees %<- 0.65%
-
-"Total expected annual return:"
-return %<- 6.65%
-
-
-"*Variable payments (grows with balance each year)"
-
-"Payment rate:"
-pmtRate %<- 5%
-
-"First year monthly payments:"
-year1 $->
-
-"Last year monthly payments:"
-yearN $->
-
-"Total of variable payments:"
-totVPmt $->
-
-"Total fees paid:"
-totVFees $->
+---
+Gross total return return = yearlyPmtRate + fees + gain
+---
+"Management fees" fees %<- 0.65%
+"Payment rate" yearlyPmtRate %<-
+"Total return" return %<- 6.5%
 
 
-"*Fixed payments (same every year)"
+"*Variable payments (monthly as percentage of account(s) balance each year)"
+"Year one" year1 $-> $3,937.50
+"Last year" yearN $-> $4,870.04
+"Total payments" totVPmt $-> $1,053,152.19
+"Total fees" totVFees $-> $144,878.08
 
-"Monthly payments"
-fixedPmt $->
 
-"Total of fixed payments"
-totFPmt $->
-
-"Total fees paid"
-totFFees $->
+"*Fixed monthly payments"
+"Monthly payment" fixedPmt $-> $4,297.73
+"Total payments" totFPmt $-> $1,031,455.78
+"Total fees" totFFees $-> $142,467.37
 
 
 "*Notes:"
 "Values that are interdependent may appear orange after solving.  This indicates that one of them must be adjusted to balance with the others.  Click \u27F2 next to an orange value to adjust it.  All green means all values are balanced."`,
                 category: 'Finance',
-                places: 2,
+                places: 3,
                 stripZeros: true,
                 groupDigits: true,
                 format: 'float',
@@ -441,22 +418,26 @@ tableGraph("f(x) showing roots") = {
                 title: "Example: Ohm's Law",
                 text: `"Ohm's Law"
 
-v = i*r
-w = v*i
 
 --Variables--
 "*Enter any two then press solve for the other two"
 
 
-v:          "volts"
+---
+v = i*r
+---
+v: 40       "volts"
 i:          "amps"
-r: 8        "ohms"
+r:          "ohms"
+
+
+---
+w = v*i
+---
 w: 200      "watts"
 
 
-
-
-"*Graphs "
+"*Graphs"
 
 tableGraph("v Watts vs amps at typical speaker resistances") = {
   r: 2..10..2
