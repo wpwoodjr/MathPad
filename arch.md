@@ -323,18 +323,31 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     After solveRecursive returns, iterate equations again. Any equation that
     still has ≥2 unknowns and isn't already in erroredEquations is reported as
     "Line N: Too many unknowns (var1, var2, ...)". No definition-equation
-    filter is needed at this point: if RHS was fully known, Kind 1 direct-eval
-    has already bound the LHS, so eqUnknowns < 2 and the equation is harmlessly
-    skipped by the ≥2 check. If RHS still has unknowns, the equation genuinely
-    is under-determined and gets reported. This makes `x = a + b` (with b
-    unknown) symmetric with `a + b = x` — both surface "Too many unknowns".
+    filter is needed: if the expression side was fully known, Kind 1 direct-eval
+    has already bound the variable, so eqUnknowns < 2 and the equation is
+    harmlessly skipped by the ≥2 check. Otherwise the equation genuinely is
+    under-determined and gets reported. This makes `x = a + b` (with b unknown)
+    symmetric with `a + b = x` — both surface "Too many unknowns".
 
-    Mid-recursion (Kind 2 and Kind 3), the isSkippableDefEquation guard does
-    apply — it skips bare-LHS definitions either when RHS is fully known
-    (pure substitution, handled by direct-eval) or when LHS is unbound (bare
-    definition staged for substitution propagation). Keeps the trace clean —
-    definitions waiting on direct-eval don't log spurious "too many unknowns"
-    entries per combo attempt.
+    ## Definition-equation recognizer (symmetric)
+    isDefinitionEquation detects "the user isolated this variable" — a bare
+    identifier on EITHER side of the equals sign:
+
+        x = (a+b)/c       def.variable = "x", def.expressionAST = <(a+b)/c>
+        (a+b)/c = x       def.variable = "x", def.expressionAST = <(a+b)/c>
+        x = speed         def.variable = "x" (LHS-first when both bare)
+        a/sin(A) = b/sin(B)   null — no isolated side, relational
+
+    Used by:
+      - isSkippableDefEquation (mid-recursion Kind 2/Kind 3): skip when
+        expression side is fully known (Kind 1 direct-eval handles it) or
+        variable side is unbound (let substitutions propagate first).
+        Keeps the trace clean — definitions waiting on direct-eval don't
+        log spurious "too many unknowns" entries per combo attempt.
+      - naturalnessScore (saveCandidate tiebreaker): counts how many
+        recognized definitions hold in a candidate snapshot. Captures
+        user-intent: isolated-variable equations are direct identities
+        the user wrote, vs relational equations expressing constraints.
 
     ## OUTPUT-with-limits re-solve (resolveWithLimits in solve-engine.js)
     Main solve treats all OUTPUT limits as display-only. After main solve, each

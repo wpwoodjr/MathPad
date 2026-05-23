@@ -884,3 +884,93 @@ z[0:5]-> 1.3868
   ✓ balanced (depth 2)
 "
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = ""
+"Test 12: Symmetric isDefinitionEquation — bare-RHS form skipped in Kind 3"
+// `2*y = w` is the reversed form of a definition (bare variable on RHS).
+// Under the symmetric isDefinitionEquation, eq.definition recognizes
+// `w` as the variable being defined and `2*y` as the expression — same
+// structure as if the user had written `w = 2*y` (LHS-bare form).
+//
+// At Kind 3 sweep1 empty combo, isSkippableDefEquation skips this
+// equation: expression side has unknown y, variable side w is unbound.
+// No `sweep1 line N: too many unknowns (w, y)` trace line, no wasted
+// Brent's call — same as for `y = z + 1` (the LHS-bare definition below).
+// Before the symmetric extension, only LHS-bare definitions skipped;
+// the bare-RHS form fell through to rootsFromBrents and produced a
+// `too many unknowns` trace entry per Kind 3 combo attempt.
+sqrt(z**2 + 1) = w
+2*y = w
+y = z + 1
+
+--Variables--
+y-> 0.5486
+z-> -0.4514
+w-> 1.0972
+
+
+
+"*--- Solve Trace ---"
+"*--- Variable discovery ---"
+"  unknown: y, z, w
+"
+"*--- Equations (3) ---"
+"  line 14: sqrt(z**2 + 1) = w
+  line 15: 2*y = w
+  line 16: y = z + 1
+"
+"*========== solveEquations (3 equations, 0 input expressions) =========="
+"*--- Advance (depth 1) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 14: w → sqrt(((z ** 2) + 1))
+    line 15: w → (2 * y)
+    line 15: y → (w / 2)
+    line 16: y → (z + 1)
+    line 16: z → (y - 1)
+  [3] Evaluate fully-known substitutions
+    w: deferred
+      line 14: unknowns z
+      line 15: unknowns y
+    y: deferred
+      line 15: unknowns w
+      line 16: unknowns z
+    z: deferred
+      line 16: unknowns y
+  [4] Sweep subs: w, y, z
+  [5] Branching (depth 1)
+    sweep1 line 15 [w@14→sqrt(((z ** 2) + 1))]: too many unknowns (y, z) in (2 * y) = sqrt(((z ** 2) + 1))
+    sweep1 line 14 [w@15→(2 * y)]: too many unknowns (z, y) in sqrt(((z ** 2) + 1)) = (2 * y)
+    sweep1 line 16 [y@15→(w / 2)]: too many unknowns (w, z) in (w / 2) = (z + 1)
+    sweep1 line 15 [y@16→(z + 1)]: too many unknowns (z, w) in (2 * (z + 1)) = w
+    sweep1 line 14 [z@16→(y - 1)]: too many unknowns (y, w) in sqrt((((y - 1) ** 2) + 1)) = w
+    sweep1 line 15 [w@14→sqrt(((z ** 2) + 1))]: too many unknowns (y, z) in (2 * y) = sqrt(((z ** 2) + 1))
+    Try sweep1: z = -0.45141622964513645 (from line 16)
+      from (line 16): y = z + 1
+      with (line 15): y → (w / 2)
+      with (line 14): w → sqrt(((z ** 2) + 1))
+"
+"*--- Advance (depth 2) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    line 15: y → (w / 2)
+    line 16: y → (z + 1)
+  [3] Evaluate fully-known substitutions
+    y: ambiguous (2 alternates) — deferred to branching
+  [4] Sweep subs: y
+  [5] Branching (depth 2)
+    Try directEval: y = 0.5485837703548635 (from line 15, direct eval)
+      from (line 15): y = (w / 2)
+"
+"*--- Advance (depth 3) ---"
+"  [1] Input expressions (none)
+  [2] Substitution map
+    (none)
+  [3] Evaluate fully-known substitutions
+  [4] Sweep subs: (none)
+  ✓ balanced (depth 3)
+"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

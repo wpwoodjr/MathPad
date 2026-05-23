@@ -540,21 +540,28 @@ function deepCopyAST(node) {
 }
 
 /**
- * Check if an equation is a simple definition: variable = expression
- * Returns { variable, expression AST } or null
+ * Check if an equation is a simple definition: one side is a bare variable,
+ * the other is the expression. Returns { variable, expressionAST,
+ * expressionText } or null. LHS-first preference: when both sides are bare
+ * (e.g. `x = speed`), the LHS becomes the variable.
+ *
+ * The recognizer detects "the user isolated this variable" regardless of
+ * direction — `(a+b)/c = x` is just as much a definition of x as
+ * `x = (a+b)/c`. Used as a hint for the mid-recursion skip and the
+ * naturalness tiebreaker; the solver itself treats both forms identically.
  */
-function isDefinitionEquation(leftText, rightText, rightAST) {
-    if (!leftText || !rightAST) return null;
-
-    // Check if left side is a simple variable name (may have $ or % suffix)
-    // Must start with a letter or underscore, not a digit (to avoid matching "1000 = expr")
-    if (!/^[a-zA-Z_]\w*[$%]?$/.test(leftText)) return null;
-
-    return {
-        variable: leftText,
-        expressionAST: rightAST,
-        expressionText: rightText
-    };
+function isDefinitionEquation(leftText, rightText, leftAST, rightAST) {
+    const bareRegex = /^[a-zA-Z_]\w*[$%]?$/;
+    // LHS-first: if LHS is a bare variable name, treat it as the definition variable.
+    // Must start with a letter or underscore, not a digit (to avoid matching "1000 = expr").
+    if (leftText && rightAST && bareRegex.test(leftText)) {
+        return { variable: leftText, expressionAST: rightAST, expressionText: rightText };
+    }
+    // Otherwise check RHS — handles forms like `(a+b)/c = x` where the user isolated x.
+    if (rightText && leftAST && bareRegex.test(rightText)) {
+        return { variable: rightText, expressionAST: leftAST, expressionText: leftText };
+    }
+    return null;
 }
 
 /**

@@ -43,7 +43,7 @@ function preParseEquations(equations) {
             // Precompute the "natural" definition shape (bare-variable LHS,
             // e.g. `b = speed`) once. Used by the saveCandidate naturalness
             // tiebreaker; null for relational equations like a/sin(A)=b/sin(B).
-            eq.definition = isDefinitionEquation(eq.leftText, eq.rightText, eq.rightAST);
+            eq.definition = isDefinitionEquation(eq.leftText, eq.rightText, eq.leftAST, eq.rightAST);
             eq.parseError = null;
         } catch (e) {
             eq.leftAST = null;
@@ -771,18 +771,20 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     }
 
     // Definition-equation guard used by Kind 2 and Kind 3 during recursive solving.
+    // `eq.definition` recognizes either-side-bare equations (`x = a+b` or `(a+b)/c = x`),
+    // with the bare side as `def.variable` and the other side as `def.expressionAST`.
     // Skip when either:
-    //   - RHS is fully known: pure substitution, no Brent's needed (Kind 1 direct-eval handles it).
-    //   - LHS is unbound: don't Brent's a bare definition; let substitutions propagate first.
-    // The post-recursion classifier doesn't need this filter — if RHS is fully known,
-    // direct-eval has already bound the LHS, so the equation has <2 remaining unknowns
-    // and is harmlessly skipped by the ≥2 check.
+    //   - expression side is fully known: pure substitution, Kind 1 direct-eval handles it.
+    //   - bare-side variable is unbound: let substitutions propagate first.
+    // The post-recursion classifier doesn't need this filter — if the expression side
+    // is fully known, direct-eval has already bound the var, so the equation has <2
+    // remaining unknowns and is harmlessly skipped by the ≥2 check.
     function isSkippableDefEquation(eq) {
         if (eq.modN || !eq.definition) return false;
         const def = eq.definition;
-        const rhsUnknowns = [...findVariablesInAST(def.expressionAST)]
+        const exprUnknowns = [...findVariablesInAST(def.expressionAST)]
             .filter(v => !context.hasVariable(v));
-        if (rhsUnknowns.length === 0) return true;
+        if (exprUnknowns.length === 0) return true;
         if (!context.hasVariable(def.variable)) return true;
         return false;
     }
@@ -1015,13 +1017,13 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     // On top-level failure, we restore bestCandidate before post-solve error
     // reporting so values and solveFailures reflect the actual best-effort state.
     let bestCandidate = null;
-    // Count "natural" definition equations (LHS is a bare variable, e.g.
-    // `b = speed`) that are satisfied in the given context. Used only as a
-    // tiebreaker when two fallback snapshots bind the same number of
-    // variables: prefer the one that keeps the user's direct assignments
-    // intact over one where a relational equation silently re-derived the
-    // same variable. Relational equations like `a/sin(A) = b/sin(B)` have a
-    // non-bare LHS so isDefinitionEquation returns null — they don't count.
+    // Count "natural" definition equations (one side is a bare variable, e.g.
+    // `b = speed` or `(a+b)/c = x`) that are satisfied in the given context.
+    // Used only as a tiebreaker when two fallback snapshots bind the same number
+    // of variables: prefer the one that keeps the user's direct assignments
+    // intact over one where a relational equation silently re-derived the same
+    // variable. Relational equations like `a/sin(A) = b/sin(B)` have no bare
+    // side so isDefinitionEquation returns null — they don't count.
     function naturalnessScore(ctx) {
         let n = 0;
         for (const eq of equations) {
@@ -1029,7 +1031,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             if (!def || !ctx.hasVariable(def.variable)) continue;
             try {
                 const lv = ctx.getVariable(def.variable);
-                const rv = evaluate(eq.rightAST, ctx);
+                const rv = evaluate(def.expressionAST, ctx);
                 if (typeof lv !== 'number' || typeof rv !== 'number') continue;
                 const res = eq.modN
                     ? modCheckBalance(lv, rv, record.degreesMode ? 360 : 2 * Math.PI, places)
