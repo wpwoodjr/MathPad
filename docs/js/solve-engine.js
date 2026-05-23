@@ -310,17 +310,12 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
         const value = valueInLimits(raw);
         if (value !== undefined) return { value, reason: null, errors };
     }
-    // Slow path produced no value and no balance error — the under-determined
-    // case (e.g. `x = a + b` with b also unknown). solveEquations doesn't
-    // classify this as "too many unknowns" (isSkippableDefEquation skips
-    // bare-LHS definitions whose LHS is still unbound — they're handled via
-    // substitutions, not flagged as failures). Without explicit handling
-    // here the slow path would return empty errors and formatOutput's
-    // `__resolvevar_${lineIndex} === undefined` branch would skip silently
-    // ("re-solve failed; specific error already pushed" — but nothing was).
-    // Emit the same "no consistent value" message used for over-determined
-    // failures, which describes both cases accurately: the limit can't be
-    // satisfied because the equation system doesn't pin `varName` down.
+    // Defensive fallback: slow path produced no value and no balance error.
+    // The main-solve unknowns classifier normally catches under-determined
+    // cases first, but if we get here without an explicit failure reason
+    // the formatOutput `__resolvevar_${lineIndex} === undefined` branch
+    // would skip silently. Emit the same "no consistent value" message
+    // used elsewhere so the user still sees something actionable.
     if (errors.length === 0) {
         return { value: undefined, reason: 'noRoot', errors: [noConsistentValueError()] };
     }
@@ -775,19 +770,29 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         return { substitutions, definitionSubs };
     }
 
-    // Definition-equation guard used by Kind 2, Kind 3, and the post-recursion
-    // "too many unknowns" classifier. Returns true if this equation should be
-    // skipped: either its LHS variable was already handled via substitutions,
-    // or its LHS variable is still unbound (don't Brent's a bare definition).
-    function isSkippableDefEquation(eq) {
+    // Definition-equation guard used by Kind 2 and Kind 3 during recursive solving.
+    // Skip when either:
+    //   - RHS is fully known: pure substitution, no Brent's needed.
+    //   - LHS is unbound: don't Brent's a bare definition; let substitutions
+    //     propagate first. (The post-recursion classifier uses isFullyKnownDefEquation
+    //     so genuinely under-determined cases still surface as "Too many unknowns".)
+    function isSkippableDefEquation(eq, skipUnboundLHS = true) {
         if (eq.modN) return false;
         const def = isDefinitionEquation(eq.leftText, eq.rightText, eq.rightAST);
         if (!def) return false;
         const rhsUnknowns = [...findVariablesInAST(def.expressionAST)]
             .filter(v => !context.hasVariable(v));
         if (rhsUnknowns.length === 0) return true;
-        if (!context.hasVariable(def.variable)) return true;
+        if (skipUnboundLHS && !context.hasVariable(def.variable)) return true;
         return false;
+    }
+
+    // Post-recursion variant: only skip when RHS is fully known. Bare-LHS
+    // equations whose RHS still has unknowns are genuinely under-determined
+    // and should surface as "Too many unknowns" — matching the symmetric
+    // `a + b = x` form which already does.
+    function isFullyKnownDefEquation(eq) {
+        return isSkippableDefEquation(eq, false);
     }
 
     // Run Brent's on an equation with a given sub combo and yield each root as
@@ -1133,7 +1138,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     for (const eq of equations) {
         if (!eq.leftAST || !eq.rightAST) continue;
         if (erroredEquations.has(eq.startLine)) continue;
-        if (isSkippableDefEquation(eq)) continue;
+        if (isFullyKnownDefEquation(eq)) continue;
         const eqUnknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
         if (eqUnknowns.length >= 2) {
             unsolvedEquations.set(eq.startLine, eqUnknowns);

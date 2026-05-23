@@ -797,23 +797,49 @@ set °: 115.639°
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
-"Surface 'no consistent value' from OUTPUT-with-limits under-determined case"
-"x[0:20]-> demands x in [0:20], but x = a + b leaves both x and b"
-"unknown. solveEquations classifies this equation as a skippable bare-LHS"
-"definition (handled via substitutions, not 'too many unknowns'), Brent's"
-"never runs (no solveFailures), and the balance check is gated on"
-"no-unknowns. All three error paths skip → solveResult.errors is empty."
-"Before the fix, resolveWithLimits returned empty errors → formatOutput"
-"saw __resolvevar_${lineIndex}=undefined and skipped silently. Now the"
-"slow path emits 'Could not find a value' when it produces neither a"
-"value nor a balance error — same message as the over-determined case,"
-"accurate description of both: limit can't be satisfied by the system."
+"Surface 'Too many unknowns' for under-determined bare-LHS definition"
+"x = a + b with `b` unbound is under-determined regardless of which side"
+"x is on. The symmetric form `a + b = x` already reports 'Too many"
+"unknowns'; the bare-LHS form should too (isSkippableDefEquation only"
+"skips when RHS is fully known, not when LHS is unbound)."
 
 a: 10
 x = a + b
 x[0:20]->
 
 --Variables--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Outer-scope pmt def with iterator-bound RHS vars surfaces 'Too many unknowns'"
+"pmt = pmt(...) at outer scope references `rate` and `years`, which are"
+"only iterator-bound in the grid body — not at outer scope. The outer"
+"equation is genuinely under-determined: pmt unbound, rate unbound, years"
+"unbound. Variant A surfaces this rather than silently skipping. The"
+"grid inherits the equation and solves per cell with rate/years bound by"
+"its own iterators, so the cells fill in cleanly even though the outer"
+"solve fails. Fix at the user level: move the equation into the grid body"
+"(as done in the analogous table-tests records)."
+
+--Formulas--
+pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
+
+--Equations--
+pmt = pmt(pv; rate/12; years*12; fv)
+
+--Variables--
+pv: 100000
+fv: 0
+
+grid("Payment vs years and rate (inherits outer eq)") = {
+  pmt<-
+  rate: 4%..8%..1%
+  years: 15..30..5
+  rate%->
+  years->
+  pmt$->
+}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
