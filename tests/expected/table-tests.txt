@@ -1830,7 +1830,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 5: Equation doesn't balance: smg = drift*cos(cmg - set) + s... (relative diff 0.14% >= 0.005%)"; StatusIsError = 1
-VarStatus = "cmg:unsolved, drift:unsolved, leeway:unsolved, set:unsolved, smg:unsolved, speed:unsolved"
+VarStatus = "cmg:partial, drift:partial, leeway:partial, set:partial, smg:unsolved, speed:partial"
 "Cleared declared var available to tables via preSolveVars"
 // When cmg is cleared and solved, tables that don't redeclare cmg
 // should still see the solved cmg value via preSolveVars (not be empty)

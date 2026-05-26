@@ -84,7 +84,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 7: Equation doesn't balance: sin(180-normalizedCHOB)/boatSp... (relative diff 123.536% >= 0.005%)"; StatusIsError = 1
-VarStatus = "boatSpeed:unsolved, currentSpeed:unsolved"
+VarStatus = "boatSpeed:partial, currentSpeed:unsolved"
 "Test 5: Course heading with inconsistent inputs"
 "Input course: 8.1 constrains correction via extracted definition; sin equations don't balance"
 

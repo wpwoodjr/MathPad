@@ -21,7 +21,7 @@ Category = "Unfiled"; Secret = 0
 Places = 0; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 3: Equation doesn't balance: a * a = 2 (relative diff 50% >= 0.5%)"; StatusIsError = 1
-VarStatus = "a:unsolved"
+VarStatus = "a:partial"
 "Test 3: Cascade — b re-solves with rounded a"
 "a=1.414→1, b=sqrt(1.414*100)≈12; re-solve: a=1, b=sqrt(100)=10"
 a * a = 2

@@ -1181,7 +1181,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     // Check equation balance and build highlighting status
     const equationVarStatus = new Map();
     let firstFailedEq = null;
-    let balancedAny = false;  // any equation we could actually balance-check (and that balanced)
+    const balancedEqs = new Set();  // equations that balance-checked AND balanced. Used by priorBalanced
+                                     // collection so a var verified by any balanced equation in this
+                                     // component counts — including equations AFTER firstFailedEq in
+                                     // document order (writing order shouldn't determine highlight color).
+    let balancedAny = false;  // shorthand for balancedEqs.size > 0, kept for the green-branch check
     const definitionDeps = new Map(); // undeclared var → RHS vars (for highlighting expansion)
     const definedByEq = new Map();    // undeclared var → the FIRST equation that introduced it (its definition).
                                        // Subsequent equations with the same bare-undeclared LHS are real
@@ -1262,6 +1266,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                     firstFailedEq = eq;
                 }
             } else {
+                balancedEqs.add(eq);
                 balancedAny = true;
             }
         } catch (e) {
@@ -1301,10 +1306,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         // have populated definitionDeps. (The committed baseline used the
         // same two-pass structure for this reason.)
         const priorBalanced = new Set();
-        for (const eq of equations) {
-            if (eq === firstFailedEq) break;
-            if (!eq.leftAST || !eq.rightAST) continue;
-            if (erroredEquations.has(eq.startLine)) continue;
+        // Iterate the set of equations that actually balanced — order in the
+        // source doesn't matter. A var verified by any balanced equation in
+        // this component counts as "passed earlier check" for the purpose
+        // of softening its highlight from unsolved (orange) to partial (gray).
+        for (const eq of balancedEqs) {
             // Skip the ORIGINATING definition for each undeclared var (it
             // balances trivially because the solver assigned the var from
             // this equation's RHS). Subsequent equations with the same
