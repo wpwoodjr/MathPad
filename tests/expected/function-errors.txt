@@ -1,7 +1,7 @@
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Error in Functions record: bad() — Unexpected end of expression\nError in local function: bad() — Unexpected end of expression"; StatusIsError = 1
+Status = "Line 1: Unknown in equation: x\nError in Functions record: bad() — Unexpected end of expression\nError in local function: bad() — Unexpected end of expression"; StatusIsError = 1
 VarStatus = ""
 "Functions"
 good(x) = x + 1

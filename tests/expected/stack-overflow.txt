@@ -1,8 +1,8 @@
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 10: Maximum call stack size exceeded\nLine 11: Maximum call stack size exceeded\nLine 12: Variable 'w' has no value to output"; StatusIsError = 1
-VarStatus = ""
+Status = "Line 10: Maximum call stack size exceeded\nLine 10: Unknown in equation: w\nLine 11: Maximum call stack size exceeded\nLine 12: Variable 'w' has no value to output"; StatusIsError = 1
+VarStatus = "n:unsolved"
 "Wallis approximation of pi — stack overflow at deep recursion"
 "Regression for the silent-skip-vs-surface asymmetry in solve-engine.js:"
 "the equation path (w = ...) used to swallow RangeError in phase [3]"

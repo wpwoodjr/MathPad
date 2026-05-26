@@ -279,8 +279,8 @@ x1[10:20]->
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 10: Computed value 0.061249916560760606 is outside limits [0, 0.01] for 'yint'"; StatusIsError = 1
-VarStatus = "fv:solved, n:solved, pmt:solved, pv:solved, yint:solved"
+Status = "Line 10: Computed value 0.061200000000000004 is outside limits [0, 0.01] for 'yint'\nLine 14: Unknown in equation: yint"; StatusIsError = 1
+VarStatus = "mint:partial, yint:unsolved"
 "Time Value of Money - Limits too narrow (error expected)"
 
 "Payment calculation"
@@ -295,6 +295,9 @@ n: 360 "number of payments (30 years)"
 
 "Monthly interest rate from annual"
 yint = mint * 12
+yint %->
+mint%<- 0.51%
+mint*12 %-> 6.12%
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1

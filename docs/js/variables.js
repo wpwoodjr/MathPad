@@ -770,9 +770,16 @@ function extractEquationFromLine(lineText, lineTokens) {
         rightOk = !!parseExpression(rightText);
     } catch (e) {}
 
-    // Incomplete equation (expr =) — return leftText for consumer use
-    if (leftOk && !rightText) {
-        return { text: lineText, leftText, rightText: null };
+    // Incomplete equation (expr =) — PalmOS-legacy evaluate-LHS pattern.
+    // Triggers when the LHS parses and the RHS has no real content (empty
+    // OR just a trailing comment). Strip the comment from eq.text so the
+    // value can be inserted right after the `=`, not at the end of the line.
+    const eqIdx = lineTokens.indexOf(eqTok);
+    const rhsContentTokens = lineTokens.slice(eqIdx + 1).filter(t =>
+        t.type !== TokenType.EOF && t.type !== TokenType.COMMENT);
+    if (leftOk && rhsContentTokens.length === 0) {
+        const eqEndCol = eqTok.col - 1 + eqWidth;
+        return { text: lineText.substring(0, eqEndCol), leftText, rightText: null };
     }
 
     // If both sides parse, return equation (preserves original spacing around =)

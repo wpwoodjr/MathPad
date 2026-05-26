@@ -110,8 +110,8 @@ speedMadeGood-> 9.635
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
-Status = "Line 7: Could not find a root for 'x'"; StatusIsError = 1
-VarStatus = ""
+Status = "Line 4: Unknown in equation: x\nLine 7: Could not find a root for 'x'"; StatusIsError = 1
+VarStatus = "x:unsolved"
 "Test 6: Tautology rejection - f(x)=0 for all x should not find a root"
 "Near-tangent detection must skip when best test point is already at zero"
 
@@ -927,8 +927,8 @@ x2[360:501] °-> 500°
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 12: Could not find a root for 'x'"; StatusIsError = 1
-VarStatus = ""
+Status = "Line 11: Unknown in equation: x\nLine 12: Could not find a root for 'x'"; StatusIsError = 1
+VarStatus = "y:unsolved"
 "Surface 'Could not find a root' for OUTPUT-only vars"
 "x*x = -4 has no real solution. Brent's fails to bracket; the failure"
 "is recorded in solveFailures. Without explicit handling for OUTPUT-only"
@@ -1002,8 +1002,8 @@ set °: 115.639°
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 8: Too many unknowns (x, b)"; StatusIsError = 1
-VarStatus = ""
+Status = "Line 8: Too many unknowns (x, b)\nLine 9: Could not find a value for 'x' in range [0:20] consistent with all equations"; StatusIsError = 1
+VarStatus = "a:unsolved"
 "Surface 'Too many unknowns' for under-determined bare-LHS definition"
 "x = a + b with `b` unbound is under-determined regardless of which side"
 "x is on. The symmetric form `a + b = x` already reports 'Too many"
@@ -1020,7 +1020,7 @@ Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 15: Too many unknowns (pmt, rate, years)"; StatusIsError = 1
-VarStatus = ""
+VarStatus = "fv:unsolved, pv:unsolved"
 "Outer-scope pmt def with iterator-bound RHS vars surfaces 'Too many unknowns'"
 "pmt = pmt(...) at outer scope references `rate` and `years`, which are"
 "only iterator-bound in the grid body — not at outer scope. The outer"
@@ -1093,8 +1093,8 @@ c: 11
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 18: Could not find a root for 'x'\nLine 19: Could not find a root for 'b'"; StatusIsError = 1
-VarStatus = ""
+Status = "Line 16: Too many unknowns (x, b)\nLine 18: Could not find a root for 'x'\nLine 19: Could not find a root for 'b'"; StatusIsError = 1
+VarStatus = "a:unsolved"
 "Tautology rejection: floating-point residuals don't fake a root"
 "x = a + b and a + b = x are equivalent — 1 effective constraint and 2"
 "unknowns (under-determined). After substituting b → (x - a) into"

@@ -44,7 +44,15 @@ function preParseEquations(equations) {
             // e.g. `b = speed`) once. Used by the saveCandidate naturalness
             // tiebreaker; null for relational equations like a/sin(A)=b/sin(B).
             eq.definition = isDefinitionEquation(eq.leftText, eq.rightText, eq.leftAST, eq.rightAST);
-            eq.parseError = null;
+            // `expr =` (LHS only) is the PalmOS-legacy evaluate-this pattern;
+            // handled by the incomplete-equation branch. Any equation with
+            // no LHS (`= expr` or bare `=`) is a parse error — the user
+            // should see something instead of it being silently dropped.
+            if (!eq.leftAST) {
+                eq.parseError = "Equation missing left side";
+            } else {
+                eq.parseError = null;
+            }
         } catch (e) {
             eq.leftAST = null;
             eq.rightAST = null;
@@ -297,6 +305,14 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
     context.variables = savedVars;
 
     let errors = (solveResult && solveResult.errors) || [];
+    // Drop the slow-path's internal "Unknown in equation" / "Too many unknowns"
+    // classifier output. Those describe the slow-path's local view (where the
+    // target var is forcibly unbound to be re-solved) and are noise from the
+    // user's perspective — the main solve already established the actual
+    // record state. The user only needs the slow-path's primary failure
+    // (Brent's no-root, limit rejection, or the noConsistentValueError below).
+    errors = errors.filter(e =>
+        !/^Line \d+: (Unknown in equation|Too many unknowns)/.test(e));
     // If the slow-path couldn't satisfy all equations — i.e. Brent's found a
     // value via one equation but other equations don't balance with it —
     // treat it as "no consistent value" rather than surfacing the confusing
@@ -1122,21 +1138,6 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         _trace(`========== solveEquations FAILED (no complete solution) ==========`);
     }
 
-    // Post-recursion classification: clear any stale unsolvedEquations entries
-    // (rootsFromBrents may have populated them from intermediate branching
-    // attempts where the list-of-unknowns doesn't reflect the final state), then
-    // repopulate based on the actual final state. Equations with ≥2 remaining
-    // unknowns get reported as "Too many unknowns".
-    unsolvedEquations.clear();
-    for (const eq of equations) {
-        if (!eq.leftAST || !eq.rightAST) continue;
-        if (erroredEquations.has(eq.startLine)) continue;
-        const eqUnknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
-        if (eqUnknowns.length >= 2) {
-            unsolvedEquations.set(eq.startLine, eqUnknowns);
-        }
-    }
-
     // Report body definitions that still couldn't evaluate
     for (const { name, ast, exprText } of bodyDefinitions) {
         if (!ast || context.hasVariable(name)) continue;
@@ -1168,14 +1169,6 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         errors.push(`Line ${lineIdx + 1}: ${failure.error} for '${varName}'`);
     }
 
-    // Report equations that couldn't be solved due to too many unknowns
-    // Skip if any unknown already has a solve failure (avoids redundant errors)
-    for (const [line, unknowns] of unsolvedEquations) {
-        if (!unknowns.some(v => solveFailures.has(v))) {
-            errors.push(`Line ${line + 1}: Too many unknowns (${unknowns.join(', ')})`);
-        }
-    }
-
     // Validate limit expressions for all declared variables (catches undefined references
     // even when the variable wasn't actually solved via Brent's). Skipped when called
     // from solveEquationsByComponent — wrapper runs validation once on the merged
@@ -1202,41 +1195,59 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 definedByEq.set(eq.leftAST.name, eq);
             }
             if (erroredEquations.has(eq.startLine)) continue;
-            // Stop balance-checking once one equation has failed — keep just
-            // a single "doesn't balance" error to focus the user on one issue
-            // at a time. Definition tracking above (definitionDeps) still
-            // runs for every equation so expandVars works on the full record.
-            if (firstFailedEq) continue;
+
+            // Focus rule: once an equation has failed (balance / unknowns),
+            // skip pushing further balance-style errors. Definition tracking
+            // (definitionDeps) above still runs for every equation so
+            // expandVars works on the full record. Exception messages (from
+            // the catch block below) are NOT subject to this focus rule —
+            // every equation that throws during evaluation gets reported,
+            // since those usually indicate independent structural issues
+            // (e.g. "Unknown function: modClose" in two separate equations).
 
             const unknowns = [...eq.allVars].filter(v => !context.hasVariable(v));
 
-            if (unknowns.length === 0) {
-                const leftVal = evaluate(eq.leftAST, context);
-                const rightVal = evaluate(eq.rightAST, context);
-                const eqText = eq.text.length > 30 ? eq.text.substring(0, 30) + '...' : eq.text;
+            if (unknowns.length > 0) {
+                if (!firstFailedEq) {
+                    const msg = unknowns.length === 1
+                        ? `Line ${eq.startLine + 1}: Unknown in equation: ${unknowns[0]}`
+                        : `Line ${eq.startLine + 1}: Too many unknowns (${unknowns.join(', ')})`;
+                    errors.push(msg);
+                    firstFailedEq = eq;
+                }
+                continue;
+            }
 
-                // Non-finite shortcut: if either side is NaN or ±Infinity and
-                // they're not strictly equal, emit a concrete message naming the
-                // actual values instead of routing through checkBalance (which
-                // produces misleading "relative diff NaN%" phrasing because the
-                // diff arithmetic on non-finite inputs produces NaN).
-                if (!Number.isFinite(leftVal) || !Number.isFinite(rightVal)) {
-                    if (leftVal === rightVal) continue; // Infinity === Infinity etc.
+            // All vars known — balance-check.
+            const leftVal = evaluate(eq.leftAST, context);
+            const rightVal = evaluate(eq.rightAST, context);
+            const eqText = eq.text.length > 30 ? eq.text.substring(0, 30) + '...' : eq.text;
+
+            // Non-finite shortcut: if either side is NaN or ±Infinity and
+            // they're not strictly equal, emit a concrete message naming the
+            // actual values instead of routing through checkBalance (which
+            // produces misleading "relative diff NaN%" phrasing because the
+            // diff arithmetic on non-finite inputs produces NaN).
+            if (!Number.isFinite(leftVal) || !Number.isFinite(rightVal)) {
+                if (leftVal === rightVal) continue; // Infinity === Infinity etc.
+                if (!firstFailedEq) {
                     const fmt = (v) => Number.isNaN(v) ? 'NaN'
                         : v === Infinity ? 'Infinity'
                         : v === -Infinity ? '-Infinity'
                         : String(v);
                     errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (left = ${fmt(leftVal)}, right = ${fmt(rightVal)})`);
-                    if (!firstFailedEq) firstFailedEq = eq;
-                    continue;
+                    firstFailedEq = eq;
                 }
+                continue;
+            }
 
-                const result = eq.modN
-                    ? modCheckBalance(leftVal, rightVal, record.degreesMode ? 360 : 2 * Math.PI, places)
-                    : checkBalance(leftVal, rightVal, places);
-                const balanced = result.balanced;
+            const result = eq.modN
+                ? modCheckBalance(leftVal, rightVal, record.degreesMode ? 360 : 2 * Math.PI, places)
+                : checkBalance(leftVal, rightVal, places);
+            const balanced = result.balanced;
 
-                if (!balanced) {
+            if (!balanced) {
+                if (!firstFailedEq) {
                     if (result.relative) {
                         const pctPlaces = Math.max(0, result.tolPlaces - 2);
                         const diffPct = parseFloat(toFixed(result.difference * 100, pctPlaces));
@@ -1248,13 +1259,14 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                             : parseFloat(toFixed(result.difference, result.tolPlaces));
                         errors.push(`Line ${eq.startLine + 1}: Equation doesn't balance: ${eqText} (absolute diff ${diff} >= ${result.tolerance})`);
                     }
-                    if (!firstFailedEq) firstFailedEq = eq;
-                } else {
-                    balancedAny = true;
+                    firstFailedEq = eq;
                 }
+            } else {
+                balancedAny = true;
             }
         } catch (e) {
             errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
+            if (!firstFailedEq) firstFailedEq = eq;
         }
     }
 
@@ -1536,19 +1548,26 @@ function formatOutput(text, declarations, context, computedValues, record, solve
     }
     text = lines.join('\n');
 
-    // Handle incomplete equations and expression outputs using pre-computed values
+    // Handle incomplete equations and expression outputs using pre-computed values.
+    // Single split/join cycle for both passes.
     const equations = precomputedEquations;
     const exprOutputs = precomputedExprOutputs;
+    const outLines = text.split('\n');
+
+    // Incomplete equations: replacement is scoped to the equation's own
+    // source line so a docstring containing the equation text (e.g. comment
+    // text mentioning `a =`) doesn't get rewritten.
     for (const eq of equations) {
         const key = `__incomplete_${eq.startLine}`;
-        if (computedValues.has(key)) {
-            const value = computedValues.get(key);
-            const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
-            const eqPattern = eq.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            text = text.replace(new RegExp(eqPattern), eq.text + ' ' + formatted);
-        }
+        if (!computedValues.has(key)) continue;
+        if (eq.startLine < 0 || eq.startLine >= outLines.length) continue;
+        const value = computedValues.get(key);
+        const formatted = formatNumber(value, format.places, format.stripZeros, format.format, 10, format.groupDigits);
+        const eqPattern = eq.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        outLines[eq.startLine] = outLines[eq.startLine].replace(
+            new RegExp(eqPattern), eq.text + ' ' + formatted);
     }
-    const exprLines = text.split('\n');
+
     for (const output of exprOutputs) {
         const key = `__exprout_${output.startLine}`;
         if (computedValues.has(key)) {
@@ -1565,13 +1584,13 @@ function formatOutput(text, declarations, context, computedValues, record, solve
             }
 
             // Insert the value after the marker
-            const line = exprLines[output.startLine];
+            const line = outLines[output.startLine];
             const markerEndIndex = output.markerEndCol - 1;
             const commentInfo = { comment: output.comment, commentUnquoted: output.commentUnquoted };
-            exprLines[output.startLine] = buildOutputLine(line, markerEndIndex, formatted, commentInfo);
+            outLines[output.startLine] = buildOutputLine(line, markerEndIndex, formatted, commentInfo);
         }
     }
-    text = exprLines.join('\n');
+    text = outLines.join('\n');
 
     return { text, errors };
 }

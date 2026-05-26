@@ -12,7 +12,7 @@ h: 6.62607015e-34 "Planck constant"
 Category = "Reference"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 3: Too many unknowns (a, b)"; StatusIsError = 1
+Status = "Line 3: Too many unknowns (a, b)\nLine 4: Unknown in equation: seconds"; StatusIsError = 1
 VarStatus = ""
 "Functions"
 // Solving the Functions record treats fn defs as equations (expected errors)
@@ -280,7 +280,7 @@ Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 13: Too many unknowns (w, y)"; StatusIsError = 1
-VarStatus = "e:solved"
+VarStatus = "e:unsolved"
 "fn and constant overriding and constant visibility"
 
 cos(x) = 0.5

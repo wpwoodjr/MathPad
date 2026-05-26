@@ -254,6 +254,9 @@ n: 360 "number of payments (30 years)"
 
 "Monthly interest rate from annual"
 yint = mint * 12
+yint %->
+mint%<-
+mint*12 %->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1

@@ -319,15 +319,52 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
                 solved variable, return { solved: false, limitsDeferred: true } and
                 retry on a later Advance pass.
 
-    ## Post-recursion classifier — "Too many unknowns"
-    After solveRecursive returns, iterate equations again. Any equation that
-    still has ≥2 unknowns and isn't already in erroredEquations is reported as
-    "Line N: Too many unknowns (var1, var2, ...)". No definition-equation
-    filter is needed: if the expression side was fully known, Kind 1 direct-eval
-    has already bound the variable, so eqUnknowns < 2 and the equation is
-    harmlessly skipped by the ≥2 check. Otherwise the equation genuinely is
-    under-determined and gets reported. This makes `x = a + b` (with b unknown)
-    symmetric with `a + b = x` — both surface "Too many unknowns".
+    ## Balance loop — equation-level error reporting
+    After solveRecursive returns, iterate equations in document order (one
+    pass per component, since solveEquationsByComponent calls solveEquations
+    per component). Each equation falls into one of these branches:
+
+        Parse error (eq.parseError set, or leftAST/rightAST null):
+            Reported up front via the parseError loop before the balance pass.
+            Specific message: "Line N: Equation missing left side" for the
+            `= expr` and bare `=` cases (LHS missing); other parse errors
+            surface their parser-provided message.
+
+        Already in erroredEquations:
+            Skip — Kind 2/Kind 3 during solving caught an exception and
+            already pushed an error.
+
+        Has unknowns (any var not in context.variables):
+            Emit "Line N: Unknown in equation: X" (1 unknown) or
+            "Line N: Too many unknowns (X, Y, ...)" (≥2). Set firstFailedEq
+            for highlighting. Subsequent unknowns/balance failures in the
+            same component are suppressed (focus rule).
+
+        Balance check (all vars known):
+            evaluate(leftAST), evaluate(rightAST). If non-finite mismatch
+            or relative/absolute diff exceeds tolerance, emit
+            "Line N: Equation doesn't balance: ...". Set firstFailedEq.
+            Subsequent balance/unknowns failures suppressed (focus rule).
+
+        Exception during evaluation (catch block):
+            "Unknown function: X", "Maximum call stack size exceeded",
+            user-defined-function body errors, etc. Emit "Line N: <message>"
+            for EVERY affected equation (no focus rule — exceptions are
+            independent structural issues, e.g. an undefined `modClose`
+            in two separate equations gets two reports). Set firstFailedEq
+            only on first.
+
+    Component-scoped: each call to solveEquations gets its own firstFailedEq
+    and emits its own errors. So a record with independent components can
+    have one error per component, each with its own highlight focus.
+
+    Slow-path filter: resolveWithLimits's slow-path is also a solveEquations
+    call, but its target var is forcibly unbound — so any equations
+    referencing the target will hit the unknowns branch. Those "Unknown
+    in equation: X" messages describe the slow-path's local view, not the
+    user's actual record state. resolveWithLimits filters them out before
+    propagating; only the primary slow-path failure (Brent's no-root,
+    limit rejection, or noConsistentValueError) surfaces.
 
     ## Definition-equation recognizer (symmetric)
     isDefinitionEquation detects "the user isolated this variable" — a bare
@@ -348,6 +385,23 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         recognized definitions hold in a candidate snapshot. Captures
         user-intent: isolated-variable equations are direct identities
         the user wrote, vs relational equations expressing constraints.
+
+    ## UI highlighting and error severity
+    The variables-panel highlight layer (green/orange/partial via
+    equationVarStatus) is independent of the line-error layer (red via
+    has-error). Both apply concurrently; CSS specificity makes has-error
+    win when both classes are on the same row.
+
+    Earlier versions suppressed the entire highlight layer when any "hard"
+    error was present (anything not containing "doesn't balance"). That hid
+    valid green/orange/partial info on unrelated rows. Now the layers are
+    decoupled: the data layer drives colors honestly, and hard errors just
+    add red markers to their source lines via the regex line-number scan.
+
+    Slow-path errors that point to the OUTPUT decl's line (not the equation
+    line) — e.g. "Computed value X is outside limits..." — make the
+    declaration row red; the equation-status layer can still independently
+    mark its declared vars as partial/unsolved if firstFailedEq is set.
 
     ## OUTPUT-with-limits re-solve (resolveWithLimits in solve-engine.js)
     Main solve treats all OUTPUT limits as display-only. After main solve, each

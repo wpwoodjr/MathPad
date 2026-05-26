@@ -798,9 +798,11 @@ class VariablesPanel {
     setErrors(errors, equationVarStatus) {
         this.clearErrors();
 
-        // Apply green/orange highlighting unless there are non-balance errors (red)
-        const hasHardErrors = errors && errors.some(e => !e.includes("doesn't balance"));
-        if (!hasHardErrors && equationVarStatus) {
+        // Apply green/orange highlighting from equationVarStatus. The data
+        // layer drives the colors; hard errors (Too many unknowns, Could not
+        // find a root, etc.) coexist with the equation-status layer rather
+        // than suppressing it.
+        if (equationVarStatus) {
             for (const decl of this.declarations.values()) {
                 if (decl.declaration && decl.declaration.type === VarType.OUTPUT) continue;
                 const status = equationVarStatus.get(decl.name);

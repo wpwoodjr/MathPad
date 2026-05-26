@@ -20,7 +20,7 @@ x2-> 2
 Category = "Reference"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Line 5: Too many unknowns (p, r, n, t)\nLine 14: Too many unknowns (a, b)\nLine 17: Too many unknowns (a, b)"; StatusIsError = 1
+Status = "Line 5: Too many unknowns (p, r, n, t)\nLine 11: Unknown in equation: f\nLine 14: Too many unknowns (a, b)"; StatusIsError = 1
 VarStatus = ""
 "Functions"
 // Solving the Functions record treats fn defs as equations (expected errors)

@@ -48,6 +48,33 @@ x[0:2]->
 Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 9: Too many unknowns (x, z)\nLine 16: Could not find a root in range [0:2] for 'x'\nLine 20: Variable 'z' has no value to output"; StatusIsError = 1
+VarStatus = "w:unsolved, x:unsolved, z:unsolved"
+"OUTPUT vs INPUT 'has no value to output' asymmetry"
+"Brent's fails for x[0:2]<- (real root 2.236 outside [0,2]). z can't"
+"be derived without x. z-> gets 'has no value to output' error (OUTPUT"
+"requires a value to display). z<- with no value gets NO error (INPUT"
+"placeholder semantics: empty is OK). Same logic for x->: in"
+"solveFailures from Brent's, so its specific 'Could not find a root'"
+"error fires and the generic 'has no value' is suppressed."
+
+x**2 + z**2 - w = 25
+x = z/2
+// w = 0
+--Variables--
+w<- 0
+// z[0:4]->
+// x[0:3]-> 2.24
+x[0:2]<-
+x->
+// x<- 2.24
+// z<- 4.47
+z->
+z<-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
 Status = "Line 10: Equation doesn't balance: x = x + 1 (relative diff 41.42% >= 0.05%)"; StatusIsError = 1
 VarStatus = ""
 "Table transitive blanking: z derived from bad x should also blank"
@@ -81,4 +108,109 @@ table "transitive (0/5 solved)"
 2		
 3		
 4		
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 13: Equation missing left side\nLine 14: Equation missing left side"; StatusIsError = 1
+VarStatus = "a:solved"
+"Equation oddities: incomplete equations and missing sides"
+"`a =` is the PalmOS-legacy evaluate-LHS pattern: the value of a gets"
+"inserted right after the =. A trailing comment is preserved (value"
+"goes before //, not at end of line). `= expr` and bare `=` are"
+"flagged as parse errors — 'Equation missing left side' — so the user"
+"notices the typo rather than silently dropping the line."
+
+a: 1
+
+a = 1  // test
+
+b: 1
+ = b
+=
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 9: Unknown in equation: a"; StatusIsError = 1
+VarStatus = "a:unsolved"
+"Self-referencing equation with unbound var: 'Unknown in equation' (singular)"
+"`a = a` is structurally a tautology, but with a unbound the balance"
+"loop can't verify it. Reports 'Unknown in equation: a' (singular form,"
+"since the equation has exactly one unknown), marks a as unsolved."
+"`b:` is an INPUT placeholder not referenced by any equation — no"
+"status assigned, no error."
+
+a:
+a = a
+b:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 12: Too many unknowns (d, e1)"; StatusIsError = 1
+VarStatus = "a:partial, e1:unsolved"
+"priorBalanced shield: a is gray (in earlier balanced eq), e1 is orange"
+"Line 3 `a + b = 25` balances with a=10, b=15 (the verified balanced"
+"equation). Line 4 `d + e1 = a + 5` becomes firstFailedEq because"
+"d and e1 are unknown. The partial/unsolved highlight pass: a appears"
+"in priorBalanced (line 3 balanced it) AND in firstFailedEq's allVars"
+"→ marked 'partial' (gray). e1 in firstFailedEq but NOT in priorBalanced"
+"→ marked 'unsolved' (orange). b isn't in firstFailedEq.allVars so"
+"gets no status (it's verified in line 3 but the green branch is"
+"gated off when firstFailedEq is set)."
+
+a + b = 25
+d + e1 = a + 5
+
+--Variables--
+a: 10
+b: 15
+e1:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 11: Too many unknowns (d, e1)"; StatusIsError = 1
+VarStatus = "a:unsolved, b:unsolved, x:solved, y:solved"
+"Mixed example: two independent components, one solves and one doesn't"
+"Component A {y = x + 1 + c2}: y, x known → Brent's solves c2 = 0,"
+"equation balances → y, x marked green via the green branch."
+"Component B {d + e1 = a + b + 5, a + b = 25}: a, b known, d/e1 unknown."
+"Line 4 sets firstFailedEq (unknowns), so a, b → 'unsolved' (orange)."
+"Line 5's balance failure (15 ≠ 25) doesn't emit because firstFailedEq"
+"is already set (focus rule). Each component independently determines"
+"its own highlights and errors."
+
+y = x + 1 + c2
+d + e1 = a + b + 5
+a + b = 25
+
+--Variables--
+y: 6
+x: 5
+a: 10
+b: 5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 16: Equation doesn't balance: z = 2 (relative diff 75% >= 0.5%)"; StatusIsError = 1
+VarStatus = "a:partial, y:partial"
+"Undeclared-var definition propagates partial highlight via expandVars"
+"`z = y + a` defines undeclared z. definitionDeps['z'] = {y, a} —"
+"z's underlying vars. `z = 2` then fails balance (z is 8, not 2)."
+"firstFailedEq = line 8 (z = 2). expandVars({z}) → {y, a}. Both"
+"appear in priorBalanced (line 2's `a = x + y` balanced) → both"
+"marked 'partial' (gray). This is the 'volume = w*h*d' pattern:"
+"when the undeclared label's equation fails, the underlying declared"
+"vars get the highlight (since the label has no var-panel row)."
+
+a = x + y
+x: 2
+y: 3
+a: 5
+
+z = y + a
+z = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

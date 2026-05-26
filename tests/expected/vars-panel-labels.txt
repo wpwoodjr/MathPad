@@ -10,7 +10,7 @@ e: 2.71828182845905
 Category = "Reference"; Secret = 0
 Places = 2; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 0
-Status = "Nothing to solve"; StatusIsError = 0
+Status = "Line 1: Unknown in equation: f"; StatusIsError = 1
 VarStatus = ""
 "Functions"
 ftoc(f) = (f - 32) * 5/9

@@ -626,7 +626,7 @@ Category = "Unfiled"; Secret = 0
 Places = 3; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Line 6: Unknown function: modClose\nLine 9: Unknown function: modClose"; StatusIsError = 1
-VarStatus = "cmg:solved, cts:solved, drift:solved, leeway:solved, set:solved, smg:solved, speed:solved"
+VarStatus = "cmg:partial, cts:unsolved, drift:partial, set:partial, smg:partial"
 "18. Removed modClose should error in balance check"
 
 ws = speed*cos(leeway)
