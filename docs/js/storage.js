@@ -193,23 +193,19 @@ Gross total return return = yearlyPmtRate + fees + gain
             {
                 id: generateId(),
                 title: 'Example: Loan Calculator',
-                text: `"Loan calculator"
+                text: `"Loan calculator with graphs and tables"
 
 --Functions--
 pmt2(pv; fv; rate; n; pmtDue) = -(pv + fv/(1 + rate)**n)*rate / ((1 - (1 + rate)**-n)*(1 + rate)**pmtDue)
 
 --Equations--
+pmt = pmt2(pv; fv; r; years*pmtsYr; pmtDue)
+pmt + extraPmt = pmt2(pv; fv; r; actYears*pmtsYr; pmtDue)
+r = (1 + rate/cmpndsYr)**(cmpndsYr/pmtsYr) - 1
 // these variables never get orange highlighting because they are "solved" here
 pmtDue = pmtDue
 cmpndsYr = cmpndsYr
 pmtsYr = pmtsYr
-
-// r is substituted into later equations
-r = (1 + rate/cmpndsYr)**(cmpndsYr/pmtsYr) - 1
-
-// all vars below may get orange highlighting (except r which is not an input var)
-pmt = pmt2(pv; fv; r; years*pmtsYr; pmtDue)
-pmt + extraPmt = pmt2(pv; fv; r; actYears*pmtsYr; pmtDue)
 
 --Hidden Variables--
 lastPmt: round(actYears*pmtsYr - pmtDue)
@@ -223,19 +219,19 @@ end: 0
 "For example, set Present Value to $200,000 and press the solve ⟲ icon next to Payment"
 
 Present Value pv $: $100,000
-Future Value fv $: $0              "(balloon payment)"
+Future Value fv $: $0               "(balloon payment)"
 Annual Rate rate %: 6.125%
-Years years : 30
+Loan Term years : 30                "Term in years"
 Payment pmt $:
 
 
-Extra Payment extraPmt $: $0        "Extra principal payment per period"
-Actual Years actYears : years            "Actual years given extra principal payment"
-
-
 Payments/Year pmtsYr: 12
-Compounds/Year cmpndsYr: pmtsYr          "generally equals payments/year"
-Annuity Due pmtDue[0..1]: end            "end or begin of period"
+Compounds/Year cmpndsYr: pmtsYr     "generally equals payments/year"
+Annuity Due pmtDue[0..1]: end       "end or begin of period"
+
+
+Prepayment extraPmt $: $0           "Extra principal payment per period"
+Actual Term actYears : years        "Actual term given prepayments"
 
 
 
