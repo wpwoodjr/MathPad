@@ -429,6 +429,7 @@ function checkAllEquationsBalance(context, equations, record, places, requiredVa
 function snapshotState(context, solveFailures, unsolvedEquations, erroredEquations, computedValues, errors, solved) {
     return {
         variables: new Map(context.variables),
+        firedBodyDefs: new Set(context.firedBodyDefs),
         solveFailures: new Map(solveFailures),
         unsolvedEquations: new Map(unsolvedEquations),
         erroredEquations: new Set(erroredEquations),
@@ -451,6 +452,7 @@ function snapshotState(context, solveFailures, unsolvedEquations, erroredEquatio
  */
 function restoreState(context, solveFailures, unsolvedEquations, erroredEquations, computedValues, errors, snap) {
     context.variables = new Map(snap.variables);
+    context.firedBodyDefs = new Set(snap.firedBodyDefs);
     solveFailures.clear();
     for (const [k, v] of snap.solveFailures) solveFailures.set(k, v);
     unsolvedEquations.clear();
@@ -544,6 +546,17 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
     // Build variables map for lookup (never reassigned after setup)
     const variables = buildVariablesMap(declarations);
 
+    // Body-def authority is enforced by phase [1] firing, not by blocking
+    // the solver. The solver binds vars freely (via direct-eval, Brent's,
+    // sweeps); when a body def's RHS becomes evaluable, phase [1] fires it
+    // and overrides any solver-set value. If the body def never becomes
+    // evaluable, reportUnevaluableBodyDefs emits a "Cannot evaluate" error.
+    //
+    // firedBodyDefs tracks apply-once status: each def fires at most once
+    // per branch (so `s: s+1` doesn't loop forever, and `salt: rand()`
+    // doesn't re-roll). Snapshot/restored through context.
+    context.firedBodyDefs = new Set();
+
     // Derive requiredVars for the terminal check: every variable that appears in
     // some equation and isn't yet in context is required. Declared-but-unreferenced
     // outputs (e.g. `d->` with no equation) are NOT required — the post-solve
@@ -579,6 +592,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 try {
                     const value = evaluate(def.ast, context);
                     context.setVariable(def.name, value);
+                    context.firedBodyDefs.add(def.name);
                     // Body defs don't count toward "Solved N" — they're declaration
                     // evaluations, not equation solves (matches old iterative solver).
                     _trace(`  ${def.name} = ${_astStr(def.ast)} = ${value}`);
@@ -649,12 +663,19 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
 
             // [1] Retry pending body defs (those with unknown deps at start).
             // Body defs don't count toward "Solved N" (matches old iterative solver).
+            // Body defs are AUTHORITATIVE: a def fires as soon as all its RHS
+            // vars (including self) are bound — even if its LHS var is already
+            // bound by the solver — and overrides that value. evaluate() throws
+            // while any dep is unbound, naturally deferring until ready. The
+            // firedBodyDefs gate fires each def exactly once (so `s: s+1` lifts
+            // a solver-set s=5 to s=6 without looping).
             _trace(`  [1] Input expressions${pendingBodyDefs.length === 0 ? ' (none)' : ''}`);
             for (const { name, ast } of pendingBodyDefs) {
-                if (!ast || context.hasVariable(name)) continue;
+                if (!ast || context.firedBodyDefs.has(name)) continue;
                 try {
                     const value = evaluate(ast, context);
                     context.setVariable(name, value);
+                    context.firedBodyDefs.add(name);
                     progressed = true;
                     _trace(`    ${name} = ${_astStr(ast)} = ${value}`);
                 } catch (e) {
@@ -1138,14 +1159,11 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         _trace(`========== solveEquations FAILED (no complete solution) ==========`);
     }
 
-    // Report body definitions that still couldn't evaluate
-    for (const { name, ast, exprText } of bodyDefinitions) {
-        if (!ast || context.hasVariable(name)) continue;
-        try { evaluate(ast, context); } catch (e) {
-            const lineIndex = (variables.get(name) || {}).lineIndex;
-            errors.push(`Line ${(lineIndex != null ? lineIndex : 0) + 1}: Cannot evaluate "${exprText || name}" - ${e.message}`);
-        }
-    }
+    // Report body definitions that still couldn't evaluate. Skipped for
+    // per-component calls (skipLimitValidation) — the wrapper runs this once on
+    // the merged context so a def whose variable lives in another component
+    // isn't flagged against this component's incomplete view.
+    if (!skipLimitValidation) reportUnevaluableBodyDefs(bodyDefinitions, context, variables, errors);
 
     // Report solve failures before expression output evaluation
     // so solver errors ("Could not find a root") appear before "has no value" errors.
@@ -1369,6 +1387,29 @@ function validateLimits(declarations, context, errors) {
     }
 }
 
+// Report body definitions that never fired. The check uses firedBodyDefs
+// rather than hasVariable: a body-def-bound var may have a solver-derived
+// value while the body def itself was never honored (e.g. `z: z+w` with w
+// unbound — z got 5 from `z = y+3`, but the body def couldn't evaluate).
+// In that case the solver's value stays in context but the user sees the
+// "Cannot evaluate" error so the body-def's failure isn't silent.
+//
+// Pulled out of solveEquations so the component wrapper can run it once on the
+// merged context. Per-component calls must skip it: a def's variable may belong
+// to a component that hasn't run yet (or never will, from this component's
+// perspective), so evaluating it against an incomplete shared context would
+// spuriously report "Variable X has no value" — the same hazard validateLimits
+// defers for cross-component limit references.
+function reportUnevaluableBodyDefs(bodyDefinitions, context, variables, errors) {
+    for (const { name, ast, exprText } of bodyDefinitions) {
+        if (!ast || context.firedBodyDefs.has(name)) continue;
+        try { evaluate(ast, context); } catch (e) {
+            const lineIndex = (variables.get(name) || {}).lineIndex;
+            errors.push(`Line ${(lineIndex != null ? lineIndex : 0) + 1}: Cannot evaluate "${exprText || name}" - ${e.message}`);
+        }
+    }
+}
+
 /**
  * Partition equations into connected components by shared variables.
  * Two equations are in the same component if they share at least one
@@ -1465,8 +1506,11 @@ function solveEquationsByComponent(context, declarations, record, equations, bod
         for (const [k, v] of result.solveFailures) merged.solveFailures.set(k, v);
         for (const [k, v] of result.equationVarStatus) merged.equationVarStatus.set(k, v);
     }
-    // Wrapper-level limit validation: now context has all components' results,
-    // so limits referencing cross-component vars resolve correctly.
+    // Wrapper-level body-def and limit validation: now context has all
+    // components' results, so defs/limits referencing cross-component vars
+    // resolve correctly. Body defs reported before limits to match the
+    // single-component ordering inside solveEquations.
+    reportUnevaluableBodyDefs(bodyDefinitions, context, buildVariablesMap(declarations), merged.errors);
     validateLimits(declarations, context, merged.errors);
     return merged;
 }

@@ -248,11 +248,27 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     limits are display-only, handled by resolveWithLimits after the solve.
     (See the buildVariablesMap filter in solve-engine.js.)
 
-        ### [1] Body definitions (pendingBodyDefs retry)
+        ### [1] Body definitions (pendingBodyDefs retry; apply-once)
             Evaluates bodyDefinitions whose deps are now known. Retried each pass.
             Outer solve: declarations that couldn't evaluate at discoverVariables
                 (out-of-order deps like b: a+3 before a: 5, or equation-dependent like x: pmt*2)
             Table body: defASTs from table body declarations (cleared per row)
+
+            Body defs are authoritative for their LHS but don't block the solver.
+            The solver (direct-eval, Brent's) may bind a body-def-bound var via
+            an equation; phase [1] then fires the body def and OVERRIDES the
+            seeded value. context.firedBodyDefs gates each def to fire at most
+            once per branch (snapshot/restored, so backtracking re-fires; shared
+            across components via context, so salt: rand() doesn't re-roll).
+
+            Body defs that never fire (RHS deps never bound, self-ref deadlock,
+            etc.) are reported by reportUnevaluableBodyDefs at end-of-solve:
+            "Cannot evaluate <RHS> - Variable <X> has no value". The error fires
+            even when the LHS has a solver-derived value, so the body-def's
+            failure is visible. Known limitation: solver-set vars derived from
+            a value that a body def later overrides aren't invalidated — causes
+            order-dependent staleness in patterns like `z: z+1` + `z = sqrt(...)`
+            with a downstream `w = sqrt(z*z+...)`.
 
         ### [2] Build substitution map (buildSubstitutionMap in solver.js)
             For each equation, deriveSubstitutions (generator) yields every

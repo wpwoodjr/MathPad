@@ -214,3 +214,225 @@ a: 5
 z = y + a
 z = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 1; DegreesMode = 0
+Status = "Line 44: Cannot evaluate \"years\" - Variable 'years' has no value"; StatusIsError = 1
+VarStatus = "actYears:solved, cmpndsYr:solved, extraPmt:solved, fv:solved, pmt:solved, pmtDue:solved, pmtsYr:solved, pv:solved, rate:solved"
+"Body def error surfaces even when solver binds the var"
+"actYears is declared with body-def value `years`. The solver still"
+"binds actYears via Brent's on the pmt equation (the model doesn't"
+"block solver paths). But the body def itself can't evaluate (years"
+"has no value), so reportUnevaluableBodyDefs emits 'Cannot evaluate"
+"years'. actYears retains its solver-derived value; the error makes"
+"the body-def's silent failure visible."
+
+"Loan calculator with graphs and tables"
+
+--Functions--
+pmt2(pv; fv; rate; n; pmtDue) = -(pv + fv/(1 + rate)**n)*rate / ((1 - (1 + rate)**-n)*(1 + rate)**pmtDue)
+
+--Equations--
+// pmt = pmt2(pv; fv; r; years*pmtsYr; pmtDue)
+pmt + extraPmt = pmt2(pv; fv; r; actYears*pmtsYr; pmtDue)
+r = (1 + rate/cmpndsYr)**(cmpndsYr/pmtsYr) - 1
+// these variables never get orange highlighting because they are "solved" here
+pmtDue = pmtDue
+cmpndsYr = cmpndsYr
+pmtsYr = pmtsYr
+// extraPmt = extraPmt
+// actYears = actYears
+
+--Hidden Variables--
+lastPmt: round(actYears*pmtsYr - pmtDue)
+totPmt: pmt + extraPmt
+begin: 1
+end: 0
+
+// Begin variables (top) panel
+--Variables--
+"*Update values, then click solve or the solve ⟲ icon next to a highlighted variable"
+"For example, set Present Value to $200,000 and press the solve ⟲ icon next to Payment"
+
+Present Value pv $: $100,000
+Future Value fv $: $0               "(balloon payment)"
+Annual Rate rate %: 6.125%
+Nominal Years years :
+Payment pmt $: -$607.61
+
+
+Extra Payment extraPmt $: $0        "Extra principal payment per period"
+Actual Years actYears : years       "Actual years given extra principal payment"
+
+
+Payments/Year pmtsYr: 12
+Compounds/Year cmpndsYr: pmtsYr     "generally equals payments/year"
+Annuity Due pmtDue[0..1]: end       "end or begin of period"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 8: Cannot evaluate \"c\" - Variable 'c' has no value\nLine 11: Variable 'c' has no value to output"; StatusIsError = 1
+VarStatus = "d:solved"
+"Solver binds d via equation; body def's failure surfaces as error"
+"`d: c` declares d's value as the expression `c`. The equation `d = 12`"
+"binds d via direct-eval (the solver isn't blocked by the body def)."
+"Body def `c` can't evaluate (c is unbound), so 'Cannot evaluate c -"
+"Variable c has no value' is emitted. d retains the solver value 12;"
+"the error documents that the body def couldn't be honored."
+
+d: c
+d = 12
+d-> 12
+c->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 22: Equation doesn't balance: s = x + y**2 (relative diff 16.7% >= 0.5%)"; StatusIsError = 1
+VarStatus = "r:solved, s:unsolved, x:unsolved, y:unsolved"
+"Body def fires after solver binds; overrides when expression differs"
+"Solver binds the LHS via the equation, then phase [1] fires the body"
+"def. The body def's evaluated value overrides the solver's value."
+""
+"`r: r` + `r = 0`: solver sets r=0, body def evaluates r → 0, no change."
+"No errors."
+""
+"`s: s + 1` + `s = x + y**2`: solver sets s=5, body def evaluates s+1 → 6"
+"and overrides s. The balance loop then catches the conflict between"
+"the equation (s should be 5) and the overridden value (6) — surfaced"
+"as a balance error."
+
+x: 1
+y: 2
+
+z = x + y**2
+
+r = 0
+r: r
+r-> 0
+
+s = x + y**2
+
+s: s + 1
+s-> 6
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 15: Cannot evaluate \"z+w\" - Variable 'w' has no value\nLine 17: Variable 'w' has no value to output\nLine 19: Cannot evaluate \"z+q\" - Variable 'q' has no value\nLine 20: Variable 'z1' has no value to output\nLine 21: Variable 'q' has no value to output"; StatusIsError = 1
+VarStatus = "x:solved, y:solved, z:solved"
+"Solver binds when it can; body-def errors surface independently"
+"Solver sets z = 5 from `z = x + y**2`. Body def `z+w` can't fire"
+"(w unbound), so 'Cannot evaluate z+w - Variable w has no value' is"
+"emitted; z keeps its solver value."
+""
+"z1 has no equation, so the solver has no path to bind it. Its body"
+"def `z+q` can't evaluate (q is unbound), so z1 stays unbound and"
+"the same 'Cannot evaluate' error fires for it. w and q both stay"
+"unbound with no-value-to-output errors on their OUTPUT lines."
+
+x: 1
+y: 2
+z = x + y**2
+
+z: z+w
+z-> 5
+w->
+
+z1: z+q
+z1->
+q->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "x:solved, y:solved, z:solved"
+"Body def re-evaluates to same value as equation — no conflict"
+"Solver sets z = 5 from `z = x + y**2` and d = 2 from `d = 2`. Once"
+"both deps (z and d) are in context, phase [1] fires the body def:"
+"z**d/z = 5**2/5 = 5. Same value, no override, no balance error."
+
+x: 1
+y: 2
+z = x + y**2
+
+d = 2
+z: z**d/z
+z-> 5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 15: Equation doesn't balance: z = sqrt(x**2 + y**2) (relative diff 16.667% >= 0.005%)"; StatusIsError = 1
+VarStatus = "x:unsolved, y:unsolved, z:unsolved"
+"Body-def override propagates to live expression output but not to solver-set w"
+"`z: z + 1` overrides z = 5 (from equation) → z = 6 in phase [1]. The"
+"balance loop then catches the conflict on `z = sqrt(x²+y²)` (5 vs 6)."
+"The live expression output `sqrt(z*z+x*x+y*y)->` evaluates with the"
+"current (post-override) z = 6 → 7.8102."
+""
+"BUT w was set by direct-eval in the prior pass using z = 5, giving"
+"w = sqrt(50) ≈ 7.0711. The `w: w` body def is a no-op (evaluates to"
+"current w) and doesn't re-derive from the equation. So w is stale."
+"This documents the known propagation gap: solver-set vars derived"
+"from a value that a body def later overrides are not invalidated."
+
+x: 3
+y: 4
+z = sqrt(x**2 + y**2)
+z: z + 1
+z-> 6
+
+w = sqrt(z*z + x*x + y*y)
+w: w
+w-> 7.0711
+
+sqrt(z*z + x*x + y*y)-> 7.8102
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Line 12: Cannot evaluate \"z + w\" - Variable 'w' has no value\nLine 14: Variable 'w' has no value to output"; StatusIsError = 1
+VarStatus = "y:solved, z:solved"
+"Solver chains through z and q; only the body def's error is reported"
+"Solver sets z = 5 from `z = y + 3` via direct-eval. Then q = z + 1 = 6"
+"from `q = z + 1`. The body def `z + w` can't fire (w unbound), so"
+"'Cannot evaluate z+w - Variable w has no value' is emitted. z and q"
+"retain their solver values; only w stays unbound."
+
+y: 2
+
+z = y + 3
+q = z + 1
+
+z: z + w
+z-> 5
+w->
+q-> 6
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Line 12: Equation doesn't balance: z = x + y**2 (relative diff 94.4% >= 0.5%)"; StatusIsError = 1
+VarStatus = "x:partial, y:partial, z:unsolved"
+"Body def fires after deps bind; overrides solver-set z"
+"Direct-eval sets z = 5 from `z = x + y**2`. Body def `z+w` can't fire"
+"yet — w is unbound. Brent's (Kind 2 sweep0) solves `cos(w) = sin(x +"
+"y**2)` for w numerically — w is its only unknown — and binds w = 85°."
+"(tryIsolateVariables only handles binary ops, so cos can't be algebrai-"
+"cally inverted; Brent's does it.) Now phase [1] fires z's body def:"
+"5 + 85 = 90, which overrides z. The balance loop catches the conflict"
+"on the z equation (5 ≠ 90)."
+
+x: 1
+y: 2
+z = x + y**2
+
+z: z + w
+z-> 90
+w-> 85
+
+cos(w) = sin(x + y**2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
