@@ -1576,6 +1576,23 @@ body.sidebar-resizing * {
     content: '▸ ';
 }
 
+/* Pre-solve placeholders: source-text body with collapsible title. */
+.variable-table-placeholder .mathpad-table-title {
+    opacity: 0.85;
+}
+.mathpad-table-placeholder-body {
+    margin: 0;
+    padding: 6px 12px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--bg-hover);
+    color: var(--syn-default, inherit);
+    white-space: pre;
+    overflow-x: auto;
+    border-radius: 0 0 3px 3px;
+    opacity: 0.85;
+}
+
 .table-solve-info {
     font-weight: normal;
     font-size: 0.85em;

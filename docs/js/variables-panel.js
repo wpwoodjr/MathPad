@@ -292,12 +292,154 @@ class VariablesPanel {
         this.flashChanges = false;
         this._oldDisplayValues = null;
 
+        // Show title-only placeholders for any detected table definitions
+        // so the user can see them in the panel even before pressing Solve.
+        // setTableData will replace these with rendered tables once solved.
+        this._renderAllTablePlaceholders();
+
         // Align all value inputs/outputs by setting name elements to the same width
         this.alignNameWidths();
 
         // Auto-size value fields that overflow
         for (const input of this.container.querySelectorAll('.variable-value-input, .variable-value-readonly')) {
             this.autoSizeInput(input);
+        }
+    }
+
+    /**
+     * Parse a table title's collapse-state prefix.
+     * Returns { unsolvedCollapsed, solvedCollapsed, displayTitle }.
+     *
+     * Canonical 2-char form: [unsolvedChar][solvedChar] where each char is
+     * 'v' (expanded) or '>' (collapsed). E.g., '>v Title' = collapsed when
+     * unsolved, expanded when solved (the default if no prefix).
+     *
+     * Legacy 1-char form ('v Title' / '> Title') is treated as setting the
+     * solved state only; unsolved defaults to collapsed.
+     */
+    _parseTablePrefix(title) {
+        if (!title) return { unsolvedCollapsed: true, solvedCollapsed: false, displayTitle: '' };
+        const c1 = title.charAt(0);
+        const c2 = title.charAt(1);
+        const isChev1 = c1 === 'v' || c1 === '>';
+        const isChev2 = c2 === 'v' || c2 === '>';
+        if (isChev1 && isChev2) {
+            return {
+                unsolvedCollapsed: c1 === '>',
+                solvedCollapsed: c2 === '>',
+                displayTitle: title.substring(2).trimStart()
+            };
+        }
+        if (isChev1) {
+            return {
+                unsolvedCollapsed: true,
+                solvedCollapsed: c1 === '>',
+                displayTitle: title.substring(1).trimStart()
+            };
+        }
+        return { unsolvedCollapsed: true, solvedCollapsed: false, displayTitle: title };
+    }
+
+    /**
+     * Build the canonical 2-char prefix from the two state flags.
+     * Returns e.g. '>v ' (with trailing space).
+     */
+    _buildTablePrefix(unsolvedCollapsed, solvedCollapsed) {
+        return (unsolvedCollapsed ? '>' : 'v') + (solvedCollapsed ? '>' : 'v') + ' ';
+    }
+
+    /**
+     * Render a source-text placeholder for one unsolved table definition.
+     * Shows the table's full declaration text (collapsible) so the user
+     * can read it (including any explanatory comments in the body) before
+     * pressing Solve. Toggle state persists via the source title's 2-char
+     * prefix (first char = unsolved state).
+     */
+    _renderTablePlaceholder(td) {
+        if (!td || !td.title) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'variable-row variable-table-container variable-table-placeholder';
+        wrapper.dataset.lineIndex = td.startLine - 1;
+        wrapper.dataset.type = (td.keyword || 'table').toLowerCase();
+
+        const parsed = this._parseTablePrefix(td.title);
+        const collapsed = parsed.unsolvedCollapsed;
+
+        // Restore camelCase form of the source keyword for display
+        const keywordDisplay = {
+            'table': 'table',
+            'tablegraph': 'tableGraph',
+            'grid': 'grid',
+            'gridgraph': 'gridGraph',
+            'vectordraw': 'vectorDraw',
+        }[(td.keyword || '').toLowerCase()] || td.keyword || 'table';
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'mathpad-table-title' + (collapsed ? ' collapsed' : '');
+        titleEl.textContent = `${keywordDisplay} ${parsed.displayTitle}`;
+        wrapper.appendChild(titleEl);
+
+        // Body: the full table source from startLine through endLine,
+        // so the user sees `keyword("title") = { ... }` exactly as written.
+        const bodyEl = document.createElement('pre');
+        bodyEl.className = 'mathpad-table-placeholder-body';
+        const lines = this.editor.getValue().split('\n');
+        bodyEl.textContent = lines.slice(td.startLine - 1, td.endLine).join('\n');
+        if (collapsed) bodyEl.style.display = 'none';
+        wrapper.appendChild(bodyEl);
+
+        // Click title to toggle the unsolved state; persist as 2-char prefix.
+        titleEl.addEventListener('click', () => {
+            const isCollapsed = titleEl.classList.toggle('collapsed');
+            bodyEl.style.display = isCollapsed ? 'none' : '';
+            this._writeTablePrefix(td.startLine, isCollapsed, /* whichState */ 'unsolved');
+        });
+
+        this.insertRowInOrder(wrapper, td.startLine - 1);
+    }
+
+    /**
+     * Update the table title's 2-char collapse prefix in source.
+     * `whichState` is 'unsolved' (writes 1st char) or 'solved' (writes 2nd).
+     * The other state is preserved from the existing prefix.
+     */
+    _writeTablePrefix(startLine, isCollapsed, whichState) {
+        if (!this.editor || startLine == null) return;
+        const text = this.editor.getValue();
+        const srcLines = text.split('\n');
+        const lineIdx = startLine - 1;
+        const line = srcLines[lineIdx];
+        if (!line) return;
+        const match = line.match(/^((?:\s*)(?:table|grid|tablegraph|gridgraph|vectordraw)\s*\(\s*")(.*)("\s*[;)])/i);
+        if (!match) return;
+        const parsed = this._parseTablePrefix(match[2]);
+        const unsolved = whichState === 'unsolved' ? isCollapsed : parsed.unsolvedCollapsed;
+        const solved = whichState === 'solved' ? isCollapsed : parsed.solvedCollapsed;
+        const newPrefix = this._buildTablePrefix(unsolved, solved);
+        srcLines[lineIdx] = line.replace(match[0], match[1] + newPrefix + parsed.displayTitle + match[3]);
+        this.editor.setValue(srcLines.join('\n'), false);
+    }
+
+    /**
+     * Render placeholders for every detected table definition.
+     * Removes any existing placeholder containers first (re-renders triggered
+     * by editor edits would otherwise accumulate duplicates), and skips any
+     * table that already has a solved (non-placeholder) container — those
+     * are owned by setTableData and shouldn't be doubled up with a source view.
+     */
+    _renderAllTablePlaceholders() {
+        for (const el of this.container.querySelectorAll('.variable-table-placeholder')) {
+            el.remove();
+        }
+        if (!this._tableDefs || this._tableDefs.length === 0) return;
+        for (const td of this._tableDefs) {
+            const lineIdx = td.startLine - 1;
+            const existing = this.container.querySelector(
+                `.variable-table-container:not(.variable-table-placeholder)[data-line-index="${lineIdx}"]`
+            );
+            if (existing) continue;
+            this._renderTablePlaceholder(td);
         }
     }
 
@@ -893,16 +1035,16 @@ class VariablesPanel {
     }
 
     /**
-     * Create a collapsible table title element.
-     * Title prefix: 'v' = open, '>' = closed. Toggling updates the source text.
+     * Create a collapsible table title element for a SOLVED table.
+     * Title prefix is a 2-char form '[unsolved][solved]' (each 'v' or '>');
+     * here we read/write the solved (2nd) char. See _parseTablePrefix.
      */
     _createTableTitle(table, wrapper) {
         if (!table.title) return null;
 
-        const rawTitle = table.title;
-        const firstChar = rawTitle.charAt(0);
-        const collapsed = firstChar === '>';
-        const displayTitle = (firstChar === 'v' || firstChar === '>') ? rawTitle.substring(1).trimStart() : rawTitle;
+        const parsed = this._parseTablePrefix(table.title);
+        const collapsed = parsed.solvedCollapsed;
+        const displayTitle = parsed.displayTitle;
 
         const titleEl = document.createElement('div');
         titleEl.className = 'mathpad-table-title' + (collapsed ? ' collapsed' : '');
@@ -941,15 +1083,14 @@ class VariablesPanel {
                 const line = lines[lineIdx];
                 if (!line) return;
                 // Match keyword + opening paren + quoted title in one shot so
-                // we can swap the keyword AND ensure the title is uncollapsed
-                // (replace ">" prefix with "v ") in the same edit.
+                // we can swap the keyword AND force the solved state to
+                // expanded (so the user sees the result of the swap) in the
+                // same edit. Preserve the unsolved state.
                 const m = line.match(/^(\s*)(table|grid|tablegraph|gridgraph)(\s*\(\s*")(.*?)("\s*[;)])/i);
                 if (!m) return;
-                let srcTitle = m[4];
-                if (srcTitle.charAt(0) === '>') {
-                    srcTitle = 'v ' + srcTitle.substring(1).trimStart();
-                }
-                const newPrefix = m[1] + swapTarget + m[3] + srcTitle + m[5];
+                const parsedSwap = this._parseTablePrefix(m[4]);
+                const newSrcTitle = this._buildTablePrefix(parsedSwap.unsolvedCollapsed, false) + parsedSwap.displayTitle;
+                const newPrefix = m[1] + swapTarget + m[3] + newSrcTitle + m[5];
                 lines[lineIdx] = newPrefix + line.substring(m[0].length);
                 // Push the keyword change as a single undo entry, then ask
                 // solve to mutate that same entry (undoable=false on solve)
@@ -985,26 +1126,9 @@ class VariablesPanel {
             const contentEl = wrapper.querySelector('.mathpad-table, .mathpad-graph');
             if (contentEl) contentEl.style.display = isCollapsed ? 'none' : '';
 
-            // Update title prefix in source text using startLine
-            if (this.editor && table.startLine != null) {
-                const text = this.editor.getValue();
-                const lines = text.split('\n');
-                const lineIdx = table.startLine - 1; // startLine is 1-based
-                const line = lines[lineIdx];
-                if (line) {
-                    const match = line.match(/^((?:table|grid|tablegraph|gridgraph|vectordraw)\s*\(\s*")(.*)("\s*[;)])/i);
-                    if (match) {
-                        // Strip existing v/> prefix from source title
-                        let srcTitle = match[2];
-                        if (srcTitle.charAt(0) === 'v' || srcTitle.charAt(0) === '>') {
-                            srcTitle = srcTitle.substring(1).trimStart();
-                        }
-                        const newPrefix = isCollapsed ? '> ' : 'v ';
-                        lines[lineIdx] = line.replace(match[0], match[1] + newPrefix + srcTitle + match[3]);
-                        this.editor.setValue(lines.join('\n'), false);
-                    }
-                }
-            }
+            // Persist the SOLVED state (2nd char of the 2-char prefix);
+            // unsolved state (1st char) is preserved from the existing prefix.
+            this._writeTablePrefix(table.startLine, isCollapsed, 'solved');
         });
 
         return titleEl;
@@ -1019,7 +1143,12 @@ class VariablesPanel {
             el.remove();
         }
 
-        if (!tables || tables.length === 0) return;
+        // No solved table data — fall back to title-only placeholders so
+        // the user still sees the table's existence in the panel.
+        if (!tables || tables.length === 0) {
+            this._renderAllTablePlaceholders();
+            return;
+        }
 
         for (const table of tables) {
             if (table.type === 'graph') {
