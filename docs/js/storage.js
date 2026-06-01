@@ -50,7 +50,7 @@ const DEFAULT_SETTINGS_RECORD = {
     stripZeros: true,
     groupDigits: true,
     format: 'float',
-    degreesMode: false,
+    degreesMode: true,
     currencySymbol: '$'
 };
 
@@ -77,12 +77,14 @@ function createDefaultData() {
 
   sqrt(x+4) / acos(0.7) = y**3
 
-"Press the Solve button (above) to see the value of x when y is 0.53 and also a graph of the equation (hint - you can expand this panel by dragging the divider above 'FORMULAS' below)."
+"*Try it"
+
+"Press the Solve button (above) to see the value of x when y is 0.53 and also a graph of the equation (if the graph isn't visible, you can expand this panel by dragging the divider above 'FORMULAS' below)."
 
   x->
   y: 0.53
 
-tableGraph("v sqrt(x+4) / acos(0.7) = y**3") = {
+tableGraph(">v sqrt(x+4) / acos(0.7) = y**3") = {
   x: -2.5..4.5..0.5
   y<-
   x->
@@ -92,7 +94,7 @@ tableGraph("v sqrt(x+4) / acos(0.7) = y**3") = {
 
 "*MathPad for web"
 
-"I've always loved MathPad but never found anything to replace its combination of simplicity and power.  This is a modern web-based reimplementation.  Most original MathPad records should still work.  Some new features include:
+"I've always loved MathPad but never found anything to replace its combination of simplicity and power.  This is a modern web-based reimplementation.  Most original MathPad records should still work.  New features include:
 
   * Tables, grids, and graphs
   * Vector diagrams - polar, navigation, and cartesian
@@ -104,9 +106,9 @@ tableGraph("v sqrt(x+4) / acos(0.7) = y**3") = {
   * Auto saves to local storage
   * Google Drive integration (in testing)
 
-Try some of the examples and have fun!
+Try the tutorials and examples, and most of all have fun!
 
-On mobile, the examples are under the hamburger (three bars) icon at top left."`,
+On mobile, the tutorials and examples are under the hamburger (three bars) icon at top left."`,
                 category: 'Tutorial',
                 places: 1,
                 stripZeros: true,
@@ -116,12 +118,14 @@ On mobile, the examples are under the hamburger (three bars) icon at top left."`
             },
             {
                 id: generateId(),
-                title: 'Tutorial 1.1: Your First Equation',
-                text: `"Tutorial 1.1: Your First Equation"
+                title: '1.1: Your First Equation',
+                text: `"1.1: Your First Equation"
 
 --Variables--
 
+---
 "*Your First Equation"
+---
 
 "MathPad solves equations. You set some values, leave others blank, and press Solve."
 
@@ -130,7 +134,7 @@ On mobile, the examples are under the hamburger (three bars) icon at top left."`
 a: 3
 b: 4
 
-a + b = c
+"Equation:" a + b = c
 
 c->
 
@@ -150,12 +154,14 @@ c->
             },
             {
                 id: generateId(),
-                title: 'Tutorial 1.2: Any Variable Can Be the Unknown',
-                text: `"Tutorial 1.2: Any Variable Can Be the Unknown"
+                title: '1.2: Any Variable Can Be the Unknown',
+                text: `"1.2: Any Variable Can Be the Unknown"
 
 --Variables--
 
+---
 "*Any Variable Can Be the Unknown"
+---
 
 "In MathPad, an equation isn't an assignment — it's a relationship all the variables together must satisfy. Solve fills in whichever variables you leave blank."
 
@@ -165,7 +171,7 @@ a: 3
 b: 4
 c:
 
-a + b = c
+"Equation:" a + b = c
 
 "*Try it"
 
@@ -173,7 +179,7 @@ a + b = c
 
 "Now try:"
 "  Clear a (delete its value) and type 12 into c. Solve. a becomes 8."
-"  Or clear b and type 12 into c. Solve. b becomes 9."
+"  Then type 3 back into a, clear b, and Solve. b becomes 9."
 
 "The solver finds whichever variable is left blank. If you leave too many blank, you'll see 'Too many unknowns'."
 `,
@@ -187,12 +193,14 @@ a + b = c
             },
             {
                 id: generateId(),
-                title: 'Tutorial 1.3: Markers and the Clear Button',
-                text: `"Tutorial 1.3: Markers and the Clear Button"
+                title: '1.3: Markers and the Clear Button',
+                text: `"1.3: Markers and the Clear Button"
 
 --Variables--
 
+---
 "*Markers and the Clear Button"
+---
 
 "The marker between a variable's name and its value controls how it behaves on Solve and Clear:"
 
@@ -204,7 +212,7 @@ a: 0
 b<- 0
 c->
 
-a + b = c
+"Equation:" a + b = c
 
 "*Try each step in order"
 
@@ -228,32 +236,42 @@ a + b = c
             },
             {
                 id: generateId(),
-                title: 'Tutorial 2.1: Comments, Labels, and Layout',
-                text: `"Tutorial 2.1: Comments, Labels, and Layout"
+                title: '2.1: Comments, Labels, and Layout',
+                text: `"2.1: Comments, Labels, and Layout"
 
 --Variables--
 
+---
 "*Making Records Readable"
+---
 
-"A record gets clearer with a few simple tools:"
+"MathPad shows your record in two places:"
 
-"   1. Quoted strings (like this) appear as text in the panel."
+"  •  the FORMULAS EDITOR (the syntax-highlighted text area below) — where you type and edit everything"
+"  •  this VARIABLES PANEL — where MathPad shows a friendly, structured view of the same content"
+
+"Both views update together. You type the annotations below into the FORMULAS EDITOR; the VARIABLES PANEL renders them like this:"
+
+"   1. Quoted strings (like this) appear as text in the variables panel."
 "   2. Strings starting with '*' become section headers."
-"   3. In a declaration, words before the variable name become its label."
+"   3. In a declaration, text before the variable name becomes its label. Always quote the label text so characters like ':' or '%' inside it don't confuse the parser — see the examples below."
 "   4. '//' starts a line comment, visible only in the formulas editor."
 
 "Below is a small tip calculator. Notice the labels next to each input — they're for humans. The solver only uses the variable name."
 
+
+---
 "*Tip Calculator"
+---
 
-Subtotal       sub $: $42.50
-Tip percent    pct %: 20%
+"Subtotal"     sub $: $42.50
+"Tip percent"  pct %: 20%
 
-Tip            tip $->
-Total          total $->
+"Tip"          tip $->
+"Total"        total $->
 
-tip = sub * pct
-total = sub + tip
+"Tip:"   tip = sub * pct
+"Total:" total = sub + tip
 
 "*Try it"
 
@@ -261,9 +279,9 @@ total = sub + tip
 
 "Change Subtotal or Tip percent above and Solve again."
 
-"(The '$' and '%' suffixes are format hints — they tell MathPad how to display values. Tutorial 2.2 covers them in detail.)"
+"(The '$:' and '%:' markers tell MathPad how to display the value — '$' for money, '%' for percent. Tutorial 2.2 covers these in detail.)"
 
-"Switch to the formulas editor (the bottom pane) to see the raw text. The labels, the equations, and the '//' comments all live there. The panel renders a friendly view of it."
+"Switch to the formulas editor to see the raw text — labels, equations, and '//' comments all live there. The variables panel renders a friendly view of it."
 `,
                 category: 'Tutorial',
                 places: 2,
@@ -275,14 +293,16 @@ total = sub + tip
             },
             {
                 id: generateId(),
-                title: 'Tutorial 2.2: Number Formatting',
-                text: `"Tutorial 2.2: Number Formatting"
+                title: '2.2: Number Formatting',
+                text: `"2.2: Number Formatting"
 
 --Variables--
 
+---
 "*Number Formatting"
+---
 
-"MathPad lets you tag values with format suffixes so they display the way you want. The suffix sits between the variable name and the marker."
+"A declaration's marker can carry a format hint that tells MathPad how to display the value. The format character goes immediately before the marker — they read as one piece: '$:', '%->', '°:', '@d:', '@t:'."
 
 "   $    money (currency symbol, two decimals, comma groups)"
 "   %    percent (the user types 5%, stored as 0.05)"
@@ -290,17 +310,20 @@ total = sub + tip
 "   @d   date (locale-aware)"
 "   @t   duration (H:MM:SS)"
 
+
+---
 "*Compound Interest"
+---
 
-Principal      pv $: $5,000
-Annual rate    rate %: 5%
-Years          years: 10
+"Principal"      pv $: $5,000
+"Annual rate"    rate %: 5%
+"Years"          years: 10
 
-Total amount   total $->
-Interest       interest $->
+"Total amount"   total $->
+"Interest"       interest $->
 
-total = pv * (1 + rate)**years
-interest = total - pv
+"Compound interest:" total = pv * (1 + rate)**years
+"Interest earned:"   interest = total - pv
 
 "*Try it"
 
@@ -322,12 +345,14 @@ interest = total - pv
             },
             {
                 id: generateId(),
-                title: 'Tutorial 2.3: Built-in Functions',
-                text: `"Tutorial 2.3: Built-in Functions"
+                title: '2.3: Built-in Functions',
+                text: `"2.3: Built-in Functions"
 
 --Variables--
 
+---
 "*Built-in Functions"
+---
 
 "MathPad has 50+ built-in functions. Call them with parentheses; separate arguments with semicolons (';'). A few groups:"
 
@@ -338,14 +363,19 @@ interest = total - pv
 
 "Function names are case-insensitive (sqrt and Sqrt are the same), but lowercase is the convention."
 
+
+---
 "*Pythagorean Theorem"
+---
 
-Side a    a: 3
-Side b    b: 4
+"Side a"      a: 3
+"Side b"      b: 4
 
-Hypotenuse  c->
+"Pythagorean theorem:" c = sqrt(a**2 + b**2)
 
-c = sqrt(a**2 + b**2)
+"Hypotenuse"  c->
+
+"Solve → c = 5 (the classic 3-4-5 triangle)."
 
 
 ---
@@ -354,14 +384,16 @@ c = sqrt(a**2 + b**2)
 
 "This record is in degrees mode (see settings ⚙), so sin/cos work with degrees."
 
-Angle      angle°: 30°
-Length     length: 10
+"Angle"      angle°: 30°
+"Length"     length: 10
 
-Adjacent   adj->
-Opposite   opp->
+"Adjacent side:" adj = length * cos(angle)
+"Opposite side:" opp = length * sin(angle)
 
-adj = length * cos(angle)
-opp = length * sin(angle)
+"Adjacent"   adj->
+"Opposite"   opp->
+
+"Solve → adj = 8.66, opp = 5.00 (30°, 10-unit hypotenuse)."
 
 
 ---
@@ -370,20 +402,13 @@ opp = length * sin(angle)
 
 "if(condition; valueIfTrue; valueIfFalse) picks one of two values."
 
-Score      score: 75
+"Score"      score: 75
 
-Pass       pass->
+"Pass/fail:" pass = if(score >= 60; 1; 0)
 
-pass = if(score >= 60; 1; 0)
+"Pass"       pass->
 
-"*Try it"
-
-"Press Solve. You'll see:"
-"   c = 5     (the classic 3-4-5 triangle)"
-"   adj = 8.66 and opp = 5.00 (30°, 10-unit hypotenuse)"
-"   pass = 1  (score >= 60)"
-
-"Change score to 50 and Solve — pass becomes 0."
+"Solve → pass = 1 (score >= 60). Change score to 50 and Solve again — pass becomes 0."
 `,
                 category: 'Tutorial',
                 places: 2,
@@ -395,31 +420,31 @@ pass = if(score >= 60; 1; 0)
             },
             {
                 id: generateId(),
-                title: 'Tutorial 2.4: Record Settings',
-                text: `"Tutorial 2.4: Record Settings"
+                title: '2.4: Record Settings',
+                text: `"2.4: Record Settings"
 
 --Variables--
 
+---
 "*Record Settings"
+---
 
-"Each record has its own settings — decimal places, comma separators, format (float / scientific / engineering), degrees vs radians, and more. They live in the details panel."
+"Each record has its own settings — decimal places, comma separators, format (float / scientific / engineering), degrees vs radians, and more. They live in the settings panel."
 
-"Find the details panel: on wider screens it's docked to the right of the variables and formulas panels; on narrower screens, toggle it with the ⚙ icon in the top bar."
+"Find the settings panel: on wider screens it's docked to the right of the variables and formulas panels; on narrower screens, toggle it with the ⚙ icon in the top bar."
 
 "*A number to experiment with"
 
 aLong: 1234.5678901
 
-Display    a-> 1,234.57
-
-a = aLong
+aLong->
 
 "*Places"
 
-"'Places' is the number of digits after the decimal point. The default for this record is 2, so a shows 1,234.57."
+"'Places' is the number of digits after the decimal point. The default for this record is 2, so aLong shows 1,234.57."
 
-"Try changing Places in the details panel to 4. Solve. a shows 1,234.5679."
-"Try Places = 0. Solve. a shows 1,235."
+"Try changing Places in the settings panel to 4. Solve. aLong shows 1,234.5679."
+"Try Places = 0. Solve. aLong shows 1,235."
 
 "*Group Digits"
 
@@ -438,11 +463,11 @@ a = aLong
 
 "   Strip Zeros    trims trailing zeros (5.00 → 5)"
 "   Degrees Mode   whether Sin/Cos use degrees or radians"
-"   Currency       what the '$' suffix actually shows ($ default; try € or £)"
+"   Currency       what the '$' marker actually shows ($ default; try € or £)"
 
-"*How settings interact with format suffixes"
+"*How settings interact with marker formats"
 
-"Record settings are defaults. Format suffixes ($, %, °, @d, @t) on individual variables override the defaults where they apply. So you can have a record where most values are 'float, 4 places' but one specific variable is a percentage or a date."
+"Record settings are defaults. The format character on a marker ($, %, °, @d, @t) overrides the defaults for that one variable. So you can have a record where most values are 'float, 4 places' but one specific variable is a percentage or a date."
 `,
                 category: 'Tutorial',
                 places: 2,
@@ -454,12 +479,14 @@ a = aLong
             },
             {
                 id: generateId(),
-                title: 'Tutorial 3.1: Two Equations, Four Variables',
-                text: `"Tutorial 3.1: Two Equations, Four Variables"
+                title: '3.1: Two Equations, Four Variables',
+                text: `"3.1: Two Equations, Four Variables"
 
 --Variables--
 
+---
 "*Edit any value, solve for the rest"
+---
 
 "Tutorial 1.2 showed one equation with three variables: you could fill in any two and solve for the third. The same idea scales up."
 
@@ -470,8 +497,8 @@ diff<-  4
 a<-
 b<-
 
-a + b = sum
-a - b = diff
+"Sum:"        a + b = sum
+"Difference:" a - b = diff
 
 "*Try it"
 
@@ -504,36 +531,32 @@ a - b = diff
             },
             {
                 id: generateId(),
-                title: 'Tutorial 3.2: Variable Limits',
-                text: `"Tutorial 3.2: Variable Limits"
+                title: '3.2: Variable Limits',
+                text: `"3.2: Variable Limits"
 
 --Variables--
 
+---
 "*Variable Limits"
+---
 
 "Some equations have more than one solution. Square brackets after the variable name tell MathPad where to look:"
 
 "   x[lo:hi]:"
 
-"*The ⟲ resolve button"
+"The Try-it steps below use the small ⟲ button next to a variable's name in the variables panel. Clicking it clears that variable and runs Solve — a quick way to ask MathPad 'what should this variable be?' without manually clearing it first."
 
-"Each editable variable in the variables panel has a small ⟲ button just to the left of its name. Clicking it does two things in sequence:"
 
-"   1. Clears that variable's value"
-"   2. Solves"
-
-"So instead of 'clear this value, press Solve', you just click ⟲ next to the variable you want MathPad to find. Other variables keep their current values as inputs."
-
-"Special case: if you just typed into a variable, clicking its own ⟲ skips the clear and just solves — useful when you want to test the value you typed."
-
+---
 "*Two-root quadratic"
+---
 
 "x² = target has two solutions: x = +√target and x = -√target. Without a hint, MathPad finds the positive root (its search starts from the positive side). Limits steer it to the other one."
 
 target: 16
 x[-10:0]:
 
-x*x = target
+"Equation:" x*x = target
 
 "*Try it"
 
@@ -564,7 +587,7 @@ x*x = target
 ratio:    0.5
 y[0:90]°:
 
-sin(y) = ratio
+"Equation:" sin(y) = ratio
 
 "Note: pressing Solve solves the whole record at once, so by now y is already 30° (the only sine-0.5 angle in [0:90])."
 
@@ -596,25 +619,28 @@ sin(y) = ratio
             },
             {
                 id: generateId(),
-                title: 'Tutorial 3.3: Conditionals and Choices',
-                text: `"Tutorial 3.3: Conditionals and Choices"
+                title: '3.3: Conditionals and Choices',
+                text: `"3.3: Conditionals and Choices"
 
 --Variables--
 
+---
 "*Tiered Values with Nested If"
+---
 
 "Tutorial 2.3 introduced if(condition; thenValue; elseValue). Nest it to express tiered values like tax brackets, shipping tiers, or discount levels."
 
-"Simplified income tax rates. A declaration ends at the newline, so the whole nested if has to live on one line:"
+"Simplified income tax rates. Equations and function definitions normally end at the newline, but wrapping them in '{ … }' lets them span multiple lines:"
 
 income$: $75,000
 
-rate%: if(income < 10000; 0%; if(income < 50000; 10%; if(income < 100000; 22%; 32%)))
+"Rate by bracket:" { rate = if(income < 10000; 0%;
+                             if(income < 50000; 10%;
+                               if(income < 100000; 22%; 32%))) }
+"Tax owed:"        tax = income * rate
 
-tax$: income * rate
-
-Effective rate  rate%->
-Tax owed        tax$->
+"Effective rate"  rate%->
+"Tax owed"        tax$->
 
 "*Try it"
 
@@ -629,9 +655,9 @@ Tax owed        tax$->
 
 month: 4
 
-days: choose(month; 31; 28; 31; 30; 31; 30; 31; 31; 30; 31; 30; 31)
+"Days in month:" days = choose(month; 31; 28; 31; 30; 31; 30; 31; 31; 30; 31; 30; 31)
 
-Days in month  days->
+"Days in month"  days->
 
 "*Try it"
 
@@ -654,9 +680,9 @@ Days in month  days->
 orderTotal$: $65
 member:      1
 
-shipping$: if(orderTotal > 50 && member == 1; 0; 7.99)
+"Shipping rule:" shipping = if(orderTotal > 50 && member == 1; 0; 7.99)
 
-Shipping  shipping$->
+"Shipping"  shipping$->
 
 "*Try it"
 
@@ -673,12 +699,14 @@ Shipping  shipping$->
             },
             {
                 id: generateId(),
-                title: 'Tutorial 3.4: Mod-Aware Equations (°=)',
-                text: `"Tutorial 3.4: Mod-Aware Equations (°=)"
+                title: '3.4: Mod-Aware Equations (°=)',
+                text: `"3.4: Mod-Aware Equations (°=)"
 
 --Variables--
 
+---
 "*Why mod-aware?"
+---
 
 "Angles wrap. A compass heading of 380° is the same direction as 20°, and -10° is the same as 350°. Regular '=' treats those as different numbers and won't balance."
 
@@ -688,7 +716,10 @@ Shipping  shipping$->
 
 "It's an equation operator (top-level only), used in place of '=' when wrapping matters."
 
+
+---
 "*Compass turn"
+---
 
 "newBearing equals oldBearing + turn (modulo 360°). With one equation and three variables, type values into any two and click ⟲ next to the third to ask MathPad to find it."
 
@@ -696,7 +727,7 @@ oldBearing°: 350°
 turn[-180:180]°:     30°
 newBearing°:
 
-newBearing °= oldBearing + turn
+"Compass turn:" newBearing °= oldBearing + turn
 
 "Why the limits on turn? '°=' has infinitely many solutions for any unknown (100° also satisfies as 460°, -260°, …). The '°' format already mods the DISPLAY into [0, 360), so oldBearing and newBearing don't need limits — they always show in the canonical range. But turn is naturally signed (starboard = positive, port = negative), and [-180:180] tells Brent's to find the smallest signed turn — 'turn 100° starboard' rather than 'turn 460°' or 'turn -260°'."
 
@@ -722,7 +753,7 @@ newBearing °= oldBearing + turn
 target°: 30°
 x[0:120]°:
 
-3*x °= target
+"Equation:" 3*x °= target
 
 "*Try it"
 
@@ -753,45 +784,40 @@ x[0:120]°:
             },
             {
                 id: generateId(),
-                title: 'Tutorial 4.1: Tables',
-                text: `"Tutorial 4.1: Tables"
+                title: '4.1: Tables',
+                text: `"4.1: Tables"
 
 --Variables--
 
+---
 "*Tables"
+---
 
 "A table evaluates a calculation across a range of values, producing one row per iteration."
 
 "   table('Title') = { body }"
 
+
+---
 "*Fahrenheit to Celsius"
+---
 
-"Below is a table converting Fahrenheit to Celsius for f = 0, 10, 20, …, 100. A few things to note as you read:"
+"Below is a table converting Fahrenheit to Celsius for f = 0, 10, 20, …, 100."
 
-"  •  The table SOURCE (the 'table(…) = { … }' block) lives in the formulas editor — it doesn't show in this variables panel."
-"  •  The RENDERED table appears here only after you press Solve."
-
-"Press Solve now — the table appears immediately below."
+"Before you press Solve, the table shows as a collapsed placeholder — click '>' next to its title to view the source (including the inline comments that annotate each line). Press Solve and the rendered table replaces the placeholder."
 
 table("F to C") = {
+  // equation, evaluated each row
   c = (f - 32) * 5/9
+  // f sweeps 0 to 100 in steps of 10
   f: 0..100..10
+  // output column: label, variable, format, marker
   "F°" f °->
+  // second output column
   "C°" c °->
 }
 
-"*The source"
-
-"Here's what the table's source looks like, with the parts annotated:"
-
-"   table('F to C') = {"
-"     c = (f - 32) * 5/9  ← equation, evaluated each row"
-"     f: 0..100..10       ← f sweeps 0 to 100 in steps of 10"
-"     'F°' f °->          ← output column: label, variable, format, marker"
-"     'C°' c °->          ← second output column"
-"   }"
-
-"Each row solves independently. Columns appear in declaration order. The '°' between the variable and '->' is the format suffix — it makes values display with a degree symbol (32° instead of 32)."
+"Each row solves independently. Columns appear in declaration order. The '°' in '°->' is the format part of the marker — it makes values display with a degree symbol (32° instead of 32)."
 
 "*Try it"
 
@@ -801,28 +827,25 @@ table("F to C") = {
 
 "The step is optional — 'f: 0..100' defaults to step 1."
 
+"Click 'as graph' next to the table title to see the same data plotted as a line. Click 'as data' to switch back. (Tutorial 4.2 covers graph tables in detail.)"
+
 
 ---
 "*Solving for an unknown each row"
 ---
 
-"The body equation can have an unknown to solve, just like a regular record. The table below appears after Solve runs (which it has, since you already pressed Solve for the first table)."
+"The body equation can have an unknown to solve, just like a regular record. The table below appears after Solve runs (which it has, since you already pressed Solve for the first table). To see the source with its inline annotations, press Clear to revert the table to a placeholder, then click '>' next to its title to expand."
 
 table("Square roots") = {
+  // equation with unknown x
   x*x = y
+  // y sweeps 0 to 25 in steps of 5
   y: 0..25..5
+  // first output column (just y)
   y->
+  // second output column (labeled 'Sqrt')
   Sqrt x->
 }
-
-"Source:"
-
-"   table('Square roots') = {"
-"     x*x = y         ← equation with unknown x"
-"     y: 0..25..5     ← y sweeps 0 to 25 in steps of 5"
-"     y->             ← first output column"
-"     Sqrt x->        ← second output column"
-"   }"
 
 "MathPad solves x*x = y for x in each row, fresh — limits work too if you need to pick a specific root. The 'Sqrt x->' output column is what makes x appear in the table; without it, x wouldn't be shown."
 `,
@@ -836,36 +859,36 @@ table("Square roots") = {
             },
             {
                 id: generateId(),
-                title: 'Tutorial 4.2: Graph Tables',
-                text: `"Tutorial 4.2: Graph Tables"
+                title: '4.2: Graph Tables',
+                text: `"4.2: Graph Tables"
 
 --Variables--
 
+---
 "*Graph Tables"
+---
 
 "tableGraph is just like table — same body syntax — but the result renders as an SVG line graph instead of a numeric table."
 
 "   tableGraph('Title') = { body }"
 
+
+---
 "*A sine wave"
+---
 
 "Press Solve now — the graph appears immediately below."
 
 tableGraph("y = sin(x)") = {
+  // equation, evaluated each row
   y = sin(x)
+  // x sweeps 0 to 360 in steps of 10
   x: 0..360..10
-  "angle°" x->
+  // first output column → X-axis (the ° on x°-> formats tick labels with the degree symbol)
+  "angle°" x°->
+  // second output column → Y-series
   "sin(x)" y->
 }
-
-"Source:"
-
-"   tableGraph('y = sin(x)') = {"
-"     y = sin(x)       ← equation, evaluated each row"
-"     x: 0..360..10    ← x sweeps 0 to 360 in steps of 10"
-"     'angle°' x->     ← first output → X-axis"
-"     'sin(x)' y->     ← second output → Y-series"
-"   }"
 
 "The FIRST output column becomes the X-axis. Subsequent output columns become Y-series. (The text export is still tabular — graphing is just how it displays.)"
 
@@ -877,24 +900,19 @@ tableGraph("y = sin(x)") = {
 "Add an inner iterator with its own '->' output, and each value of that iterator becomes a separate labeled line."
 
 tableGraph("y = amp*sin(x)") = {
+  // equation
   y = amp*sin(x)
+  // outer iterator (X-axis)
   x: 0..360..10
+  // inner iterator: 1, 2, 3
   amp: 1..3
-  "angle°" x->
+  // X-axis (° on x°-> formats tick labels with the degree symbol)
+  "angle°" x°->
+  // Y-axis
   "y" y->
+  // makes amp a line-grouping variable
   amp amp->
 }
-
-"Source:"
-
-"   tableGraph('y = amp*sin(x)') = {"
-"     y = amp*sin(x)   ← equation"
-"     x: 0..360..10    ← outer iterator (X-axis)"
-"     amp: 1..3        ← inner iterator: 1, 2, 3"
-"     'angle°' x->     ← X-axis"
-"     'y' y->          ← Y-axis"
-"     amp amp->        ← makes amp a line-grouping variable"
-"   }"
 
 "amp sweeps 1, 2, 3. The 'amp amp->' output makes amp a grouping variable: three lines appear, one per amp value, labeled in the legend."
 
@@ -914,40 +932,40 @@ tableGraph("y = amp*sin(x)") = {
             },
             {
                 id: generateId(),
-                title: 'Tutorial 4.3: Grids',
-                text: `"Tutorial 4.3: Grids"
+                title: '4.3: Grids',
+                text: `"4.3: Grids"
 
 --Variables--
 
+---
 "*Grids"
+---
 
 "A grid is a 2D table: one iterator drives the rows, another drives the columns, and a value output fills the cells."
 
 "   grid('Title') = { body }"
 
+
+---
 "*Multiplication table"
+---
 
 "Press Solve now — the grid appears immediately below."
 
 grid("Multiplication") = {
+  // equation, evaluated per cell
   product = x * y
+  // first iterator → row headers
   x: 1..10
+  // second iterator → column headers
   y: 1..10
+  // first output → row headers
   X x->
+  // second output → column headers
   Y y->
+  // third output → cell value
   product product->
 }
-
-"Source:"
-
-"   grid('Multiplication') = {"
-"     product = x * y    ← equation, evaluated per cell"
-"     x: 1..10           ← first iterator → row headers"
-"     y: 1..10           ← second iterator → column headers"
-"     X x->              ← first output → row headers"
-"     Y y->              ← second output → column headers"
-"     product product->  ← third output → cell value"
-"   }"
 
 "Hover any cell to see its row + column + header highlighted."
 
@@ -956,27 +974,24 @@ grid("Multiplication") = {
 "*Solving per cell"
 ---
 
-"Like table, the body equation can have an unknown that solves per cell."
+"The multiplication grid above used a direct assignment ('product = x * y') — the solver just evaluates the right side and stores it. Grid bodies can also hold proper equations, where the unknown is buried inside an expression and Brent's root-finder works it out per cell."
 
-grid("Hypotenuse a² + b² = c²") = {
-  c = sqrt(a*a + b*b)
+"Here c is squared in the equation, so the solver has to find c such that c² = a² + b² (the positive root)."
+
+grid("Hypotenuse c² = a² + b²") = {
+  // equation: c is the unknown, found by the solver per cell
+  c*c = a*a + b*b
+  // rows
   a: 1..5
+  // columns
   b: 1..5
+  // row headers
   A a->
+  // column headers
   B b->
+  // solved cell value
   C c->
 }
-
-"Source:"
-
-"   grid('Hypotenuse a² + b² = c²') = {"
-"     c = sqrt(a*a + b*b)  ← equation"
-"     a: 1..5              ← rows"
-"     b: 1..5              ← columns"
-"     A a->                ← row headers"
-"     B b->                ← column headers"
-"     C c->                ← cell value"
-"   }"
 
 "*Try it"
 
@@ -992,12 +1007,14 @@ grid("Hypotenuse a² + b² = c²") = {
             },
             {
                 id: generateId(),
-                title: 'Tutorial 4.4: Compass Rose',
-                text: `"Tutorial 4.4: Compass Rose"
+                title: '4.4: Compass Rose',
+                text: `"4.4: Compass Rose"
 
 --Variables--
 
+---
 "*vectorDraw"
+---
 
 "vectorDraw renders a set of vectors as an SVG diagram. The 'type' argument tells MathPad how to interpret each (a, b) pair:"
 
@@ -1007,69 +1024,61 @@ grid("Hypotenuse a² + b² = c²") = {
 
 "   vectorDraw('Title'; type) = { body }"
 
+
+---
 "*A compass rose"
+---
 
 "Eight unit vectors radiating from the origin at the standard bearings. Press Solve now — the diagram appears immediately below."
 
-vectorDraw("Compass Rose"; navigation) = {
-  0 °->
-  0 ->
-  N 0 °->
-  1 ->
+vectorDraw(">v Compass Rose"; navigation) = {
+  // Each vector is FOUR output declarations in a row:
+  //   start direction, start magnitude, end direction (with label), end magnitude.
+  // All eight vectors here start at the origin (magnitude 0) and end Dist units out.
 
+  Dist: 1
+
+  0 °->          // vector 1: start direction (unused when magnitude is 0)
+  0 ->           // start magnitude (0 → at origin)
+  N 0 °->        // end bearing; 'N' is the legend label
+  Dist ->        // end magnitude (vector length)
+
+  // vectors 2–8: same start, different end bearings
   0 °->
   0 ->
   NE 45 °->
-  1 ->
+  Dist ->
 
   0 °->
   0 ->
   E 90 °->
-  1 ->
+  Dist ->
 
   0 °->
   0 ->
   SE 135 °->
-  1 ->
+  Dist ->
 
   0 °->
   0 ->
   S 180 °->
-  1 ->
+  Dist ->
 
   0 °->
   0 ->
   SW 225 °->
-  1 ->
+  Dist ->
 
   0 °->
   0 ->
   W 270 °->
-  1 ->
+  Dist ->
 
   0 °->
   0 ->
   NW 315 °->
-  1 ->
+  Dist ->
 }
-
-"*The source"
-
-"Each vector is FOUR output declarations in a row. Here's the first one annotated:"
-
-"   vectorDraw('Compass Rose'; navigation) = {"
-"     0 °->         ← vector 1: start direction (unused when magnitude is 0)"
-"     0 ->          ← start magnitude (0 → at origin)"
-"     N 0 °->       ← end bearing; 'N' is the legend label"
-"     1 ->          ← end magnitude (length)"
-""
-"     0 °->"
-"     0 ->          ← vectors 2–8: same start, different end bearings"
-"     NE 45 °->"
-"     1 ->"
-""
-"     …             ← (E, SE, S, SW, W, NW)"
-"   }"
 
 "Blank lines between vectors are optional but help with readability."
 
@@ -1091,6 +1100,66 @@ vectorDraw("Compass Rose"; navigation) = {
             },
             {
                 id: generateId(),
+                title: '4.5: Outer Parameters',
+                text: `"4.5: Outer Parameters"
+
+--Variables--
+
+---
+"*Driving a table with outer values"
+---
+
+"Variables declared OUTSIDE a table or grid are visible inside it. This lets you parameterize the calculation — keep the equation general and pull values like rates, scale factors, or starting points from a single place above. Change an outer value, press Solve, and every row recomputes with the new parameter. Without this, you'd have to bake constants into the equation, making 'what if rate were 7%?' a tedious edit."
+
+
+---
+"*Example: years to reach each target"
+---
+
+"Outer pv, rate, and years describe one compound-interest scenario — useful for any single calculation in this record. The table re-uses pv and rate per row, but sweeps fv and re-solves for years."
+
+pv$:    $1,000
+rate%:  5%
+years:  20
+
+fv = pv * (1 + rate)**years
+
+"Outer growth (one scenario, using years = 20):"
+fv$->
+
+"There's a subtler use of outer variables: when one is referenced by an equation that also runs inside a table, the outer value flows in by default. 'var<-' inside the table body shadows it, telling the solver to treat that variable as a per-row unknown — re-found for each row independently, while the outer declaration keeps its value for use elsewhere."
+
+table("Years to grow \\pv$\\ to each target at \\rate%\\") = {
+  // No equation in the body — the table inherits the outer 'fv = pv * (1+rate)**years'.
+  // (Tables only override outer equations if you put one in the body.)
+  // iterator: target value
+  fv: 2000..10000..2000
+  // 'years<-' overrides the outer years=20 — solve for years per row
+  years<-
+  "Target" fv $->
+  "Years"  years->
+}
+
+"Change pv or rate above and Solve. Both the outer fv (at years=20) and every table row recompute together."
+
+
+---
+"*Try it"
+---
+
+"  •  Change rate to 7% and Solve. Outer fv jumps; table years drop."
+"  •  Remove 'years<-' from the table body and Solve. The outer years=20 now applies to every row, so years is fully determined — no per-row unknown remains for the solver to find, and the Years column comes back blank. Add 'years<-' back to fix it."
+`,
+                category: 'Tutorial',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+                created: Date.UTC(2026, 5, 1, 12, 0, 0),
+            },
+            {
+                id: generateId(),
                 title: 'Example: Retirement Calculator',
                 text: `"Retirement Calculator"
 
@@ -1108,6 +1177,9 @@ pmt2(pv; rate; n; fv) = (pv - fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 fees(pv; fv; totPmt; return; fees) = fees * (totPmt + fv - pv) / (return - fees)
 
 --Equations--
+"Future value of account(s)" fv = pv * (1 + gain)**years
+"Gross total return" return = yearlyPmtRate + fees + gain
+
 "Variable payments"
 totVPmt = totAcc(pv; gain; yearlyPmtRate; years)
 totVFees = fees(pv; fv; totVPmt; return; fees)
@@ -1121,38 +1193,33 @@ totFFees = fees(pv; fv; totFPmt; return; fees)
 
 --Variables--
 
-"*Calculates fixed and variable monthly retirement withdrawals"
-"Enter retirement account(s) present value, life expectancy, yearly gain (or future value), fees, and total annual return; then click the Solve button.  Correct any orange results by pressing \u27F2 next to one of the orange values."
+"*Estimate fixed and variable monthly retirement withdrawals"
 
+"Enter retirement account(s) present value, life expectancy, yearly gain (or future value), fees, and total expected annual return; then click the Solve button.  Correct any orange results by pressing \u27F2 next to one of the orange values."
 
----
-Future value of account(s) fv = pv * (1 + gain)**years
----
-"Present value" pv $<- $1,000,000
-"Life expectancy" years <- 20
+"*Future value of account(s)"
+"Present value" pv $: $1,000,000
+"Life expectancy" years : 20
 "Yearly gain" gain %<- 1.125%
 "Future value" fv $<-
 
-
----
-Gross total return return = yearlyPmtRate + fees + gain
----
-"Management fees" fees %<- 0.65%
-"Payment rate" yearlyPmtRate %<-
-"Total return" return %<- 6.5%
+"*Gross total return"
+"Management fees" fees %: 0.65%
+"Yearly payment rate" yearlyPmtRate %<-
+"Total return" return %<- 6%
 
 
-"*Variable payments (monthly as percentage of account(s) balance each year)"
-"Year one" year1 $-> $3,937.50
-"Last year" yearN $-> $4,870.04
-"Total payments" totVPmt $-> $1,053,152.19
-"Total fees" totVFees $-> $144,878.08
+"*Variable payments (monthly as percentage of each year's account(s) balance)"
+"Year one" year1 $->
+"Last year" yearN $->
+"Total payments" totVPmt $->
+"Total fees" totVFees $->
 
 
 "*Fixed monthly payments"
-"Monthly payment" fixedPmt $-> $4,297.73
-"Total payments" totFPmt $-> $1,031,455.78
-"Total fees" totFFees $-> $142,467.37
+"Monthly payment" fixedPmt $->
+"Total payments" totFPmt $->
+"Total fees" totFFees $->
 
 
 "*Notes:"
@@ -1193,20 +1260,20 @@ end: 0
 "*Update values, then click solve or the solve ⟲ icon next to a highlighted variable"
 "For example, set Present Value to $200,000 and press the solve ⟲ icon next to Payment"
 
-Present Value pv $: $100,000
-Future Value fv $: $0               "(balloon payment)"
-Annual Rate rate %: 6.125%
-Loan Term years : 30                "Term in years"
-Payment pmt $:
+"Present Value" pv $: $100,000
+"Future Value" fv $: $0               "(balloon payment)"
+"Annual Rate" rate %: 6.125%
+"Loan Term" years : 30                "Term in years"
+"Payment" pmt $:
 
 
-Payments/Year pmtsYr: 12
-Compounds/Year cmpndsYr: pmtsYr     "generally equals payments/year"
-Annuity Due pmtDue[0..1]: end       "end or begin of period"
+"Payments/Year" pmtsYr: 12
+"Compounds/Year" cmpndsYr: pmtsYr     "generally equals payments/year"
+"Annuity Due" pmtDue[0..1]: end       "end or begin of period"
 
 
-Prepayment extraPmt $: $0           "Extra principal payment per period"
-Actual Term actYears : years        "Actual term given prepayments"
+"Prepayment" extraPmt $: $0           "Extra principal payment per period"
+"Actual Term" actYears : years        "Actual term given prepayments"
 
 
 
@@ -1479,33 +1546,55 @@ gridGraph("v BMI by height (m) & weight (kg)") = {
             },
             {
                 id: generateId(),
-                title: 'Example: Basel Series',
-                text: `"Basel Series"
-  "Recursive and non-recursive solutions"
+                title: 'Example: Fourier Square Wave',
+                text: `"Fourier Square Wave"
+
+--Functions--
+
+"Square wave as a Fourier series — (4/pi) times the sum of sin((2k-1)x)/(2k-1) for k from 1 to N. The (2k-1) factor picks off only the odd harmonics; even ones vanish for a symmetric square wave."
+square(x; N) = (4/pi) * sum(sin((2*k-1)*x) / (2*k-1); k; 1; N)
 
 --Variables--
-"*The Basel series is the sum of 1/n**2 where n goes from 1 to infinity"
 
-"It is equal to pi**2/6"
-  pi**2/6->               "(to 8 places)"
+---
+"*Fourier approximation of a square wave"
+---
+
+"This record is in degrees mode, so sin() takes degrees and the fundamental's period is 360°."
+
+"Press Solve to render the graph below. The graph plots y = square(x; N) over two full periods. Change N to see the approximation sharpen as more harmonics are added."
+
+"Number of harmonics" N: 10
+
+tableGraph("Square wave (N = \\N\\ terms)") = {
+  // x sweeps two periods; small step keeps the transitions crisp
+  x: 0..720..2
+  y = square(x; N)
+  "x°" x °->
+  "y"  y->
+}
 
 
-"Here we develop a recursive basel function"
-      basel(low; high) = if(low > high; 0; 1/low**2 + basel(low+1; high))
+---
+"*Try it"
+---
 
-"We are limited to how high n can go by the recursion limit"
-  basel(1; 750)->
+"Change N to 1, 3, 10, 50, or 200 and Solve after each."
 
+"  •  N = 1  — just a single sine"
+"  •  N = 3  — recognizable as a square wave with rounded corners"
+"  •  N = 50 — sharp transitions, but visible ripples near each step"
+"  •  N = 200 — very sharp, but the overshoot just at each transition stays about 9% — that's the Gibbs phenomenon, a fundamental property of Fourier series at discontinuities."
 
-"Here we develop a solution using the built-in sum function"
-"Since sum is not subject to recursion limits we can sum to much higher n"
-  sum(1/n**2; n; 1; 10000000)->`,
+"*Why sum() and not recursion?"
+
+"You could write the series recursively, but sum() avoids the recursion-depth limit and is faster for large N. The local variable k inside sum(...; k; 1; N) is bound to each integer in the range; outside the call, k means nothing."`,
                 category: 'Math',
-                places: 8,
+                places: 4,
                 stripZeros: true,
                 groupDigits: false,
                 format: 'float',
-                degreesMode: false,
+                degreesMode: true,
 
             },
             {
@@ -1516,15 +1605,15 @@ gridGraph("v BMI by height (m) & weight (kg)") = {
 --Variables--
 "*Constants defined here are available in all records"
 
-"*Naming convention: single-letter constants are UPPERCASE (C, E, G, H) so they don't clash with lowercase variable names you use in equations. pi keeps its conventional lowercase form. Multi-letter constants (kB, NA) keep their conventional casing."
+"*Naming convention: descriptive lowercase or camelCase names. They read more clearly in equations than single letters and leave the single-letter namespace free for your own variables. pi keeps its conventional lowercase form."
 
 pi: 3.141592653589793
-E: 2.71828182845905
-C: 299792458 "speed of light m/s"
-G: 6.67430e-11 "gravitational constant"
-H: 6.62607015e-34 "Planck constant"
-kB: 1.380649e-23 "Boltzmann constant"
-NA: 6.02214076e23 "Avogadro number"
+euler: 2.71828182845905
+lightSpeed: 299792458 "speed of light m/s"
+gravitational: 6.67430e-11 "gravitational constant"
+planck: 6.62607015e-34 "Planck constant"
+boltzmann: 1.380649e-23 "Boltzmann constant"
+avogadro: 6.02214076e23 "Avogadro number"
 golden: 1.61803398874989 "golden ratio"
 
 secsPerHour: 3600
@@ -1578,7 +1667,7 @@ disc(a;b;c) = b**2 - 4*a*c`,
             },
             { id: generateId(), ...DEFAULT_SETTINGS_RECORD }
         ],
-        categories: ['Tutorial', 'Unfiled', 'Finance', 'Math', 'Medical', 'Science', 'Reference', 'Personal'],
+        categories: ['Tutorial', 'Unfiled', 'Finance', 'Math', 'Medical', 'Science', 'Reference'],
         settings: {
             lastRecordId: welcomeRecordId
         }

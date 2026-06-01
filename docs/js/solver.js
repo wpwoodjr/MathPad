@@ -381,8 +381,8 @@ function parseEquation(equation, knownVars) {
     }
 
     // Find all variables in the equation
-    const leftVars = findVariables(leftAST);
-    const rightVars = findVariables(rightAST);
+    const leftVars = findVariablesInAST(leftAST);
+    const rightVars = findVariablesInAST(rightAST);
     const allVars = new Set([...leftVars, ...rightVars]);
 
     // Find unknown variables (not in knownVars)
@@ -401,32 +401,6 @@ function parseEquation(equation, knownVars) {
 /**
  * Find all variable names in an AST
  */
-function findVariables(node) {
-    const vars = new Set();
-
-    function walk(n) {
-        if (!n) return;
-        switch (n.type) {
-            case 'VARIABLE':
-                vars.add(n.name);
-                break;
-            case 'BINARY_OP':
-                walk(n.left);
-                walk(n.right);
-                break;
-            case 'UNARY_OP':
-                walk(n.operand);
-                break;
-            case 'FUNCTION_CALL':
-                n.args.forEach(walk);
-                break;
-        }
-    }
-
-    walk(node);
-    return vars;
-}
-
 /**
  * Substitute variables in an AST with their definition expressions.
  *
@@ -795,27 +769,38 @@ function detectCycle(variable, directDeps, dependencies) {
  */
 function findVariablesInAST(node) {
     const vars = new Set();
+    const BINDING_FNS = new Set(['sum', 'prod']);
 
-    function walk(n) {
+    function walk(n, excluded) {
         if (!n) return;
         switch (n.type) {
             case 'VARIABLE':
-                vars.add(n.name);
+                if (!excluded || !excluded.has(n.name)) vars.add(n.name);
                 break;
             case 'BINARY_OP':
-                walk(n.left);
-                walk(n.right);
+                walk(n.left, excluded);
+                walk(n.right, excluded);
                 break;
             case 'UNARY_OP':
-                walk(n.operand);
+                walk(n.operand, excluded);
                 break;
             case 'FUNCTION_CALL':
-                n.args.forEach(walk);
+                if (BINDING_FNS.has((n.name || '').toLowerCase())
+                    && n.args.length >= 4
+                    && n.args[1] && n.args[1].type === 'VARIABLE') {
+                    const inner = new Set(excluded || []);
+                    inner.add(n.args[1].name);
+                    walk(n.args[0], inner);
+                    walk(n.args[2], excluded);
+                    walk(n.args[3], excluded);
+                } else {
+                    n.args.forEach(arg => walk(arg, excluded));
+                }
                 break;
         }
     }
 
-    walk(node);
+    walk(node, null);
     return vars;
 }
 
@@ -845,7 +830,7 @@ function createEquationFunction(leftAST, rightAST, unknownVar, context) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         SolverError, brent, expandFromGuess, solveEquation,
-        parseEquation, findVariables, findVariablesInAST, createEquationFunction,
+        parseEquation, findVariablesInAST, createEquationFunction,
         substituteInAST, deepCopyAST, isDefinitionEquation,
         deriveSubstitution, invertOperation, buildSubstitutionMap, detectCycle
     };

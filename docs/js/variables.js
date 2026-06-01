@@ -183,31 +183,8 @@ function parseVariableLine(line, tokens) {
  * Find all variable names in an AST expression
  * Used to detect if an expression is a constant (no variables)
  */
-function findVariablesInExpression(node) {
-    const vars = new Set();
-
-    function walk(n) {
-        if (!n) return;
-        switch (n.type) {
-            case 'VARIABLE':
-                vars.add(n.name);
-                break;
-            case 'BINARY_OP':
-                walk(n.left);
-                walk(n.right);
-                break;
-            case 'UNARY_OP':
-                walk(n.operand);
-                break;
-            case 'FUNCTION_CALL':
-                n.args.forEach(walk);
-                break;
-        }
-    }
-
-    walk(node);
-    return vars;
-}
+// findVariablesInExpression was a duplicate of solver.js's findVariablesInAST
+// and had no remaining callers; removed.
 
 /**
  * Parse literal value from tokens: date text, numeric literal, or negative literal.

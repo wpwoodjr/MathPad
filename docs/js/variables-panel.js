@@ -10,14 +10,24 @@
  *   highlight as plain variables instead of builtins.
  */
 function highlightLabelText(text, options = {}) {
-    const { tokens } = tokenizeMathPad(text, options);
+    const { stripQuotes = false, ...tokenizerOptions } = options;
+    const { tokens } = tokenizeMathPad(text, tokenizerOptions);
     let html = '';
     let lastPos = 0;
     for (const token of tokens) {
         if (token.from > lastPos) {
             html += escapeHtml(text.slice(lastPos, token.from));
         }
-        html += `<span class="tok-${token.type}">${escapeHtml(text.slice(token.from, token.to))}</span>`;
+        let tokenText = text.slice(token.from, token.to);
+        // For label rendering, the surrounding quotes on a quoted comment
+        // ('"Equation"') are visual noise — strip them so the label reads
+        // as plain text while still being styled as a comment.
+        if (stripQuotes && token.type === 'comment'
+            && tokenText.length >= 2
+            && tokenText.startsWith('"') && tokenText.endsWith('"')) {
+            tokenText = tokenText.slice(1, -1);
+        }
+        html += `<span class="tok-${token.type}">${escapeHtml(tokenText)}</span>`;
         lastPos = token.to;
     }
     if (lastPos < text.length) {
@@ -203,6 +213,37 @@ class VariablesPanel {
                 }
             }
 
+            // Detect multi-line braced blocks (e.g. "{ rate = if(...) ... }" spread
+            // over several lines). Tables already get their own placeholder render,
+            // so skip any brace block whose start sits inside a table. For other
+            // multi-line braces (continued equations), merge the whole block onto
+            // one label so the syntax highlighter spans all the lines.
+            const bracedStarts = new Map(); // startLine (0-based) → endLine (0-based)
+            const bracedConsumed = new Set();
+            if (allTokens) {
+                let inBrace = false;
+                let braceStart = -1;
+                for (const lineTokens of allTokens) {
+                    for (const t of lineTokens) {
+                        if (!inBrace && t.type === TokenType.LBRACE) {
+                            inBrace = true;
+                            braceStart = t.line - 1; // 0-based
+                        } else if (inBrace && t.type === TokenType.RBRACE) {
+                            const braceEnd = t.line - 1;
+                            if (braceEnd > braceStart
+                                && braceStart > varsSectionLineIndex
+                                && !tableSkipLines.has(braceStart + 1)) {
+                                bracedStarts.set(braceStart, braceEnd);
+                                for (let l = braceStart + 1; l <= braceEnd; l++) {
+                                    bracedConsumed.add(l);
+                                }
+                            }
+                            inBrace = false;
+                        }
+                    }
+                }
+            }
+
             const lines = text.split('\n');
             for (let i = varsSectionLineIndex + 1; i < lines.length; i++) {
                 if (newDeclMap.has(i)) continue; // Already a declaration
@@ -210,6 +251,23 @@ class VariablesPanel {
                 if (i >= excludeStart && i < traceSectionLineIndex) continue;
                 if (consumedLines.has(i)) continue; // Part of a multi-line comment
                 if (tableSkipLines.has(i + 1)) continue; // Inside table definition
+                if (bracedConsumed.has(i)) continue; // Inside a multi-line braced equation
+
+                // Multi-line braced equation: merge the whole block (label-line +
+                // continuation lines) into a single label so the syntax highlighter
+                // styles it as one piece.
+                const braceEnd = bracedStarts.get(i);
+                if (braceEnd != null) {
+                    const blockText = lines.slice(i, braceEnd + 1).join('\n');
+                    newDeclMap.set(i, {
+                        name: blockText,
+                        declaration: { marker: null, comment: null },
+                        lineIndex: i,
+                        isLabel: true,
+                        isQuoted: false
+                    });
+                    continue;
+                }
 
                 const line = lines[i];
                 const trimmed = line.trim();
@@ -219,14 +277,28 @@ class VariablesPanel {
 
                 // Use token-based comment text if available (handles multi-line)
                 const commentInfo = commentLines.get(i);
-                let labelText = commentInfo ? commentInfo.text : line;
-                let isQuoted = commentInfo ? true : false;
+                const isMultiLineComment = commentInfo && commentInfo.endLine > i;
+                let labelText, isQuoted;
 
-                if (!commentInfo) {
-                    // Fallback: strip surrounding quotes for single-line
-                    const stripped = labelText.trim();
-                    if (stripped.startsWith('"') && stripped.endsWith('"') && stripped.length >= 2) {
-                        labelText = stripped.slice(1, -1);
+                if (isMultiLineComment) {
+                    // Multi-line quoted comment — render the full comment body
+                    labelText = commentInfo.text;
+                    isQuoted = true;
+                } else if (commentInfo && trimmed === `"${commentInfo.text}"`) {
+                    // Single-line quoted comment, alone on the line — render
+                    // the body plainly without the surrounding quotes
+                    labelText = commentInfo.text;
+                    isQuoted = true;
+                } else {
+                    // Either no comment, or comment with other content on the
+                    // line (e.g. '"Equation" a + b = c'). Render the whole
+                    // line through the highlighter so the rest stays visible.
+                    labelText = line;
+                    isQuoted = false;
+                    // Legacy fallback: line wraps in quotes but the tokenizer
+                    // didn't catch it as a comment — strip them.
+                    if (!commentInfo && trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2) {
+                        labelText = trimmed.slice(1, -1);
                         isQuoted = true;
                     }
                 }
@@ -366,26 +438,25 @@ class VariablesPanel {
         const parsed = this._parseTablePrefix(td.title);
         const collapsed = parsed.unsolvedCollapsed;
 
-        // Restore camelCase form of the source keyword for display
-        const keywordDisplay = {
-            'table': 'table',
-            'tablegraph': 'tableGraph',
-            'grid': 'grid',
-            'gridgraph': 'gridGraph',
-            'vectordraw': 'vectorDraw',
-        }[(td.keyword || '').toLowerCase()] || td.keyword || 'table';
-
+        // Just the title — keyword (table/grid/etc) shows in the source body
+        // when the placeholder is expanded, so no need to prefix it here.
         const titleEl = document.createElement('div');
         titleEl.className = 'mathpad-table-title' + (collapsed ? ' collapsed' : '');
-        titleEl.textContent = `${keywordDisplay} ${parsed.displayTitle}`;
+        titleEl.textContent = parsed.displayTitle;
         wrapper.appendChild(titleEl);
 
         // Body: the full table source from startLine through endLine,
         // so the user sees `keyword("title") = { ... }` exactly as written.
+        // Syntax-highlight via tokenizeMathPad → tok-* spans (same CSS the
+        // editor uses), so numbers/identifiers/keywords/etc. read clearly.
         const bodyEl = document.createElement('pre');
         bodyEl.className = 'mathpad-table-placeholder-body';
         const lines = this.editor.getValue().split('\n');
-        bodyEl.textContent = lines.slice(td.startLine - 1, td.endLine).join('\n');
+        const sourceText = lines.slice(td.startLine - 1, td.endLine).join('\n');
+        bodyEl.innerHTML = highlightLabelText(sourceText, {
+            referenceConstants: this.editor.referenceConstants,
+            referenceFunctions: this.editor.referenceFunctions
+        });
         if (collapsed) bodyEl.style.display = 'none';
         wrapper.appendChild(bodyEl);
 
@@ -493,7 +564,10 @@ class VariablesPanel {
                     // Syntax-highlight non-quoted labels (equations, expressions).
                     // Pass reference info so builtins (e, pi, ...) and reference
                     // functions are styled as builtin, not plain variables.
+                    // stripQuotes: hide the surrounding quotes on inline quoted
+                    // comments — they read better without them in the panel.
                     label.innerHTML = highlightLabelText(labelText, {
+                        stripQuotes: true,
                         referenceConstants: this.editor.referenceConstants,
                         referenceFunctions: this.editor.referenceFunctions
                     });
@@ -1583,7 +1657,7 @@ class VariablesPanel {
         const titleEl = this._createTableTitle(table, wrapper);
         if (titleEl) wrapper.appendChild(titleEl);
 
-        const colors = ['#4ade80', '#60a5fa', '#fb923c', '#f472b6', '#a78bfa', '#facc15', '#34d399'];
+        const colors = ['#4ade80', '#60a5fa', '#fb923c', '#f472b6', '#a78bfa', '#facc15', '#06b6d4', '#ef4444'];
 
         // Pick the (a, b) → (x, y) conversion based on vectorType. SVG's
         // y-axis points down, so we negate the up-direction component.
