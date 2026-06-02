@@ -299,6 +299,63 @@ function findErrorLines(errors) {
 }
 
 /**
+ * Vars panel debounce for the typing path. The user isn't watching the
+ * vars panel while typing in the formulas editor, so we coalesce the
+ * expensive updateFromText / stripStaleSections / reference-info work
+ * to fire on the same 500ms cadence as the localStorage save. Solve,
+ * Clear, undo/redo, and vars-panel edits keep the immediate path.
+ */
+const VARS_DEBOUNCE_MS = 500;
+let _varsDebounceTimer = null;
+const _pendingVarsWork = new Map(); // recordId → work descriptor (latest wins)
+
+function _runVarsWork(work) {
+    // Skip if the editor was destroyed since scheduling (tab closed, record deleted).
+    if (!UI.editors.has(work.recordId)) return false;
+    work.variablesManager.updateFromText(work.value);
+    work.variablesManager.clearErrors();
+    work.editor.setErrorLines(null);
+    const stripped = stripStaleSections(work.value);
+    if (stripped !== work.value) {
+        work.editor.saveToHistoryNow();
+        // Leave a single trailing newline so the cursor doesn't jump up against
+        // the now-removed section's marker.
+        work.editor.setValue(stripped.trimEnd() + '\n', false);
+    }
+    work.variablesManager.setTableData(null);
+    work.editor.setTopMetadata({ tables: null });
+    return work.isConstantsOrFunctions;
+}
+
+function flushPendingVarsUpdates() {
+    if (_varsDebounceTimer) {
+        clearTimeout(_varsDebounceTimer);
+        _varsDebounceTimer = null;
+    }
+    if (_pendingVarsWork.size === 0) return;
+    let refInfoNeeded = false;
+    for (const work of _pendingVarsWork.values()) {
+        if (_runVarsWork(work)) refInfoNeeded = true;
+    }
+    _pendingVarsWork.clear();
+    if (refInfoNeeded) updateAllEditorsReferenceInfo();
+}
+
+function cancelPendingVarsUpdates() {
+    if (_varsDebounceTimer) {
+        clearTimeout(_varsDebounceTimer);
+        _varsDebounceTimer = null;
+    }
+    _pendingVarsWork.clear();
+}
+
+function scheduleVarsUpdate(work) {
+    _pendingVarsWork.set(work.recordId, work); // overwrite — latest text wins
+    if (_varsDebounceTimer) clearTimeout(_varsDebounceTimer);
+    _varsDebounceTimer = setTimeout(flushPendingVarsUpdates, VARS_DEBOUNCE_MS);
+}
+
+/**
  * Stamp record.modified = now and refresh the details panel display
  * if this record is currently shown. Used by non-editor edit paths
  * (rename, details-panel field changes); the editor's onChange handler
@@ -561,46 +618,43 @@ function createEditorForRecord(record) {
         updateRecordTitleFromContent(record);
         updateVariablesHeader(record);
 
-        // Update variables panel (unless change originated from variables panel)
+        // Update variables panel (unless change originated from variables panel).
+        // Typing path is debounced — the user isn't watching the vars panel while
+        // editing the formulas. Solve, Clear, undo/redo, vars-panel edits stay
+        // immediate because they're visual feedback the user expects.
         if (!syncFromVariables) {
-            if (undoRedo) variablesManager.enableFlash();
-            variablesManager.updateFromText(value);
-            // Restore cached highlights and status on undo/redo
-            if (metadata) {
-                if (metadata.errors || metadata.equationVarStatus) {
-                    variablesManager.setErrors(metadata.errors, metadata.equationVarStatus);
-                    editor.setErrorLines(findErrorLines(metadata.errors));
-                } else {
-                    variablesManager.clearErrors();
-                    editor.setErrorLines(null);
-                }
-                variablesManager.setTableData(metadata.tables || null);
-                if (metadata.statusMessage != null) {
-                    setStatus(metadata.statusMessage, metadata.statusIsError);
-                }
-            }
-            // Strip stale generated sections (Tables, Trace, References) and clear
-            // solve state on user keyboard input — once the user starts editing,
-            // the previous solve's output is no longer in sync with the source.
             if (userInput) {
-                variablesManager.clearErrors();
-                editor.setErrorLines(null);
-                const stripped = stripStaleSections(value);
-                if (stripped !== value) {
-                    editor.saveToHistoryNow();
-                    // Leave a single trailing newline so the cursor doesn't
-                    // jump up against the now-removed section's marker.
-                    editor.setValue(stripped.trimEnd() + '\n', false);
+                scheduleVarsUpdate({
+                    recordId: record.id,
+                    value,
+                    variablesManager,
+                    editor,
+                    isConstantsOrFunctions: isReferenceRecord(record) && (record.title === 'Constants' || record.title === 'Functions')
+                });
+            } else {
+                if (undoRedo) variablesManager.enableFlash();
+                variablesManager.updateFromText(value);
+                // Restore cached highlights and status on undo/redo
+                if (metadata) {
+                    if (metadata.errors || metadata.equationVarStatus) {
+                        variablesManager.setErrors(metadata.errors, metadata.equationVarStatus);
+                        editor.setErrorLines(findErrorLines(metadata.errors));
+                    } else {
+                        variablesManager.clearErrors();
+                        editor.setErrorLines(null);
+                    }
+                    variablesManager.setTableData(metadata.tables || null);
+                    if (metadata.statusMessage != null) {
+                        setStatus(metadata.statusMessage, metadata.statusIsError);
+                    }
                 }
-                variablesManager.setTableData(null);
-                // Cache cleared state so redo restores it correctly
-                editor.setTopMetadata({ tables: null });
             }
         }
         syncFromVariables = false;
 
-        // If Constants or Functions record changed, update all editors' reference highlighting
-        if (isReferenceRecord(record) && (record.title === 'Constants' || record.title === 'Functions')) {
+        // Reference info propagation: immediate for non-typing paths; typing
+        // path piggybacks on scheduleVarsUpdate's debounce above.
+        if (!userInput && isReferenceRecord(record) && (record.title === 'Constants' || record.title === 'Functions')) {
             updateAllEditorsReferenceInfo();
         }
     });
@@ -1564,6 +1618,11 @@ function handleSolve(undoable = true, traceMode = false, includeTableOutputs = f
     if (!editorInfo) return;
 
     try {
+        // Drop any pending typing-path vars update — solve produces its own
+        // fresh state via the post-solve setValue → onChange path. The deferred
+        // updateFromText would just be overwritten moments later.
+        cancelPendingVarsUpdates();
+
         // Capture pre-solve status before it changes
         const preStatus = { ...UI.lastPersistentStatus };
 
@@ -1681,6 +1740,10 @@ function handleClearInput() {
 
     const editorInfo = UI.editors.get(UI.currentRecordId);
     if (!editorInfo) return;
+
+    // Drop any pending typing-path vars update — Clear produces its own fresh
+    // state via the post-clear setValue → onChange path.
+    cancelPendingVarsUpdates();
 
     // Capture pre-clear status before it changes
     const preStatus = { ...UI.lastPersistentStatus };

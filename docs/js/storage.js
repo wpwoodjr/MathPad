@@ -2277,11 +2277,11 @@ ftoc(f) = (f - 32) * 5/9
 
 
 "Hypotenuse"
-hypot(a;b) = sqrt(a**2 + b**2)
+hypot(a; b) = sqrt(a**2 + b**2)
 
 
 "Quadratic discriminant"
-disc(a;b;c) = b**2 - 4*a*c`,
+disc(a; b; c) = b**2 - 4*a*c`,
                 category: 'Reference',
                 places: 2,
                 stripZeros: true,
