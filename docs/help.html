@@ -90,6 +90,7 @@
         <strong>Contents</strong>
         <ul>
             <li><a href="#getting-started">Getting Started</a></li>
+            <li><a href="#sidebar-tabs">Sidebar and Tabs</a></li>
             <li><a href="#variables">Variables</a></li>
             <li><a href="#equations">Equations</a></li>
             <li><a href="#number-formats">Number Formats</a></li>
@@ -102,7 +103,6 @@
             <li><a href="#pre-solve">Pre-solve Values</a></li>
             <li><a href="#tables-grids">Tables, Grids, and Vector Diagrams</a></li>
             <li><a href="#import-export">Import / Export</a></li>
-            <li><a href="#google-drive">Google Drive Sync</a></li>
             <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
             <li><a href="#settings">Record Settings</a></li>
             <li><a href="#example">Example: Loan Calculator</a></li>
@@ -116,6 +116,29 @@
         <li>Click <strong>Solve</strong> (or press Ctrl+Enter) to compute results</li>
         <li>Edit values in the variables panel to quickly change inputs and re-solve</li>
     </ol>
+    <p>For a hands-on walkthrough, open the records in the <strong>Tutorial</strong> category in the sidebar &mdash; they cover the language and the app step by step, from a first equation through tables, dates, and the workflow tools.</p>
+
+    <h2 id="sidebar-tabs">Sidebar and Tabs</h2>
+    <p>The sidebar lists every record, grouped by category. On narrower screens it's hidden behind the hamburger menu (☰) in the header.</p>
+
+    <h3>Category controls</h3>
+    <ul>
+        <li>Click a category header to collapse or expand it.</li>
+        <li><code>A↓</code> next to the header toggles between insertion order and alphabetical sort.</li>
+        <li><code>✕</code> appears only on empty categories (other than <em>Unfiled</em> and <em>Reference</em>) and deletes them.</li>
+        <li>The divider between the sidebar and the editor is draggable; the width persists across sessions.</li>
+    </ul>
+
+    <h3>Preview vs persistent tabs</h3>
+    <p>Single-click a record in the sidebar to open it as a <strong>preview tab</strong> (italicized, single slot &mdash; opening another preview replaces it). A preview is promoted to a persistent tab when you edit the record, rename it, change a setting, or double-click it. Persistent tabs survive reloads; previews do not.</p>
+
+    <h3>Records</h3>
+    <ul>
+        <li><strong>+ New Record</strong> creates a blank record in <em>Unfiled</em>.</li>
+        <li>To rename, double-click the title in the sidebar, or edit the first line of the record in the formulas editor (the title comes from there).</li>
+        <li>To move a record to a different category, open the detail panel (⚙) and pick from the Category dropdown; the dropdown includes a "New category…" option.</li>
+        <li><strong>Reset</strong> wipes every record and restores the default starter set. Export first if you want to keep anything.</li>
+    </ul>
 
     <h2 id="variables">Variables</h2>
     <p>Variables are declared with a name followed by a <strong>marker</strong> that determines their behavior:</p>
@@ -264,6 +287,7 @@ a**2 + b**2 = c**2</pre>
         <li><code>@t-&gt;&gt;</code> &mdash; duration with fractional seconds</li>
         <li><code>@t:</code> &mdash; input accepts duration text (e.g. <code>1:30:00</code>)</li>
     </ul>
+    <p>Durations of 24h or more display with a day count (<code>2d 5:30:00</code> is 2 days plus 5 hours 30 minutes); the parser accepts the same form on input.</p>
     <table>
         <tr><th>Function</th><th>Description</th></tr>
         <tr><td><code>Now</code></td><td>Current date/time as epoch seconds</td></tr>
@@ -288,22 +312,44 @@ a**2 + b**2 = c**2</pre>
         <tr><td><code>Sum(a; b; ...)</code></td><td>Sum of values</td></tr>
     </table>
 
+    <h3>Iteration</h3>
+    <p>Sum or multiply an expression over an integer range. The second argument is the index variable's name; the index runs from <em>start</em> to <em>end</em> inclusive and is in scope only inside <em>expr</em>.</p>
+    <table>
+        <tr><th>Function</th><th>Description</th></tr>
+        <tr><td><code>Sum(expr; var; start; end)</code></td><td>Sum of <em>expr</em> evaluated with <em>var</em> = start..end</td></tr>
+        <tr><td><code>Prod(expr; var; start; end)</code></td><td>Product of <em>expr</em> evaluated with <em>var</em> = start..end</td></tr>
+        <tr><td><code>Sum(a; b; ...)</code></td><td>Variadic form &mdash; sum of fixed arguments</td></tr>
+        <tr><td><code>Avg(a; b; ...)</code></td><td>Average of fixed arguments (no binding form)</td></tr>
+    </table>
+    <p class="example">Example: <code>Sum(1/k**2; k; 1; 1000)</code> &mdash; partial sum of the Basel series</p>
+
     <h3>Other</h3>
     <table>
         <tr><th>Function</th><th>Description</th></tr>
-        <tr><td><code>Pmt(pv; rate; n; fv)</code></td><td>Loan/annuity payment calculation</td></tr>
         <tr><td><code>isClose(a; b; places)</code></td><td>1 if a and b are equal within tolerance, 0 otherwise</td></tr>
         <tr><td><code>Tau</code></td><td>2&pi; (always)</td></tr>
         <tr><td><code>Perigon</code></td><td>360 in degrees mode, 2&pi; in radians mode</td></tr>
         <tr><td><code>Places</code></td><td>Current record's decimal places setting</td></tr>
     </table>
+    <p>For financial helpers like <code>pmt</code> and <code>compound</code>, see the Default Functions record below.</p>
 
     <h2 id="user-functions">User-defined Functions</h2>
     <p>Define functions in any record using the syntax:</p>
     <pre>f(x; y) = expression using x and y</pre>
     <p>Define functions in the special <strong>"Functions"</strong> record to make them available to all records. Function parameters use semicolons as separators, just like built-in functions.</p>
-    <p class="example">Example: pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)</p>
     <p>Function bodies can reference values from the <strong>Constants</strong> record and call other user-defined functions and built-ins. They <em>cannot</em> read variables from the calling record &mdash; only the function's parameters and the global environment (constants + functions) are visible inside the body. Shadowing a constant locally (e.g. <code>c: 1</code> in a record that uses a function referencing <code>c</code>) does <em>not</em> change the function's behavior &mdash; it always sees the canonical value from the Constants record. This keeps functions self-contained and predictable.</p>
+
+    <h3>Default Functions record</h3>
+    <p>A fresh MathPad ships with these functions already defined in the Functions record &mdash; available everywhere unless you edit or remove them:</p>
+    <table>
+        <tr><th>Function</th><th>Description</th></tr>
+        <tr><td><code>pmt(pv; rate; n; fv)</code></td><td>Loan / annuity payment (returns a negative value for cash flowing out)</td></tr>
+        <tr><td><code>compound(pv; rate; n)</code></td><td>Compound-interest future value: <code>pv * (1 + rate)**n</code></td></tr>
+        <tr><td><code>ctof(c)</code> / <code>ftoc(f)</code></td><td>Celsius ↔ Fahrenheit conversion</td></tr>
+        <tr><td><code>hypot(a; b)</code></td><td><code>sqrt(a**2 + b**2)</code></td></tr>
+        <tr><td><code>disc(a; b; c)</code></td><td>Quadratic discriminant <code>b**2 - 4*a*c</code></td></tr>
+    </table>
+    <p>Edit the Functions record to add, remove, or modify these.</p>
 
     <h2 id="special-records">Special Records</h2>
     <table>
@@ -319,7 +365,7 @@ a**2 + b**2 = c**2</pre>
         <li>Editable inputs for variable values &mdash; edit and press Tab or click away to apply</li>
         <li>Readonly fields for output values (selectable and copyable)</li>
         <li>Equation highlighting: <span style="color:#4ec9b0">green</span> = balanced, <span style="color:#cca700">orange</span> = unbalanced, <span style="color:#f44747">red</span> = error</li>
-        <li>Click the solve button next to an output variable to clear it and solve</li>
+        <li>The <code>⟲</code> button next to any editable variable clears its value and re-solves &mdash; a quick way to ask "what should this variable be?" without manually clearing first. Ctrl+click adds trace output; Shift+click appends the table-outputs text section.</li>
         <li>Press Escape in an input to revert to the previous value</li>
     </ul>
 
@@ -345,6 +391,12 @@ x: 42    "the answer"</pre>
         <tr><td><code>x~?</code></td><td>1 if x has a pre-solve value, 0 otherwise</td></tr>
     </table>
     <p class="example">Example: counter: if(counter~?; counter~ + 1; 0) &mdash; increments each time you solve</p>
+    <p><strong>Inside a table, grid, or vectorDraw body, <code>~</code> refers to the value from the PREVIOUS ROW (or cell), not the previous solve.</strong> The first row sees no pre-solve values (so <code>x~?</code> is 0); subsequent rows inherit from the previous row. This is the foundation of running-total patterns:</p>
+    <pre>table("Investment growth") = {
+  year: 1..10
+  balance = if(balance~?; balance~; 0) * (1 + rate) + contrib
+  ...
+}</pre>
 
     <h2 id="tables-grids">Tables, Grids, and Vector Diagrams</h2>
     <p>Use <code>table</code> to iterate a variable over a range and display results in columns. Use <code>tableGraph</code> to render those rows as an SVG line graph. Use <code>grid</code> for 2D cell grids with two iterators. Use <code>vectorDraw</code> to render SVG vector diagrams (navigation, polar, or cartesian).</p>
@@ -382,6 +434,11 @@ x: 42    "the answer"</pre>
   y-&gt;
   z-&gt;
 }</pre>
+
+    <h3>Inline expressions in titles</h3>
+    <p>Wrap an expression in backslashes inside the title string to interpolate its current value:</p>
+    <pre>table("Loan at \rate%\ over \years\ years") = { ... }</pre>
+    <p>The expression is evaluated against the record's variables and re-rendered each Solve. Useful for self-labeling tables and graphs whose subject depends on the inputs.</p>
 
     <h3>Body Declarations</h3>
     <table>
@@ -432,33 +489,38 @@ x: 42    "the answer"</pre>
 
     <h2 id="import-export">Import / Export</h2>
     <ul>
-        <li><strong>Export</strong>: saves all records to a text file</li>
-        <li><strong>Import</strong>: loads records from a <code>.txt</code> export file</li>
-        <li>Import replaces all existing records</li>
+        <li><strong>Export</strong>: saves all records to a single text file (<code>mathpad_export_YYYY-MM-DD.txt</code>) in the browser's downloads folder.</li>
+        <li><strong>Import</strong>: loads records from a <code>.txt</code> export file. Import REPLACES all existing records, so export first if you want to keep them.</li>
+        <li>The file format is also accepted by the original 1997 PalmOS MathPad's MpExport utility, so old PalmOS archives can be imported as-is.</li>
+        <li>Records are separated by a line of 27 tildes (<code>~~~~~~~~~~~~~~~~~~~~~~~~~~~</code>); each block starts with metadata (Category, Places, Format, etc.) and is followed by the record's raw text. The file is plain text — open it in any editor to trim, fix, or stitch together exports.</li>
     </ul>
     <p>Access Import/Export from the sidebar buttons.</p>
 
-    <h2 id="google-drive">Google Drive Sync</h2>
-    <p>Click <strong>Sign In</strong> to sync records to Google Drive:</p>
-    <ul>
-        <li>Records are saved to a "MathPad" folder in your Drive root</li>
-        <li>Auto-syncs every 15 seconds when changes are detected</li>
-        <li>Conflict detection &mdash; prompts you if Drive has newer data</li>
-        <li>Works across devices (phone, tablet, desktop)</li>
-        <li>Optional &mdash; MathPad works fully offline using local storage</li>
-    </ul>
-
     <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+    <p>Cmd substitutes for Ctrl on Mac.</p>
     <table>
         <tr><th>Shortcut</th><th>Action</th></tr>
-        <tr><td><code>Ctrl+Enter</code></td><td>Solve current record</td></tr>
-        <tr><td><code>Ctrl+Z</code></td><td>Undo</td></tr>
+        <tr><td><code>Ctrl+Enter</code> / <code>Ctrl+S</code></td><td>Solve current record</td></tr>
+        <tr><td><code>Ctrl+Shift+Enter</code></td><td>Solve and append a <code>--- Table Outputs ---</code> text section</td></tr>
+        <tr><td><code>Ctrl+Shift+S</code></td><td>Clear inputs and outputs (same as the Clear button)</td></tr>
+        <tr><td><code>Ctrl+Z</code></td><td>Undo (routes to the active editor; also undoes Solves)</td></tr>
         <tr><td><code>Ctrl+Y</code> / <code>Ctrl+Shift+Z</code></td><td>Redo</td></tr>
         <tr><td><code>Tab</code> (in formulas)</td><td>Indent line by 2 spaces (or selection)</td></tr>
         <tr><td><code>Shift+Tab</code> (in formulas)</td><td>Outdent line by 2 spaces</td></tr>
         <tr><td><code>Ctrl+/</code> (in formulas)</td><td>Toggle <code>//</code> line comment on selection</td></tr>
         <tr><td><code>Tab</code> / <code>Shift+Tab</code> (in vars panel)</td><td>Cycle through variable inputs</td></tr>
-        <tr><td><code>Escape</code></td><td>Revert edited variable value or unfocus formulas</td></tr>
+        <tr><td><code>Enter</code> (in vars panel)</td><td>Commit edit and Solve</td></tr>
+        <tr><td><code>Escape</code></td><td>Revert edited variable value, unfocus formulas, or close modals</td></tr>
+    </table>
+
+    <h3>Solve Button Modifiers</h3>
+    <p>Hold modifier keys when you click the Solve button:</p>
+    <table>
+        <tr><th>Click</th><th>Action</th></tr>
+        <tr><td>Solve</td><td>Normal solve</td></tr>
+        <tr><td>Shift+click</td><td>Solve, then append a <code>--- Table Outputs ---</code> text section</td></tr>
+        <tr><td>Ctrl+click</td><td>Solve in <strong>trace mode</strong> &mdash; appends a <code>*--- Solve Trace ---</code> section showing the steps the solver took. Useful when a result surprises you.</td></tr>
+        <tr><td>Ctrl+Shift+click</td><td>Trace plus table outputs</td></tr>
     </table>
 
     <h2 id="settings">Record Settings</h2>
@@ -478,7 +540,7 @@ x: 42    "the answer"</pre>
     <h2 id="example">Example: Loan Calculator</h2>
     <pre>"Loan calculator"
 
---Formulas--
+--Functions--
 pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 
 --Equations--
@@ -493,9 +555,10 @@ pmt $&lt;-               "monthly payment"</pre>
 
     <p><strong>How it works:</strong></p>
     <ol>
-        <li>The <strong>Formulas</strong> section defines a reusable payment function</li>
-        <li>The <strong>Equations</strong> section ties the function to the variables</li>
-        <li>The <strong>Variables</strong> section lists inputs and outputs &mdash; <code>$</code> formats as money, <code>%</code> as percent</li>
+        <li><code>--Functions--</code> and <code>--Equations--</code> are visual labels &mdash; only <code>--Variables--</code> is a real section marker (controls what shows in the variables panel)</li>
+        <li>The function definition is reusable from anywhere below it</li>
+        <li>The equation ties the function to the variables MathPad will solve for</li>
+        <li>The variables section lists inputs and outputs &mdash; <code>$</code> formats as money, <code>%</code> as percent</li>
         <li>Click <strong>Solve</strong> to calculate <code>pmt: -$607.61</code></li>
         <li>To solve backwards, set <code>pmt: -$2,000</code> and clear <code>pv</code>, then solve &mdash; MathPad finds <code>pv: $329,158.21</code></li>
     </ol>

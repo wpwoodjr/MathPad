@@ -9,7 +9,7 @@ Dates
 // now()@t->> 493093:11:32.579
 
 t1@d: 04-02-2026 09:03:04.750
-t1@t-> 493093:03:05
+t1@t-> 20545d 13:03:05
 TimePart(t1)@t->> 9:03:04.750
 
 n: 1775095376.535
@@ -32,8 +32,8 @@ a-n @t->> 0:14:59.301
 b@d: 04-01-2026 22:22:09.75
 b@d->> 04/01/2026 22:22:09
 
-a@t-> 493082:17:56
-n@t-> 493082:02:57
+a@t-> 20545d 2:17:56
+n@t-> 20545d 2:02:57
 899@t->> 0:14:59
 899@d->> 12/31/1969 19:14:59
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -54,7 +54,7 @@ d3@d<<- 04/02/2026 00:00:00
 
 t1@t: 10:12:34.001
 1 = days(t1; t2)
-t2@t<<- 34:12:34.001
+t2@t<<- 1d 10:12:34.001
 
 t1@t-> 10:12:34
 t1@t->> 10:12:34.001
@@ -146,4 +146,41 @@ e@t-> 0:00:46        "rounds down: 0:00:46"
 // Negative duration also rounds correctly (away from zero on .5)
 f@t: -0:00:46.623
 f@t-> -0:00:47       "rounds to -0:00:47"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
+Dates 6 - day breakout parsing and formatting
+
+// Values >= 24h format as "Nd H:MM:SS". Parser accepts the same plus
+// "Nd H:MM" shorthand. Round-trip stays clean.
+
+a@t: 1d 0:00:00
+a@t-> 1d 0:00:00     "1d 0:00:00"
+
+b@t: 2d 5:30:00
+b@t-> 2d 5:30:00     "2d 5:30:00"
+
+c@t: 1d 5:30
+c@t-> 1d 5:30:00     "1d 5:30 -> 1d 5:30:00"
+
+d@t: 1d 0:00:00.500
+d@t->> 1d 0:00:00.500 "fractional: 1d 0:00:00.500"
+
+e@t: -1d 1:00:00
+e@t-> -1d 1:00:00    "negative: -1d 1:00:00"
+
+// 23:59:59.5 carries into days when rounded
+f@t: 23:59:59.5
+f@t-> 1d 0:00:00     "carries to 1d 0:00:00"
+
+// Exactly 24h boundary
+g@t: 24:00:00
+g@t-> 1d 0:00:00     "1d 0:00:00"
+
+// Plain hours as input (49 hours = 2d 1:00:00)
+h@t: 49
+h@t-> 2d 1:00:00     "49 hours -> 2d 1:00:00"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

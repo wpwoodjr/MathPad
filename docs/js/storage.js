@@ -108,7 +108,9 @@ tableGraph(">v sqrt(x+4) / acos(0.7) = y**3") = {
 
 Try the tutorials and examples, and most of all have fun!
 
-On mobile, the tutorials and examples are under the hamburger (three bars) icon at top left."`,
+On mobile, the tutorials and examples are under the hamburger (three bars) icon at top left.
+
+Light / dark theme: click the ☀/☾ icon in the top bar (or the sidebar on narrow screens) to toggle. Your choice is remembered for next time."`,
                 category: 'Tutorial',
                 places: 1,
                 stripZeros: true,
@@ -225,6 +227,22 @@ c->
 "  4. Type 3 into b and press Solve. c becomes 3 (re-derived fresh)."
 
 "The difference between '<-' and '->' isn't visible on Clear (both clear), but it shows on Solve: '<-' keeps the user's value across solves, '->' always recomputes."
+
+
+---
+"*Full-precision markers"
+---
+
+"Each of the three markers above has a 'doubled' twin that displays the value at FULL precision, ignoring the record's Places setting:"
+
+"   '::'    like ':' but solves to full precision"
+"   '<<-'   like '<-' but solves to full precision"
+"   '->>'   like '->' but outputs full precision"
+
+"Use the doubled form when the rounded display would lose information that matters — for example:"
+
+sin(45°) °->
+sin(45°) °->>
 `,
                 category: 'Tutorial',
                 places: 2,
@@ -258,6 +276,22 @@ c->
 "   4. '//' starts a line comment, visible only in the formulas editor."
 
 "Below is a small tip calculator. Notice the labels next to each input — they're for humans. The solver only uses the variable name."
+
+
+---
+"*The --Variables-- marker"
+---
+
+"Open the formulas editor for this record (click into the syntax-highlighted area below). Near the top you'll see a line:"
+
+"   --Variables--"
+
+"That marker splits the record in two:"
+
+"  •  Lines ABOVE it are still computed and still affect the solve, but they're HIDDEN from the variables panel."
+"  •  Lines BELOW it are SHOWN in the variables panel."
+
+"Use it to keep intermediate helpers, function definitions, and supporting equations out of the way, exposing only the inputs and outputs you actually want users to see and edit."
 
 
 ---
@@ -409,6 +443,27 @@ c->
 "Pass"       pass->
 
 "Solve → pass = 1 (score >= 60). Change score to 50 and Solve again — pass becomes 0."
+
+
+---
+"*Iteration: sum and prod"
+---
+
+"sum and prod have two forms. The variadic form adds (or multiplies) a fixed list of arguments. The binding form runs an expression over an integer range, with a local index variable:"
+
+"   sum(expr; var; start; end)        sum of 'expr' for var = start..end"
+"   prod(expr; var; start; end)       same with multiplication"
+
+"The index is local to the expression — it doesn't conflict with a variable of the same name outside."
+
+"Sum 1..100:" total = sum(k; k; 1; 100)
+total->                                          "5050"
+
+"Five factorial via prod:" fact5 = prod(k; k; 1; 5)
+fact5->                                          "120"
+
+"Sum 1/k² for k = 1..1000 (partial Basel series):" basel = sum(1/k**2; k; 1; 1000)
+basel->                                          "approaches π²/6 ≈ 1.6449"
 `,
                 category: 'Tutorial',
                 places: 2,
@@ -1125,16 +1180,14 @@ years:  20
 fv = pv * (1 + rate)**years
 
 "Outer growth (one scenario, using years = 20):"
-fv$->
-
-"There's a subtler use of outer variables: when one is referenced by an equation that also runs inside a table, the outer value flows in by default. 'var<-' inside the table body shadows it, telling the solver to treat that variable as a per-row unknown — re-found for each row independently, while the outer declaration keeps its value for use elsewhere."
+fv $->
 
 table("Years to grow \\pv$\\ to each target at \\rate%\\") = {
   // No equation in the body — the table inherits the outer 'fv = pv * (1+rate)**years'.
   // (Tables only override outer equations if you put one in the body.)
   // iterator: target value
   fv: 2000..10000..2000
-  // 'years<-' overrides the outer years=20 — solve for years per row
+  // 'years<-' shadows the outer years=20 — solve for years per row
   years<-
   "Target" fv $->
   "Years"  years->
@@ -1144,10 +1197,13 @@ table("Years to grow \\pv$\\ to each target at \\rate%\\") = {
 
 
 ---
-"*Try it"
+"*Shadowing outer values with var<-"
 ---
 
-"  •  Change rate to 7% and Solve. Outer fv jumps; table years drop."
+"There's a subtler use of outer variables: when one is referenced by an equation that also runs inside a table, the outer value flows in by default. 'var<-' inside the table body shadows it, telling the solver to treat that variable as a per-row unknown — re-found for each row independently, while the outer declaration keeps its value for use elsewhere (here, by the outer fv calculation above)."
+
+"*Try it"
+
 "  •  Remove 'years<-' from the table body and Solve. The outer years=20 now applies to every row, so years is fully determined — no per-row unknown remains for the solver to find, and the Years column comes back blank. Add 'years<-' back to fix it."
 `,
                 category: 'Tutorial',
@@ -1157,6 +1213,572 @@ table("Years to grow \\pv$\\ to each target at \\rate%\\") = {
                 format: 'float',
                 degreesMode: true,
                 created: Date.UTC(2026, 5, 1, 12, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: '5.1: User-Defined Functions',
+                text: `"5.1: User-Defined Functions"
+
+--Functions--
+"BMI = weight (kg) / height² (m). Returns a unitless number."
+bmi(weight; height) = weight / height**2
+
+--Variables--
+
+---
+"*Writing your own function"
+---
+
+"MathPad has 50+ built-in functions. You can also define your own — useful for any formula you'll reuse, or for keeping a busy equation readable."
+
+"Syntax:"
+
+"   name(arg1; arg2; ...) = expression"
+
+"By convention, function definitions are grouped under a '--Functions--' section in the formulas editor (technically they can appear anywhere). This record's formulas editor has 'bmi' defined that way — once defined, you can call it anywhere a formula or expression is used."
+
+weight:  70             // kg
+height:  1.75           // m
+
+"Body Mass Index:" myBmi = bmi(weight; height)
+
+myBmi->
+
+"User-defined functions are usable wherever expressions are valid — including inside table bodies:"
+
+table("vv BMI by weight (at height = \\height\\ m)") = {
+  // The table inherits no outer equation; it just calls bmi(...) per row.
+  weight: 50..120..10
+  "Weight (kg)" weight->
+  "BMI"         bmi(weight; height)->
+}
+
+"*Try it"
+
+"Press Solve. myBmi ≈ 22.86."
+
+"Change weight and Solve — myBmi updates, but the table doesn't (its 'weight: 50..120..10' iterator overrides the outer weight)."
+
+"Change height and Solve — both myBmi and every row of the table update, because the table doesn't override height."
+
+
+---
+"*Sharing functions across records"
+---
+
+"A function in this record's '--Functions--' section is local to THIS record. To make one available in EVERY record, put it in the special FUNCTIONS record (in the sidebar's ★ section, alongside Constants)."
+
+"The Functions record already includes:"
+
+"  •  pmt(pv; rate; n; fv; pmtDue)  loan / annuity payment"
+"  •  compound(pv; rate; n)         compound interest"
+"  •  ctof(c)                       Celsius → Fahrenheit"
+"  •  ftoc(f)                       Fahrenheit → Celsius"
+
+"*Try it"
+
+"  •  Open the Functions record from the sidebar (★ section, near the top)."
+"  •  At the bottom of that record, add:"
+"        imperialBmi(lb; inches) = lb / inches**2 * 703"
+"  •  Come back to this record. In the formulas editor below '--Variables--', add a line like:"
+"        usBmi = imperialBmi(155; 70)"
+"  •  Add a display line:  usBmi->"
+"  •  Solve. usBmi ≈ 22.24 — your new global function works from here just like the built-ins."
+`,
+                category: 'Tutorial',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+                created: Date.UTC(2026, 5, 1, 12, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: '5.2: The Constants Record',
+                text: `"5.2: The Constants Record"
+
+--Variables--
+
+---
+"*Built-in constants"
+---
+
+"MathPad ships with a CONSTANTS record (sidebar's ★ section, alongside Functions). Any variable defined there is visible from every record — use them directly in equations, no need to redefine locally."
+
+"What's already in there:"
+
+"  •  pi, euler, golden             mathematical constants"
+"  •  lightSpeed, gravitational     physics"
+"  •  planck, boltzmann, avogadro   more physics"
+"  •  secsPerHour, secsPerDay       time conversion shortcuts"
+
+"In the formulas editor, names defined in the Constants record get highlighted as built-ins (the same style as pi or sqrt) — a visual reminder that they're reference values, not your record's local variables."
+
+
+---
+"*Example: circle math"
+---
+
+radius:  5
+
+"Circumference:" circumference = 2 * pi * radius
+"Area:"          area = pi * radius**2
+
+circumference->
+area->
+
+
+---
+"*Example: how far does light travel?"
+---
+
+"lightSpeed is about 300,000,000 m/s. The table below uses it alongside the local iterator t."
+
+table("vv Light-distance vs time") = {
+  // t sweeps seconds; lightSpeed comes from the Constants record
+  t: 1..10..1
+  meters = lightSpeed * t
+  "Seconds" t->
+  "Meters"  meters->
+}
+
+
+---
+"*Adding your own constants"
+---
+
+"To make a value available in every record, add it to the Constants record."
+
+"*Try it"
+
+"  •  Open the Constants record from the sidebar."
+"  •  Add a line at the bottom:"
+"        feetPerMeter: 3.28084"
+"  •  Come back here. In the formulas editor (below '--Variables--'), add:"
+"        roomFt = 10 * feetPerMeter"
+"        roomFt->"
+"  •  Solve. roomFt ≈ 32.81."
+
+"The new constant works everywhere now, with the same highlighting as the built-in ones."
+`,
+                category: 'Tutorial',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+                created: Date.UTC(2026, 5, 1, 12, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: '5.3: Dates and Times',
+                text: `"5.3: Dates and Times"
+
+--Variables--
+
+---
+"*Date and duration formats"
+---
+
+"Two format markers handle calendar work:"
+
+"  •  @d  date         locale-aware (MM/DD/YYYY or DD/MM/YYYY)"
+"  •  @t  duration     H:MM:SS"
+
+"Append '>>' (e.g. @d->>, @t->>) to include time-of-day or fractional seconds."
+
+"Durations of 24h or more display with a day count: '2d 5:30:00' is 2 days plus 5 hours 30 minutes. The parser accepts the same form on input."
+
+"Internally, dates are stored as seconds since Jan 1, 1970 UTC (epoch); durations are just numbers of seconds. The format markers control display and parsing."
+
+"Input also accepts the same formats. Type a date or duration directly into a '@d:' or '@t:' variable — MathPad parses it back to seconds:"
+
+"   when@d: 4/1/2026                  (or 4/1/2026 14:30 for a specific time)"
+"   dur@t:  1:30:00                   (or 1d 5:30:00 for over 24 hours)"
+
+
+---
+"*Built-in functions"
+---
+
+"   Now()                      current date+time (epoch seconds)"
+"   Date(y; m; d; h; mn; s)    build a date from components (3–6 args)"
+"   Days(d1; d2)               days from d1 to d2 (positive if d1 is earlier)"
+"   Year(d), Month(d), Day(d)  extract components"
+"   Hour(d), Minute(d), Second(d)"
+"   Weekday(d)                 1 (Mon) … 7 (Sun)"
+"   Hours(t)                   duration t (seconds) → fractional hours"
+"   TimePart(d)                seconds since local midnight"
+
+"From the Constants record: secsPerHour (3600), secsPerDay (86400)."
+
+
+---
+"*Example: countdown to a deadline"
+---
+
+today = Now()
+
+"Today is:" today @d->>
+
+deadline = Date(Year(today); 12; 31)
+"Deadline:" deadline @d->
+
+daysLeft = Days(today; deadline)
+
+"Days remaining:" daysLeft->
+"Time remaining:" daysLeft*secsPerDay @t->
+
+"Date(y; m; d) builds a date from components, so Date(Year(today); 12; 31) is the end of the current year. Days(d1; d2) returns fractional days; multiplying by secsPerDay gives total seconds, which @t formats as 'Nd H:MM:SS'."
+
+"Change the deadline expression in the formulas editor to your own target date and Solve."
+
+
+---
+"*Example: travel times"
+---
+
+"How long does it take to drive a distance at a given speed?"
+
+"   time (hours) = distance / speed"
+
+"The '@t' format expects seconds, so multiply hours by secsPerHour to get the value @t will display as H:MM:SS:"
+
+grid("vv Travel time by distance and speed") = {
+  // distance in miles, speed in mph; result in seconds for the @t format
+  t = distance / speed * secsPerHour
+  distance: 50..500..50
+  speed: 30..70..10
+  "Distance (mi)" distance->
+  "Speed (mph)"   speed->
+  "Time"          t @t->
+}
+
+"For 250 miles at 60 mph: 4:10:00. Hover any cell to see its row and column highlighted."
+`,
+                category: 'Tutorial',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+                created: Date.UTC(2026, 5, 1, 12, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: '5.4: Pre-Solve Values and Persistence',
+                text: `"5.4: Pre-Solve Values and Persistence"
+
+--Variables--
+
+---
+"*Looking at the previous solve"
+---
+
+"Sometimes a calculation needs to refer to its own previous result — a counter that increments, a change tracker, a running total. MathPad gives you two postfix operators for this:"
+
+"  •  x~     the pre-solve value of x  (value stored in the text before this Solve began)"
+"  •  x~?    1 if x has a pre-solve value, 0 otherwise"
+
+"Use 'x~?' as a guard around 'x~' so the first Solve (when no value exists yet) doesn't error."
+
+
+---
+"*Persistent outputs (:> and :>>)"
+---
+
+"You already know two output markers:"
+
+"  •  ->     cleared by the Clear button AND before each Solve"
+"  •  ->>    same, but full precision"
+
+"Two more markers persist through Clear:"
+
+"  •  :>     cleared only before each Solve (survives Clear)"
+"  •  :>>    same, but full precision"
+
+"Use ':>' for derived values that should remain visible as part of the record across Clear cycles — counters, accumulators, and anything you want to compare to its previous self."
+
+
+---
+"*Example: solve counter"
+---
+
+"Each press of Solve increments the count. Press Clear and the count stays — only manually editing the value resets it."
+
+solveCount = if(solveCount~?; solveCount~ + 1; 1)
+solveCount:>
+
+"How it works:"
+"  •  First Solve: solveCount~? is 0, so the if() picks the else branch (1)."
+"  •  Subsequent Solves: solveCount~? is 1, so it reads solveCount~ (the prior result) and adds 1."
+"  •  The ':>' marker stores the new value in the record text, surviving the Clear button."
+
+"Try it: press Solve a few times, then press Clear, then Solve again. The count keeps climbing."
+
+
+---
+"*Example: running total"
+---
+
+"Inside a table, '~' has a sibling meaning: it refers to the PREVIOUS ROW's value (not the previous Solve). Combined with '~?' as a guard for the first row, this gives you running totals, cumulative sums, and compound growth — patterns that would otherwise need a recursive function."
+
+"This table compounds an annual contribution at a fixed return rate. The 'balance' column uses the previous row's balance, grows it by 'rate', and adds the year's contribution."
+
+contrib$: 5000
+rate%: 7%
+
+table("vv Investment growth, $5,000/yr at 7%") = {
+  year: 1..10
+  balance = if(balance~?; balance~; 0) * (1 + rate) + contrib
+  totalIn = contrib * year
+  interest = balance - totalIn
+
+  "Year"        year->
+  "Contributed" totalIn$->
+  "Balance"     balance$->
+  "Interest"    interest$->
+}
+
+"How it works, row by row:"
+"  •  Row 1 (year 1): balance~? is 0 (no previous row), so the if() picks 0. Balance = 0 + first contribution."
+"  •  Row 2+: balance~ holds the prior row's balance, which compounds."
+
+"Change 'contrib' or 'rate' and Solve to see how the curve shifts."
+
+
+---
+"*A note on constants"
+---
+
+"Unshadowed constants always have a pre-solve value (their constant value), so 'pi~?' is always 1 and 'pi~' is pi. The ~ operator is interesting mainly for variables that change between Solves."
+`,
+                category: 'Tutorial',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+                created: Date.UTC(2026, 5, 1, 12, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: '6.1: Sidebar, Categories, and Tabs',
+                text: `"6.1: Sidebar, Categories, and Tabs"
+
+--Variables--
+
+---
+"*The sidebar"
+---
+
+"The SIDEBAR holds every record in your MathPad. On wider screens it sits along the left edge; on narrower screens it's hidden behind the hamburger menu (☰) in the header — tap to slide it open, tap a record or the backdrop to close."
+
+"Records are grouped by CATEGORY — click a category header to collapse or expand its records. The count next to the category name shows how many records it contains."
+
+"Click a record to open it as a PREVIEW (italicized tab, single slot — opening another preview replaces it). Double-click, or edit the record, to PROMOTE it to a regular tab that survives reloads."
+
+"Each category header has two small controls:"
+
+"  •  A↓        toggle between insertion order (default) and alphabetical sort"
+"  •  ✕         delete the category (only shown when it's empty — 'Unfiled' and 'Reference' can't be deleted)"
+
+"Tip: the divider between the sidebar and the editor area is draggable. Drag it left or right to resize, and MathPad remembers the width across sessions."
+
+
+---
+"*Special records"
+---
+
+"Three records are special. They live in the 'Reference' category, appear at the top of it, and are marked with a ★:"
+
+"  •  ★ Constants          its variables are available in EVERY record (pi, e, secsPerDay, your own)"
+"  •  ★ Functions          its user-defined functions are callable from EVERY record"
+"  •  ★ Default Settings   its title, settings, and content are the template for + New Record"
+
+"Tutorials 5.1 and 5.2 cover Constants and Functions in detail. Default Settings is where you adjust the starting decimal places, format, and other per-record settings that every new record inherits."
+
+"You only get one of each — MathPad picks the record whose title matches exactly."
+
+
+---
+"*Creating and organizing records"
+---
+
+"At the bottom of the sidebar:"
+
+"  •  + New Record         creates a blank record in the 'Unfiled' category"
+"  •  Import               loads records from a text file (covered in 6.3)"
+"  •  Export               saves all records to a text file (covered in 6.3)"
+"  •  Reset                wipes everything back to the default starter records"
+
+"To move a record into a different category, open its detail panel (⚙ button in the header) and pick from the Category dropdown. The dropdown also includes a 'New category…' option that prompts you for a new name."
+
+"To rename a record, double-click its title in the sidebar — or just edit the first line of the record in the formulas editor (the title comes from there)."
+
+
+---
+"*On smaller screens"
+---
+
+"The sidebar collapses into the hamburger menu (☰) at narrower widths. Below ~560px, the Help and Theme buttons also move from the header down into the sidebar to free up header space."
+`,
+                category: 'Tutorial',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+                created: Date.UTC(2026, 5, 2, 12, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: '6.2: Keyboard Shortcuts',
+                text: `"6.2: Keyboard Shortcuts"
+
+--Variables--
+
+---
+"*Global"
+---
+
+"These work from anywhere in the app (Cmd substitutes for Ctrl on Mac):"
+
+"   Ctrl+Enter         Solve the current record"
+"   Ctrl+Shift+Enter   Solve and append a '--- Table Outputs ---' text section"
+"   Ctrl+S             Solve (same as Ctrl+Enter, no append)"
+"   Ctrl+Shift+S       Clear inputs and outputs (same as the Clear button)"
+"   Ctrl+Z             Undo (routes to the active editor)"
+"   Ctrl+Y             Redo (or Ctrl+Shift+Z)"
+"   Escape             Close an open modal or the mobile sidebar"
+
+
+---
+"*Solve button modifiers"
+---
+
+"The Solve button responds to modifier keys when you click it:"
+
+"   Solve              Normal solve"
+"   Shift+click        Solve, then append a '--- Table Outputs ---' text section (same as Ctrl+Shift+Enter)"
+"   Ctrl+click         Solve in TRACE mode — appends a '*--- Solve Trace ---' section showing the steps the solver took. Useful when a result surprises you."
+"   Ctrl+Shift+click   Both — trace plus table outputs"
+
+
+---
+"*Undo across Solves"
+---
+
+"MathPad treats Solve as just another edit on the undo stack — the same Ctrl+Z that undoes typing will also undo a Solve, restoring the variable values and status text from BEFORE the solve ran. You can step back through a long session and replay it forward with Ctrl+Y."
+
+"Variable-panel edits, Tab indent, and Ctrl+/ comment toggle are all undoable too."
+
+
+---
+"*Formulas editor"
+---
+
+"When the cursor is in the formulas editor (the syntax-highlighted area below the variables panel):"
+
+"   Tab                Indent 2 spaces (or indent every selected line)"
+"   Shift+Tab          Outdent the current line (or every selected line)"
+"   Ctrl+/             Toggle '// ' line comment on the current line or selection"
+"   Escape             Defocus the editor"
+
+
+---
+"*Variables panel"
+---
+
+"When you click into an input value in the variables panel:"
+
+"   Tab                Move to the next input (wraps around)"
+"   Shift+Tab          Move to the previous input"
+"   Enter              Commit the edit and Solve"
+"   Escape             Revert the in-progress edit"
+
+"Tab cycling is handy for sweeping through a record's inputs to try different values — press Tab to advance, type a new value, Enter to Solve."
+`,
+                category: 'Tutorial',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+                created: Date.UTC(2026, 5, 2, 12, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: '6.3: Import and Export',
+                text: `"6.3: Import and Export"
+
+--Variables--
+
+---
+"*Export"
+---
+
+"The 'Export' button at the bottom of the sidebar saves EVERY record to a single text file named 'mathpad_export_YYYY-MM-DD.txt'. The file lands in your browser's downloads folder."
+
+"Use export to:"
+
+"  •  back up your MathPad before experimenting"
+"  •  copy records to another browser or device"
+"  •  share a record (paste the text into a message, or attach the file)"
+
+
+---
+"*Import"
+---
+
+"The 'Import' button opens a file picker. Pick a previously-exported MathPad .txt file and confirm — IMPORT REPLACES ALL EXISTING RECORDS, so export first if you want to keep what you have."
+
+"The exported text format is also accepted from the original 1997 PalmOS MathPad's MpExport utility, so old PalmOS archives can be imported as-is."
+
+
+---
+"*The file format"
+---
+
+"Each record is a plain-text block, separated from the next by a line of 27 tildes:"
+
+"   ~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+"Inside a block, the first few lines are metadata (Category, Places, Format, etc.); the rest is the record's text exactly as it appears in the formulas editor. A small example block looks like this:"
+
+"   Category = \\"Examples\\"; Secret = 0"
+"   Places = 2; StripZeros = 1"
+"   Format = \\"float\\"; GroupDigits = 1; DegreesMode = 1"
+"   Created = \\"2026-04-12T09:00:00.000Z\\"; Modified = \\"2026-04-15T18:23:11.000Z\\""
+"   \\"My calculator\\""
+"   "
+"   a + b = c"
+"   a: 3"
+"   b: 4"
+"   c->"
+"   ~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+"What's preserved on round-trip: titles, content, category, decimal places, format, group digits, degrees mode, currency symbol, status, and creation / modification timestamps."
+
+
+---
+"*Tips"
+---
+
+"  •  EDIT BEFORE IMPORT — the export file is plain text. You can open it in any editor, trim it to one record, fix a typo, or stitch two exports together (just keep the tilde separators between records)."
+
+"  •  SHARING ONE RECORD — copy a single block from your export file (everything from one tilde line through the next) and paste it as a snippet. The recipient can wrap it with their own export-style header lines if needed, or just type the formulas directly into a new record."
+
+"  •  RESET — the 'Reset' button next to Import/Export wipes your current MathPad back to the default starter records (Welcome, tutorials, examples). Export first if you've made changes you'd like to keep."
+`,
+                category: 'Tutorial',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+                created: Date.UTC(2026, 5, 2, 12, 0, 0),
             },
             {
                 id: generateId(),
@@ -1257,9 +1879,10 @@ end: 0
 
 // Begin variables (top) panel
 --Variables--
-"*Update values, then click solve or the solve ⟲ icon next to a highlighted variable"
-"For example, set Present Value to $200,000 and press the solve ⟲ icon next to Payment"
+"*Update values, then click solve or the solve ⟲ icon next to a variable."
+"For example, set Present Value to $200,000 and press the solve ⟲ icon next to Payment."
 
+"*Time value of money"
 "Present Value" pv $: $100,000
 "Future Value" fv $: $0               "(balloon payment)"
 "Annual Rate" rate %: 6.125%
@@ -1267,11 +1890,13 @@ end: 0
 "Payment" pmt $:
 
 
+"*Seldom used tweaks"
 "Payments/Year" pmtsYr: 12
 "Compounds/Year" cmpndsYr: pmtsYr     "generally equals payments/year"
 "Annuity Due" pmtDue[0..1]: end       "end or begin of period"
 
 
+"*Prepayments"
 "Prepayment" extraPmt $: $0           "Extra principal payment per period"
 "Actual Term" actYears : years        "Actual term given prepayments"
 
@@ -1389,7 +2014,7 @@ tableGraph("Quadratic equation \\a\\*x^2 + \\b\\x + \\c\\") = {
 
 
 "Here we develop a recursive function fac(n)"
-      fac(n) = if(n <= 1; 1; n * fac(n - 1))
+   fac(n) = if(n <= 1; 1; n * fac(n - 1))
   fac(170)->
 
 "Here we provide a solution using the built-in prod function"

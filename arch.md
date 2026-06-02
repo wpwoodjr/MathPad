@@ -130,6 +130,18 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     x~?     1 if x has a pre-solve value, 0 otherwise
     Example: counter: if(counter~?; counter~ + 1; 0)
 
+    Inside a table/grid/vectorDraw body, ~ refers to the PREVIOUS ROW (or cell)
+    rather than the previous Solve. evaluateTable sets
+    context.preSolveValues = (rowCount === 0 ? new Map() : prevValues) at the
+    start of each row, so row 0 sees no pre-solve values and ~? returns 0;
+    subsequent rows inherit the prior row's full state. Foundation of
+    running-total patterns:
+        table("Investment") = {
+          year: 1..10
+          balance = if(balance~?; balance~; 0) * (1 + rate) + contrib
+          ...
+        }
+
 # Other
 ## Final Output
     Known values are inserted for -> ->> :> :>> declarations

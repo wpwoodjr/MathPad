@@ -445,10 +445,13 @@ function getReferenceInfo() {
  */
 function updateAllEditorsReferenceInfo() {
     const { constants, functions, parsedConstants, parsedFunctions } = getReferenceInfo();
-    for (const [id, { editor }] of UI.editors) {
+    for (const [id, { editor, variablesManager }] of UI.editors) {
         const record = UI.data.records.find(r => r.id === id);
         const isFnRecord = record && isReferenceRecord(record, 'Functions');
         editor.setReferenceInfo(constants, isFnRecord ? null : functions, parsedConstants, isFnRecord ? null : parsedFunctions);
+        // Re-render the vars panel so its label highlighter sees the new
+        // reference info too (otherwise it lags behind the editor).
+        if (variablesManager) variablesManager.updateFromText(editor.getValue());
     }
 }
 
@@ -641,14 +644,16 @@ function createEditorForRecord(record) {
     // Panel expand/collapse for mobile keyboard is handled by the
     // visualViewport resize handler in setupEventListeners()
 
-    // Initial variables render
-    variablesManager.updateFromText(record.text);
-
-    // Set reference info for highlighting
-    // Functions record doesn't load its own functions as references (they're definitions, not builtins)
+    // Set reference info for highlighting before the initial render, so
+    // identifiers like 'pi' get the builtin style on first display in the
+    // variables panel (highlightLabelText reads editor.referenceConstants).
+    // Functions record doesn't load its own functions as references (they're definitions, not builtins).
     const { constants, functions, parsedConstants, parsedFunctions } = getReferenceInfo();
     const isFnRecord = isReferenceRecord(record, 'Functions');
     editor.setReferenceInfo(constants, isFnRecord ? null : functions, parsedConstants, isFnRecord ? null : parsedFunctions);
+
+    // Initial variables render
+    variablesManager.updateFromText(record.text);
 
     // Update undo/redo button states when stacks change
     editor.onUndoStateChange((canUndo, canRedo) => {

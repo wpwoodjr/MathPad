@@ -259,6 +259,13 @@ function parseDateText(text) {
  */
 function parseDurationText(text) {
     const t = text.trim();
+    // Nd H:MM:SS[.mmm] or Nd H:MM
+    const md = t.match(/^(-?)(\d+)d\s+(\d+):(\d{2})(?::(\d{2}(?:\.\d+)?))?$/);
+    if (md) {
+        const sign = md[1] === '-' ? -1 : 1;
+        const secs = md[5] ? parseFloat(md[5]) : 0;
+        return sign * (parseInt(md[2]) * 86400 + parseInt(md[3]) * 3600 + parseInt(md[4]) * 60 + secs);
+    }
     // H:MM:SS[.mmm]
     const m3 = t.match(/^(-?)(\d+):(\d{2}):(\d{2}(?:\.\d+)?)$/);
     if (m3) {
@@ -313,18 +320,22 @@ function formatDuration(seconds, fractional) {
     let total = Math.abs(seconds);
     // Without fractional output, round to the nearest whole second up front so
     // values like 46.623 display as :47 (not :46). Rounding here also lets a
-    // 59.5→60 carry propagate naturally into minutes (and 3599.5→3600 into hours).
+    // 59.5→60 carry propagate naturally into minutes (and 3599.5→3600 into hours,
+    // 86399.5→86400 into days).
     if (!fractional) total = Math.round(total);
+    const d = Math.floor(total / 86400);
+    total -= d * 86400;
     const h = Math.floor(total / 3600);
     total -= h * 3600;
     const m = Math.floor(total / 60);
     total -= m * 60;
     const s = Math.floor(total);
     const ms = Math.round((total - s) * 1000);
-    let result = `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    let hms = `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     if (fractional && ms) {
-        result += `.${String(ms).padStart(3, '0')}`;
+        hms += `.${String(ms).padStart(3, '0')}`;
     }
+    const result = d > 0 ? `${d}d ${hms}` : hms;
     return neg ? '-' + result : result;
 }
 

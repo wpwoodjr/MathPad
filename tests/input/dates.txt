@@ -113,3 +113,37 @@ e@t->                "rounds down: 0:00:46"
 // Negative duration also rounds correctly (away from zero on .5)
 f@t: -0:00:46.623
 f@t->                "rounds to -0:00:47"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Dates 6 - day breakout parsing and formatting
+
+// Values >= 24h format as "Nd H:MM:SS". Parser accepts the same plus
+// "Nd H:MM" shorthand. Round-trip stays clean.
+
+a@t: 1d 0:00:00
+a@t->                "1d 0:00:00"
+
+b@t: 2d 5:30:00
+b@t->                "2d 5:30:00"
+
+c@t: 1d 5:30
+c@t->                "1d 5:30 -> 1d 5:30:00"
+
+d@t: 1d 0:00:00.500
+d@t->>               "fractional: 1d 0:00:00.500"
+
+e@t: -1d 1:00:00
+e@t->                "negative: -1d 1:00:00"
+
+// 23:59:59.5 carries into days when rounded
+f@t: 23:59:59.5
+f@t->                "carries to 1d 0:00:00"
+
+// Exactly 24h boundary
+g@t: 24:00:00
+g@t->                "1d 0:00:00"
+
+// Plain hours as input (49 hours = 2d 1:00:00)
+h@t: 49
+h@t->                "49 hours -> 2d 1:00:00"

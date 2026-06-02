@@ -1,12 +1,12 @@
 # MathPad
 
-An algebraic equation solver with automatic unknown detection, root-finding, and Google Drive sync.
+An algebraic equation solver with automatic unknown detection, root-finding, tables, graphs, and an interactive tutorial series.
 
 ## About
 <img width="163" height="163" alt="image" src="https://github.com/user-attachments/assets/77817643-bd90-4c19-9ec7-9f2654016c79" />
 
 MathPad was originally created by **Rick Huebner** for PalmOS PDAs (circa 1997-2000). This repository contains:
-- A modern web-based reimplementation with near-feature parity and cloud sync
+- A modern web-based reimplementation with near-feature parity
 - The original MathPad 1.5 release (documentation, PRC files, and desktop utilities)
 
 ## Web Application
@@ -18,10 +18,10 @@ Or open `docs/index.html` locally in a browser. No build step required.
 ### Core Features
 
 - **Automatic Equation Solving** — detects unknown variables and solves using Brent's root-finding method. Solve forward or backward: give it any combination of knowns and unknowns
-- **50+ Built-in Functions** — math, trig (degrees/radians), date/time, financial, and control flow
+- **50+ Built-in Functions** — math, trig (degrees/radians), date/time, iteration (`sum`/`prod` binding form), and control flow
 - **User-defined Functions** — define functions like `f(x;y) = expr` in any record, or in the "Functions" record to make them available globally
 - **Global Constants** — define constants in a "Constants" record, available to all other records
-- **Google Drive Sync** — sign in with Google to sync records across devices with automatic conflict detection
+- **Interactive Tutorial Series** — six lesson groups in the sidebar's Tutorial category cover the language and the app, from a first equation through tables, dates, and the workflow tools
 - **Tables and Grids** — iterate variables over ranges to produce columnar tables or 2D grids, with per-cell equation solving
 - **Vector Diagrams** — `vectorDraw` renders SVG vector diagrams in navigation, polar, or cartesian coordinates with legend and per-vector solving
 - **Import/Export** — compatible with original PalmOS MathPad export format
@@ -44,7 +44,7 @@ Or open `docs/index.html` locally in a browser. No build step required.
 - **Money format** (`price$:`) — displays as `$1,234.56`. Configurable currency symbol per record (`$`, `€`, `£`, `¥`, `₹`, `₩`, `₱`, `₺`, `₴`, `₫`, `₡`, `₽`, `₸`, `₼`, `₾`, `৳`); suffix currencies show the symbol after the number.
 - **Percent format** (`rate%:`) — stores as decimal, displays with `%`
 - **Angular format** (`angle°:`) — mode-aware: degrees mode displays mod 360 with `°` suffix; radians mode displays mod 2π with no symbol
-- **Date/duration formats** (`@d`, `@t`) — locale-aware date display, H:MM:SS duration display
+- **Date/duration formats** (`@d`, `@t`) — locale-aware date display; H:MM:SS duration display, with `Nd H:MM:SS` for durations ≥ 24h (the parser accepts the same form on input)
 - **Numeric bases** (`hex#16:`) — bases 2 through 36
 - **Inline evaluation** (`\expr\`) — evaluates expression in table/grid titles for display
 
@@ -170,11 +170,17 @@ When a table, grid, or vector diagram doesn't fully solve, its title shows `(n/m
 
 ### Keyboard Shortcuts
 
-- `Ctrl+Enter` — Solve current record
-- `Ctrl+Z` — Undo
-- `Ctrl+Y` or `Ctrl+Shift+Z` — Redo
-- `Tab` / `Shift+Tab` — Cycle through variable inputs
-- `Escape` — Revert edited variable value
+- `Ctrl+Enter` or `Ctrl+S` — Solve current record
+- `Ctrl+Shift+Enter` — Solve and append a `--- Table Outputs ---` text section
+- `Ctrl+Shift+S` — Clear inputs and outputs
+- `Ctrl+Z` / `Ctrl+Y` (or `Ctrl+Shift+Z`) — Undo / Redo (also undoes Solves)
+- `Tab` / `Shift+Tab` (formulas) — Indent / outdent 2 spaces
+- `Ctrl+/` (formulas) — Toggle line comment
+- `Tab` / `Shift+Tab` (vars panel) — Cycle through variable inputs
+- `Enter` (vars panel) — Commit edit and Solve
+- `Escape` — Revert edited variable value, unfocus formulas, or close modals
+
+Solve button modifiers: **Shift+click** appends table outputs; **Ctrl+click** appends a `--- Solve Trace ---` section showing the solver's steps.
 
 ## Example: Loan Calculator
 
@@ -183,7 +189,7 @@ Here's a walkthrough using the built-in TVM (Time Value of Money) example:
 ```
 "Loan calculator"
 
---Formulas--
+--Functions--
 pmt(pv; rate; n; fv) = -(pv + fv / (1 + rate)**n) * rate / (1 - (1 + rate)**-n)
 
 --Equations--
@@ -199,19 +205,20 @@ years <- 30            "number of years"
 
 **How it works:**
 
-1. **Formulas** section defines a reusable payment function `pmt(pv; rate; n; fv)`
-2. **Equations** section ties the function to the variables
-3. **Variables** section lists inputs and outputs — `$` formats as money, `%` as percent, `@d` as date, `@t` as duration
-4. The `<-` marker means input variables (editable in the variables panel)
-5. **Comments** in double quotes describe each variable
+1. `--Functions--` and `--Equations--` are visual labels; only `--Variables--` is a real section marker (controls what shows in the variables panel)
+2. The function definition is reusable from anywhere below it
+3. The equation ties the function to the variables MathPad will solve for
+4. The variables section lists inputs and outputs — `$` formats as money, `%` as percent, `@d` as date, `@t` as duration
+5. The `<-` marker means input variables (editable in the variables panel)
+6. **Comments** in double quotes describe each variable
 
 **Try it:**
 
-1. Click **Solve** — MathPad calculates `pmt: $607.94` (monthly payment)
-2. Change `pv` to `$250,000` and click the ⟲ icon next to `pmt` — it clears `pmt` and solves, giving `pmt: $1,519.84`
-3. To solve backwards, set `pmt: $2,000` and click ⟲ next to `pv` — MathPad finds `pv: $328,903.63`
+1. Click **Solve** — MathPad calculates `pmt: -$607.61` (monthly payment; negative because cash flows out)
+2. Change `pv` to `$250,000` and click the ⟲ icon next to `pmt` — it clears `pmt` and re-solves with the new principal
+3. To solve backwards, set `pmt: -$2,000` and click ⟲ next to `pv` — MathPad finds the loan amount that produces that payment
 
-Each variable has a ⟲ icon that clears it and solves, making it easy to compute any variable from the others. MathPad automatically detects the unknown and solves using root-finding.
+Each editable variable has a ⟲ icon that clears it and solves, making it easy to compute any variable from the others. MathPad automatically detects the unknown and solves using root-finding.
 
 ## Differences from PalmOS MathPad 1.5
 
@@ -224,7 +231,7 @@ Each variable has a ⟲ icon that clears it and solves, making it easy to comput
 - **Extended limits** — `[lo:hi:step]`, expression bounds, auto-swap, mod-aware wraparound for angular vars
 - **Pre-solve access** — `x~` (value before this solve) and `x~?` (existence check)
 - **New markers** — `<<-` (full-precision input), `:>` and `:>>` (persistent outputs)
-- **Undo/redo, multiple tabs, dark/light themes, Google Drive sync**
+- **Undo/redo, multiple tabs, dark/light themes**
 
 **Behavior changes that affect imported PalmOS records:**
 
@@ -239,20 +246,20 @@ Each variable has a ⟲ icon that clears it and solves, making it easy to comput
 - Write-protected regions `/* … */`
 - Page-position markers `--Input--` / `--Output--` (the web app's `--Variables--` is unrelated)
 - Inline `\expr\` substitution outside of table/grid titles
-- IR beaming and the Private record flag (Drive sync replaces beaming)
+- IR beaming and the Private record flag
 
 ## Technical Details
 
 - Pure client-side JavaScript — no build system, no frameworks, no server
-- ~15,500 lines of JS across 13 modules
+- ~17,500 lines of JS across 13 modules
 - Brent's root-finding algorithm with adaptive bracketing, known-scale heuristics, and singularity/pole rejection
 - Recursive backtracking solver with deterministic-advance phases (direct-eval, substitution building, sweep subs) and three kinds of branching candidates (direct-eval alternates, sweep-0 natural 1-unknown, sweep-1 subset-enumerated substitution combos); falls back to most-progressed snapshot when no balanced branch found
 - Equation-graph partitioning into independent components (union-find over shared vars, limit refs, body-def refs) to avoid cartesian-product blow-up on disjoint sub-systems
 - Multi-sub symmetric substitution derivation; cycle-safe recursive substitution via visited-set guard
 - Token-based parser with AST generation for expression evaluation
-- Auto-saves to localStorage with 500ms debounce; Google Drive sync every 15 seconds
+- Auto-saves to localStorage with 500ms debounce
 - Mobile responsive with touch-friendly controls
-- Works offline — Drive sync is optional and degrades gracefully
+- Works offline — no server required
 
 ## License
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MathPad is an algebraic equation solver web application, reimplemented from the original PalmOS app (1997-2000) by Rick Huebner. It solves systems of equations using Brent's root-finding method, supports 50+ built-in functions, and syncs to Google Drive.
+MathPad is an algebraic equation solver web application, reimplemented from the original PalmOS app (1997-2000) by Rick Huebner. It solves systems of equations using Brent's root-finding method and supports 50+ built-in functions. (A Google Drive sync layer exists in `drive.js` but is currently in private testing — not surfaced in tutorials, README, or help.)
 
 - **Web Application** (`docs/`) - Full-featured browser-based app, no build system
 - **Legacy PalmOS** (`mathpad 1.5/`) - Original C source and utilities
@@ -120,7 +120,7 @@ node tests/gen-expected.js TESTNAME
 - `%` suffix → percent format (×100, follows record's places setting)
 - `°` suffix → angular format (**mode-aware**): degrees mode displays mod 360 with `°` suffix; radians mode displays mod 2π without symbol. `formatDegrees(value, places, degreesMode)`.
 - `@d` suffix → date format (locale-aware MM/DD/YYYY or DD/MM/YYYY); `@d->>` includes time
-- `@t` suffix → duration format (H:MM:SS); `@t->>` includes fractional seconds
+- `@t` suffix → duration format (H:MM:SS, or `Nd H:MM:SS` for ≥ 24h); `@t->>` includes fractional seconds. `parseDurationText` accepts the same forms (`H:MM:SS`, `H:MM`, plain hours, and `Nd H:MM:SS`).
 - `@d:` and `@t:` parse date/duration text as input values
 - Base notation: `#16` for hex, `#2` for binary, etc. (bases 2-36)
 - Custom `toFixed()` avoids IEEE 754 midpoint rounding errors
@@ -159,17 +159,17 @@ node tests/gen-expected.js TESTNAME
 app.js (entry point, ~200 lines)
   ↓
 ui.js (main orchestration, ~1950 lines)
-  ├→ storage.js (localStorage, import/export, ~1215 lines)
-  ├→ drive.js (Google Drive sync, ~990 lines)
+  ├→ storage.js (localStorage, import/export, tutorial + example records, ~2885 lines)
+  ├→ drive.js (Google Drive sync — testing only, not exposed, ~990 lines)
   ├→ editor.js (syntax highlighting editor, ~1400 lines)
-  ├→ variables-panel.js (structured variable display, ~2105 lines)
-  ├→ solve-engine.js (solving + table/grid eval, ~2750 lines)
-  │     ├→ solver.js (Brent's algorithm, ~845 lines)
-  │     ├→ evaluator.js (expression eval, 50+ builtins, ~945 lines)
-  │     └→ variables.js (variable parsing + table detection, ~1260 lines)
+  ├→ variables-panel.js (structured variable display, ~2330 lines)
+  ├→ solve-engine.js (solving + table/grid eval, ~2810 lines)
+  │     ├→ solver.js (Brent's algorithm, ~840 lines)
+  │     ├→ evaluator.js (expression eval, 50+ builtins, ~955 lines)
+  │     └→ variables.js (variable parsing + table detection, ~1245 lines)
   ├→ parser.js (tokenizer & AST, ~1090 lines)
-  ├→ line-parser.js (token-based line parsing, ~770 lines)
-  └→ theme.js (light/dark toggle, ~110 lines)
+  ├→ line-parser.js (token-based line parsing, ~775 lines)
+  └→ theme.js (light/dark toggle, ~115 lines)
 ```
 
 Script load order in `index.html`: theme → parser → line-parser → evaluator → solver → variables → storage → drive → editor → variables-panel → solve-engine → ui → app
@@ -271,7 +271,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 | `dur@t: 1:30:00` | Duration format | `@t` before marker = duration H:MM:SS; `@t->>` includes fractional seconds |
 | `a °= b` | Degree equality | Mod-aware equation operator (mod 360 or mod 2π per degreesMode) — top-level equation only, for balance checks and Brent's solving. Not a general expression operator. |
 | `expr$->` | Expression output | Format expression result as money |
-| `x~` | Pre-solve value | Strictly returns value before this solve started |
+| `x~` | Pre-solve value | Strictly returns value before this solve started. **Inside a table/grid/vectorDraw body**, refers to the PREVIOUS ROW (preSolveValues is reset to prevValues each row; empty Map for row 0). |
 | `x~?` | Existence check | 1 if x has a pre-solve value, 0 otherwise |
 | `\expr\` | Inline eval (table/grid titles only) | Evaluates expression for display in title |
 
@@ -283,9 +283,13 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 
 **Date/Time**: Now, Date(y;m;d;h;min;s), Days(d1;d2), Year, Month, Day, Weekday, Hour, Minute, Second, Hours, TimePart
 
-**Control**: If(cond;then;else), Choose(n;v1;v2;...), Min, Max, Avg, Sum
+**Control**: If(cond;then;else), Choose(n;v1;v2;...), Min, Max, Avg, Sum (variadic)
 
-**Other**: Pmt (financial), isClose (balance tolerance check)
+**Iteration**: Sum(expr; var; start; end), Prod(expr; var; start; end) — binding-variable forms
+
+**Other**: isClose (balance tolerance check), Tau, Perigon, Places
+
+**Shipped in default Functions record** (user-editable, not hardcoded): `pmt(pv;rate;n;fv)`, `compound(pv;rate;n)`, `ctof(c)`, `ftoc(f)`, `hypot(a;b)`, `disc(a;b;c)`. Available globally to every record unless the user edits/removes them.
 
 ## CSS Theming
 

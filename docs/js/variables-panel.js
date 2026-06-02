@@ -328,7 +328,7 @@ class VariablesPanel {
                 // If name, marker, format, limits, or comment changed, remove old row and add new one
                 const limitsChanged = JSON.stringify(existing.declaration.limits) !== JSON.stringify(info.declaration.limits);
                 const formatChanged = existing.declaration.format !== info.declaration.format || existing.declaration.base !== info.declaration.base;
-                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || existing.declaration.label !== info.declaration.label || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment) {
+                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || existing.declaration.label !== info.declaration.label || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment || existing.isQuoted !== info.isQuoted) {
                     toRemove.push(lineIndex);
                     toAdd.push(info);
                 } else if (this.declarationChanged(existing, info)) {
@@ -342,6 +342,26 @@ class VariablesPanel {
                 toRemove.push(lineIndex);
             }
         }
+
+        // Reference info (Constants / Functions records) can change without
+        // any text change in this record — in which case labels with the
+        // same text wouldn't be picked up by the diff above. setReferenceInfo
+        // creates a fresh Set each call, so reference equality is enough.
+        const refConsts = this.editor.referenceConstants;
+        const refFns = this.editor.referenceFunctions;
+        if (this._lastReferenceConstants !== undefined
+            && (this._lastReferenceConstants !== refConsts || this._lastReferenceFunctions !== refFns)) {
+            const toRemoveSet = new Set(toRemove);
+            for (const [lineIndex, info] of newDeclMap) {
+                if (!info.isLabel) continue;
+                if (toRemoveSet.has(lineIndex)) continue;
+                if (!this.declarations.has(lineIndex)) continue; // already in toAdd
+                toRemove.push(lineIndex);
+                toAdd.push(info);
+            }
+        }
+        this._lastReferenceConstants = refConsts;
+        this._lastReferenceFunctions = refFns;
 
         // Snapshot old display values before removing rows (for flash comparison on re-added rows)
         // Key by name (not lineIndex) so line insertions/deletions don't cause false flashes
