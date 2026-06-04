@@ -271,9 +271,22 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 | `dur@t: 1:30:00` | Duration format | `@t` before marker = duration H:MM:SS; `@t->>` includes fractional seconds |
 | `a °= b` | Degree equality | Mod-aware equation operator (mod 360 or mod 2π per degreesMode) — top-level equation only, for balance checks and Brent's solving. Not a general expression operator. |
 | `expr$->` | Expression output | Format expression result as money |
+| `x: x` | Self-ref unknown | Shadow a constant `x` and keep it an equation-driven unknown that **re-resolves every solve** (never pinned). See "Self-referencing declarations" below. |
 | `x~` | Pre-solve value | Strictly returns value before this solve started. **Inside a table/grid/vectorDraw body**, refers to the PREVIOUS ROW (preSolveValues is reset to prevValues each row; empty Map for row 0). |
 | `x~?` | Existence check | 1 if x has a pre-solve value, 0 otherwise |
 | `\expr\` | Inline eval (table/grid titles only) | Evaluates expression for display in title |
+
+### Self-referencing declarations (`x: x`) — shadow a constant, stay equation-driven
+
+`x: x` is the idiom for "make `x` a local unknown that the equations re-derive on **every** solve, never pinned." Useful when `x` is a global Constant but a particular record should solve for `x` instead of using the constant value. Three behaviors combine:
+
+1. **Shadows the constant** — any INPUT declaration of a constant's name calls `shadowConstant` (`variables.js:270`, `!isOutput` gate), so the global value is gone for that record and `x` starts unbound.
+2. **Never pins** — the RHS `x` is a non-literal expression, so `parseLiteralValue` returns null and the line becomes a **body definition**, not a fixed input. On write-back the solver preserves the source expression (`x: x` stays `x: x`) rather than serializing the computed value in.
+3. **Re-resolves every solve** — with no baked-in value, each solve starts with `x` unbound and the equation re-derives it; the body def `x: x` then fires harmlessly (sets `x = x`, a no-op via `firedBodyDefs`).
+
+Contrast with bare `x:` (empty slot): it also shadows the constant, but the solved value **is** written back (`x:` → `x: 5.00`), pinning it — subsequent solves treat it as a fixed input and a changed equation produces a balance error.
+
+**Caveat**: `x: x` requires that something determines `x` on each solve. If a solve leaves `x` under-determined (no equation binds it), the self-referential body def can't evaluate and `reportUnevaluableBodyDefs` emits `Cannot evaluate "x" - Variable 'x' has no value`.
 
 ## Built-in Functions
 
