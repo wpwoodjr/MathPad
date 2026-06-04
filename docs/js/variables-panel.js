@@ -1493,17 +1493,12 @@ class VariablesPanel {
         const multiLine = lines.length > 1;
 
         // Tick formatters
-        const xFmt = (v) => {
-            const col = table.columns[xCol];
-            return col.format ? formatVariableValue(v, col.format, col.fullPrecision, table.formatOpts || {}) : this._formatTickLabel(v);
-        };
+        const xFmt = (v) => this._formatTickLabel(v, table.formatOpts || {}, table.columns[xCol].format);
         // Y-axis format comes from the first Y-series column, not the first
         // non-X column — when col 1 is a grouping column (e.g. gridGraph's
         // forced col-1 grouping), its format would mis-format the Y ticks.
         const yFmtCol = ySeriesCols.length > 0 ? table.columns[ySeriesCols[0]] : table.columns[yCols[0]];
-        const yFmt = (v) => yFmtCol.format
-            ? formatVariableValue(v, yFmtCol.format, yFmtCol.fullPrecision, table.formatOpts || {})
-            : this._formatTickLabel(v);
+        const yFmt = (v) => this._formatTickLabel(v, table.formatOpts || {}, yFmtCol.format);
 
         // Graph dimensions
         const width = 550;
@@ -1845,12 +1840,12 @@ class VariablesPanel {
             };
             for (const xv of xTicks) {
                 if (xv === 0) continue;
-                addLabel(tx(xv), xAxisSvgY + 11, 'middle', this._formatTickLabel(xv));
+                addLabel(tx(xv), xAxisSvgY + 11, 'middle', this._formatTickLabel(xv, table.formatOpts || {}));
             }
             for (const yv of yTicks) {
                 if (yv === 0) continue;
                 // Negate yv → user-space (positive up).
-                addLabel(yAxisSvgX - 4, ty(yv) + 3, 'end', this._formatTickLabel(-yv));
+                addLabel(yAxisSvgX - 4, ty(yv) + 3, 'end', this._formatTickLabel(-yv, table.formatOpts || {}));
             }
         } else if (vectorType === 'polar') {
             // Concentric circles + radial spokes every 30°. Use the data
@@ -1931,7 +1926,7 @@ class VariablesPanel {
                 t.setAttribute('class', 'graph-text');
                 t.setAttribute('font-size', '9');
                 t.setAttribute('opacity', '0.55');
-                t.textContent = this._formatTickLabel(r);
+                t.textContent = this._formatTickLabel(r, table.formatOpts || {});
                 svg.appendChild(t);
             }
         } else if (vectorType === 'navigation') {
@@ -2177,12 +2172,24 @@ class VariablesPanel {
     }
 
     /**
-     * Format an axis tick label. Tick values are clean round numbers from
-     * _niceTicks; toPrecision just scrubs FP noise (e.g. 0.30000000000000004).
+     * Format an axis tick label, honoring the record's group-digits and
+     * float/sci/eng settings via formatVariableValue. Trailing zeros are
+     * ALWAYS stripped, regardless of the record's strip-zeros setting — padded
+     * ticks ("0.10", "10.00%") clutter the axis. A high `places` preserves each
+     * nice-tick's significant digits without padding (stripping removes the
+     * excess), so distinct ticks stay distinct: in sci mode `places` is the
+     * mantissa precision, and a small record places would round 1.5e6 to "2e+6".
+     *
+     * eng is capped at 6 places: it derives the mantissa via value/10^engExp,
+     * which amplifies _niceTicks' FP noise (0.30000000000000004) into view as
+     * "300.00000000000011e-3" at high places. eng mantissas are O(1..1000) with
+     * ≤1 significant decimal for nice ticks, so 6 is ample and clear of the
+     * ~13th-decimal noise. float (toFixed) and sci (toExponential) round
+     * cleanly, so they keep 14 places for tiny ticks (1e-7).
      */
-    _formatTickLabel(value) {
-        if (Number.isInteger(value)) return String(value);
-        return value.toPrecision(6).replace(/\.?0+$/, '');
+    _formatTickLabel(value, fmt = {}, varFormat = null) {
+        const places = fmt.numberFormat === 'eng' ? 6 : 14;
+        return formatVariableValue(value, varFormat, false, { ...fmt, places, stripZeros: true });
     }
 
     /**

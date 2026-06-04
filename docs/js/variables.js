@@ -439,7 +439,7 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
             const formatted = formatNumber(percent, places, stripZeros, numberFormat, 10, false, null);
             return formatted + '%';
         }
-        return formatPercent(value, places);
+        return formatPercent(value, places, stripZeros);
     }
 
     // Handle degrees format (mode-aware: degrees mode uses ° + mod M, radians

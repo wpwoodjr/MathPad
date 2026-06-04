@@ -219,3 +219,16 @@ A - 10 °-> 50°
 A -10 °-> 350°
 Label (9 - 1) -> 8
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 0
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
+"Percent strip-zeros off pads trailing zeros to the record's places"
+(0.1)%-> 10.00%
+(0.075)%-> 7.50%
+(0.005)%-> 0.50%
+(0)%-> 0.00%
+x: 10%
+x %-> 10.00%
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

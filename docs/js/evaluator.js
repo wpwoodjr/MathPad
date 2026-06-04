@@ -858,9 +858,10 @@ function formatMoney(value, symbol) {
 /**
  * Format value as percentage: multiply by 100, strip trailing zeros, append %
  */
-function formatPercent(value, places) {
+function formatPercent(value, places, stripZeros = true) {
     const percent = value * 100;
-    const formatted = toFixed(percent, places).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+    let formatted = toFixed(percent, places);
+    if (stripZeros) formatted = formatted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
     return formatted + '%';
 }
 
@@ -889,7 +890,7 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
     // Check for special variable name suffixes
     if (varName) {
         if (varName.endsWith('$')) return formatMoney(value);
-        else if (varName.endsWith('%')) return formatPercent(value, places);
+        else if (varName.endsWith('%')) return formatPercent(value, places, stripZeros);
         else if (varName.endsWith('°')) return formatDegrees(value, places);
     }
 
