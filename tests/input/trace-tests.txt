@@ -128,13 +128,17 @@ b->
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
-"Test 8: Sweep 1 verification rejects spurious root"
-// Navigation with law-of-sines at the BOTTOM. The first sweep-1 combo
-// (speed → sqrt form) substituted into the quadratic smg equation has a
-// spurious root at set=0.001° that satisfies the substituted equation but
-// NOT the other equations (vector addition doesn't balance). The candidate
-// verification rejects this combo and retries with the law-of-sines sub,
-// which yields the correct set=49.42°, speed=1.07.
+"Test 8: Underdetermined nav system - two valid roots, solver settles one"
+// Vector-triangle navigation (boat + current = ground track): smg, cmg,
+// drift, cts known; speed and set unknown. The closure is quadratic in speed,
+// so the system has TWO exact roots, and both balance every equation:
+//   A: speed=0.9199, set=40.576°   (the solver settles here)
+//   B: speed=1.0742, set=49.424°
+// Neither root is "more correct" - which one wins is a matter of solver path
+// and equation order, not validity. The solver reaches root A via sweep-1:
+// speed binds from the boat-subtraction equation, then set from the set °=
+// atan2 equation, balancing at depth 2; the law-of-sines pair never decides
+// the answer.
 
 // Solve for smg given cmg (quadratic form)
 smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)

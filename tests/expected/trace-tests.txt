@@ -449,13 +449,17 @@ Places = 4; StripZeros = 1
 Format = "float"; GroupDigits = 0; DegreesMode = 1
 Status = "Solved 2 equations"; StatusIsError = 0
 VarStatus = "cmg:solved, cts:solved, drift:solved, set:solved, smg:solved, speed:solved"
-"Test 8: Sweep 1 verification rejects spurious root"
-// Navigation with law-of-sines at the BOTTOM. The first sweep-1 combo
-// (speed → sqrt form) substituted into the quadratic smg equation has a
-// spurious root at set=0.001° that satisfies the substituted equation but
-// NOT the other equations (vector addition doesn't balance). The candidate
-// verification rejects this combo and retries with the law-of-sines sub,
-// which yields the correct set=49.42°, speed=1.07.
+"Test 8: Underdetermined nav system - two valid roots, solver settles one"
+// Vector-triangle navigation (boat + current = ground track): smg, cmg,
+// drift, cts known; speed and set unknown. The closure is quadratic in speed,
+// so the system has TWO exact roots, and both balance every equation:
+//   A: speed=0.9199, set=40.576°   (the solver settles here)
+//   B: speed=1.0742, set=49.424°
+// Neither root is "more correct" - which one wins is a matter of solver path
+// and equation order, not validity. The solver reaches root A via sweep-1:
+// speed binds from the boat-subtraction equation, then set from the set °=
+// atan2 equation, balancing at depth 2; the law-of-sines pair never decides
+// the answer.
 
 // Solve for smg given cmg (quadratic form)
 smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
@@ -496,42 +500,42 @@ set °<- 40.576°
   unknown: speed, set
 "
 "*--- Equations (9) ---"
-"  line 10: smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
-  line 13: smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(se
-  line 14 [°=]: cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
-  line 17: speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set)
-  line 18 [°=]: cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
-  line 21: drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts)
-  line 22 [°=]: set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
-  line 25: speed = smg*sin(cmg - set) / sin(cts - set)
-  line 26: drift = smg*sin(cts - cmg) / sin(cts - set)
+"  line 14: smg = drift*cos(cmg - set) + sqrt(speed**2 - drift**2*sin(cmg - set)**2)
+  line 17: smg = sqrt((speed*sin(cts) + drift*sin(set))**2 + (speed*cos(cts) + drift*cos(se
+  line 18 [°=]: cmg °= atan(speed*sin(cts) + drift*sin(set); speed*cos(cts) + drift*cos(set))
+  line 21: speed = sqrt((smg*sin(cmg) - drift*sin(set))**2 + (smg*cos(cmg) - drift*cos(set)
+  line 22 [°=]: cts °= atan(smg*sin(cmg) - drift*sin(set); smg*cos(cmg) - drift*cos(set))
+  line 25: drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts)
+  line 26 [°=]: set °= atan(smg*sin(cmg) - speed*sin(cts); smg*cos(cmg) - speed*cos(cts))
+  line 29: speed = smg*sin(cmg - set) / sin(cts - set)
+  line 30: drift = smg*sin(cts - cmg) / sin(cts - set)
 "
 "*========== solveEquations (9 equations, 0 input expressions) =========="
 "*--- Advance (depth 1) ---"
 "  [1] Input expressions (none)
   [2] Substitution map
-    line 17: speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
-    line 25: speed → ((smg * sin((cmg - set))) / sin((cts - set)))
-    line 22: set → atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts))))
+    line 21: speed → sqrt(((((smg * sin(cmg)) - (drift * sin(set))) ** 2) + (((smg * cos(cmg)) - (drift * cos(set))) ** 2)))
+    line 29: speed → ((smg * sin((cmg - set))) / sin((cts - set)))
+    line 26: set → atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts))))
   [3] Evaluate fully-known substitutions
     speed: deferred
-      line 17: unknowns set
-      line 25: unknowns set
+      line 21: unknowns set
+      line 29: unknowns set
     set: deferred
-      line 22: unknowns speed
+      line 26: unknowns speed
   [4] Sweep subs: speed, set
   [5] Branching (depth 1)
-    sweep1 line 10: too many unknowns (set, speed)
-    sweep1 line 13: too many unknowns (speed, set)
-    sweep1 line 14: too many unknowns (speed, set)
-    sweep1 line 18: Could not find a root for 'set'
-    Try sweep1: speed = 0.9198843183703256 (from line 21)
-      from (line 21): drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
+    sweep1 line 14: too many unknowns (set, speed)
+    sweep1 line 17: too many unknowns (speed, set)
+    sweep1 line 18: too many unknowns (speed, set)
+    sweep1 line 22: Could not find a root for 'set'
+    Try sweep1: speed = 0.9198843183703256 (from line 25)
+      from (line 25): drift = sqrt((smg*sin(cmg) - speed*sin(cts))**2 + (smg*cos(cmg) - speed*cos(cts))**2)
 "
 "*--- Advance (depth 2) ---"
 "  [1] Input expressions (none)
   [2] Substitution map
-    line 22: set → atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts))))
+    line 26: set → atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts))))
   [3] Evaluate fully-known substitutions
     set = atan(((smg * sin(cmg)) - (speed * sin(cts))); ((smg * cos(cmg)) - (speed * cos(cts)))) = 40.57602429483915
   [4] Sweep subs: (none)
