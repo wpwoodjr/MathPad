@@ -468,6 +468,27 @@ button {
     font-size: 12px;
 }
 
+.sidebar-github-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.sidebar-github-link:hover {
+    color: var(--text-primary);
+}
+
+.sidebar-github-link svg {
+    display: block;
+}
+
 
 /* Editor Main Area */
 .editor-main {
