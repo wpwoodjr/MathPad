@@ -25,7 +25,7 @@
     --error-color: #f44747;
     --warning-color: #cca700;
     --success-color: #4ec9b0;
-    --partial-color: #7a8a95;
+    --partial-color: #85a193;
     --star-label-color: #57c1ff;
 
     /* Syntax highlighting */
@@ -84,8 +84,8 @@
 
     --error-color: #b02818;
     --warning-color: #c97400;
-    --success-color: #1f8a2e;
-    --partial-color: #4a5a68;
+    --success-color: #13a52d;
+    --partial-color: #367048;
     --star-label-color: #2a4a78;
 
     /* Syntax highlighting */
@@ -243,7 +243,8 @@ button {
 }
 
 #btn-undo:disabled, #btn-redo:disabled {
-    color: var(--text-muted);
+    color: var(--text-primary);
+    opacity: 0.28;
     cursor: default;
 }
 
