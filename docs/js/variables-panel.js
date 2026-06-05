@@ -716,22 +716,24 @@ class VariablesPanel {
                 this._skipNextBlurSolve = false; // clear flag set by mousedown
                 // Get current info from declarations (may have been replaced after solve)
                 const currentInfo = this.declarations.get(info.lineIndex) || info;
-                // Clear the value if present, UNLESS user just edited this variable
+                // Clear the value if present, UNLESS user just edited this variable.
+                // The blank is applied only to the text handed to solve (startText)
+                // — the editor's value and undo top keep the current value until
+                // the solve writes its result. So a solve that restores the same
+                // value produces no undo entry (setValue's own changed-check), and
+                // one that changes it pushes exactly one. No separate clear edit.
                 const justEdited = this.lastEditedVar === info.name;
-                let cleared = false;
+                let startText = null;
                 if (this.formatValueForDisplay(currentInfo) && !justEdited) {
-                    valueElement.value = '';
-                    this.handleValueChange(info.lineIndex, '');
-                    cleared = true;
+                    startText = this.buildClearedText(info.lineIndex);
                 }
-                // Clear tracking and trigger solve
-                // When cleared: non-undoable so undo collapses clear+solve into one step
-                // When not cleared: undoable so solve gets its own undo entry
+                // Clear tracking and trigger solve (always undoable — setValue
+                // suppresses the no-op when the value is unchanged).
                 // Ctrl+click enables the solve trace output;
                 // Shift+click appends the "--- Table Outputs ---" text section
                 this.lastEditedVar = null;
                 if (this.solveCallback) {
-                    this.solveCallback(!cleared, !!e.ctrlKey, !!e.shiftKey);
+                    this.solveCallback(true, !!e.ctrlKey, !!e.shiftKey, startText);
                 }
             });
             row.appendChild(solveBtn);
@@ -801,6 +803,25 @@ class VariablesPanel {
         const row = this.container.querySelector(`[data-line-index="${lineIndex}"]`);
         if (row) row.remove();
         this.inputElements.delete(lineIndex);
+    }
+
+    /**
+     * Build the formulas text with one declaration's value blanked, WITHOUT
+     * committing it to the editor or undo stack. Used by the clear-and-solve
+     * button: the solve runs against this blanked text (so the input is treated
+     * as unknown and re-derived), while the editor's current value stays put
+     * until the solve writes its result.
+     */
+    buildClearedText(lineIndex) {
+        const info = this.declarations.get(lineIndex);
+        const text = this.editor.getValue();
+        if (!info) return text;
+        const lines = text.split('\n');
+        if (lineIndex >= 0 && lineIndex < lines.length) {
+            lines[lineIndex] = buildOutputLine(lines[lineIndex], info.markerEndCol - 1, '');
+            return lines.join('\n');
+        }
+        return text;
     }
 
     /**

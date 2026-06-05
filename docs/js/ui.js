@@ -678,8 +678,8 @@ function createEditorForRecord(record) {
         }
     });
 
-    variablesManager.onSolve((undoable, traceMode, includeTableOutputs) => {
-        handleSolve(undoable, traceMode, includeTableOutputs);
+    variablesManager.onSolve((undoable, traceMode, includeTableOutputs, startText) => {
+        handleSolve(undoable, traceMode, includeTableOutputs, startText);
     });
 
     variablesManager.onBlur(() => {
@@ -1605,7 +1605,7 @@ function handleReset() {
 /**
  * Handle solve
  */
-function handleSolve(undoable = true, traceMode = false, includeTableOutputs = false) {
+function handleSolve(undoable = true, traceMode = false, includeTableOutputs = false, startText = null) {
     if (!UI.currentRecordId) {
         setStatus('No record selected', true);
         return;
@@ -1628,16 +1628,25 @@ function handleSolve(undoable = true, traceMode = false, includeTableOutputs = f
 
         setStatus('Solving...', false, false);
 
-        // Get current text from editor
-        let text = editorInfo.editor.getValue();
+        // Get current text from editor. The clear-and-solve button passes a
+        // startText with one input blanked: the solve runs against that, but the
+        // editor's value (and undo top) stays at the original until the final
+        // setValue writes the result — so a solve that restores the same value
+        // produces no undo entry, and one that changes it pushes exactly one
+        // (setValue's own changed-check does the work — no separate clear edit).
+        let text = (startText != null) ? startText : editorInfo.editor.getValue();
 
         // Remember cursor line position
         const cursorPos = editorInfo.editor.getCursorPosition();
         const textBeforeCursor = text.substring(0, cursorPos);
         const cursorLine = textBeforeCursor.split('\n').length - 1;
 
-        // Create evaluation context with constants and user functions
-        const parserTokens = editorInfo.editor.parserTokens;
+        // Create evaluation context with constants and user functions. When
+        // solving a startText that differs from the editor, tokenize it fresh
+        // (the editor's cached parserTokens describe its own value).
+        const parserTokens = (startText != null)
+            ? new Tokenizer(text).tokenize()
+            : editorInfo.editor.parserTokens;
         const context = createEvalContext(record,
             editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
             text, parserTokens);
