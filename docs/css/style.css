@@ -93,14 +93,14 @@
     --syn-string: #8a3018;
     --syn-comment: #6a8055;
     --syn-keyword: #1a2a78;
-    --syn-function: #6a4a10;
+    --syn-function: #a87000;
     --syn-builtin: #6a1a78;
-    --syn-variable: #15257a;
-    --syn-variable-def: #1f4090;
+    --syn-variable: #4368b8;
+    --syn-variable-def: #2f66cc;
     --syn-operator: #1f2810;
     --syn-bracket: #8a5a10;
     --syn-brace: #6a1a78;
-    --syn-punctuation: #1f6a45;
+    --syn-punctuation: #0d9fb8;
     --vars-label-color: #1f4078;
 
     /* Editor */

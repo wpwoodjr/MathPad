@@ -1782,6 +1782,50 @@ table("vv Investment growth, $5,000/yr at 7%") = {
             },
             {
                 id: generateId(),
+                title: 'Sample tables',
+                text: `--Variables--
+"*Sample tables"
+"Three quick demos — a table, a multi-iterator table, and a grid. Press Solve to fill them in."
+
+"1d table with font size 18"
+table("vv single iterator x:0..4, y=x*2, z=x*y"; 18) = {
+  y = x*2
+  z = x*y
+  x: 0..4
+  x->
+  y->
+  z->
+}
+
+"1d, 2 iterator table with default font size"
+table("vv two iterators x:0..4, y=0..8..2, z=x*y") = {
+  z = x*y
+  x: 0..4
+  y: 0..8..2
+  x->
+  y->
+  z->
+}
+
+"2d grid"
+grid("vv two iterators x:0..4, y=0..8..2, z=x*y") = {
+  z = x*y
+  x: 0..4
+  y: 0..8..2
+  x->
+  y->
+  z->
+}`,
+                category: 'Examples',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+                created: Date.UTC(2026, 5, 6, 12, 0, 0),
+            },
+            {
+                id: generateId(),
                 title: 'Example: Retirement Calculator',
                 text: `"Retirement Calculator"
 
@@ -2292,7 +2336,7 @@ disc(a; b; c) = b**2 - 4*a*c`,
             },
             { id: generateId(), ...DEFAULT_SETTINGS_RECORD }
         ],
-        categories: ['Tutorial', 'Unfiled', 'Finance', 'Math', 'Medical', 'Science', 'Reference'],
+        categories: ['Tutorial', 'Examples', 'Unfiled', 'Finance', 'Math', 'Medical', 'Science', 'Reference'],
         settings: {
             lastRecordId: welcomeRecordId
         }
