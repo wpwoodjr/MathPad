@@ -1839,6 +1839,7 @@ tableGraph("vv One iterator: x; One series: cube root") = {
 }
 
 "*Single iterator, multi-series tableGraph"
+"After Solving, click 'as table' to see the calculated values for the graph"
 
 tableGraph("vv One iterator: x; Two series: square and cube root") = {
   x: 1..9..0.5
