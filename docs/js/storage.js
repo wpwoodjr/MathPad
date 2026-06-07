@@ -1783,7 +1783,8 @@ table("vv Investment growth, $5,000/yr at 7%") = {
             {
                 id: generateId(),
                 title: 'Sample tables',
-                text: `--Variables--
+                text: `"Sample tables"
+--Variables--
 "*Sample tables"
 "Three quick demos — a table, a multi-iterator table, and a grid. Press Solve to fill them in."
 
@@ -1823,6 +1824,60 @@ grid("vv two iterators x:0..4, y=0..8..2, z=x*y") = {
                 format: 'float',
                 degreesMode: true,
                 created: Date.UTC(2026, 5, 6, 12, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: 'Sample tableGraphs',
+                text: `"Sample tableGraphs"
+--Variables--
+"*Sample Multi-series, multi-iterator tableGraphs"
+"- the first iterator (x) becomes the X-axis;
+- the others (y, z) become grouping iterators — each combination draws one line per series"
+
+tableGraph("vv Two iterators: x and y; One series: length") = {
+  x: 0..6..0.5
+  y: 0..6..3
+  x->
+  y->
+  Length sqrt(x**2 + y**2)->
+}
+
+tableGraph("vv Three iterators: x, y, and z; One series: length") = {
+  x: 0..6..0.5
+  y: 0..6..3
+  z: 0..6..3
+  x->
+  y->
+  z->
+  Length sqrt(x**2 + y**2 + z**2)->
+}
+
+tableGraph("vv Two iterators: x and y; Two series: square root and cube root") = {
+  x: 0..6..0.5
+  y: 0..6..3
+  x->
+  y->
+  Square Root sqrt(x**2 + y**2)->
+  Cube Root (x**2 + y**2)**(1/3)->
+}
+
+tableGraph("vv Three iterators: x, y, and z; Two series: square root and cube root") = {
+  x: 0..6..0.5
+  y: 0..6..3
+  z: 0..6..3
+  x->
+  y->
+  z->
+  Square Root sqrt(x**2 + y**2 + z**2)->
+  Cube Root (x**2 + y**2 + z**2)**(1/3)->
+}`,
+                category: 'Examples',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: true,
+                created: Date.UTC(2026, 5, 7, 12, 0, 0),
             },
             {
                 id: generateId(),
