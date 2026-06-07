@@ -42,6 +42,9 @@
     --syn-brace: #ffd700;
     --syn-punctuation: #20ebc2;
     --vars-label-color: #1baef1;
+    /* Subtle band behind a function-definition signature (lighter tint reads
+       on the dark editor bg; light theme uses a darkening tint below) */
+    --fn-def-bg: rgba(255, 255, 255, 0.16);
 
     /* Editor */
     --caret-color: #d4d4d4;
@@ -102,6 +105,7 @@
     --syn-brace: #d8a601;
     --syn-punctuation: #02c432;
     --vars-label-color: #30629b;
+    --fn-def-bg: rgba(128, 128, 128, 0.15);
 
     /* Editor */
     --caret-color: #1f2810;
@@ -689,6 +693,15 @@ button {
 }
 
 /* Syntax highlighting tokens */
+/* Subtle continuous background behind a function definition's `name(params)`
+   signature so it reads distinctly from an equation. Layered on top of the
+   token color classes; the render also tags inter-token gaps so the tint
+   doesn't stripe at the spaces. No padding/radius — keeps monospace alignment
+   and lets adjacent token spans form one seamless band. */
+.tok-fn-def {
+    background-color: var(--fn-def-bg);
+}
+
 .tok-number {
     color: var(--syn-number);
 }

@@ -27,6 +27,10 @@ function highlightLabelText(text, options = {}) {
             && tokenText.startsWith('"') && tokenText.endsWith('"')) {
             tokenText = tokenText.slice(1, -1);
         }
+        // No fn-def band in the vars panel: a label row tokenizes in isolation
+        // (can't tell a def from an equation/call of the same shape) and merges
+        // multi-line braced blocks (so a row's lineIndex won't match the def's
+        // line). The editor band — whole-record context — handles definitions.
         html += `<span class="tok-${token.type}">${escapeHtml(tokenText)}</span>`;
         lastPos = token.to;
     }

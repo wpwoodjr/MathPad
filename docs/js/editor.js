@@ -45,6 +45,34 @@ function tokenizeMathPad(text, options = {}) {
         }
     }
 
+    // Mark the signature `name(params)` of each function DEFINITION so a
+    // definition reads distinctly from an equation (otherwise both are the
+    // same `LHS = RHS` shape with mostly variable-colored tokens). Flagged
+    // tokens get a subtle background (.tok-fn-def). For each parsed function,
+    // find its signature — the first `name(` within the def's line range — and
+    // flag the name through the matching `)`. Using the first occurrence
+    // ignores recursive calls in the body.
+    const fnDefSignature = new Set(); // flatTokens indices inside a def signature
+    for (const [fnName, fn] of parsedFunctions) {
+        const lname = String(fnName).toLowerCase();
+        for (let i = 0; i < flatTokens.length; i++) {
+            const t = flatTokens[i];
+            if (t.type !== TokenType.IDENTIFIER || typeof t.value !== 'string') continue;
+            if (t.value.toLowerCase() !== lname) continue;
+            if (t.line < fn.startLine || t.line > fn.endLine) continue;
+            const nxt = flatTokens[i + 1];
+            if (!nxt || nxt.type !== TokenType.LPAREN) continue;
+            fnDefSignature.add(i); // the function name
+            let depth = 0;
+            for (let j = i + 1; j < flatTokens.length; j++) {
+                fnDefSignature.add(j);
+                if (flatTokens[j].type === TokenType.LPAREN) depth++;
+                else if (flatTokens[j].type === TokenType.RPAREN && --depth === 0) break;
+            }
+            break;
+        }
+    }
+
     // Find quoted comment regions from tokenizer
     const quotedCommentRegions = [];
     let pos = 0;
@@ -175,7 +203,7 @@ function tokenizeMathPad(text, options = {}) {
         lastTokenWasBuiltin = (highlightType === 'builtin');
         lastTokenEnd = tokenEnd;
 
-        tokens.push({ from: tokenStart, to: tokenEnd, type: highlightType });
+        tokens.push({ from: tokenStart, to: tokenEnd, type: highlightType, fnDef: fnDefSignature.has(ti) });
         pos = tokenEnd;
     }
 
@@ -1173,17 +1201,26 @@ class SimpleEditor {
 
         let html = '';
         let lastPos = 0;
+        let prevToken = null;
 
         for (const token of tokens) {
-            // Add unhighlighted text before this token
+            // Add unhighlighted text before this token. When the gap sits
+            // between two function-def signature tokens (e.g. the spaces after
+            // a `;` in `f(x; c1; c2)`), wrap it in tok-fn-def too so the subtle
+            // background stays continuous instead of striping at the spaces.
             if (token.from > lastPos) {
-                html += escapeHtml(text.slice(lastPos, token.from));
+                const gap = escapeHtml(text.slice(lastPos, token.from));
+                html += (prevToken && prevToken.fnDef && token.fnDef)
+                    ? `<span class="tok-fn-def">${gap}</span>`
+                    : gap;
             }
 
             // Add highlighted token
             const tokenText = escapeHtml(text.slice(token.from, token.to));
-            html += `<span class="tok-${token.type}">${tokenText}</span>`;
+            const tokClass = token.fnDef ? `tok-${token.type} tok-fn-def` : `tok-${token.type}`;
+            html += `<span class="${tokClass}">${tokenText}</span>`;
             lastPos = token.to;
+            prevToken = token;
         }
 
         // Add remaining text
