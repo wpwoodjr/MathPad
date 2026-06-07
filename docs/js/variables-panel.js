@@ -1675,6 +1675,80 @@ class VariablesPanel {
             svg.appendChild(text);
         }
 
+        // Hover crosshair + coordinate readout. Map the pointer from screen to
+        // viewBox coords (the SVG is CSS-scaled), then invert sx/sy to data
+        // coords. Shown only inside the plot rectangle.
+        const plotRight = margin.left + plotW, plotBottom = margin.top + plotH;
+        const cross = document.createElementNS(ns, 'g');
+        cross.setAttribute('class', 'graph-crosshair');
+        cross.style.display = 'none';
+        const vLine = document.createElementNS(ns, 'line');
+        vLine.setAttribute('y1', margin.top); vLine.setAttribute('y2', plotBottom);
+        const hLine = document.createElementNS(ns, 'line');
+        hLine.setAttribute('x1', margin.left); hLine.setAttribute('x2', plotRight);
+        const readBg = document.createElementNS(ns, 'rect');
+        readBg.setAttribute('class', 'graph-crosshair-bg');
+        readBg.setAttribute('rx', '2');
+        const readText = document.createElementNS(ns, 'text');
+        readText.setAttribute('class', 'graph-crosshair-text');
+        cross.appendChild(vLine); cross.appendChild(hLine);
+        cross.appendChild(readBg); cross.appendChild(readText);
+        svg.appendChild(cross);
+
+        // Format a hovered coordinate to ~3 significant figures (not the
+        // record's fixed places): a graph spans a range and the pointer only
+        // resolves ~1px, so fixed decimals are either empty or false precision.
+        // Round the value to SIG sig figs (so large values read 524000, not
+        // 523847), then choose the decimal count per number format: float by
+        // magnitude, sci fixed (mantissa is always 1.xx), eng by the mantissa's
+        // 1–3 digit magnitude. Routed through formatVariableValue so axis units
+        // (%, °, $) and comma grouping still apply.
+        const SIG = 3;
+        const opts = table.formatOpts || {};
+        const xColFmt = table.columns[xCol].format, yColFmt = yFmtCol.format;
+        const coordFmt = (v, fmt) => {
+            if (!isFinite(v)) return '—';
+            const mag = v === 0 ? 0 : Math.floor(Math.log10(Math.abs(v)));
+            const rf = Math.pow(10, SIG - 1 - mag);
+            const value = v === 0 ? 0 : Math.round(v * rf) / rf;
+            let places;
+            if (opts.numberFormat === 'sci') places = SIG - 1;
+            else if (opts.numberFormat === 'eng') places = Math.max(0, SIG - 1 - (((mag % 3) + 3) % 3));
+            else places = Math.max(0, Math.min(SIG - 1 - mag, 12));
+            return formatVariableValue(value, fmt, false, { ...opts, places, stripZeros: true });
+        };
+
+        svg.addEventListener('mousemove', (e) => {
+            const ctm = svg.getScreenCTM();
+            if (!ctm) return;
+            const pt = svg.createSVGPoint();
+            pt.x = e.clientX; pt.y = e.clientY;
+            const p = pt.matrixTransform(ctm.inverse());
+            if (p.x < margin.left || p.x > plotRight || p.y < margin.top || p.y > plotBottom) {
+                cross.style.display = 'none';
+                return;
+            }
+            cross.style.display = ''; // show before measuring text (getComputedTextLength needs layout)
+            const dataX = xMin + (p.x - margin.left) / plotW * (xMax - xMin);
+            const dataY = yMin + (1 - (p.y - margin.top) / plotH) * (yMax - yMin);
+            vLine.setAttribute('x1', p.x); vLine.setAttribute('x2', p.x);
+            hLine.setAttribute('y1', p.y); hLine.setAttribute('y2', p.y);
+            readText.textContent = `(${coordFmt(dataX, xColFmt)}, ${coordFmt(dataY, yColFmt)})`;
+            let tw;
+            try { tw = readText.getComputedTextLength() + 8; }
+            catch (_) { tw = readText.textContent.length * 6.5 + 8; }
+            const boxH = 16, off = 8;
+            let bx = p.x + off, by = p.y - off - boxH;
+            if (bx + tw > plotRight) bx = p.x - off - tw;
+            if (by < margin.top) by = p.y + off;
+            bx = Math.max(margin.left, Math.min(bx, plotRight - tw));
+            by = Math.max(margin.top, Math.min(by, plotBottom - boxH));
+            readBg.setAttribute('x', bx); readBg.setAttribute('y', by);
+            readBg.setAttribute('width', tw); readBg.setAttribute('height', boxH);
+            readText.setAttribute('x', bx + 4); readText.setAttribute('y', by + boxH - 4);
+        });
+        svg.addEventListener('mouseleave', () => { cross.style.display = 'none'; });
+
         wrapper.appendChild(svg);
         this.insertRowInOrder(wrapper, table.startLine - 1);
         this._setStickyHeaderOffsets(wrapper);

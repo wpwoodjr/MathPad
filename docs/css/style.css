@@ -1734,6 +1734,25 @@ body.sidebar-resizing * {
 .mathpad-graph .graph-border { stroke: var(--text-muted); }
 .mathpad-graph .graph-line { stroke: var(--accent-primary); }
 
+/* Hover crosshair + coordinate readout */
+.graph-crosshair { pointer-events: none; }
+.graph-crosshair line {
+    stroke: var(--text-secondary);
+    stroke-width: 0.7;
+    stroke-dasharray: 3 3;
+}
+.graph-crosshair-bg {
+    fill: var(--bg-tertiary);
+    fill-opacity: 0.92;
+    stroke: var(--border-color);
+    stroke-width: 0.5;
+}
+.graph-crosshair-text {
+    fill: var(--text-primary);
+    font-size: 11px;
+    font-family: var(--font-mono);
+}
+
 .mathpad-grid-row-label-text {
     writing-mode: vertical-lr;
     transform: rotate(180deg);
