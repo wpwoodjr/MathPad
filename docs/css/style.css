@@ -36,10 +36,10 @@
     --syn-function: #dcdcaa;
     --syn-builtin: #c586c0;
     --syn-variable: #9cdcfe;
-    --syn-variable-def: #4fc1ff;
+    --syn-variable-def: #49a4fa;
     --syn-operator: #d4d4d4;
     --syn-bracket: #ffd700;
-    --syn-brace: #da70d6;
+    --syn-brace: #ffd700;
     --syn-punctuation: #20ebc2;
     --vars-label-color: #1baef1;
 
@@ -86,22 +86,22 @@
     --warning-color: #c97400;
     --success-color: #13a52d;
     --partial-color: #367048;
-    --star-label-color: #2a4a78;
+    --star-label-color: #1e7c94;
 
     /* Syntax highlighting */
     --syn-number: #2a5520;
     --syn-string: #8a3018;
     --syn-comment: #6a8055;
     --syn-keyword: #1a2a78;
-    --syn-function: #a87000;
-    --syn-builtin: #6a1a78;
-    --syn-variable: #4368b8;
-    --syn-variable-def: #2f66cc;
+    --syn-function: #9e6c00;
+    --syn-builtin: #861d99;
+    --syn-variable: #0188a0;
+    --syn-variable-def: #0460b6;
     --syn-operator: #1f2810;
-    --syn-bracket: #8a5a10;
-    --syn-brace: #6a1a78;
-    --syn-punctuation: #0d9fb8;
-    --vars-label-color: #1f4078;
+    --syn-bracket: #d8a601;
+    --syn-brace: #d8a601;
+    --syn-punctuation: #02c432;
+    --vars-label-color: #30629b;
 
     /* Editor */
     --caret-color: #1f2810;
