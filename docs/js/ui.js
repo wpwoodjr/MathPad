@@ -1391,31 +1391,15 @@ function setupEventListeners() {
         }
     });
 
-    // Solve button — Ctrl+click enables solve trace output.
-    // mousedown sets skip flag on active vars panel so the variable-input blur
-    // (fired before click when editing a variable) doesn't trigger a redundant
-    // quick-solve before the click handler runs the actual solve.
-    addListener('btn-solve', 'mousedown', () => {
-        const info = UI.editors.get(UI.currentRecordId);
-        if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = true;
-    });
+    // Solve button — Ctrl+click enables solve trace output. A vars-panel input
+    // losing focus to this click won't auto-solve (the blur quick-solve fires
+    // only on Tab/Enter, not on a click), so no double-solve guard is needed.
     addListener('btn-solve', 'click', (e) => {
-        // Clear skip flag set by mousedown in case no blur happened in between
-        const info = UI.editors.get(UI.currentRecordId);
-        if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = false;
         handleSolve(true, !!(e && e.ctrlKey), !!(e && e.shiftKey));
     });
 
-    // Clear Input button — same skip-blur-solve pattern as Solve: the blur
-    // fired when an input loses focus would otherwise run a quick-solve right
-    // before Clear wipes the value.
-    addListener('btn-clear', 'mousedown', () => {
-        const info = UI.editors.get(UI.currentRecordId);
-        if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = true;
-    });
+    // Clear Input button
     addListener('btn-clear', 'click', () => {
-        const info = UI.editors.get(UI.currentRecordId);
-        if (info && info.variablesManager) info.variablesManager._skipNextBlurSolve = false;
         handleClearInput();
     });
 

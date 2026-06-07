@@ -54,6 +54,7 @@ class VariablesPanel {
         this.inputElements = new Map();
         this.lastEditedVar = null; // Track most recently edited variable name
         this.hasClearedInput = false; // True if user cleared an input since last solve/clear
+        this._solveOnBlur = false; // True only when a blur was triggered by Tab/Enter (not a click)
         this.errorLines = new Set(); // Lines with errors
         this.flashChanges = false;
         this._oldDisplayValues = null;
@@ -69,7 +70,9 @@ class VariablesPanel {
             if (e.key === 'Tab' && e.target.classList.contains('variable-value-input')) {
                 e.preventDefault();
                 const nextInput = this.getNextInput(e.target, e.shiftKey);
-                // Blur first (triggers undo logic), then focus next
+                // Blur first (triggers undo logic), then focus next. Tab/Enter
+                // signal "done" → allow the blur to auto-solve.
+                this._solveOnBlur = true;
                 e.target.blur();
                 if (nextInput) {
                     nextInput.focus();
@@ -671,10 +674,15 @@ class VariablesPanel {
             valueElement.addEventListener('blur', (e) => {
                 this.handleValueChange(info.lineIndex, e.target.value);
                 if (!e.target.value.trim()) this.hasClearedInput = true;
-                // Skip the quick-solve blur callback if the user is about to Ctrl+click
-                // the solve button (the click handler will fire a trace solve instead).
-                if (this._skipNextBlurSolve) { this._skipNextBlurSolve = false; return; }
-                if (this.blurCallback && !this.hasClearedInput) this.blurCallback();
+                // Auto-solve only when the blur was triggered by Tab or Enter
+                // (the user signaling "done"), not by clicking elsewhere. This
+                // also means clicking Solve/Clear/the ⟲ icon won't fire a
+                // redundant quick-solve before the button's own action runs —
+                // those are mouse clicks, not Tab/Enter. The edited value is
+                // committed via handleValueChange either way.
+                const solveRequested = this._solveOnBlur;
+                this._solveOnBlur = false;
+                if (solveRequested && this.blurCallback && !this.hasClearedInput) this.blurCallback();
             });
             valueElement.addEventListener('focus', (e) => {
                 // Track this as the focused variable (for clear exclusion)
@@ -688,6 +696,7 @@ class VariablesPanel {
                     e.target.value = e.target.dataset.originalValue ?? e.target.value;
                     e.target.blur();
                 } else if (e.key === 'Enter') {
+                    this._solveOnBlur = true;
                     e.target.blur();
                 }
             });
@@ -709,15 +718,8 @@ class VariablesPanel {
             solveBtn.className = 'variable-solve-btn';
             solveBtn.textContent = '⟲';
             solveBtn.title = 'Clear and solve';
-            // mousedown sets a flag so the upcoming blur (fired before click
-            // when an input is focused) doesn't trigger a quick-solve before
-            // the click handler runs its own solve.
-            solveBtn.addEventListener('mousedown', () => {
-                this._skipNextBlurSolve = true;
-            });
             solveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                this._skipNextBlurSolve = false; // clear flag set by mousedown
                 // Get current info from declarations (may have been replaced after solve)
                 const currentInfo = this.declarations.get(info.lineIndex) || info;
                 // Clear the value if present, UNLESS user just edited this variable.
