@@ -1237,6 +1237,8 @@ bmi(weight; height) = weight / height**2
 
 "By convention, function definitions are grouped under a '--Functions--' section in the formulas editor (technically they can appear anywhere). This record's formulas editor has 'bmi' defined that way — once defined, you can call it anywhere a formula or expression is used."
 
+"In the formulas editor, a definition's signature — the 'name(arg1; arg2; ...)' part up to the '=' — gets a subtle highlighted band. That's how you tell a function definition apart from an ordinary equation at a glance (both are otherwise just 'left = right')."
+
 weight:  70             // kg
 height:  1.75           // m
 
