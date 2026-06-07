@@ -2037,6 +2037,21 @@ class VariablesPanel {
             const fmt = col && col.format ? col.format : null;
             return formatVariableValue(val, fmt, false, fmtOpts);
         };
+        // Opaque mask over the legend band. The compass rose is sized to the
+        // data radius and centered on the origin, so when the origin sits low
+        // in the plot (e.g. vectors heading mostly north) the rose ring/ticks/
+        // labels spill past the plot bottom. Cover that band with the panel
+        // background (the table container is always transparent over it, hover
+        // included) so nothing shows through behind the legend. Drawn after the
+        // rose + vectors, before the legend swatches/text.
+        const legendMask = document.createElementNS(ns, 'rect');
+        legendMask.setAttribute('x', 0);
+        legendMask.setAttribute('y', margin.top + plotH);
+        legendMask.setAttribute('width', width);
+        legendMask.setAttribute('height', height - (margin.top + plotH));
+        legendMask.style.fill = 'var(--bg-secondary)';
+        svg.appendChild(legendMask);
+
         const legendTop = margin.top + plotH + 8;
         for (let i = 0; i < table.vectors.length; i++) {
             const v = table.vectors[i];
