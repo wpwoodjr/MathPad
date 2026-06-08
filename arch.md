@@ -217,10 +217,12 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
     enumerateAlternatives yields candidate decisions (Kind 1/2/3). For each
     candidate the backtracker snapshots state, applies the decision, and
     recurses. First branch that balances wins; if none do, falls back to the
-    most-progressed snapshot. saveCandidate's progress-wins rule
-    (`bestCandidate.variables.size >= context.variables.size` short-circuits)
-    ensures eager limit-rejection saves get replaced when subsequent branches
-    bind more vars. maxIterations = 50 caps recursion depth.
+    most-progressed snapshot. saveCandidate's progress-wins rule replaces the
+    saved snapshot only when the new context binds more vars
+    (`context.variables.size > bestCandidate.variables.size`), or the same count
+    but a higher naturalnessScore (tiebreaker) — so eager limit-rejection saves
+    get replaced when later branches bind more (or equally-many-but-more-natural)
+    vars. maxIterations = 50 caps recursion depth.
 
 ## solveEquationsByComponent — partitioning wrapper
     solveEquationsByComponent(context, declarations, record, equations, bodyDefinitions)

@@ -327,6 +327,7 @@ a**2 + b**2 = c**2</pre>
     <table>
         <tr><th>Function</th><th>Description</th></tr>
         <tr><td><code>isClose(a; b; places)</code></td><td>1 if a and b are equal within tolerance, 0 otherwise</td></tr>
+        <tr><td><code>modIsClose(a; b; n; places)</code></td><td>Like <code>isClose</code> but mod-aware (equal modulo <code>n</code>) &mdash; useful with <code>&deg;=</code> angles, e.g. <code>modIsClose(a; b; Perigon; Places)</code></td></tr>
         <tr><td><code>Tau</code></td><td>2&pi; (always)</td></tr>
         <tr><td><code>Perigon</code></td><td>360 in degrees mode, 2&pi; in radians mode</td></tr>
         <tr><td><code>Places</code></td><td>Current record's decimal places setting</td></tr>
@@ -337,6 +338,7 @@ a**2 + b**2 = c**2</pre>
     <p>Define functions in any record using the syntax:</p>
     <pre>f(x; y) = expression using x and y</pre>
     <p>Define functions in the special <strong>"Functions"</strong> record to make them available to all records. Function parameters use semicolons as separators, just like built-in functions.</p>
+    <p>In the formulas editor, a definition's signature &mdash; the <code>name(arg1; arg2; &hellip;)</code> part up to the <code>=</code> &mdash; is shown with a subtle highlighted band, so a function definition stands out from an ordinary equation at a glance.</p>
     <p>Function bodies can reference values from the <strong>Constants</strong> record and call other user-defined functions and built-ins. They <em>cannot</em> read variables from the calling record &mdash; only the function's parameters and the global environment (constants + functions) are visible inside the body. Shadowing a constant locally (e.g. <code>c: 1</code> in a record that uses a function referencing <code>c</code>) does <em>not</em> change the function's behavior &mdash; it always sees the canonical value from the Constants record. This keeps functions self-contained and predictable.</p>
 
     <h3>Default Functions record</h3>
@@ -362,7 +364,7 @@ a**2 + b**2 = c**2</pre>
     <h2 id="variables-panel">Variables Panel</h2>
     <p>The variables panel (above the formulas editor) shows a structured view of all variables:</p>
     <ul>
-        <li>Editable inputs for variable values &mdash; edit and press Tab or click away to apply</li>
+        <li>Editable inputs for variable values &mdash; your edit is saved into the formula text whenever you leave the field (click away, Tab, or Enter). Press <strong>Tab or Enter to also re-solve</strong>; clicking away just saves without solving</li>
         <li>Readonly fields for output values (selectable and copyable)</li>
         <li>Equation highlighting: <span style="color:#4ec9b0">green</span> = balanced, <span style="color:#cca700">orange</span> = unbalanced, <span style="color:#f44747">red</span> = error</li>
         <li>The <code>⟲</code> button next to any editable variable clears its value and re-solves &mdash; a quick way to ask "what should this variable be?" without manually clearing first. Ctrl+click adds trace output; Shift+click appends the table-outputs text section.</li>
@@ -423,6 +425,7 @@ x: 42    "the answer"</pre>
   Z z-&gt;
 }</pre>
     <p>The above renders 11 lines (one per <code>y</code> value), each plotting <code>z</code> against <code>x</code>, labeled <code>Y = 1.0</code>, <code>Y = 1.1</code>, &hellip; <code>Y = 2.0</code>.</p>
+    <p>Hover the mouse over a graph to get a crosshair and a readout of the <code>(x, y)</code> coordinates at the pointer.</p>
 
     <h3>Grid (2D Cell Grid)</h3>
     <pre>grid("Multiplication") = {
@@ -508,7 +511,7 @@ x: 42    "the answer"</pre>
         <tr><td><code>Tab</code> (in formulas)</td><td>Indent line by 2 spaces (or selection)</td></tr>
         <tr><td><code>Shift+Tab</code> (in formulas)</td><td>Outdent line by 2 spaces</td></tr>
         <tr><td><code>Ctrl+/</code> (in formulas)</td><td>Toggle <code>//</code> line comment on selection</td></tr>
-        <tr><td><code>Tab</code> / <code>Shift+Tab</code> (in vars panel)</td><td>Cycle through variable inputs</td></tr>
+        <tr><td><code>Tab</code> / <code>Shift+Tab</code> (in vars panel)</td><td>Commit edit, Solve, and cycle to the next / previous input</td></tr>
         <tr><td><code>Enter</code> (in vars panel)</td><td>Commit edit and Solve</td></tr>
         <tr><td><code>Escape</code></td><td>Revert edited variable value, unfocus formulas, or close modals</td></tr>
     </table>

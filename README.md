@@ -28,8 +28,8 @@ Or open `docs/index.html` locally in a browser. No build step required.
 
 ### Editor
 
-- **Syntax-highlighted editor** with line numbers and real-time token coloring
-- **Variables panel** — structured view of all variables with editable inputs, equation balance highlighting (green/orange/red), and flash animation on value changes
+- **Syntax-highlighted editor** with line numbers and real-time token coloring; a function definition's `name(args)` signature gets a subtle highlight band so it reads apart from an ordinary equation
+- **Variables panel** — structured view of all variables with editable inputs, equation balance highlighting (green/orange/red), and flash animation on value changes. Editing a value commits when you click away; press Tab or Enter to also re-solve
 - **Undo/redo** — full undo history with Ctrl+Z / Ctrl+Y, restores solve results, status, and per-state modification time. Tab indent / Shift+Tab outdent / Ctrl+/ comment toggle, all undoable.
 - **Created/Modified tracking** — record creation and last-edit timestamps shown in the details panel. Modified updates on direct typing, title rename, and details-panel setting changes (not solve, clear, or vars-panel value edits).
 - **Split-pane layout** — resizable variables panel above the formulas editor
@@ -137,7 +137,7 @@ Tables inherit outer equations when the body has none; body equations override i
 
 **Multiple iterators** iterate as nested loops over the cartesian product. First-declared = outermost (changes slowest); last-declared = innermost (changes fastest). Iterator bounds are evaluated once up-front, so inner iterators cannot depend on outer iterator values.
 
-**`tableGraph`** renders the rows as an SVG line graph instead of a column table. Column 0 is the X-axis; remaining columns are Y series (one line each). With multiple iterators, grouping is opt-in: an inner iterator becomes a line-grouping variable only if it has a `iter->` output column. The column's label (e.g. `Y` in `Y y->`) is used in the legend (`Y = 1.0`). Without `y->`, the inner iterator just sweeps silently.
+**`tableGraph`** renders the rows as an SVG line graph instead of a column table. Column 0 is the X-axis; remaining columns are Y series (one line each). With multiple iterators, grouping is opt-in: an inner iterator becomes a line-grouping variable only if it has a `iter->` output column. The column's label (e.g. `Y` in `Y y->`) is used in the legend (`Y = 1.0`). Without `y->`, the inner iterator just sweeps silently. Hover a graph to get a crosshair and an `(x, y)` coordinate readout at the pointer.
 
 ```
 tableGraph("z = x^y") = {

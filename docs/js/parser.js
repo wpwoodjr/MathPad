@@ -14,7 +14,7 @@ const ClearBehavior = {
     NONE: 'none',            // : or :: (persistent, never cleared)
     ON_CLEAR: 'onClear',     // <- (cleared by Clear button)
     ON_SOLVE: 'onSolve',     // -> or ->> (cleared by Clear button AND before solving)
-    ON_SOLVE_ONLY: 'onSolveOnly' // => or =>> (cleared before solving, but NOT by Clear button)
+    ON_SOLVE_ONLY: 'onSolveOnly' // :> or :>> (cleared before solving, but NOT by Clear button)
 };
 
 // Token types

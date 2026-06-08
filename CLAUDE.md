@@ -35,7 +35,7 @@ node tests/gen-expected.js TESTNAME
 
 ### UI Layout
 - **Header**: Hamburger menu, title, action buttons (Solve, Clear, Undo ↶, Redo ↷), Drive controls, theme toggle, help (?), settings (⚙)
-- **Sidebar**: Collapsible category groups with record list; special records (Constants ★, Functions ★) at top; Import/Export/Reset and Help/Theme buttons at bottom; resizable width with drag divider (persistent); scrolls to current record on selection
+- **Sidebar**: Collapsible category groups with record list; special records (Constants ★, Functions ★) at top; Import/Export/Reset and Help/Theme buttons plus a "View on GitHub" link at bottom; resizable width with drag divider (persistent); scrolls to current record on selection
 - **Editor area**: Tab bar for multiple open records; split-pane with variables panel (top, resizable) and formulas editor (bottom) with syntax highlighting.
 - **Preview tabs** (VS Code-style): sidebar single-click opens a record in a single italicized preview slot — opening another preview replaces it (old editor destroyed). Preview is promoted to persistent on any record change (textarea edit via `record.text !== value` check in `editor.onChange`, title rename, details-panel field change). Preview tabs are excluded from `data.settings.openTabs` so they don't survive reload. Sidebar double-click promotes + renames; tab double-click promotes.
 - **Details panel**: Record settings (category, decimal places, format, strip zeros, group digits, degrees mode)
@@ -50,6 +50,8 @@ node tests/gen-expected.js TESTNAME
 - Global Ctrl+Z / Ctrl+Y keybindings routed to active editor
 - Tab indent / Shift+Tab outdent / Ctrl+/ comment toggle, all undoable with cursor restoration
 - `notifyChange(metadata, undoRedo, userInput, modifiedAt)` — listener receives `(value, metadata, undoRedo, userInput, modifiedAt)`. `userInput=true` only for direct typing/Tab/Ctrl+/ (not setValue).
+- **Function-definition signature band**: `tokenizeMathPad` flags the `name(params)` signature of each parsed function definition (`fnDefSignature` set, `token.fnDef`), found as the first `name(` within the def's line range (so recursive calls, and equations/calls of the same `name(params) =` shape like a root-finding `f(x)=0`, are NOT flagged). Rendered with a subtle `--fn-def-bg` background (`.tok-fn-def`); inter-token gaps inside a signature are wrapped in the same class so the band stays continuous. Editor-only — deliberately NOT applied in the vars panel (its per-line tokenizing can't tell a definition from a call, and braced multi-line bodies merge into one row).
+- **Clear-and-solve (`⟲`)**: a single undoable `setValue`. The vars panel builds the input-blanked text (`buildClearedText`) and passes it to `handleSolve` as `startText` (tokenized fresh); the editor keeps its current value until the solve writes the result, so a solve that restores the same value pushes no undo entry and one that changes it pushes exactly one — `setValue`'s own changed-check does the work.
 
 ### Variables Panel
 - Displays parsed variable declarations with editable value inputs
@@ -60,6 +62,7 @@ node tests/gen-expected.js TESTNAME
 - Name widths re-aligned on window resize via `alignNameWidths()`
 - Equation variable highlighting: green (balanced), orange (unbalanced), red (error)
 - Tab cycles through inputs; Escape reverts; flash animation on value changes
+- **Editing an input value commits to the formula text on every blur (`handleValueChange`), but auto-solves only when the blur was triggered by Tab or Enter** (a `_solveOnBlur` flag set by those handlers) — clicking elsewhere commits without solving, Escape reverts without solving. This also means clicking Solve/Clear/`⟲` (mouse clicks, not Tab/Enter) won't fire a redundant quick-solve before the button's own action, so no separate double-solve guard is needed.
 - Column-preserved comment spacing
 
 ### Solving
@@ -110,6 +113,8 @@ node tests/gen-expected.js TESTNAME
 - Grid header values computed from output variable after solving (enables formatted headers like `hours@t->`)
 - Grid hover: row + column + header highlighting
 - Collapsible titles; optional font size parameter: `table("Title"; 12) = { ... }`
+- **Graph hover crosshair** (`_renderGraph`): hovering a tableGraph/gridGraph shows a dashed crosshair tracking the pointer plus an `(x, y)` readout. The pointer is mapped screen→viewBox via `getScreenCTM().inverse()` (the SVG is CSS-scaled) then to data coords by inverting the `sx`/`sy` transforms; shown only inside the plot rect, the readout chip flips/clamps to stay in-bounds, and the crosshair `<g>` is `pointer-events:none`. The readout uses **~3 significant figures** (not the record's fixed `places`) — the value is rounded to 3 sig figs (so large values read `524000`, not `523847`), and the decimal count is chosen per number format (float by magnitude, sci fixed since the mantissa is `1.xx`, eng by the mantissa's 1–3 digit magnitude), routed through `formatVariableValue` so axis units (%, °, $) and grouping still apply.
+- **vectorDraw legend mask**: the navigation compass rose is sized to the data radius and centered on the origin, so when the origin sits low it can spill past the plot bottom into the legend band; an opaque `var(--bg-secondary)` rect over the legend band (drawn after the rose/vectors, before the legend) hides the bleed-through.
 - **Solve status indicator**: when table/grid/vectorDraw doesn't fully solve, shows "(n/m solved)" after title (85% font size, 70% opacity); hidden when everything solves. Tracks per-row (table), per-cell (grid), or per-unknown (vectorDraw) success.
 - Table output text section (`"--- Table Outputs ---"`) appended for copy/export; includes vectorDraw blocks with per-vector header+value pairs
 - All table result objects include `keyword` field for text output type prefix (e.g., `table "Title"`, `grid "Title"`, `vectordraw "Title"`)
@@ -138,6 +143,11 @@ node tests/gen-expected.js TESTNAME
 - **"Functions"** — user-defined functions: `f(x;y) = expr`
 - **"Default Settings"** — template for new record settings
 
+### Seeded categories & records
+- Default category order (`createDefaultData` in storage.js): `Tutorial`, `Examples`, `Unfiled`, `Finance`, `Math`, `Medical`, `Science`, `Reference`
+- **Examples** holds standalone demo records: "Sample tables", "Sample tableGraphs", "Table inheritance" (shows a table inheriting the record's equation/inputs and overriding `rate`/`pmt` per row). The `Finance`/`Math`/etc. categories hold the "Example: …" worked records (Retirement, Loan, …)
+- Seeded records (and changes to them) only apply to **new** data / after Reset or Import — existing localStorage isn't migrated
+
 ### Import/Export
 - PalmOS-compatible text format with `~~~~~~~~~~~~~~~~~~~~~~~~~~~` record separator
 - Import: `.txt` export files
@@ -158,11 +168,11 @@ node tests/gen-expected.js TESTNAME
 ```
 app.js (entry point, ~200 lines)
   ↓
-ui.js (main orchestration, ~1950 lines)
-  ├→ storage.js (localStorage, import/export, tutorial + example records, ~2885 lines)
+ui.js (main orchestration, ~2010 lines)
+  ├→ storage.js (localStorage, import/export, tutorial + example records, ~3045 lines)
   ├→ drive.js (Google Drive sync — testing only, not exposed, ~990 lines)
-  ├→ editor.js (syntax highlighting editor, ~1400 lines)
-  ├→ variables-panel.js (structured variable display, ~2330 lines)
+  ├→ editor.js (syntax highlighting editor, ~1435 lines)
+  ├→ variables-panel.js (structured variable display, ~2455 lines)
   ├→ solve-engine.js (solving + table/grid eval, ~2810 lines)
   │     ├→ solver.js (Brent's algorithm, ~840 lines)
   │     ├→ evaluator.js (expression eval, 50+ builtins, ~955 lines)
@@ -300,15 +310,16 @@ Contrast with bare `x:` (empty slot): it also shadows the constant, but the solv
 
 **Iteration**: Sum(expr; var; start; end), Prod(expr; var; start; end) — binding-variable forms
 
-**Other**: isClose (balance tolerance check), Tau, Perigon, Places
+**Other**: isClose / modIsClose (balance tolerance checks; `modIsClose(a;b;n;places)` is mod-aware), Tau, Perigon, Places
 
 **Shipped in default Functions record** (user-editable, not hardcoded): `pmt(pv;rate;n;fv)`, `compound(pv;rate;n)`, `ctof(c)`, `ftoc(f)`, `hypot(a;b)`, `disc(a;b;c)`. Available globally to every record unless the user edits/removes them.
 
 ## CSS Theming
 
 - CSS custom properties for all colors, defined on `:root` (dark default) and `[data-theme="light"]`
-- Syntax highlighting: `.tok-NUMBER`, `.tok-IDENTIFIER`, `.tok-STRING`, `.tok-KEYWORD`, `.tok-FUNCTION`, `.tok-BUILTIN`, `.tok-VARIABLE`, `.tok-VARIABLE_DEF`
-- Variable states: `.has-solved` (green), `.has-unsolved` (orange), `.has-error` (red)
+- Syntax highlighting (lowercase `tok-<type>`): `.tok-number`, `.tok-comment`, `.tok-function`, `.tok-builtin`, `.tok-variable`, `.tok-variable-def`, `.tok-operator`, `.tok-paren`, `.tok-bracket`, `.tok-brace`, `.tok-punctuation`, `.tok-error`, `.tok-section-marker` (the `--Variables--` marker), `.tok-fn-def` (subtle `--fn-def-bg` background band on a function-definition signature — see Editor)
+- Graph hover crosshair: `.graph-crosshair` (dashed lines), `.graph-crosshair-bg` / `.graph-crosshair-text` (the coordinate-readout chip)
+- Variable states: `.has-solved` (green), `.has-unsolved` (orange), `.has-error` (red), `.has-partial` (muted — "passed an earlier equation but not this one")
 - Key sizing vars: `--header-height: 48px`, `--sidebar-width: 220px`, `--tab-height: 35px`
 - Responsive breakpoints: 768px (sidebar collapses, Drive status hidden), 560px (help/theme to sidebar), 480px (compact)
 
@@ -361,7 +372,7 @@ App loads → localStorage (instant) → check Drive metadata
 
 **Component partitioning** (`partitionEquationsByComponent` + `solveEquationsByComponent` in `solve-engine.js`): union-find over variable names; vars are unioned if they share an equation, a limit-expression reference, or a body-def RHS reference. Equations group by union representative. Wrapper runs `solveEquations` per component with the shared `context` and full declarations/body-defs (cross-component vars are inert). Per-component calls pass `skipLimitValidation=true`; `validateLimits` runs once at the wrapper after merging. Avoids backtracker cartesian-product blow-up on independent contradictory sub-systems.
 
-**bestCandidate progress-wins** (`saveCandidate` in `solve-engine.js`): when the recursive backtracker can't find a balanced branch, it falls back to the most-progressed snapshot. The save check `if (bestCandidate && bestCandidate.variables.size >= context.variables.size) return;` ensures eager saves (from limit-rejection) get replaced when subsequent branches bind more vars. Without this, an early shallow save would lock in a partial state and end-of-solve validation could spuriously report "Variable X has no value" for limits referencing vars that deeper branches set.
+**bestCandidate progress-wins** (`saveCandidate` in `solve-engine.js`): when the recursive backtracker can't find a balanced branch, it falls back to the most-progressed snapshot. The save check keeps the new snapshot only when it binds **more** vars than the saved one (`context.variables.size > bestCandidate.variables.size`), or binds the same count but scores higher on `naturalnessScore(context)` (the tie-breaker; the saved candidate stores its `naturalness`). This lets eager saves (from limit-rejection) get replaced when later branches bind more — or equally-many-but-more-naturally derived — vars. Without it, an early shallow save would lock in a partial state and end-of-solve validation could spuriously report "Variable X has no value" for limits referencing vars that deeper branches set.
 
 **OUTPUT-with-limits re-solve** (`resolveWithLimits` in `solve-engine.js`): each OUTPUT declaration with limits runs its own re-solve after the main solve. Fast path uses the main-solve value if already in limits; slow path builds modifiedDecls (prepend INPUT+limits entry for the target), calls full `solveEquations`, and surfaces any balance/root errors to the user. Stored under `__resolvevar_${lineIndex}` keys; `formatOutput` reads them per-declaration.
 
