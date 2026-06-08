@@ -1903,6 +1903,43 @@ tableGraph("vv Three iterators: x, y, and z; Two series: square root and cube ro
             },
             {
                 id: generateId(),
+                title: 'Table inheritance',
+                text: `"Table inheritance"
+--Variables--
+
+"*Solve a simple loan, then let a table reuse the SAME formula and variables — overriding the rate and pmt per row. It shows how a table inherits the record's equations and inputs."
+
+"Time value of money formula:" pmt = pv * rate / (1 - (1 + rate)**-n)
+
+"*Loan"
+"Amount"           pv $: $20000
+"Annual rate"      rate%: 6%
+"Years"            n: 5
+"Annual payment"   pmt$<-
+
+"*Payment by rate"
+"The table below has no equation and no pv/n of its own — it inherits the 'pmt =' formula and the pv and n values above. The iterator overrides 'rate', so each row uses a different rate."
+
+"There's a catch worth understanding: 'pmt' is solved in the loan above, and its value is written back into the 'pmt$<-' line — so the table would otherwise inherit that one fixed payment. To make each row RE-solve pmt from the inherited formula, the table body re-declares it as an unknown with 'pmt<-'. (Delete that line and re-solve: the pinned $4,747.93 clashes with the formula at every rate but 6%, so those Payment cells come up blank.)"
+
+table("vv Payment by interest rate") = {
+  rate: 0.04..0.08..0.005
+  pmt<-
+  "Rate"      rate%->
+  "Payment"   pmt $->
+}
+
+"Notice the 6% row equals the 'Annual payment' above — same formula, same pv and years, just rate swapped for the iterator value and pmt recalculated. Change pv, rate, or years and re-solve: the single result and every table row update together."`,
+                category: 'Examples',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: false,
+                created: Date.UTC(2026, 5, 8, 12, 0, 0),
+            },
+            {
+                id: generateId(),
                 title: 'Example: Retirement Calculator',
                 text: `"Retirement Calculator"
 
