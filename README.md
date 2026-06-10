@@ -1,7 +1,5 @@
 # MathPad
 
-<img align="right" width="140" alt="MathPad icon" src="https://github.com/user-attachments/assets/77817643-bd90-4c19-9ec7-9f2654016c79" />
-
 **Write equations the way you'd write them on paper, fill in what you know, and MathPad solves for whatever's left — in either direction.**
 
 MathPad is a free, browser-based equation solver. Instead of rearranging formulas by hand, you write the relationships once and let it find the unknown — give it the inputs and it computes the result, or give it the result and it works backward to an input. It handles linked systems of equations, 50+ built-in functions, tables and graphs, dates and money, and ships with an interactive tutorial. One page, no install, no account, works offline.
@@ -12,12 +10,12 @@ MathPad is a free, browser-based equation solver. Instead of rearranging formula
 
 ```
 area = w * h
-w: 4
-h: 3
-area->
+w <- 4
+h <- 3
+area <-
 ```
 
-Click **Solve** and `area->` becomes `area-> 12`. The trick is that you can leave *any* variable blank instead: clear `w`, set `area` to `20`, and Solve — MathPad sees that `w` is now the unknown and works backward to find `w = 6.67`. Same equation, no rearranging; you just choose which value you don't know.
+Click **Solve** and `area <-` becomes `area <- 12`. The trick is that you can leave *any* variable blank instead: clear `w`, set `area` to `20`, and Solve — MathPad sees that `w` is now the unknown and works backward to find `w <- 6.67`. Same equation, no rearranging; you just choose which value you don't know.
 
 <!--
   Screenshot: add a real image of the app here — the formulas editor + variables
@@ -30,6 +28,8 @@ Click **Solve** and `area->` becomes `area-> 12`. The trick is that you can leav
 It hits a sweet spot between a calculator, a spreadsheet, and Wolfram. A **calculator** makes you rearrange the formula to solve backward — and can't at all when there's no closed form, like getting a loan's rate from its payment; MathPad just blanks the unknown and finds it numerically. A **spreadsheet** is one-directional and buries formulas inside cells, while MathPad solves in any direction and shows the relationships *as* readable, named equations. **Wolfram** is far more powerful but built for one-shot queries or heavyweight notebooks; MathPad is a lightweight document you keep and re-solve as your numbers change — free, instant, and offline. (Reach for a spreadsheet when you have big datasets, and Wolfram for symbolic math or calculus.)
 
 ## About
+
+<img align="right" width="140" alt="MathPad icon" src="https://github.com/user-attachments/assets/77817643-bd90-4c19-9ec7-9f2654016c79" />
 
 MathPad was originally created by **Rick Huebner** for PalmOS PDAs (circa 1997–2000). This repository contains a modern web-based reimplementation with near-feature parity, plus the original MathPad 1.5 release (documentation, PRC files, and desktop utilities).
 
