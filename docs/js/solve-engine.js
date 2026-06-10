@@ -1627,7 +1627,7 @@ function formatOutput(text, declarations, context, computedValues, record, solve
             try {
                 formatted = varFormat
                     ? formatVariableValue(value, varFormat, fullPrecision, format)
-                    : formatNumber(value, places, format.stripZeros, format.format, exprBase || 10, format.groupDigits);
+                    : formatNumber(value, places, format.stripZeros, format.format, exprBase || 10, format.groupDigits, null, format.places);
             } catch (e) {
                 errors.push(`Line ${output.startLine + 1}: ${e.message}`);
                 continue;

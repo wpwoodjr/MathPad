@@ -183,7 +183,7 @@ n: 360 "number of payments (30 years)"
 "Monthly interest rate from annual"
 mint = yint / 12
 
-mint-> 0.01
+mint-> 0.00625
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 2; StripZeros = 1
@@ -207,7 +207,7 @@ n: 360 "number of payments (30 years)"
 
 "Monthly interest rate from annual"
 mint = yint / 12
-mint-> 0.01
+mint-> 0.00625
 mint->> 0.00625
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -265,8 +265,8 @@ x$-> $3.00
 x$->> $2.996
 
 z%: 6.725%
-z-> 0.07
-z->> 0.06725
+z-> 0.0672
+z->> 0.06724999999999999
 z%-> 6.72%
 z%->> 6.724999999999999%
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -683,7 +683,7 @@ VarStatus = ""
 "01 Deg/Rad: degrees"
 
 a: cos(45)
-a->> 0.707106781186548
+a->> 0.7071067811865476
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1
@@ -693,7 +693,7 @@ VarStatus = ""
 "02 Deg/Rad: radians"
 
 a: cos(pi/4)
-a->> 0.707106781186548
+a->> 0.7071067811865481
 
 
 

@@ -286,7 +286,7 @@ smg: 1.41
 cmg °: 0°
 
 Boat through water
-speed: 0.9199
+speed: 0.91988
 cts °: 315°
 
 Current
@@ -483,7 +483,7 @@ drift = smg*sin(cts - cmg) / sin(cts - set)
 --Variables--
 smg: 1.41
 cmg °: 0°
-speed<- 0.9199
+speed<- 0.91988
 cts °: 315°
 drift: 1
 set °<- 40.576°
@@ -585,7 +585,7 @@ smg: 1.41
 cmg °<- 359.8285°
 speed: 1
 cts °: 315°
-drift<- 0.994
+drift<- 0.99403
 set °: 45°
 
 
@@ -911,8 +911,8 @@ sqrt(z**2 + 1) = w
 y = z + 1
 
 --Variables--
-y-> 0.5486
-z-> -0.4514
+y-> 0.54858
+z-> -0.45142
 w-> 1.0972
 
 

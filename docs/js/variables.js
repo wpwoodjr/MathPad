@@ -401,7 +401,10 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
         return value > 0 ? 'Infinity' : '-Infinity';
     }
 
-    const places = fullPrecision ? 15 : (format.places != null ? format.places : 4);
+    // The record's chosen precision — also anchors the "too small for decimal,
+    // use scientific" polish at full precision (where `places` becomes 15).
+    const displayPlaces = format.places != null ? format.places : 4;
+    const places = fullPrecision ? 15 : displayPlaces;
     const stripZeros = format.stripZeros !== false;
     const numberFormat = format.numberFormat || 'float';
     const base = format.base || 10;
@@ -481,7 +484,7 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
     }
 
     // Regular number formatting
-    return formatNumber(value, places, stripZeros, numberFormat, base, groupDigits, null);
+    return formatNumber(value, places, stripZeros, numberFormat, base, groupDigits, null, displayPlaces);
 }
 
 /**

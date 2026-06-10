@@ -97,6 +97,23 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         rate%->> (formatted as rate*100 with full precision followed by %)
         hexnum#16: (formatted as hexnum in base 16 followed by #16)
 
+    ### Float significant-figure handling (magnitude-aware)
+        Plain float output is NOT plain fixed-decimal. Two rules keep small values usable:
+        1. Sub-1 values keep >= places+1 significant figures. A value < 1 is shown with
+           effPlaces = places - floor(log10|v|) decimal places, so 0.0284 at places=3 is
+           "0.02841" (4 sig figs), not "0.028" (2). Without this, a written-back small value
+           loses so much precision that liters = ml/1000 fails to re-balance, while the
+           same record in sci/eng balances (sci is significant-figure based = scale-invariant).
+           At full precision (->> / ::, internal places=15) this gives the full ~16 sig figs,
+           same as the sci mantissa, FP noise tail included.
+        2. Leading zeros > places => scientific notation. If a value has more leading zeros
+           after the decimal than the record's places, show it in sci form instead of a wall
+           of zeros (pi/1e14 at places=3 => 3.14e-14). Strict > (== places stays decimal).
+        The leading-zero check uses the record's DISPLAY places even at full precision, via the
+        displayPlaces arg of formatNumber (set by formatVariableValue and the __exprout_ path in
+        solve-engine.js) — otherwise ->> would compare against 15 and never switch. So -> and ->>
+        agree, for both variable values and expression outputs.
+
     ### Variable clearing
         When seeing -> ->> :> :>> this indicates that the RHS (not including any comments) on that line should be cleared before solving
         When seeing <- <<- this indicates that the RHS (not including any comments) on that line should be cleared by the Clear button

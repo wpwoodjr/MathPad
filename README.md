@@ -41,6 +41,7 @@ Or open `docs/index.html` locally in a browser. No build step required.
 
 - Configurable decimal places, trailing zero stripping, comma grouping
 - Scientific and engineering notation
+- **Magnitude-aware float display** — small values (< 1) keep at least one more significant figure than the decimal-places setting, so they stay precise enough to balance against larger related values; a value with more leading zeros than the `places` setting switches to scientific notation (e.g. a record at 3 places shows `3.14e-14` instead of a wall of zeros)
 - **Money format** (`price$:`) — displays as `$1,234.56`. Configurable currency symbol per record (`$`, `€`, `£`, `¥`, `₹`, `₩`, `₱`, `₺`, `₴`, `₫`, `₡`, `₽`, `₸`, `₼`, `₾`, `৳`); suffix currencies show the symbol after the number.
 - **Percent format** (`rate%:`) — stores as decimal, displays with `%`
 - **Angular format** (`angle°:`) — mode-aware: degrees mode displays mod 360 with `°` suffix; radians mode displays mod 2π with no symbol

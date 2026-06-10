@@ -881,7 +881,7 @@ function formatDegrees(value, places, degreesMode = true) {
  * If varName ends with '%', format as percentage
  * If varName ends with '°', format as degrees
  */
-function formatNumber(value, places = 14, stripZeros = true, format = 'float', base = 10, groupDigits = false, varName = null) {
+function formatNumber(value, places = 14, stripZeros = true, format = 'float', base = 10, groupDigits = false, varName = null, displayPlaces = null) {
     if (!isFinite(value)) {
         if (isNaN(value)) return 'NaN';
         return value > 0 ? 'Infinity' : '-Infinity';
@@ -919,14 +919,34 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
             }
             break;
         }
-        default: // float
-            // Use decimal places (toFixed) instead of significant figures
-            if (Math.abs(value) >= 1e14 || (Math.abs(value) < 1e-14 && value !== 0)) {
-                // Use scientific notation for very large/small numbers
-                str = value.toExponential(places);
-            } else {
-                str = toFixed(value, places);
+        default: { // float
+            // displayPlaces is the record's chosen precision; it differs from
+            // `places` only at full precision (->> / ::), where `places` is 15
+            // but the polish below should still key off the user's setting.
+            const dispPlaces = displayPlaces != null ? displayPlaces : places;
+            let useExp = Math.abs(value) >= 1e14 || (Math.abs(value) < 1e-14 && value !== 0);
+            let effPlaces = places;
+            if (!useExp && value !== 0 && Math.abs(value) < 1) {
+                const mag = Math.floor(Math.log10(Math.abs(value)));
+                if (-mag - 1 > dispPlaces) {
+                    // More leading zeros than the record's display precision: a
+                    // fixed-point string would be mostly zeros, so render it
+                    // compactly in scientific notation (e.g. pi/1e14 at ->>).
+                    useExp = true;
+                } else {
+                    // Sub-1 value: extend the decimals so it keeps at least
+                    // places+1 significant figures instead of being crushed by
+                    // fixed decimal places (0.0284 -> "0.028" at places=3 = 2 sig
+                    // figs). That keeps it precision-compatible with a larger
+                    // related value under algebraic rearrangement (the same
+                    // scale-invariance sci has). At full precision (places=15)
+                    // this is the full ~16 sig figs, identical to sci '->>'.
+                    effPlaces = places - mag;
+                }
             }
+            str = useExp ? value.toExponential(places) : toFixed(value, effPlaces);
+            break;
+        }
     }
 
     // Strip trailing zeros if requested

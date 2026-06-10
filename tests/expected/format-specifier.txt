@@ -232,3 +232,49 @@ VarStatus = ""
 x: 10%
 x %-> 10.00%
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Nothing to solve"; StatusIsError = 0
+VarStatus = ""
+"Leading zeros formatting checks"
+
+x: 3.141592653589793
+n: 100000000000000
+x/n-> 3.142e-14
+x/n->> 3.141592653589793e-14
+x/n/10->> 3.141592653589793e-15
+
+a: 0.0003020000000001355
+a-> 0.000302
+a->> 0.0003020000000001355
+0.0003020000000001355-> 0.000302
+0.0003020000000001355->> 0.0003020000000001355
+
+b: 0.00003020000000001355
+b-> 3.02e-5
+b->> 3.020000000001355e-5
+0.00003020000000001355-> 3.02e-5
+0.00003020000000001355->> 3.020000000001355e-5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0
+Status = "Solved 3 equations"; StatusIsError = 0
+VarStatus = "impOz:solved, l2:solved, liters:solved, ml:solved"
+"balance test"
+
+ml = 28.4130625*impOz
+liters = ml/1000
+
+impOz: 1
+ml<- 28.41
+liters<- 0.0284
+
+places()-> 2
+isClose(liters; ml/1000; places())-> 1
+
+l2*1000 = ml
+l2<- 0.0284
+isClose(l2*1000; ml; places())-> 1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

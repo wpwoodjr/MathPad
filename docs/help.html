@@ -204,6 +204,10 @@ a**2 + b**2 = c**2</pre>
         <tr><td>Degree literal</td><td><code>400&deg;</code> (stored as 400, no mod)</td></tr>
     </table>
 
+    <h3>Small values in Float</h3>
+    <p>In Float format, the decimal-places setting is a <em>minimum</em> precision for small numbers, not a hard cap. A value below 1 is shown with at least one more significant figure than your places setting, so it isn't crushed to a couple of digits &mdash; at 3 places, <code>0.0284130625</code> displays as <code>0.02841</code>, not <code>0.028</code>. This keeps small results precise enough to stay consistent with larger related values, so an equation and its algebraic rearrangement both balance.</p>
+    <p>If a number has more leading zeros than your places setting, it switches to scientific notation instead of a long run of zeros &mdash; at 3 places, <code>3.14&times;10⁻¹⁴</code> shows as <code>3.142e-14</code> rather than <code>0.0000000000000314</code>. Full-precision outputs (<code>-&gt;&gt;</code>) follow the same rules, showing every significant digit the value carries.</p>
+
     <h3>Format Prefixes</h3>
     <p>Add a format prefix before the marker to control display:</p>
     <table>

@@ -121,6 +121,8 @@ node tests/gen-expected.js TESTNAME
 
 ### Number Formatting
 - Decimal places, strip trailing zeros, comma grouping, scientific/engineering notation
+- **Float keeps ≥ `places+1` significant figures for sub-1 values** (`formatNumber` default/float branch): a value `< 1` extends its decimal count to `effPlaces = places − ⌊log10|v|⌋` so it shows at least `places+1` sig figs, instead of being crushed by fixed decimal places (`0.0284` at places=3 would otherwise round to `0.028`, 2 sig figs). This keeps a small value precision-compatible with a larger *related* one under algebraic rearrangement (the scale-invariance sci has), so e.g. `liters = ml/1000` **and** the rearranged `l2*1000 = ml` both balance from the written-back values. At full precision (`->>`/`::`, internal `places=15`) this yields the full ~16 sig figs — identical to the sci mantissa, trailing FP digits included (the honest meaning of full precision).
+- **Leading-zeros → scientific**: when a value has more leading zeros after the decimal than the record's `places`, it renders in scientific notation rather than a wall of zeros (`pi/1e14` → `3.14e-14`). Strict `>` (leading zeros `== places` stays decimal). The check is anchored on the record's *display* `places` even at full precision — threaded as the `displayPlaces` arg of `formatNumber`, set by `formatVariableValue` (variable values) and the expression-output path in `solve-engine.js` (`__exprout_` formatting) — so `->` and `->>` agree and the rule keys off the user's setting, not the internal 15.
 - `$` suffix → money format ($1,234.56, always 2 decimals or `currencyPlaces[symbol]`). Configurable currency symbol per-record (`currencySymbol`); suffix currencies (`₽₸₼₾৳`) display the symbol after the number.
 - `%` suffix → percent format (×100, follows record's places setting)
 - `°` suffix → angular format (**mode-aware**): degrees mode displays mod 360 with `°` suffix; radians mode displays mod 2π without symbol. `formatDegrees(value, places, degreesMode)`.
@@ -209,7 +211,7 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 ```javascript
 {
   id: number, title: string, text: string, category: string,
-  places: number,          // decimal precision (default 2)
+  places: number,          // decimal precision (default 4, from the "Default Settings" record)
   stripZeros: boolean, groupDigits: boolean,
   format: 'float' | 'sci' | 'eng',
   degreesMode: boolean,    // false = radians

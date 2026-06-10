@@ -53,7 +53,7 @@ speed: 10
 cts: 162.4156
 
 Current
-drift-> 0.9
+drift-> 0.89997
 set[0:360]-> 210.0017
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -228,7 +228,7 @@ speed: 10
 cts: 162.4156
 
 Current
-drift-> 0.9
+drift-> 0.89999
 set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -368,7 +368,7 @@ speed: 10
 cts: 162.4156
 
 Current
-drift-> 0.8999
+drift-> 0.89994
 set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -438,7 +438,7 @@ speed: 10
 cts[0:360]-> 162.4158
 
 Current
-drift-> 0.8999
+drift-> 0.89994
 set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -473,7 +473,7 @@ speed-> 10
 cts: 162.4156
 
 Current
-drift-> 0.9
+drift-> 0.89999
 set: 210
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -953,7 +953,7 @@ table "smg and cts"
 
 table "smg and drift"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
-1.5	10.63	166°	10	162.4°	0.9	210°
+1.5	10.63	166°	10	162.4°	0.904	210°
 
 table "smg and set"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
@@ -969,7 +969,7 @@ table "cmg and cts"
 
 table "cmg and drift"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
-2.5	10.63	166°	10	162.4°	0.9	210°
+2.5	10.63	166°	10	162.4°	0.903	210°
 
 table "cmg and set"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
@@ -981,7 +981,7 @@ table "speed and cts"
 
 table "speed and drift"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
-3.5	10.63	166°	10	162.4°	0.9	210°
+3.5	10.63	166°	10	162.4°	0.904	210°
 
 table "speed and set"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
@@ -989,7 +989,7 @@ table "speed and set"
 
 table "cts and drift"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
-4.5	10.63	166°	10	162.4°	0.9	210°
+4.5	10.63	166°	10	162.4°	0.903	210°
 
 table "cts and set"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
@@ -997,7 +997,7 @@ table "cts and set"
 
 table "drift and set"
 "cnt"	"smg"	"cmg"	"speed"	"cts"	"drift"	"set"
-5.6	10.63	166°	10	162.4°	0.9	210.02°
+5.6	10.63	166°	10	162.4°	0.904	210.02°
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1

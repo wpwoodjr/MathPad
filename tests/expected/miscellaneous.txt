@@ -232,16 +232,16 @@ c0: -14
 f(x; c5; c4; c3; c2; c1; c0) = c5*x**5 + c4*x**4 + c3*x**3 + c2*x**2 + c1*x + c0
 
 f(x; c5; c4; c3; c2; c1; c0) = 0
-x-> 0.7805
+x-> 0.78046
 
 0 = f(x0; c5; c4; c3; c2; c1; c0)
-x0-> 0.7805
+x0-> 0.78046
 
 f(x1; c5; c4; c3; c2; c1; c0) = 0
-x1-> 0.7805
+x1-> 0.78046
 
 0 = f(x2; c5; c4; c3; c2; c1; c0)
-x2-> 0.7805
+x2-> 0.78046
 
 "Evaluate polynomial at specific points"
 f(1; c5; c4; c3; c2; c1; c0)->> 4
@@ -511,7 +511,7 @@ nn-> NaN
 2/0-> Infinity wow so big!
 Infinity/Infinity-> NaN wow that's not even a number!
 NaN*8-> NaN
-2/3-> 0.6667 wow
+2/3-> 0.66667 wow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
 Places = 4; StripZeros = 1

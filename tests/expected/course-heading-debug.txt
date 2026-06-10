@@ -15,8 +15,8 @@ sin(180-normalizedCHOB)/boatSpeed = sin(normalizedCHOB - correction)/speedMadeGo
 speedMadeGood->> Infinity
 correction[-90:90]->> 0                  "degrees"
 course = desiredHeading + correction
-sin(180-normalizedCHOB)->> 0.017452406437283
-sin(normalizedCHOB - correction)->> 0.017452406437284
+sin(180-normalizedCHOB)->> 0.01745240643728344
+sin(normalizedCHOB - correction)->> 0.01745240643728351
 course->> 12
 sin(180-normalizedCHOB)/boatSpeed->> 0
 sin(correction)/max(currentSpeed; 1e-4)->> 0

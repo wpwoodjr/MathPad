@@ -91,7 +91,7 @@ estWatts(userPwr; limitPower; maxMotorPower; adjustedTemp) = userPwr/(limitPower
 adjTemp - ((refTemp - temperature)/tempAdjFactor/100) = 1
 adjBattCap = battCap*battAdjFactor
 hours = adjBattCap/fitWatts(estWatts(userPwr; limitPwr; maxMotorPwr; adjTemp); a; b; c; d)
-adjTemp->> 0.702666666666667
+adjTemp->> 0.7026666666666667
 
 --Constants--
 a: 0.00170924441718192

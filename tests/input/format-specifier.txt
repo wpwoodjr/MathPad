@@ -205,3 +205,45 @@ Format = "float"; GroupDigits = 0; DegreesMode = 1; ShadowConstants = 0
 x: 10%
 x %->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 3; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Leading zeros formatting checks"
+
+x: 3.141592653589793
+n: 100000000000000
+x/n->
+x/n->>
+x/n/10->>
+
+a: 0.0003020000000001355
+a->
+a->>
+0.0003020000000001355->
+0.0003020000000001355->>
+
+b: 0.00003020000000001355
+b->
+b->>
+0.00003020000000001355->
+0.00003020000000001355->>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"balance test"
+
+ml = 28.4130625*impOz
+liters = ml/1000
+
+impOz: 1
+ml<-
+liters<-
+
+places()->
+isClose(liters; ml/1000; places())->
+
+l2*1000 = ml
+l2<-
+isClose(l2*1000; ml; places())->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~

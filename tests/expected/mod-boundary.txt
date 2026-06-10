@@ -211,7 +211,7 @@ VarStatus = "a:solved"
 // Without mod-aware error, Brent's finds false root at discontinuity
 // With mod-aware error, Brent's correctly finds b = tan(10°) ≈ 0.18
 a: 170
-b[-10:10]-> 0.18
+b[-10:10]-> 0.176
 a °= atan(b; -1)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Category = "Unfiled"; Secret = 0
@@ -349,7 +349,7 @@ w °= 4*pi() + 0.5
 // atan discontinuity in radians
 // atan(b; -1) ≈ pi - atan(b) for b > 0; need result ≡ 2.967 (≈ pi - 0.175)
 a: 2.967
-b[-10:10]-> 0.1764
+b[-10:10]-> 0.17639
 a °= atan(b; -1)
 
 // Substitution system in radians
