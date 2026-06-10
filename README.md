@@ -1,19 +1,41 @@
 # MathPad
 
-An algebraic equation solver with automatic unknown detection, root-finding, tables, graphs, and an interactive tutorial series.
+<img align="right" width="140" alt="MathPad icon" src="https://github.com/user-attachments/assets/77817643-bd90-4c19-9ec7-9f2654016c79" />
+
+**Write equations the way you'd write them on paper, fill in what you know, and MathPad solves for whatever's left — in either direction.**
+
+MathPad is a free, browser-based equation solver. Instead of rearranging formulas by hand, you write the relationships once and let it find the unknown — give it the inputs and it computes the result, or give it the result and it works backward to an input. It handles linked systems of equations, 50+ built-in functions, tables and graphs, dates and money, and ships with an interactive tutorial. One page, no install, no account, works offline.
+
+**[Try it online →](https://wpwoodjr.github.io/MathPad/)**
+
+### A 30-second taste
+
+```
+area = w * h
+w: 4
+h: 3
+area->
+```
+
+Click **Solve** and `area->` becomes `area-> 12`. The trick is that you can leave *any* variable blank instead: clear `w`, set `area` to `20`, and Solve — MathPad sees that `w` is now the unknown and works backward to find `w = 6.67`. Same equation, no rearranging; you just choose which value you don't know.
+
+<!--
+  Screenshot: add a real image of the app here — the formulas editor + variables
+  panel with a solved result, or a graph. Capture from the live site, drag it into
+  a GitHub comment to get a hosted URL, then replace this block with: ![MathPad](url)
+-->
+
+### Why MathPad?
+
+It hits a sweet spot between a calculator, a spreadsheet, and Wolfram. A **calculator** makes you rearrange the formula to solve backward — and can't at all when there's no closed form, like getting a loan's rate from its payment; MathPad just blanks the unknown and finds it numerically. A **spreadsheet** is one-directional and buries formulas inside cells, while MathPad solves in any direction and shows the relationships *as* readable, named equations. **Wolfram** is far more powerful but built for one-shot queries or heavyweight notebooks; MathPad is a lightweight document you keep and re-solve as your numbers change — free, instant, and offline. (Reach for a spreadsheet when you have big datasets, and Wolfram for symbolic math or calculus.)
 
 ## About
-<img width="163" height="163" alt="image" src="https://github.com/user-attachments/assets/77817643-bd90-4c19-9ec7-9f2654016c79" />
 
-MathPad was originally created by **Rick Huebner** for PalmOS PDAs (circa 1997-2000). This repository contains:
-- A modern web-based reimplementation with near-feature parity
-- The original MathPad 1.5 release (documentation, PRC files, and desktop utilities)
+MathPad was originally created by **Rick Huebner** for PalmOS PDAs (circa 1997–2000). This repository contains a modern web-based reimplementation with near-feature parity, plus the original MathPad 1.5 release (documentation, PRC files, and desktop utilities).
 
 ## Web Application
 
-**Try it online: https://wpwoodjr.github.io/MathPad/**
-
-Or open `docs/index.html` locally in a browser. No build step required.
+Open `docs/index.html` in any browser — no build step, no server — or use the [live version](https://wpwoodjr.github.io/MathPad/).
 
 ### Core Features
 
@@ -41,8 +63,8 @@ Or open `docs/index.html` locally in a browser. No build step required.
 
 - Configurable decimal places, trailing zero stripping, comma grouping
 - Scientific and engineering notation
-- **Magnitude-aware float display** — small values (< 1) keep at least one more significant figure than the decimal-places setting, so they stay precise enough to balance against larger related values; a value with more leading zeros than the `places` setting switches to scientific notation (e.g. a record at 3 places shows `3.14e-14` instead of a wall of zeros)
-- **Money format** (`price$:`) — displays as `$1,234.56`. Configurable currency symbol per record (`$`, `€`, `£`, `¥`, `₹`, `₩`, `₱`, `₺`, `₴`, `₫`, `₡`, `₽`, `₸`, `₼`, `₾`, `৳`); suffix currencies show the symbol after the number.
+- **Magnitude-aware float display** — small values keep enough significant figures to stay consistent across magnitudes, and switch to scientific notation when they'd otherwise be a wall of leading zeros
+- **Money format** (`price$:`) — displays as `$1,234.56`; the currency symbol is configurable per record (€, £, ¥, ₹, … — suffix currencies show after the number)
 - **Percent format** (`rate%:`) — stores as decimal, displays with `%`
 - **Angular format** (`angle°:`) — mode-aware: degrees mode displays mod 360 with `°` suffix; radians mode displays mod 2π with no symbol
 - **Date/duration formats** (`@d`, `@t`) — locale-aware date display; H:MM:SS duration display, with `Nd H:MM:SS` for durations ≥ 24h (the parser accepts the same form on input)
@@ -78,31 +100,9 @@ An equation is any line with `=` between two expressions. If all variables have 
 
 `°=` is only valid at the top level of an equation line (for balance checks and Brent's solving); it is not a general expression operator.
 
-### Algebraic Substitution
+### Solving Linked Systems
 
-When a system has multiple unknowns, the solver derives algebraic substitutions to reduce equations to a single unknown for Brent's root-finding. Derivation is **symmetric** — both LHS-with-RHS-as-target and RHS-with-LHS-as-target are explored, so `x = z/2` yields both `x → z/2` and `z → 2*x`. The recursive backtracker enumerates subset-sized combinations (size 0, 1, …, N) to prefer smaller combos that leave more variables free for Brent's.
-
-The following forms are recognized (where `B`, `C`, `D` are arbitrary expressions not containing the target variable):
-
-**Direct extraction** — variable is a top-level operand:
-
-| Form | Substitution |
-|------|-------------|
-| `var + B = D` | `var = D - B` |
-| `var * B = D` | `var = D / B` |
-| `var / B = D` | `var = D * B` |
-| `B / var = D` | `var = B / D` |
-| `var ** B = D` | `var = D ** (1/B)` |
-
-**Extraction from sum/difference** — variable is inside a product or quotient within a sum:
-
-| Form | Substitution |
-|------|-------------|
-| `var * B + C = D` | `var = (D - C) / B` |
-| `var / B + C = D` | `var = (D - C) * B` |
-| `B / var + C = D` | `var = B / (D - C)` |
-
-Subtraction (`-`), commuted forms (`C + var * B`), and swapped sides (`D = var * B + C`) all work. Substitutions chain across equations in the system.
+When a record has several unknowns, MathPad reduces the system before root-finding: it derives algebraic substitutions to isolate variables (**symmetrically** — `x = z/2` yields both `x → z/2` *and* `z → 2*x`), partitions independent equations into separate components to avoid combinatorial blow-up, and runs a recursive backtracker to find a consistent assignment. In practice you can hand it a tangle of related equations and let it work out the order and the algebra. (For the exact substitution forms recognized, see [arch.md](arch.md).)
 
 ### Tables, Grids, and Vector Diagrams
 
@@ -134,7 +134,7 @@ grid("Multiplication") = {
 - `v: 10` — definition (expression value)
 - `Label z->` — output column with optional label
 
-Tables inherit outer equations when the body has none; body equations override if any are present. Tables also inherit all outer values, however a value may be overridden by a declaration in the table.  Each row/cell is solved independently. Optional font size: `table("Title"; 12) = { ... }`.
+Tables inherit the record's outer equations and values when the body doesn't define its own; a body declaration overrides the inherited one. Each row/cell is solved independently. Optional font size: `table("Title"; 12) = { ... }`.
 
 **Multiple iterators** iterate as nested loops over the cartesian product. First-declared = outermost (changes slowest); last-declared = innermost (changes fastest). Iterator bounds are evaluated once up-front, so inner iterators cannot depend on outer iterator values.
 

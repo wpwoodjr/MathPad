@@ -319,6 +319,20 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
             Legacy single-result wrappers `deriveSubstitution` and
             `tryIsolateVariable` are kept for back-compat (return first yield).
 
+            Recognized forms (B, C, D are expressions not containing the target):
+              Direct extraction — target is a top-level operand:
+                var + B = D    → var = D - B
+                var * B = D    → var = D / B
+                var / B = D    → var = D * B
+                B / var = D    → var = B / D
+                var ** B = D   → var = D ** (1/B)
+              Extraction from a sum/difference — target inside a product/quotient:
+                var * B + C = D → var = (D - C) / B
+                var / B + C = D → var = (D - C) * B
+                B / var + C = D → var = B / (D - C)
+              Subtraction (-), commuted forms (C + var*B), and swapped sides
+              (D = var*B + C) all work; substitutions chain across equations.
+
         ### [3] Evaluate fully-known substitutions
             For each variable's subs array: classify fully-known subs into
             non-NaN candidates (finite or ±Infinity) and NaN fallbacks.
