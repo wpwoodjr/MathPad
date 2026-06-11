@@ -1087,8 +1087,6 @@ function updateRecordDetail(field, value) {
             updateRecordTitleFromContent(record);
         }
         renderSidebar();
-        renderDetailsPanel();
-        renderSettingsModal();
     }
 
     // Re-tokenize when places changes (affects ° literal snapping via modClose)
@@ -1098,6 +1096,11 @@ function updateRecordDetail(field, value) {
             editorInfo.editor.updateHighlighting();
         }
     }
+
+    // Keep both settings surfaces in sync — a change made in the modal must
+    // show in the details panel, and vice versa.
+    renderDetailsPanel();
+    renderSettingsModal();
 }
 
 /**
