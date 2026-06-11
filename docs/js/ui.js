@@ -389,6 +389,57 @@ function promotePreview(recordId) {
 }
 
 /**
+ * Destroy a single record's editor (DOM container + registry entry).
+ * No-op if the record has no editor.
+ */
+function destroyEditor(recordId) {
+    const editorInfo = UI.editors.get(recordId);
+    if (!editorInfo) return;
+    editorInfo.container.remove();
+    UI.editors.delete(recordId);
+}
+
+/**
+ * Destroy ALL editors and reset every piece of per-editor UI state
+ * (tabs, preview slot, current record, visit history). This is the single
+ * place that knows the full list — import, reset, and Drive reload all go
+ * through here, so a new piece of state can't be forgotten by one of them
+ * (a hand-rolled copy of this sequence once left previewTabId stale).
+ */
+function destroyAllEditors() {
+    for (const [, { container }] of UI.editors) {
+        container.remove();
+    }
+    UI.editors.clear();
+    UI.openTabs = [];
+    UI.previewTabId = null;
+    UI.currentRecordId = null;
+    UIState.visitHistory = [];
+}
+
+/**
+ * Re-render the full UI for freshly-replaced UI.data (after import, reset,
+ * or Drive reload) and open the last-viewed record if it still exists,
+ * else the first record, else show the no-editor message.
+ */
+function resetUIForData({ useSavedScroll = false } = {}) {
+    renderSidebar(useSavedScroll);
+    renderTabBar();
+    renderDetailsPanel();
+
+    const lastRecordId = UI.data.settings && UI.data.settings.lastRecordId;
+    const recordToOpen = lastRecordId ? findRecord(UI.data, lastRecordId) : null;
+    if (recordToOpen) {
+        openRecord(recordToOpen.id);
+    } else if (UI.data.records.length > 0) {
+        openRecord(UI.data.records[0].id);
+    } else {
+        const noEditorMsg = document.querySelector('.no-editor-message');
+        if (noEditorMsg) noEditorMsg.style.display = 'block';
+    }
+}
+
+/**
  * Open a record. By default the tab is persistent; pass {preview:true}
  * to open in the single VS Code-style preview slot (italic, replaces the
  * existing preview if any). Switching to an already-open record never
@@ -410,11 +461,7 @@ function openRecord(recordId, { preview = false } = {}) {
             const prevId = UI.previewTabId;
             const slot = UI.openTabs.indexOf(prevId);
             UI.openTabs[slot] = recordId;
-            if (UI.editors.has(prevId)) {
-                const { container } = UI.editors.get(prevId);
-                container.remove();
-                UI.editors.delete(prevId);
-            }
+            destroyEditor(prevId);
             const oldHist = UIState.visitHistory.indexOf(prevId);
             if (oldHist !== -1) UIState.visitHistory.splice(oldHist, 1);
         } else {
@@ -854,11 +901,7 @@ function closeTab(recordId) {
     debouncedSave(UI.data);
 
     // Remove editor
-    if (UI.editors.has(recordId)) {
-        const { container } = UI.editors.get(recordId);
-        container.remove();
-        UI.editors.delete(recordId);
-    }
+    destroyEditor(recordId);
 
     // Remove from visit history
     const histIdx = UIState.visitHistory.indexOf(recordId);
@@ -900,71 +943,10 @@ function renderDetailsPanel() {
     const record = findRecord(UI.data, UI.currentRecordId);
     if (!record) return;
 
-    const categoryOptions = UI.data.categories.map(cat =>
-        `<option value="${escapeAttr(cat)}" ${cat === record.category ? 'selected' : ''}>${escapeHtmlText(cat)}</option>`
-    ).join('') + '<option value="__new__">+ Add new...</option>';
-
-    const formatOptions = ['float', 'sci', 'eng'].map(fmt =>
-        `<option value="${fmt}" ${fmt === record.format ? 'selected' : ''}>${fmt.charAt(0).toUpperCase() + fmt.slice(1)}</option>`
-    ).join('');
-
     UI.detailsPanel.innerHTML = `
         <div class="details-header">Record Settings</div>
 
-        <div class="detail-group">
-            <label>Category</label>
-            <select id="detail-category" onchange="updateRecordDetail('category', this.value)">
-                ${categoryOptions}
-            </select>
-        </div>
-
-        <div class="detail-group">
-            <label>Decimal Places</label>
-            <div class="number-with-buttons">
-                <button onclick="var i=document.getElementById('detail-places'); i.stepDown(); i.dispatchEvent(new Event('change'))">−</button>
-                <input type="number" id="detail-places" min="0" max="15" value="${record.places != null ? record.places : 2}"
-                       onchange="updateRecordDetail('places', parseInt(this.value))">
-                <button onclick="var i=document.getElementById('detail-places'); i.stepUp(); i.dispatchEvent(new Event('change'))">+</button>
-            </div>
-        </div>
-
-        <div class="detail-group">
-            <label>Format</label>
-            <select id="detail-format" onchange="updateRecordDetail('format', this.value)">
-                ${formatOptions}
-            </select>
-        </div>
-
-        <div class="detail-group">
-            <label>Currency</label>
-            <select id="detail-currency" onchange="updateRecordDetail('currencySymbol', this.value)">
-                ${['$', '€', '£', '¥', '₹', '₩', '₱', '₺', '₴', '₫', '₡', '₽', '₸', '₼', '₾', '৳'].map(s => `<option value="${s}" ${(record.currencySymbol || '$') === s ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
-        </div>
-
-        <div class="detail-group checkbox">
-            <label>
-                <input type="checkbox" id="detail-strip" ${record.stripZeros ? 'checked' : ''}
-                       onchange="updateRecordDetail('stripZeros', this.checked)">
-                Strip trailing zeros
-            </label>
-        </div>
-
-        <div class="detail-group checkbox">
-            <label>
-                <input type="checkbox" id="detail-group" ${record.groupDigits ? 'checked' : ''}
-                       onchange="updateRecordDetail('groupDigits', this.checked)">
-                Group digits with commas
-            </label>
-        </div>
-
-        <div class="detail-group checkbox">
-            <label>
-                <input type="checkbox" id="detail-degrees" ${record.degreesMode ? 'checked' : ''}
-                       onchange="updateRecordDetail('degreesMode', this.checked)">
-                Degrees mode (vs radians)
-            </label>
-        </div>
+        ${renderRecordSettingsFields(record)}
 
         <div class="detail-group detail-info">
             <div><span class="detail-info-label">Created:</span> ${formatRecordDate(record.created)}</div>
@@ -974,6 +956,80 @@ function renderDetailsPanel() {
         <div class="details-actions">
             <button onclick="duplicateCurrentRecord()" class="btn-secondary">Duplicate</button>
             <button onclick="deleteCurrentRecord()" class="btn-danger">Delete</button>
+        </div>
+    `;
+}
+
+/**
+ * Build the record-settings field markup (category, places, format,
+ * currency, three checkboxes) shared by the details panel and the mobile
+ * settings modal. All change handling goes through updateRecordDetail,
+ * which re-renders both surfaces on category change. Fields are id-free —
+ * the same markup can exist in both places at once.
+ */
+function renderRecordSettingsFields(record) {
+    const categoryOptions = UI.data.categories.map(cat =>
+        `<option value="${escapeAttr(cat)}" ${cat === record.category ? 'selected' : ''}>${escapeHtmlText(cat)}</option>`
+    ).join('') + '<option value="__new__">+ Add new...</option>';
+
+    const formatOptions = ['float', 'sci', 'eng'].map(fmt =>
+        `<option value="${fmt}" ${fmt === record.format ? 'selected' : ''}>${fmt.charAt(0).toUpperCase() + fmt.slice(1)}</option>`
+    ).join('');
+
+    return `
+        <div class="detail-group">
+            <label>Category</label>
+            <select onchange="updateRecordDetail('category', this.value)">
+                ${categoryOptions}
+            </select>
+        </div>
+
+        <div class="detail-group">
+            <label>Decimal Places</label>
+            <div class="number-with-buttons">
+                <button onclick="var i=this.parentElement.querySelector('input'); i.stepDown(); i.dispatchEvent(new Event('change'))">−</button>
+                <input type="number" min="0" max="15" value="${record.places != null ? record.places : 4}"
+                       onchange="updateRecordDetail('places', parseInt(this.value))">
+                <button onclick="var i=this.parentElement.querySelector('input'); i.stepUp(); i.dispatchEvent(new Event('change'))">+</button>
+            </div>
+        </div>
+
+        <div class="detail-group">
+            <label>Format</label>
+            <select onchange="updateRecordDetail('format', this.value)">
+                ${formatOptions}
+            </select>
+        </div>
+
+        <div class="detail-group">
+            <label>Currency</label>
+            <select onchange="updateRecordDetail('currencySymbol', this.value)">
+                ${['$', '€', '£', '¥', '₹', '₩', '₱', '₺', '₴', '₫', '₡', '₽', '₸', '₼', '₾', '৳'].map(s => `<option value="${s}" ${(record.currencySymbol || '$') === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+        </div>
+
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" ${record.stripZeros ? 'checked' : ''}
+                       onchange="updateRecordDetail('stripZeros', this.checked)">
+                Strip trailing zeros
+            </label>
+        </div>
+
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" ${record.groupDigits ? 'checked' : ''}
+                       onchange="updateRecordDetail('groupDigits', this.checked)">
+                Group digits with commas
+            </label>
+        </div>
+
+        <div class="detail-group checkbox">
+            <label>
+                <input type="checkbox" ${record.degreesMode ? 'checked' : ''}
+                       onchange="updateRecordDetail('degreesMode', this.checked)">
+                Degrees mode (vs radians)
+            </label>
         </div>
     `;
 }
@@ -1281,69 +1337,8 @@ function renderSettingsModal() {
     const record = findRecord(UI.data, UI.currentRecordId);
     if (!record) return;
 
-    const categoryOptions = UI.data.categories.map(cat =>
-        `<option value="${escapeAttr(cat)}" ${cat === record.category ? 'selected' : ''}>${escapeHtmlText(cat)}</option>`
-    ).join('') + '<option value="__new__">+ Add new...</option>';
-
-    const formatOptions = ['float', 'sci', 'eng'].map(fmt =>
-        `<option value="${fmt}" ${fmt === record.format ? 'selected' : ''}>${fmt.charAt(0).toUpperCase() + fmt.slice(1)}</option>`
-    ).join('');
-
     body.innerHTML = `
-        <div class="detail-group">
-            <label>Category</label>
-            <select onchange="updateRecordDetail('category', this.value); renderSettingsModal();">
-                ${categoryOptions}
-            </select>
-        </div>
-
-        <div class="detail-group">
-            <label>Decimal Places</label>
-            <div class="number-with-buttons">
-                <button onclick="var i=this.parentElement.querySelector('input'); i.stepDown(); i.dispatchEvent(new Event('change'))">−</button>
-                <input type="number" min="0" max="15" value="${record.places != null ? record.places : 2}"
-                       onchange="updateRecordDetail('places', parseInt(this.value))">
-                <button onclick="var i=this.parentElement.querySelector('input'); i.stepUp(); i.dispatchEvent(new Event('change'))">+</button>
-            </div>
-        </div>
-
-        <div class="detail-group">
-            <label>Format</label>
-            <select onchange="updateRecordDetail('format', this.value)">
-                ${formatOptions}
-            </select>
-        </div>
-
-        <div class="detail-group">
-            <label>Currency</label>
-            <select onchange="updateRecordDetail('currencySymbol', this.value)">
-                ${['$', '€', '£', '¥', '₹', '₩', '₱', '₺', '₴', '₫', '₡', '₽', '₸', '₼', '₾', '৳'].map(s => `<option value="${s}" ${(record.currencySymbol || '$') === s ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
-        </div>
-
-        <div class="detail-group checkbox">
-            <label>
-                <input type="checkbox" ${record.stripZeros ? 'checked' : ''}
-                       onchange="updateRecordDetail('stripZeros', this.checked)">
-                Strip trailing zeros
-            </label>
-        </div>
-
-        <div class="detail-group checkbox">
-            <label>
-                <input type="checkbox" ${record.groupDigits ? 'checked' : ''}
-                       onchange="updateRecordDetail('groupDigits', this.checked)">
-                Group digits with commas
-            </label>
-        </div>
-
-        <div class="detail-group checkbox">
-            <label>
-                <input type="checkbox" ${record.degreesMode ? 'checked' : ''}
-                       onchange="updateRecordDetail('degreesMode', this.checked)">
-                Degrees mode (vs radians)
-            </label>
-        </div>
+        ${renderRecordSettingsFields(record)}
 
         <div class="details-actions">
             <button onclick="duplicateCurrentRecord(); toggleSettings();" class="btn-secondary">Duplicate</button>
@@ -1494,32 +1489,10 @@ async function handleFileSelect(e) {
         backfillRecordTimestamps(UI.data);
         saveData(UI.data);
 
-        // Clear all editors since records may have changed
-        for (const [id, { container }] of UI.editors) {
-            container.remove();
-        }
-        UI.editors.clear();
-        UI.openTabs = [];
-        UI.previewTabId = null;
-        UI.currentRecordId = null;
-
-        // Re-render UI
-        renderSidebar();
-        renderTabBar();
-        renderDetailsPanel();
-
-        // Open the selected record from the imported file, or first record
-        const selectedId = UI.data.settings && UI.data.settings.lastRecordId;
-        const recordToOpen = selectedId ? findRecord(UI.data, selectedId) : null;
-        if (recordToOpen) {
-            openRecord(recordToOpen.id);
-        } else if (UI.data.records.length > 0) {
-            openRecord(UI.data.records[0].id);
-        } else {
-            // No records - show the "no editor" message
-            const noEditorMsg = document.querySelector('.no-editor-message');
-            if (noEditorMsg) noEditorMsg.style.display = 'block';
-        }
+        // Records may have changed wholesale — tear down and rebuild the UI,
+        // opening the selected record from the imported file (or the first)
+        destroyAllEditors();
+        resetUIForData();
 
         const count = UI.data.records.length;
         setStatus(`Imported ${count} record${count !== 1 ? 's' : ''} from ${file.name}`, false, false);
@@ -1557,30 +1530,13 @@ function handleReset() {
     );
 
     if (confirmed) {
-        // Clear all editors
-        for (const [id, { container }] of UI.editors) {
-            container.remove();
-        }
-        UI.editors.clear();
-        UI.openTabs = [];
-        UI.previewTabId = null;
-        UI.currentRecordId = null;
+        destroyAllEditors();
 
-        // Reset data to defaults
+        // Reset data to defaults; resetUIForData opens the default record
+        // (lastRecordId set by createDefaultData), or the first one
         UI.data = createDefaultData();
         saveData(UI.data);
-
-        // Re-render UI
-        renderSidebar();
-        renderTabBar();
-        renderDetailsPanel();
-
-        // Open the default record (lastRecordId set by createDefaultData), or the first one
-        if (UI.data.records.length > 0) {
-            const defaultId = UI.data.settings && UI.data.settings.lastRecordId;
-            const initialId = (defaultId && findRecord(UI.data, defaultId)) ? defaultId : UI.data.records[0].id;
-            openRecord(initialId);
-        }
+        resetUIForData();
 
         setStatus('Reset to default records', false, false);
     }
@@ -1938,14 +1894,7 @@ function reloadUIWithData(newData) {
     // Suppress dirty marking — we're loading from Drive, not making local changes
     UI.initComplete = false;
 
-    // Clear all editors
-    for (const [id, { container }] of UI.editors) {
-        container.remove();
-    }
-    UI.editors.clear();
-    UI.openTabs = [];
-    UI.previewTabId = null;
-    UI.currentRecordId = null;
+    destroyAllEditors();
 
     // Backfill missing timestamps with sentinel default
     backfillRecordTimestamps(newData);
@@ -1954,26 +1903,16 @@ function reloadUIWithData(newData) {
     UI.data = newData;
     saveData(UI.data, true);
 
-    // Re-render UI (useSavedScroll so renderSidebar uses Drive's scroll position)
-    renderSidebar(true);
-    renderTabBar();
-    renderDetailsPanel();
-
-    // Restore sidebar width from new data
+    // Restore sidebar width from new data before rendering/opening records,
+    // so editor and vars-panel layout measures against the final width
     const sidebar = document.getElementById('sidebar');
     const savedWidth = UI.data.settings && UI.data.settings.sidebarWidth;
     if (sidebar) {
         sidebar.style.width = savedWidth ? savedWidth + 'px' : '';
     }
 
-    // Open the last viewed record or the first record
-    const lastRecordId = UI.data.settings && UI.data.settings.lastRecordId;
-    const recordToOpen = lastRecordId ? findRecord(UI.data, lastRecordId) : null;
-    if (recordToOpen) {
-        openRecord(recordToOpen.id);
-    } else if (UI.data.records.length > 0) {
-        openRecord(UI.data.records[0].id);
-    }
+    // useSavedScroll so renderSidebar uses Drive's scroll position
+    resetUIForData({ useSavedScroll: true });
 
     setTimeout(() => { UI.initComplete = true; }, 50);
 }
