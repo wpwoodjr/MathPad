@@ -2594,37 +2594,26 @@ function ensureDefaultSettingsRecord(data) {
 }
 
 /**
- * Debounced save function
+ * Trailing debounce: the save fires `delay` ms after the most recent call.
+ * The `data` argument is intentionally ignored at fire time — the timer
+ * saves UI.data as it is THEN, so a save pending across a wholesale
+ * UI.data replacement (import, reset, Drive reload) can never clobber
+ * localStorage with the pre-replacement object. (Callers still pass
+ * UI.data for readability; nothing ever passes anything else.)
  */
 let saveTimeout = null;
-let resched = true;
-function doSave(data, delay) {
-    if (resched) {
-        resched = false;
-        saveTimeout = setTimeout(() => {
-            doSave(data, delay);
-        }, delay);
-    } else {
-        saveTimeout = null;
-        resched = true;
-        saveData(data, true);
-    }
-}
 function cancelPendingSave() {
-    if (saveTimeout) {
-        clearTimeout(saveTimeout);
-        saveTimeout = null;
-        resched = true;
-    }
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
 }
 function debouncedSave(data, delay = 500, localOnly = false) {
     if (!UI.initComplete) return;
     if (!localOnly) markDriveDirty();
-    if (saveTimeout) {
-        resched = true;
-    } else {
-        doSave(data, delay);
-    }
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+        saveTimeout = null;
+        saveData(UI.data, true);
+    }, delay);
 }
 /**
  * Export data to MpExport text format
