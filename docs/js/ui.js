@@ -177,7 +177,7 @@ function renderSidebar(useSavedScroll = false) {
         <div class="sidebar-actions">
             <div class="sidebar-actions-row sidebar-theme-help-row">
                 <button onclick="showHelp()" class="btn-secondary" title="Help">? Help</button>
-                <button onclick="toggleTheme()" class="btn-secondary btn-theme-toggle" title="Toggle light/dark theme">${document.documentElement.getAttribute('data-theme') === 'light' ? '\u263D' : '<span style="font-size:1.3em;line-height:1">\u263C</span>'} Theme</button>
+                <button onclick="toggleTheme()" class="btn-secondary btn-theme-toggle" title="Toggle light/dark theme"></button>
             </div>
             <button onclick="createNewRecord()" class="btn-new-record">+ New Record</button>
             <div class="sidebar-actions-row">
@@ -193,6 +193,9 @@ function renderSidebar(useSavedScroll = false) {
     `;
 
     UI.sidebar.innerHTML = html;
+
+    // The theme button was emitted empty — theme.js owns the icon/label/title
+    if (window.refreshThemeButtons) window.refreshThemeButtons();
 
     // Restore scroll position
     const newSidebarContent = UI.sidebar.querySelector('.sidebar-content');

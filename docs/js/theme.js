@@ -32,7 +32,10 @@
         if (saved === 'light' || saved === 'dark') {
             return saved;
         }
-        return 'light';
+        // No saved preference: follow the OS. This matches the
+        // listenForSystemChanges handler, which already applies the system
+        // theme on OS-level changes when no preference is saved.
+        return getSystemTheme();
     }
 
     function applyTheme(theme) {
@@ -90,6 +93,11 @@
 
     // Expose globally for onclick handlers (e.g., sidebar button)
     window.toggleTheme = toggleTheme;
+    // For code that rebuilds a .btn-theme-toggle (renderSidebar): re-applies
+    // the correct icon/label/title so the icon logic lives only here.
+    window.refreshThemeButtons = function() {
+        updateToggleButtons(getEffectiveTheme());
+    };
 
     // Apply theme immediately to prevent flash of wrong theme
     var initialTheme = getEffectiveTheme();
