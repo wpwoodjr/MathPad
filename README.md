@@ -1,19 +1,42 @@
+# History
+
+<img align="right" width="140" alt="MathPad icon" src="https://github.com/user-attachments/assets/77817643-bd90-4c19-9ec7-9f2654016c79" />
+
+MathPad is an equation solver, originally created by **Rick Huebner** for PalmOS PDAs (circa 1997–2000). I always loved MathPad but never found anything to replace its combination of simplicity and power.  This repository contains a modern web-based reimplementation, plus the original MathPad 1.5 release (documentation, PRC files, and desktop utilities).
+
 # MathPad
 
-An algebraic equation solver with automatic unknown detection, root-finding, tables, graphs, and an interactive tutorial series.
+**Write equations the way you'd write them on paper, fill in what you know, and MathPad solves for whatever's left — in either direction.**
 
-## About
-<img width="163" height="163" alt="image" src="https://github.com/user-attachments/assets/77817643-bd90-4c19-9ec7-9f2654016c79" />
+Instead of rearranging formulas by hand, you write the relationships once and let it find the unknown — give it the inputs and it computes the result, or give it the result and it works backward to an input. It handles linked systems of equations, 50+ built-in functions, tables and graphs, dates and money, and ships with an interactive tutorial. One web page, no install, no account, works offline.
 
-MathPad was originally created by **Rick Huebner** for PalmOS PDAs (circa 1997-2000). This repository contains:
-- A modern web-based reimplementation with near-feature parity
-- The original MathPad 1.5 release (documentation, PRC files, and desktop utilities)
+**[Try it online →](https://wpwoodjr.github.io/MathPad/)**
 
-## Web Application
+### A 30-second taste
 
-**Try it online: https://wpwoodjr.github.io/MathPad/**
+This is a Mathpad record.  The first line is the title, the second is the equation for time value of money.  Below that are the variables.  In this case we will solve for `pmt`:
+```
+TVM (Loan Amortization)
+pmt = -pv/((1-(1+int/12)**-n)/(int/12))
 
-Or open `docs/index.html` locally in a browser. No build step required.
+pv $<- $150,000
+int %<- 6.25%
+n <- 360
+pmt $<-
+```
+
+Click **Solve** and `pmt $<-` becomes `pmt $<- -923.58`. The trick is that you can leave *any* variable blank instead: clear `int`, set `pv` to `$100,000`, and Solve — MathPad sees that `int` is now the unknown and works backward to find `int %<- 10.62%`. Same equation, no rearranging; you just choose which value you don't know.
+
+<img width="727.5" height="750" alt="image" src="https://github.com/user-attachments/assets/05ab23e2-34a9-4b5a-ac04-40988d686073" />
+
+
+### Why MathPad?
+
+It hits a sweet spot between a calculator, a spreadsheet, and Wolfram. A **calculator** makes you rearrange the formula to solve backward — and can't at all when there's no closed form, like getting a loan's rate from its payment; MathPad just blanks the unknown and finds it numerically. A **spreadsheet** is one-directional and buries formulas inside cells, while MathPad solves in any direction and shows the relationships *as* readable, named equations. **Wolfram** is far more powerful but built for one-shot queries or heavyweight notebooks; MathPad is a set of lightweight documents you keep and re-solve as your numbers change — free, instant, and offline. (Reach for a spreadsheet when you have big datasets, and Wolfram for symbolic math or calculus.)
+
+# Web Application
+
+Open `docs/index.html` in any browser — no build step, no server — or use the [live version](https://wpwoodjr.github.io/MathPad/).
 
 ### Core Features
 
@@ -22,30 +45,28 @@ Or open `docs/index.html` locally in a browser. No build step required.
 - **User-defined Functions** — define functions like `f(x;y) = expr` in any record, or in the "Functions" record to make them available globally
 - **Global Constants** — define constants in a "Constants" record, available to all other records
 - **Interactive Tutorial Series** — six lesson groups in the sidebar's Tutorial category cover the language and the app, from a first equation through tables, dates, and the workflow tools
-- **Tables and Grids** — iterate variables over ranges to produce columnar tables or 2D grids, with per-cell equation solving
+- **Tables, Grids, and Graphs** — iterate variables over ranges to produce columnar tables or 2D grids, then click `as graph` to visualize it
 - **Vector Diagrams** — `vectorDraw` renders SVG vector diagrams in navigation, polar, or cartesian coordinates with legend and per-vector solving
 - **Import/Export** — compatible with original PalmOS MathPad export format
 
 ### Editor
 
-- **Syntax-highlighted editor** with line numbers and real-time token coloring; a function definition's `name(args)` signature gets a subtle highlight band so it reads apart from an ordinary equation
-- **Variables panel** — structured view of all variables with editable inputs, equation balance highlighting (green/orange/red), and flash animation on value changes. Editing a value commits when you click away; press Tab or Enter to also re-solve
-- **Undo/redo** — full undo history with Ctrl+Z / Ctrl+Y, restores solve results, status, and per-state modification time. Tab indent / Shift+Tab outdent / Ctrl+/ comment toggle, all undoable.
-- **Created/Modified tracking** — record creation and last-edit timestamps shown in the details panel. Modified updates on direct typing, title rename, and details-panel setting changes (not solve, clear, or vars-panel value edits).
+- **Multiple tabs** — work on multiple records.  Records are saved across browser sessions.
+- **Syntax-highlighted editor** with line numbers and real-time token coloring.
+- **Variables panel** — structured view of all variables with editable inputs, equation balance highlighting (green/orange/red), and flash animation on value changes.
+- **Undo/redo** — full undo history with Ctrl+Z / Ctrl+Y.
 - **Split-pane layout** — resizable variables panel above the formulas editor
 - **Resizable sidebar** — drag to adjust sidebar width, persisted across sessions
-- **Multiple tabs** — work on several records simultaneously; sidebar single-click opens a preview tab (italic), and any edit or double-click pins it
 - **Light/dark theme** — light by default, toggle with one click; your choice persists across sessions
 
 ### Number Formatting
 
-- Configurable decimal places, trailing zero stripping, comma grouping
+- **Configurable** decimal places, trailing zero stripping, comma grouping
 - Scientific and engineering notation
-- **Magnitude-aware float display** — small values (< 1) keep at least one more significant figure than the decimal-places setting, so they stay precise enough to balance against larger related values; a value with more leading zeros than the `places` setting switches to scientific notation (e.g. a record at 3 places shows `3.14e-14` instead of a wall of zeros)
-- **Money format** (`price$:`) — displays as `$1,234.56`. Configurable currency symbol per record (`$`, `€`, `£`, `¥`, `₹`, `₩`, `₱`, `₺`, `₴`, `₫`, `₡`, `₽`, `₸`, `₼`, `₾`, `৳`); suffix currencies show the symbol after the number.
+- **Money format** (`price$:`) — displays as `$1,234.56`; the currency symbol is configurable per record (€, £, ¥, ₹, … — suffix currencies show after the number)
 - **Percent format** (`rate%:`) — stores as decimal, displays with `%`
 - **Angular format** (`angle°:`) — mode-aware: degrees mode displays mod 360 with `°` suffix; radians mode displays mod 2π with no symbol
-- **Date/duration formats** (`@d`, `@t`) — locale-aware date display; H:MM:SS duration display, with `Nd H:MM:SS` for durations ≥ 24h (the parser accepts the same form on input)
+- **Date/duration formats** (`@d`, `@t`) — locale-aware date display; H:MM:SS duration display, with `Nd H:MM:SS` for durations ≥ 24h
 - **Numeric bases** (`hex#16:`) — bases 2 through 36
 - **Inline evaluation** (`\expr\`) — evaluates expression in table/grid titles for display
 
@@ -69,7 +90,7 @@ Or open `docs/index.html` locally in a browser. No build step required.
 
 ### Equations
 
-An equation is any line with `=` between two expressions. If all variables have values, MathPad checks that both sides balance. If there's an unknown, it solves using Brent's root-finding method.
+An equation is a line with `=` between two expressions. If all variables have values, MathPad checks that both sides balance. If there's an unknown, it solves using Brent's root-finding method.
 
 | Syntax | Behavior |
 |--------|----------|
@@ -78,31 +99,11 @@ An equation is any line with `=` between two expressions. If all variables have 
 
 `°=` is only valid at the top level of an equation line (for balance checks and Brent's solving); it is not a general expression operator.
 
-### Algebraic Substitution
+### Solving Linked Systems
 
-When a system has multiple unknowns, the solver derives algebraic substitutions to reduce equations to a single unknown for Brent's root-finding. Derivation is **symmetric** — both LHS-with-RHS-as-target and RHS-with-LHS-as-target are explored, so `x = z/2` yields both `x → z/2` and `z → 2*x`. The recursive backtracker enumerates subset-sized combinations (size 0, 1, …, N) to prefer smaller combos that leave more variables free for Brent's.
+When a record has several unknowns, MathPad reduces the system before root-finding: it derives algebraic substitutions to isolate variables (**symmetrically** — `x = z/2` yields both `x → z/2` *and* `z → 2*x`), partitions independent equations into separate components to avoid combinatorial blow-up, and runs a recursive backtracker to find a consistent assignment. In practice you can hand it a tangle of related equations and let it work out the order and the algebra. (For the exact substitution forms recognized, see [arch.md](arch.md).)
 
-The following forms are recognized (where `B`, `C`, `D` are arbitrary expressions not containing the target variable):
-
-**Direct extraction** — variable is a top-level operand:
-
-| Form | Substitution |
-|------|-------------|
-| `var + B = D` | `var = D - B` |
-| `var * B = D` | `var = D / B` |
-| `var / B = D` | `var = D * B` |
-| `B / var = D` | `var = B / D` |
-| `var ** B = D` | `var = D ** (1/B)` |
-
-**Extraction from sum/difference** — variable is inside a product or quotient within a sum:
-
-| Form | Substitution |
-|------|-------------|
-| `var * B + C = D` | `var = (D - C) / B` |
-| `var / B + C = D` | `var = (D - C) * B` |
-| `B / var + C = D` | `var = B / (D - C)` |
-
-Subtraction (`-`), commuted forms (`C + var * B`), and swapped sides (`D = var * B + C`) all work. Substitutions chain across equations in the system.
+<img align="right" width="264" height="472" alt="image" src="https://github.com/user-attachments/assets/6019be55-e919-4aaa-a8f4-32b2ff8bfe95" />
 
 ### Tables, Grids, and Vector Diagrams
 
@@ -112,7 +113,7 @@ Use `table` for columnar output, `grid` for 2D cell grids, and `vectorDraw` for 
 table("Distance vs Time") = {
   distance = speed * time
   speed: 60
-  time<- 1..5
+  time: 1..5
   time->
   distance->
 }
@@ -120,25 +121,27 @@ table("Distance vs Time") = {
 grid("Multiplication") = {
   z = x * y
   z<-
-  x<- 1..5
-  y<- 1..5
+  x: 1..5
+  y: 1..5
   x->
   y->
   z->
 }
 ```
 
-**Body declarations:**
-- `x<- 0..10` or `x: 0..10..2` — iterator (range with optional step)
-- `z<-` or `z:` — unknown for equation solving (bare, no value)
+**Table body declarations:**
+- `x: 0..10` or `x: 0..10..2` — iterator (range with optional step)
+- `z<-` — unknown for equation solving (bare, no value)
 - `v: 10` — definition (expression value)
 - `Label z->` — output column with optional label
 
-Tables inherit outer equations when the body has none; body equations override if any are present. Tables also inherit all outer values, however a value may be overridden by a declaration in the table.  Each row/cell is solved independently. Optional font size: `table("Title"; 12) = { ... }`.
+Tables inherit the record's outer equations and values when the body doesn't define its own; a body declaration overrides the inherited one. Each row/cell is solved independently. Optional font size: `table("Title"; 12) = { ... }`.
+
+<img align="right" width="500" alt="image" src="https://github.com/user-attachments/assets/c74bf2e4-aa22-4ddf-b779-5a4b2772a34f" />
 
 **Multiple iterators** iterate as nested loops over the cartesian product. First-declared = outermost (changes slowest); last-declared = innermost (changes fastest). Iterator bounds are evaluated once up-front, so inner iterators cannot depend on outer iterator values.
 
-**`tableGraph`** renders the rows as an SVG line graph instead of a column table. Column 0 is the X-axis; remaining columns are Y series (one line each). With multiple iterators, grouping is opt-in: an inner iterator becomes a line-grouping variable only if it has a `iter->` output column. The column's label (e.g. `Y` in `Y y->`) is used in the legend (`Y = 1.0`). Without `y->`, the inner iterator just sweeps silently. Hover a graph to get a crosshair and an `(x, y)` coordinate readout at the pointer.
+`tableGraph` renders the rows as an SVG line graph instead of a column table. Column 0 is the X-axis; remaining columns are Y series (one line each). With multiple iterators, grouping is opt-in: an inner iterator becomes a line-grouping variable only if it has a `iter->` output column. The column's label (e.g. `Y` in `Y y->`) is used in the legend (`Y = 1.0`). Hover a graph to get a crosshair and an `(x, y)` coordinate readout at the pointer.
 
 ```
 tableGraph("z = x^y") = {
@@ -151,21 +154,44 @@ tableGraph("z = x^y") = {
 }
 ```
 
+<img align="right" width="500" alt="image" src="https://github.com/user-attachments/assets/6de14e36-457c-4362-b485-f17b2e5c0a5c" />
+
 **Vector Diagrams:**
 
 ```
-vectorDraw("Wind Triangle"; navigation) = {
-  "equations..."
-  tc °->            "start direction (bearing)"
-  start_mag ->      "start magnitude"
-  Label end_dir °-> "end direction, labels vector in legend"
-  end_mag ->        "end magnitude (relative displacement)"
+Ground track
+smg: 9.538
+cmg °: 0°
+
+Boat through water
+speed: 10
+cts °: 342.54°
+
+Current
+drift: 3
+set °: 90°
+
+vectorDraw("v Course visualization"; navigation) = {
+  0 °->
+  0 ->
+  "Course to steer" cts °->
+  "Boat speed" speed->
+
+  0 °->
+  0 ->
+  "Course made good" cmg °->
+  "Speed made good" smg->
+
+  cts °->
+  speed ->
+  "Current Set" set °->
+  "Drift" drift->
 }
 ```
 
 The second argument is the coordinate **type** (required): `navigation` (0° = up, +° clockwise — bearings), `polar` (0° = right, +° counter-clockwise — math), or `cartesian` (raw `x, y`, no angle handling). For navigation/polar each pair is `(direction, magnitude)`; for cartesian each pair is `(x, y)`. An optional font size goes third: `vectorDraw("Title"; polar; 12)`.
 
-Each vector is defined by four outputs: a start pair (absolute position from the origin) and an end pair. For navigation/polar the end pair is the **relative displacement** (added to the start). For cartesian the end pair is the **absolute destination** point. Labels on the end pair identify the vector in the legend. Direction columns respect the record's degrees/radians mode; legend values use the record's places, strip zeros, and group digits settings.
+Each vector is defined by four outputs: a start pair (absolute position from the origin) and an end pair. Labels on the end pair identify the vector in the legend. Direction columns respect the record's degrees/radians mode; legend values use the record's places, strip zeros, and group digits settings.
 
 When a table, grid, or vector diagram doesn't fully solve, its title shows `(n/m solved)` to indicate partial results.
 
@@ -215,9 +241,10 @@ years <- 30            "number of years"
 
 **Try it:**
 
-1. Click **Solve** — MathPad calculates `pmt: -$607.61` (monthly payment; negative because cash flows out)
-2. Change `pv` to `$250,000` and click the ⟲ icon next to `pmt` — it clears `pmt` and re-solves with the new principal
-3. To solve backwards, set `pmt: -$2,000` and click ⟲ next to `pv` — MathPad finds the loan amount that produces that payment
+1. Copy the Loan Calculator text and paste it into a new MathPad record
+2. Click **Solve** — MathPad calculates `pmt: -$607.61` (monthly payment; negative because cash flows out)
+3. Change `pv` to `$250,000` and click the ⟲ icon next to `pmt` — it clears `pmt` and re-solves with the new principal
+4. To solve backwards, set `pmt: -$2,000` and click ⟲ next to `pv` — MathPad finds the loan amount that produces that payment
 
 Each editable variable has a ⟲ icon that clears it and solves, making it easy to compute any variable from the others. MathPad automatically detects the unknown and solves using root-finding.
 
@@ -252,7 +279,7 @@ Each editable variable has a ⟲ icon that clears it and solves, making it easy 
 ## Technical Details
 
 - Pure client-side JavaScript — no build system, no frameworks, no server
-- ~17,500 lines of JS across 13 modules
+- ~18,000 lines of JS across 13 modules
 - Brent's root-finding algorithm with adaptive bracketing, known-scale heuristics, and singularity/pole rejection
 - Recursive backtracking solver with deterministic-advance phases (direct-eval, substitution building, sweep subs) and three kinds of branching candidates (direct-eval alternates, sweep-0 natural 1-unknown, sweep-1 subset-enumerated substitution combos); falls back to most-progressed snapshot when no balanced branch found
 - Equation-graph partitioning into independent components (union-find over shared vars, limit refs, body-def refs) to avoid cartesian-product blow-up on disjoint sub-systems
