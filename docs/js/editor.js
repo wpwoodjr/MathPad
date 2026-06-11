@@ -73,19 +73,16 @@ function tokenizeMathPad(text, options = {}) {
         }
     }
 
+    // Token text offsets come straight from tokenizer (line, col) via the
+    // line-start offset table — no text re-searching.
+    const lineStarts = computeLineOffsets(text);
+
     // Find quoted comment regions from tokenizer
     const quotedCommentRegions = [];
-    let pos = 0;
     for (const token of flatTokens) {
-        if (token.type === TokenType.EOF) continue;
-        const tokenStart = findTokenPosition(text, token, pos);
-        if (tokenStart === -1) continue;
-        const tokenLength = getTokenLength(token, text, tokenStart);
-        const tokenEnd = tokenStart + tokenLength;
-        if (token.type === TokenType.COMMENT) {
-            quotedCommentRegions.push({ start: tokenStart, end: tokenEnd });
-        }
-        pos = tokenEnd;
+        if (token.type !== TokenType.COMMENT) continue;
+        const tokenStart = tokenOffset(lineStarts, token);
+        quotedCommentRegions.push({ start: tokenStart, end: tokenStart + getTokenLength(token) });
     }
 
     // Helper to check if a region overlaps with quoted comments
@@ -101,7 +98,6 @@ function tokenizeMathPad(text, options = {}) {
     );
 
     const tokens = [];
-    pos = 0;
 
     let lastTokenWasVarDef = false;
     let lastTokenWasBuiltin = false;
@@ -123,16 +119,12 @@ function tokenizeMathPad(text, options = {}) {
             prevTokenLine = token.line;
         }
 
-        const tokenStart = findTokenPosition(text, token, pos);
-        if (tokenStart === -1) continue;
-
-        const tokenLength = getTokenLength(token, text, tokenStart);
-        const tokenEnd = tokenStart + tokenLength;
+        const tokenStart = tokenOffset(lineStarts, token);
+        const tokenEnd = tokenStart + getTokenLength(token);
 
         // Skip tokens that overlap with comment regions (comments take precedence)
         const inCommentRegion = commentRegions.some(r => tokenStart < r.end && tokenEnd > r.start);
         if (inCommentRegion) {
-            pos = tokenEnd;
             lastTokenWasVarDef = false;
             prevHighlightType = null;
             continue;
@@ -201,7 +193,6 @@ function tokenizeMathPad(text, options = {}) {
         lastTokenEnd = tokenEnd;
 
         tokens.push({ from: tokenStart, to: tokenEnd, type: highlightType, fnDef: fnDefSignature.has(ti) });
-        pos = tokenEnd;
     }
 
     // Add comment regions as single comment tokens
@@ -487,47 +478,11 @@ function findEquationLabelRegions(line, lineTokens) {
 }
 
 /**
- * Find the position of a token in the text
+ * Get the length of a token in the source text.
+ * (Token text positions come from tokenOffset(lineStarts, token) — the
+ * tokenizer's own line/col — so there is no text re-searching.)
  */
-function findTokenPosition(text, token, startFrom) {
-    // For most tokens, we can find them by their value
-    let searchValue;
-    if (token.type === TokenType.NUMBER) {
-        searchValue = token.value.raw || String(token.value.value);
-    } else if (token.type === TokenType.COMMENT) {
-        searchValue = token.lineComment ? '//' + token.value : '"' + token.value + '"';
-    } else if (token.type === TokenType.ERROR || token.type === TokenType.UNEXPECTED_CHAR) {
-        // Extract the actual character from error message like "Unexpected character '$'"
-        const match = token.value.match(/character '(.)'/);
-        searchValue = match ? match[1] : null;
-    } else {
-        searchValue = token.value;
-    }
-
-    if (!searchValue) {
-        // Skip whitespace for multi-char error tokens
-        let pos = startFrom;
-        while (pos < text.length && /\s/.test(text[pos])) {
-            pos++;
-        }
-        return pos;
-    }
-
-    // Skip whitespace to find the token
-    let pos = startFrom;
-    while (pos < text.length && /\s/.test(text[pos])) {
-        pos++;
-    }
-
-    // Look for the token value
-    const idx = text.indexOf(searchValue, pos);
-    return idx >= startFrom ? idx : -1;
-}
-
-/**
- * Get the length of a token in the source text
- */
-function getTokenLength(token, text, start) {
+function getTokenLength(token) {
     if (token.type === TokenType.NUMBER) {
         return (token.value.raw || String(token.value.value)).length;
     } else if (token.type === TokenType.COMMENT) {
@@ -1275,14 +1230,29 @@ class SimpleEditor {
     updateLineNumbers() {
         const lines = this.textarea.value.split('\n');
         const errorLines = this.errorLines;
-        let html = '';
 
-        // Measure each line's rendered height to handle wrapping
+        // Measure all wrapped line heights in ONE layout pass: fill the
+        // measure element with one child div per line (children inherit
+        // pre-wrap/break-word and span the same content width as raw text),
+        // then read every child's offsetHeight. The first read triggers a
+        // single reflow; the rest read from clean layout. Measuring lines
+        // one-by-one via measureTextHeight would force a write→read reflow
+        // per line — hundreds per keystroke on large records.
+        this.measureElement.style.width = `${this.textarea.clientWidth}px`;
+        let measureHtml = '';
         for (let i = 0; i < lines.length; i++) {
-            const height = this.measureTextHeight(lines[i]);
+            measureHtml += `<div>${lines[i] ? escapeHtml(lines[i]) : '\u00A0'}</div>`;
+        }
+        this.measureElement.innerHTML = measureHtml;
+
+        const children = this.measureElement.children;
+        let html = '';
+        for (let i = 0; i < lines.length; i++) {
+            const height = children[i].offsetHeight;
             const cls = errorLines.has(i) ? 'line-number has-error' : 'line-number';
             html += `<div class="${cls}" style="height:${height}px">${i + 1}</div>`;
         }
+        this.measureElement.textContent = '';
         this.lineNumbers.innerHTML = html;
         this.lineNumbers.scrollTop = this.textarea.scrollTop;
     }

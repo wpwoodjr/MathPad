@@ -80,6 +80,8 @@ function loadModules() {
 
     // Variables (depends on parser, evaluator)
     const variables = require(path.join(jsPath, 'variables.js'));
+    global.computeLineOffsets = variables.computeLineOffsets;
+    global.tokenOffset = variables.tokenOffset;
     // VarType and ClearBehavior are already set from parser.js above
     global.parseVariableLine = variables.parseVariableLine;
     global.parseAllVariables = variables.parseAllVariables;

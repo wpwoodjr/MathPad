@@ -1133,6 +1133,7 @@ function expandInlineExprs(text, context, record) {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        computeLineOffsets, tokenOffset,
         parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         buildOutputLine, capturePreSolveValues, clearVariables,

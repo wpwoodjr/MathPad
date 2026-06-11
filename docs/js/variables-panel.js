@@ -41,6 +41,22 @@ function highlightLabelText(text, options = {}) {
 }
 
 /**
+ * Shared hidden span for measuring input text width. Module-level singleton:
+ * panels are created/destroyed constantly (preview tabs), and a per-panel
+ * span appended to document.body would be orphaned on every panel destroy.
+ * Stateless between uses — font and text are reset on every measurement.
+ */
+let _measureSpan = null;
+function getMeasureSpan() {
+    if (!_measureSpan) {
+        _measureSpan = document.createElement('span');
+        _measureSpan.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;';
+        document.body.appendChild(_measureSpan);
+    }
+    return _measureSpan;
+}
+
+/**
  * VariablesPanel - Manages the structured variables view
  */
 class VariablesPanel {
@@ -941,16 +957,12 @@ class VariablesPanel {
      */
     autoSizeInput(input) {
         if (!input.value) { input.style.maxWidth = ''; return; }
-        // Measure text width using a hidden span
-        if (!this._measureSpan) {
-            this._measureSpan = document.createElement('span');
-            this._measureSpan.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;';
-            document.body.appendChild(this._measureSpan);
-        }
+        // Measure text width using the shared hidden span
+        const measureSpan = getMeasureSpan();
         const style = getComputedStyle(input);
-        this._measureSpan.style.font = style.font;
-        this._measureSpan.textContent = input.value;
-        const textWidth = this._measureSpan.offsetWidth;
+        measureSpan.style.font = style.font;
+        measureSpan.textContent = input.value;
+        const textWidth = measureSpan.offsetWidth;
         const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) +
                          parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
         const needed = textWidth + padding + 4;

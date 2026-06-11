@@ -2492,15 +2492,20 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         // OUTPUT-with-limits no-root cases — main value present in context
         // but per-column re-solve failed). Collapses duplicate var refs
         // across columns and ignores pure-constant columns.
+        // Evaluate each column exactly once, up front. A column with limits
+        // runs a full resolveWithLimits re-solve inside getColValue, so
+        // evaluating per-use would double that work — and two evaluations
+        // aren't guaranteed to agree for rand()-dependent records.
+        const colValues = columns.map(getColValue);
         const refVars = new Set();
         const solvedRefVars = new Set();
-        for (const col of columns) {
+        columns.forEach((col, idx) => {
             if (col.ast) {
                 for (const v of findVariablesInAST(col.ast)) refVars.add(v);
             } else if (col.name) {
                 refVars.add(col.name);
             }
-            const v = getColValue(col);
+            const v = colValues[idx];
             if (v !== undefined && isFinite(v)) {
                 if (col.ast) {
                     for (const rv of findVariablesInAST(col.ast)) solvedRefVars.add(rv);
@@ -2508,7 +2513,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
                     solvedRefVars.add(col.name);
                 }
             }
-        }
+        });
         const solveInfo = solvedRefVars.size < refVars.size
             ? { solved: solvedRefVars.size, total: refVars.size }
             : null;
@@ -2518,10 +2523,10 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         for (let i = 0; i < columns.length; i += 4) {
             const sdCol = columns[i], smCol = columns[i + 1];
             const edCol = columns[i + 2], emCol = columns[i + 3];
-            const startDir = getColValue(sdCol);
-            const startMag = getColValue(smCol);
-            const endDir = getColValue(edCol);
-            const endMag = getColValue(emCol);
+            const startDir = colValues[i];
+            const startMag = colValues[i + 1];
+            const endDir = colValues[i + 2];
+            const endMag = colValues[i + 3];
             // Label preference: end-direction column's label, then end-mag's label
             const dirLabel = (edCol.header && edCol.header !== edCol.name) ? edCol.header : null;
             const magLabel = (emCol.header && emCol.header !== emCol.name) ? emCol.header : null;
