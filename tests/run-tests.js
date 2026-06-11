@@ -42,9 +42,7 @@ function loadModules() {
 
     // Line Parser (depends on parser)
     const lineParser = require(path.join(jsPath, 'line-parser.js'));
-    global.LineType = lineParser.LineType;
     global.LineParser = lineParser.LineParser;
-    global.parseMarkedLineNew = lineParser.parseMarkedLineNew;
     global.getMarkerString = lineParser.getMarkerString;
     global.tokensToText = lineParser.tokensToText;
 
@@ -77,7 +75,6 @@ function loadModules() {
     global.solveEquation = solver.solveEquation;
     global.findVariablesInAST = solver.findVariablesInAST;
     global.isDefinitionEquation = solver.isDefinitionEquation;
-    global.deriveSubstitution = solver.deriveSubstitution;
     global.buildSubstitutionMap = solver.buildSubstitutionMap;
     global.substituteInAST = solver.substituteInAST;
 
@@ -88,7 +85,6 @@ function loadModules() {
     global.parseAllVariables = variables.parseAllVariables;
     global.capturePreSolveValues = variables.capturePreSolveValues;
     global.clearVariables = variables.clearVariables;
-    global.findEquations = variables.findEquations;
     global.createEvalContext = variables.createEvalContext;
     global.parseConstantsRecord = variables.parseConstantsRecord;
     global.parseFunctionsRecord = variables.parseFunctionsRecord;
@@ -97,7 +93,6 @@ function loadModules() {
     global.formatVariableValue = variables.formatVariableValue;
     global.findExpressionOutputs = variables.findExpressionOutputs;
     global.findEquationsAndOutputs = variables.findEquationsAndOutputs;
-    global.clearExpressionOutputs = variables.clearExpressionOutputs;
     global.buildOutputLine = variables.buildOutputLine;
     global.findTableDefinitions = variables.findTableDefinitions;
     global.parseMarkedLine = variables.parseMarkedLine;

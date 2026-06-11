@@ -85,12 +85,11 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
     let unknowns = [...allVars].filter(v => !context.hasVariable(v));
 
     if (unknowns.length === 0) {
-        // All variables known - just evaluate to check
-        const leftVal = evaluate(leftAST, context);
-        const rightVal = evaluate(rightAST, context);
-        if (Math.abs(leftVal - rightVal) > 1e-10) {
-            // Equation doesn't balance - might be an error
-        }
+        // All variables known — evaluate both sides so evaluation errors
+        // (unknown function, etc.) surface to the caller; balance checking
+        // itself happens in the post-recursion balance loop.
+        evaluate(leftAST, context);
+        evaluate(rightAST, context);
         return { solved: false };
     }
 
@@ -701,7 +700,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             }
 
             // [2] Build substitution map
-            substitutions = buildSubstitutionMap(equations, context, errors);
+            substitutions = buildSubstitutionMap(equations, context);
             _trace('  [2] Substitution map');
             if (substitutions.size > 0) {
                 for (const [k, subs] of substitutions) {
@@ -1627,7 +1626,7 @@ function formatOutput(text, declarations, context, computedValues, record, solve
             try {
                 formatted = varFormat
                     ? formatVariableValue(value, varFormat, fullPrecision, format)
-                    : formatNumber(value, places, format.stripZeros, format.format, exprBase || 10, format.groupDigits, null, format.places);
+                    : formatNumber(value, places, format.stripZeros, format.format, exprBase || 10, format.groupDigits, format.places);
             } catch (e) {
                 errors.push(`Line ${output.startLine + 1}: ${e.message}`);
                 continue;

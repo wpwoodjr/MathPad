@@ -168,23 +168,6 @@ window.addEventListener('beforeunload', (e) => {
 });
 
 /**
- * Application info
- */
-const APP_INFO = {
-    name: 'MathPad Web',
-    version: '1.0.0',
-    description: 'Algebraic equation solver based on MathPad for PalmOS',
-    author: 'Based on original MathPad by Rick Huebner'
-};
-
-/**
- * Show about dialog
- */
-function showAbout() {
-    alert(`${APP_INFO.name} v${APP_INFO.version}\n\n${APP_INFO.description}\n\n${APP_INFO.author}`);
-}
-
-/**
  * Show help
  */
 function showHelp() {
@@ -192,6 +175,4 @@ function showHelp() {
 }
 
 // Export to global scope
-window.showAbout = showAbout;
 window.showHelp = showHelp;
-window.APP_INFO = APP_INFO;

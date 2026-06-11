@@ -124,10 +124,6 @@ class Tokenizer {
         return ch && /[a-zA-Z0-9_]/.test(ch);
     }
 
-    isHexDigit(ch) {
-        return ch && /[0-9a-fA-F]/.test(ch);
-    }
-
     makeToken(type, value, startLine, startCol) {
         const token = { type, value, line: startLine, col: startCol };
         // Attach pending whitespace to token
@@ -194,8 +190,6 @@ class Tokenizer {
         const startCol = this.col;
         const startPos = this.pos;
         let value = '';
-
-
 
         // Decimal number (possibly floating point with scientific notation)
         // Allow commas as digit grouping
@@ -484,15 +478,9 @@ class Tokenizer {
             return this.makeToken(TokenType.OPERATOR, twoChar, startLine, startCol);
         }
 
-        // °= (degree equality — mod-aware equation operator)
-        if (ch === '°' && ch2 === '=') {
-            this.advance(2);
-            const token = this.makeToken(TokenType.OPERATOR, '°=', startLine, startCol);
-            token.modN = true;
-            return token;
-        }
-
         // Single-character operators (% is not an operator - use mod() function)
+        // (°= never reaches here — the main tokenize() loop intercepts it,
+        // and bare ° is consumed by the FORMATTER block.)
         const singleCharOps = ['+', '-', '*', '/', '&', '|', '^', '~', '!', '<', '>', '=', '?'];
         if (singleCharOps.includes(ch)) {
             this.advance();
@@ -1075,10 +1063,6 @@ function parseTokens(tokens) {
     const parser = new Parser(tokens);
     return parser.parse();
 }
-
-// Note: parseVariableDeclaration, findEquations, and findInlineEvaluations
-// have been consolidated into variables.js to eliminate duplication.
-// Use parseVariableLine, findEquations, findInlineEvaluations from variables.js instead.
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

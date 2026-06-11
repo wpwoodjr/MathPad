@@ -40,39 +40,6 @@ function getLineText(text, lineOffsets, lineNum) {
 }
 
 /**
- * Extract base variable name, format, and numeric base from a name that may have suffixes
- * e.g., "pmt$" -> { baseName: "pmt", format: "money", base: 10 }
- *       "rate%" -> { baseName: "rate", format: "percent", base: 10 }
- *       "hex#16" -> { baseName: "hex", format: null, base: 16 }
- *       "x" -> { baseName: "x", format: null, base: 10 }
- */
-function parseVarNameAndFormat(nameWithSuffix) {
-    // Check for #base suffix: var#16
-    const baseMatch = nameWithSuffix.match(/^(\w+)#(\d+)$/);
-    if (baseMatch) {
-        return { baseName: baseMatch[1], format: null, base: parseInt(baseMatch[2]) };
-    }
-    // Check for $ suffix
-    if (nameWithSuffix.endsWith('$')) {
-        return { baseName: nameWithSuffix.slice(0, -1), format: 'money', base: 10 };
-    }
-    // Check for % suffix
-    if (nameWithSuffix.endsWith('%')) {
-        return { baseName: nameWithSuffix.slice(0, -1), format: 'percent', base: 10 };
-    }
-    return { baseName: nameWithSuffix, format: null, base: 10 };
-}
-
-/**
- * Replace the value portion of a variable declaration line
- * @param {string} line - The line of text
- * @param {string} varName - Variable name (without $ or % suffix)
- * @param {string} marker - The declaration marker (: <- -> ->> ::)
- * @param {boolean} hasLimits - Whether the declaration has limits [low:high]
- * @param {string} newValue - The new value to insert (empty string to clear)
- * @returns {string|null} The modified line, or null if marker not found
- */
-/**
  * Build an output line by replacing the value after the marker
  * Used by both variable outputs and expression outputs
  * @param {string} line - The original line
@@ -415,7 +382,7 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
     if (varFormat === 'money') {
         if (fullPrecision) {
             const absValue = Math.abs(value);
-            let formatted = formatNumber(absValue, places, stripZeros, numberFormat, 10, groupDigits, null);
+            let formatted = formatNumber(absValue, places, stripZeros, numberFormat, 10, groupDigits);
             // Ensure at least currency's decimal places
             const minPlaces = (typeof currencyPlaces !== 'undefined' && currencyPlaces[currencySymbol] != null) ? currencyPlaces[currencySymbol] : 2;
             const dot = formatted.indexOf('.');
@@ -439,7 +406,7 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
     if (varFormat === 'percent') {
         if (fullPrecision) {
             const percent = value * 100;
-            const formatted = formatNumber(percent, places, stripZeros, numberFormat, 10, false, null);
+            const formatted = formatNumber(percent, places, stripZeros, numberFormat, 10, false);
             return formatted + '%';
         }
         return formatPercent(value, places, stripZeros);
@@ -461,13 +428,13 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
             const shifted = value - M * Math.floor((value - low) / M);
             normalized = (shifted >= low && shifted <= high) ? shifted : value;
             const formatted = fullPrecision
-                ? formatNumber(normalized, places, stripZeros, numberFormat, 10, false, null)
+                ? formatNumber(normalized, places, stripZeros, numberFormat, 10, false)
                 : toFixed(normalized, places).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
             return degreesMode ? formatted + '°' : formatted;
         }
         normalized = value - M * Math.floor(value / M);
         if (fullPrecision) {
-            const formatted = formatNumber(normalized, places, stripZeros, numberFormat, 10, false, null);
+            const formatted = formatNumber(normalized, places, stripZeros, numberFormat, 10, false);
             return degreesMode ? formatted + '°' : formatted;
         }
         return formatDegrees(normalized, places, degreesMode);
@@ -484,10 +451,9 @@ function formatVariableValue(value, varFormat, fullPrecision, format = {}) {
     }
 
     // Regular number formatting
-    return formatNumber(value, places, stripZeros, numberFormat, base, groupDigits, null, displayPlaces);
+    return formatNumber(value, places, stripZeros, numberFormat, base, groupDigits, displayPlaces);
 }
 
-/**
 /**
  * Capture pre-solve values for all variables (before outputs are cleared).
  * Used by the ~? operator and returned by ~ access.
@@ -508,7 +474,7 @@ function capturePreSolveValues(text, allTokens) {
  * Clears ALL matching declarations, not just one per variable
  * clearType: 'input' clears input variables (<-) and output variables (-> and ->>)
  *            'output' clears output variables only (-> and ->>)
- *            'solve' clears output variables (-> ->>) and persistent outputs (=> =>>)
+ *            'solve' clears output variables (-> ->>) and persistent outputs (:> :>>)
  *            'all' clears all variables
  */
 function clearVariables(text, clearType = 'input', allTokens, skipLines) {
@@ -551,8 +517,8 @@ function clearVariables(text, clearType = 'input', allTokens, skipLines) {
 
 /**
  * Find equations and expression outputs in a single pass over all lines.
- * This is the core implementation; findEquations() and findExpressionOutputs()
- * are thin wrappers for callers that only need one result.
+ * This is the core implementation; findExpressionOutputs() is a thin
+ * wrapper for callers that only need outputs.
  * @param {string} text - The formula text
  * @returns {{ equations: Array, exprOutputs: Array }}
  */
@@ -705,28 +671,6 @@ function findExpressionOutputs(text, allTokens) {
 }
 
 /**
- * Clear expression output values for recalculating outputs
- * @param {string} clearType - 'solve' clears all recalculating outputs; otherwise skips persistent (=> =>>)
- */
-function clearExpressionOutputs(text, clearType, allTokens) {
-    const lines = text.split('\n');
-    const outputs = findExpressionOutputs(text, allTokens);
-
-    for (const output of outputs) {
-        // Skip persistent outputs (:> :>>) unless solving
-        const isPersistent = output.marker === ':>' || output.marker === ':>>';
-        if (output.recalculates && output.valueTokens && output.valueTokens.length > 0 && (clearType === 'solve' || !isPersistent)) {
-            const line = lines[output.startLine];
-            const markerEndIndex = output.markerEndCol - 1;
-            const commentInfo = { comment: output.comment, commentUnquoted: output.commentUnquoted };
-            lines[output.startLine] = buildOutputLine(line, markerEndIndex, '', commentInfo);
-        }
-    }
-
-    return lines.join('\n');
-}
-
-/**
  * Try to extract a valid equation from a line that may have label text before/after.
  * For example: "equation c = a + b test" -> "c = a + b"
  * Returns the extracted equation text, or the original if it parses fine or can't be fixed.
@@ -819,54 +763,6 @@ function extractEquationFromLine(lineText, lineTokens) {
     // Couldn't extract a clean equation — return original text with raw split sides
     // so consumers can still attempt to parse each side and report specific errors
     return { text: lineText, leftText: leftText || null, rightText: rightText || null };
-}
-
-/**
- * Find equations in text (lines or blocks with = that are not variable declarations)
- * Thin wrapper around findEquationsAndOutputs for callers that only need equations.
- */
-function findEquations(text, allTokens) {
-    return findEquationsAndOutputs(text, allTokens).equations;
-}
-
-/**
- * Find inline evaluations: \ expression \
- */
-function findInlineEvaluations(text) {
-    const results = [];
-    const regex = /\\([^\\]+)\\/g;
-    let match;
-
-    while ((match = regex.exec(text)) !== null) {
-        // Calculate line and column
-        const before = text.substring(0, match.index);
-        const lines = before.split('\n');
-        const line = lines.length - 1;
-        const col = lines[lines.length - 1].length;
-
-        results.push({
-            fullMatch: match[0],
-            expression: match[1].trim(),
-            start: match.index,
-            end: match.index + match[0].length,
-            line: line,
-            col: col
-        });
-    }
-
-    return results;
-}
-
-/**
- * Replace inline evaluation with result
- */
-function replaceInlineEvaluation(text, evalInfo, result) {
-    const formattedResult = typeof result === 'number' ?
-        formatNumber(result, 14, true, 'float', 10) : String(result);
-
-    return text.substring(0, evalInfo.start) +
-           '\\' + formattedResult + '\\' +
-           text.substring(evalInfo.end);
 }
 
 /**
@@ -1237,10 +1133,10 @@ function expandInlineExprs(text, context, record) {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        parseVarNameAndFormat, parseMarkedLine, parseVariableLine, parseAllVariables,
+        parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
-        buildOutputLine, capturePreSolveValues, clearVariables, findEquations,
-        findExpressionOutputs, findEquationsAndOutputs, clearExpressionOutputs,
+        buildOutputLine, capturePreSolveValues, clearVariables,
+        findExpressionOutputs, findEquationsAndOutputs,
         expandInlineExprs,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext,
         extractEquationFromLine, findTableDefinitions

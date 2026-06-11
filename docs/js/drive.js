@@ -235,10 +235,6 @@ function isDriveSignedIn() {
     return !!DriveState.accessToken || !!DriveState.userEmail;
 }
 
-function getDriveUserEmail() {
-    return DriveState.userEmail;
-}
-
 /**
  * Ensure we have a valid token, requesting one if needed.
  * At most one popup per session (auto-selects account if possible).
@@ -973,7 +969,6 @@ window.driveSignIn = driveSignIn;
 window.driveSignOut = driveSignOut;
 window.isDriveSignedIn = isDriveSignedIn;
 window.isDriveAuthenticated = isDriveAuthenticated;
-window.getDriveUserEmail = getDriveUserEmail;
 window.markDriveDirty = markDriveDirty;
 window.startDriveSync = startDriveSync;
 window.stopDriveSync = stopDriveSync;

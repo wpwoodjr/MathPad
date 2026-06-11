@@ -31,9 +31,7 @@ function loadModules() {
 
     // Line Parser (depends on parser)
     const lineParser = require(path.join(jsPath, 'line-parser.js'));
-    global.LineType = lineParser.LineType;
     global.LineParser = lineParser.LineParser;
-    global.parseMarkedLineNew = lineParser.parseMarkedLineNew;
     global.getMarkerString = lineParser.getMarkerString;
     global.tokensToText = lineParser.tokensToText;
 

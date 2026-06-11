@@ -356,52 +356,6 @@ function solveEquation(f, limits = null, knownScale = 0, modN = null, { allRoots
 }
 
 /**
- * Parse an equation and identify the unknown variable
- * Returns { leftAST, rightAST, unknownVar } or null if not solvable
- *
- * @param {string} equation - Equation text (e.g., "a + b = c")
- * @param {Object} context - Evaluation context with known variables
- * @returns {Object|null} Parsed equation info
- */
-function parseEquation(equation, knownVars) {
-    // Split on = (but not == or != etc)
-    const eqMatch = equation.match(/^([^=]+)=([^=].*)$/);
-    if (!eqMatch) return null;
-
-    const leftText = eqMatch[1].trim();
-    const rightText = eqMatch[2].trim();
-
-    // Parse both sides
-    let leftAST, rightAST;
-    try {
-        leftAST = parseExpression(leftText);
-        rightAST = parseExpression(rightText);
-    } catch (e) {
-        return null;
-    }
-
-    // Find all variables in the equation
-    const leftVars = findVariablesInAST(leftAST);
-    const rightVars = findVariablesInAST(rightAST);
-    const allVars = new Set([...leftVars, ...rightVars]);
-
-    // Find unknown variables (not in knownVars)
-    const unknowns = [...allVars].filter(v => !knownVars.has(v));
-
-    return {
-        leftAST,
-        rightAST,
-        leftText,
-        rightText,
-        allVars: [...allVars],
-        unknowns
-    };
-}
-
-/**
- * Find all variable names in an AST
- */
-/**
  * Substitute variables in an AST with their definition expressions.
  *
  * Recursive: the replacement AST for a variable is itself walked and has
@@ -565,18 +519,6 @@ function* deriveSubstitutions(context, leftAST, rightAST) {
 }
 
 /**
- * Legacy single-sub API — returns the first derivable sub. Kept for
- * callers (and tests) that only need one; new code should use
- * deriveSubstitutions (generator).
- */
-function deriveSubstitution(context, leftText, leftAST, rightAST) {
-    for (const sub of deriveSubstitutions(context, leftAST, rightAST)) {
-        return sub;
-    }
-    return null;
-}
-
-/**
  * Generator: yield every unknown-variable isolation reachable from an
  * expression tree. Given that ast equals resultAST, peels off binary
  * operations one level at a time until reaching a bare unknown variable.
@@ -611,16 +553,6 @@ function* tryIsolateVariables(ast, resultAST, context) {
             if (!findVariablesInAST(ast.left).has(iso.variable)) yield iso;
         }
     }
-}
-
-/**
- * Legacy single-isolation API — returns the first isolation found.
- */
-function tryIsolateVariable(ast, resultAST, context) {
-    for (const iso of tryIsolateVariables(ast, resultAST, context)) {
-        return iso;
-    }
-    return null;
 }
 
 /**
@@ -687,81 +619,32 @@ function invertOperation(op, result, other, varOnLeft) {
  * Build a substitution map from definition equations
  * Only includes definitions where the variable has no value in context
  * Now includes algebraically derived substitutions
- * Detects cycles and returns them in the errors array
  */
-function buildSubstitutionMap(equations, context, errors = []) {
+function buildSubstitutionMap(equations, context) {
     const substitutions = new Map();
 
     for (const eq of equations) {
-        try {
-            // Enumerate every algebraically derivable sub from this equation.
-            // Both LHS and RHS are explored (see deriveSubstitutions).
-            //
-            // Cycles in the resulting sub map are allowed — e.g. `x = z/2`
-            // yields both `x → z/2` and `z → 2*x`, which reference each
-            // other. substituteInAST's cycle guard handles the runtime
-            // termination; subset-enumerated Kind 3 combos prefer applying
-            // one direction at a time over both together.
-            for (const def of deriveSubstitutions(context, eq.leftAST, eq.rightAST)) {
-                if (context.hasVariable(def.variable)) continue;
-                const sub = { ast: def.expressionAST, sourceLine: eq.startLine, modN: !!eq.modN };
-                if (substitutions.has(def.variable)) {
-                    substitutions.get(def.variable).push(sub);
-                } else {
-                    substitutions.set(def.variable, [sub]);
-                }
+        // Enumerate every algebraically derivable sub from this equation.
+        // Both LHS and RHS are explored (see deriveSubstitutions, which
+        // swallows inversion errors internally).
+        //
+        // Cycles in the resulting sub map are allowed — e.g. `x = z/2`
+        // yields both `x → z/2` and `z → 2*x`, which reference each
+        // other. substituteInAST's cycle guard handles the runtime
+        // termination; subset-enumerated Kind 3 combos prefer applying
+        // one direction at a time over both together.
+        for (const def of deriveSubstitutions(context, eq.leftAST, eq.rightAST)) {
+            if (context.hasVariable(def.variable)) continue;
+            const sub = { ast: def.expressionAST, sourceLine: eq.startLine, modN: !!eq.modN };
+            if (substitutions.has(def.variable)) {
+                substitutions.get(def.variable).push(sub);
+            } else {
+                substitutions.set(def.variable, [sub]);
             }
-        } catch (e) {
-            // Add error with line number and continue processing other equations
-            errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
         }
     }
 
     return substitutions;
-}
-
-/**
- * Detect if adding a variable with given dependencies would create a cycle
- * Uses DFS to check if any dependency leads back to the variable
- */
-function detectCycle(variable, directDeps, dependencies) {
-    const visited = new Set();
-    const path = [];
-
-    function dfs(v) {
-        if (v === variable) {
-            return true; // Found cycle back to original variable
-        }
-        if (visited.has(v)) {
-            return false; // Already visited, no cycle through this path
-        }
-        visited.add(v);
-        path.push(v);
-
-        const deps = dependencies.get(v);
-        if (deps) {
-            for (const dep of deps) {
-                if (dfs(dep)) {
-                    return true;
-                }
-            }
-        }
-        path.pop();
-        return false;
-    }
-
-    // Check if any direct dependency leads back to the variable
-    for (const dep of directDeps) {
-        if (dep === variable) {
-            return [variable]; // Direct self-reference
-        }
-        path.length = 0;
-        visited.clear();
-        if (dfs(dep)) {
-            return [dep, ...path];
-        }
-    }
-    return null;
 }
 
 /**
@@ -804,25 +687,6 @@ function findVariablesInAST(node) {
     return vars;
 }
 
-/**
- * Create an equation function for solving
- * Returns a function f(x) where f(x) = left - right = 0
- */
-function createEquationFunction(leftAST, rightAST, unknownVar, context) {
-    return (x) => {
-        const ctx = context.clone();
-        ctx.setVariable(unknownVar, x);
-
-        try {
-            const leftVal = evaluate(leftAST, ctx);
-            const rightVal = evaluate(rightAST, ctx);
-            return leftVal - rightVal;
-        } catch (e) {
-            return NaN;
-        }
-    };
-}
-
 // Import parseExpression and evaluate from other modules (will be available globally)
 // These will be set up when the modules are loaded together
 
@@ -830,8 +694,8 @@ function createEquationFunction(leftAST, rightAST, unknownVar, context) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         SolverError, brent, expandFromGuess, solveEquation,
-        parseEquation, findVariablesInAST, createEquationFunction,
+        findVariablesInAST,
         substituteInAST, deepCopyAST, isDefinitionEquation,
-        deriveSubstitution, invertOperation, buildSubstitutionMap, detectCycle
+        invertOperation, buildSubstitutionMap
     };
 }

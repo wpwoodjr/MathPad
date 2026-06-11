@@ -104,7 +104,6 @@ function tokenizeMathPad(text, options = {}) {
     pos = 0;
 
     let lastTokenWasVarDef = false;
-    let lastTokenWasVar = false;
     let lastTokenWasBuiltin = false;
     let lastTokenEnd = 0;
     let prevHighlightType = null;
@@ -119,7 +118,6 @@ function tokenizeMathPad(text, options = {}) {
         // Reset state on line transitions (replaces old NEWLINE token handling)
         if (token.line !== prevTokenLine) {
             lastTokenWasVarDef = false;
-            lastTokenWasVar = false;
             lastTokenWasBuiltin = false;
             prevHighlightType = null;
             prevTokenLine = token.line;
@@ -197,9 +195,8 @@ function tokenizeMathPad(text, options = {}) {
 
         // Track highlight type for lookback in identifier classification
         prevHighlightType = highlightType;
-        // Track if this token is a variable-def, variable, or builtin for styling following $ or % or #
+        // Track if this token is a variable-def or builtin for styling following $ or % or #
         lastTokenWasVarDef = (highlightType === 'variable-def');
-        lastTokenWasVar = (highlightType === 'variable');
         lastTokenWasBuiltin = (highlightType === 'builtin');
         lastTokenEnd = tokenEnd;
 
@@ -303,7 +300,7 @@ function analyzeLines(text, strippedText, referenceConstants, tokensByLine) {
         }
 
         // Create LineParser from pre-tokenized input (no re-tokenization)
-        const parser = LineParser.fromTokens(tokensByLine[i] || [], i);
+        const parser = LineParser.fromTokens(tokensByLine[i] || []);
         const result = parser.parse();
 
         // --- Shadow detection (non-reference lines only) ---
@@ -1344,10 +1341,6 @@ class SimpleEditor {
         this.textarea.focus();
     }
 
-    getScrollPosition() {
-        return this.textarea.scrollTop;
-    }
-
     setScrollPosition(scrollTop) {
         this.textarea.scrollTop = scrollTop;
         this.onScroll();
@@ -1359,47 +1352,6 @@ class SimpleEditor {
 
     setCursorPosition(pos) {
         this.textarea.selectionStart = this.textarea.selectionEnd = pos;
-    }
-    getSelection() {
-        return {
-            start: this.textarea.selectionStart,
-            end: this.textarea.selectionEnd
-        };
-    }
-
-    setSelection(start, end) {
-        this.textarea.selectionStart = start;
-        this.textarea.selectionEnd = end;
-    }
-
-    insertText(text, pos = null) {
-        if (pos === null) {
-            pos = this.textarea.selectionStart;
-        }
-        const value = this.textarea.value;
-        this.textarea.value = value.substring(0, pos) + text + value.substring(pos);
-        this.textarea.selectionStart = this.textarea.selectionEnd = pos + text.length;
-        this.onInput();
-    }
-
-    replaceSelection(text) {
-        const start = this.textarea.selectionStart;
-        const end = this.textarea.selectionEnd;
-        const value = this.textarea.value;
-        this.textarea.value = value.substring(0, start) + text + value.substring(end);
-        this.textarea.selectionStart = this.textarea.selectionEnd = start + text.length;
-        this.onInput();
-    }
-
-    // Highlight a range (for errors)
-    highlightError(from, to) {
-        // For now, just select the range
-        this.textarea.focus();
-        this.textarea.setSelectionRange(from, to);
-    }
-
-    clearErrorHighlight() {
-        // Nothing needed for basic implementation
     }
 }
 

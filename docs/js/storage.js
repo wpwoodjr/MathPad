@@ -2940,27 +2940,6 @@ function findRecord(data, recordId) {
 }
 
 /**
- * Update a record
- */
-function updateRecord(data, recordId, updates) {
-    const record = findRecord(data, recordId);
-    if (record) {
-        Object.assign(record, updates);
-    }
-    return data;
-}
-
-/**
- * Add a new category
- */
-function addCategory(data, categoryName) {
-    if (!data.categories.includes(categoryName)) {
-        data.categories.push(categoryName);
-    }
-    return data;
-}
-
-/**
  * Delete a category (moves records to Unfiled)
  */
 function deleteCategory(data, categoryName) {
@@ -2975,28 +2954,6 @@ function deleteCategory(data, categoryName) {
 
     // Remove category
     data.categories = data.categories.filter(c => c !== categoryName);
-    return data;
-}
-
-/**
- * Rename a category
- */
-function renameCategory(data, oldName, newName) {
-    if (oldName === 'Unfiled') return data;
-
-    // Update records
-    for (const record of data.records) {
-        if (record.category === oldName) {
-            record.category = newName;
-        }
-    }
-
-    // Update categories list
-    const idx = data.categories.indexOf(oldName);
-    if (idx !== -1) {
-        data.categories[idx] = newName;
-    }
-
     return data;
 }
 
@@ -3037,7 +2994,7 @@ if (typeof module !== 'undefined' && module.exports) {
         STORAGE_KEY, createDefaultData, isReferenceRecord, isReferenceTitle, generateId,
         loadData, saveData, debouncedSave, stripStaleSections, cleanDataForSave,
         exportToText, importFromText, downloadTextFile, readTextFile,
-        createRecord, deleteRecord, findRecord, updateRecord,
-        addCategory, deleteCategory, renameCategory, getRecordsByCategory
+        createRecord, deleteRecord, findRecord,
+        deleteCategory, getRecordsByCategory
     };
 }

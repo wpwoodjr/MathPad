@@ -11,29 +11,15 @@
  */
 
 /**
- * Line classification types
- */
-const LineType = {
-    DECLARATION: 'declaration',           // varName: value
-    EXPRESSION_OUTPUT: 'expression-output', // expr-> value
-    EQUATION: 'equation',                 // expr = expr
-    FUNCTION_DEF: 'function-def',         // f(x) = expr
-    INLINE_EVAL: 'inline-eval',           // \expr\
-    COMMENT: 'comment',                   // "..."
-    BLANK: 'blank'
-};
-
-/**
- * Marker precedence - higher precedence markers take priority
- * Arrow markers (->, ->>, <-) have higher precedence than colon markers
+ * Marker precedence - higher precedence markers take priority.
+ * Input arrows (<-, <<-) are handled by findBestMarker's early return
+ * and never reach a precedence lookup.
  */
 const MARKER_PRECEDENCE = {
     '->>': 3,
     ':>>': 3,
-    '<<-': 3,
     '->': 2,
     ':>': 2,
-    '<-': 2,
     '::': 1,
     ':': 0
 };
@@ -96,31 +82,24 @@ class LineParser {
     /**
      * Create a LineParser by tokenizing a line of text
      * @param {string} line - The line text to parse
-     * @param {number} lineNumber - Line number (0-based)
      */
-    constructor(line, lineNumber = 0) {
+    constructor(line) {
         const tokenizer = new Tokenizer(line);
         const allLines = tokenizer.tokenize();
-        // Delegate to the token-based initializer (single-line input → first line)
-        const fromTokens = LineParser.fromTokens(allLines[0] || [], lineNumber);
-        this.lineNumber = fromTokens.lineNumber;
-        this.pos = fromTokens.pos;
-        this.lineComment = fromTokens.lineComment;
-        this.trailingComment = fromTokens.trailingComment;
-        this.tokens = fromTokens.tokens;
+        // Delegate to the token-based initializer (single-line input → first
+        // line). Returning the object from the constructor makes `new
+        // LineParser(line)` yield the fully-initialized fromTokens result.
+        return LineParser.fromTokens(allLines[0] || []);
     }
 
     /**
      * Create a LineParser from pre-tokenized input (avoids re-tokenizing)
      * Derives comment metadata purely from the token stream.
      * @param {Array} tokens - Tokens for this line (may include COMMENT and EOF tokens)
-     * @param {number} lineNumber - Line number (0-based)
      * @returns {LineParser}
      */
-    static fromTokens(tokens, lineNumber = 0) {
+    static fromTokens(tokens) {
         const parser = Object.create(LineParser.prototype);
-        parser.lineNumber = lineNumber;
-        parser.pos = 0;
 
         // Extract comment info from COMMENT tokens
         let lineComment = null;
@@ -161,15 +140,6 @@ class LineParser {
         parser.allTokens = tokens;
 
         return parser;
-    }
-
-    peek(offset = 0) {
-        const idx = this.pos + offset;
-        return idx < this.tokens.length ? this.tokens[idx] : null;
-    }
-
-    advance() {
-        return this.pos < this.tokens.length ? this.tokens[this.pos++] : null;
     }
 
     /**
@@ -232,7 +202,7 @@ class LineParser {
 
     /**
      * Walk tokens backward from the marker to find the variable declaration group.
-     * Returns { name, base, limits, hasLimits, varTokenStartIndex } or null.
+     * Returns { name, base, limits, varTokenStartIndex } or null.
      *
      * Handles: IDENTIFIER, optional #base suffix (FORMATTER + NUMBER or merged into marker),
      * optional [limits] (LBRACKET...RBRACKET), and optional $/%  FORMATTER tokens.
@@ -244,7 +214,6 @@ class LineParser {
         // Base may be merged into the marker token (e.g., #16->)
         let base = markerToken.base || 10;
         let limits = null;
-        let hasLimits = false;
         let idx = markerIndex - 1;
 
         // Skip standalone $, %, or ° FORMATTER tokens (normally merged into marker,
@@ -276,7 +245,6 @@ class LineParser {
             // idx is now at LBRACKET (or -1 if unmatched)
             // separators are in reverse order (right-to-left scan)
             if (idx >= 0) {
-                hasLimits = true;
                 if (separators.length >= 2) {
                     // [low .. high .. step] — separators[1] is first .., separators[0] is second ..
                     const sep1 = separators[separators.length - 1]; // leftmost
@@ -311,7 +279,6 @@ class LineParser {
                 name: this.tokens[idx].value,
                 base,
                 limits,
-                hasLimits,
                 varTokenStartIndex: idx
             };
         }
@@ -752,21 +719,10 @@ class LineParser {
     }
 }
 
-/**
- * Parse a marked line using the grammar-based parser
- * This is a drop-in replacement for the regex-based parseMarkedLine in variables.js
- */
-function parseMarkedLineNew(line) {
-    const parser = new LineParser(line);
-    return parser.parse();
-}
-
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        LineType,
         LineParser,
-        parseMarkedLineNew,
         getMarkerString,
         tokenToRaw,
         tokensToText

@@ -2362,7 +2362,6 @@ class VariablesPanel {
 
         // Body rows
         const tbody = document.createElement('tbody');
-        const midRow = Math.floor(numRows / 2);
 
         for (let r = 0; r < numRows; r++) {
             const tr = document.createElement('tr');

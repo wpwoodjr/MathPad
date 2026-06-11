@@ -877,21 +877,13 @@ function formatDegrees(value, places, degreesMode = true) {
 
 /**
  * Format a number for display
- * If varName ends with '$', format as money
- * If varName ends with '%', format as percentage
- * If varName ends with '°', format as degrees
+ * ($/%/° suffix dispatch happens upstream in formatVariableValue, which
+ * has the record's currencySymbol/degreesMode; this is the raw formatter.)
  */
-function formatNumber(value, places = 14, stripZeros = true, format = 'float', base = 10, groupDigits = false, varName = null, displayPlaces = null) {
+function formatNumber(value, places = 14, stripZeros = true, format = 'float', base = 10, groupDigits = false, displayPlaces = null) {
     if (!isFinite(value)) {
         if (isNaN(value)) return 'NaN';
         return value > 0 ? 'Infinity' : '-Infinity';
-    }
-
-    // Check for special variable name suffixes
-    if (varName) {
-        if (varName.endsWith('$')) return formatMoney(value);
-        else if (varName.endsWith('%')) return formatPercent(value, places, stripZeros);
-        else if (varName.endsWith('°')) return formatDegrees(value, places);
     }
 
     // Non-decimal base output: round to integer, use value#base suffix notation (e.g., FF#16, 77#8)
