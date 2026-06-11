@@ -877,7 +877,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             }
             return;
         }
-        const roots = eq.modN ? dedupeModEquivalent(r.values, eq.modN) : r.values;
+        const roots = eq.modN ? dedupeModEquivalent(r.values, modValue) : r.values;
         for (const value of roots) {
             yield {
                 kind,

@@ -1117,3 +1117,25 @@ b->
 
 --Variables--
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 2; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 1
+Status = "Solved 2 equations"; StatusIsError = 0
+VarStatus = "x:solved, y:solved"
+"Mod-equivalent root dedup uses the modulus (regression: collapsed mod 1)"
+"sin(x) °= 0.5 has two genuinely distinct roots in [0:360]: 30 and 150."
+"dedupeModEquivalent must collapse only roots differing by a multiple of"
+"the modulus (360 here). A regression passed eq.modN (boolean true) as"
+"the modulus, deduping by fractional part mod 1 — both roots are"
+"integers, so 150 was silently dropped from the backtracker's"
+"candidates. Only x=150 satisfies the body def y: cos(x) against"
+"y = cos(150°) = -0.866; with the bug the solver got stuck at x=30"
+"and reported a balance error on line 11."
+
+sin(x) °= 0.5
+y = -0.86602540378444
+
+--Variables--
+x[0:360]<- 150
+y: cos(x)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
