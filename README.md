@@ -17,11 +17,10 @@ area <-
 
 Click **Solve** and `area <-` becomes `area <- 12`. The trick is that you can leave *any* variable blank instead: clear `w`, set `area` to `20`, and Solve — MathPad sees that `w` is now the unknown and works backward to find `w <- 6.67`. Same equation, no rearranging; you just choose which value you don't know.
 
-<!--
-  Screenshot: add a real image of the app here — the formulas editor + variables
-  panel with a solved result, or a graph. Capture from the live site, drag it into
-  a GitHub comment to get a hosted URL, then replace this block with: ![MathPad](url)
--->
+<img width="970" height="1000" alt="image" src="https://github.com/user-attachments/assets/05ab23e2-34a9-4b5a-ac04-40988d686073" />
+
+
+![MathPad](https://github.com/user-attachments/assets/05ab23e2-34a9-4b5a-ac04-40988d686073)
 
 ### Why MathPad?
 
