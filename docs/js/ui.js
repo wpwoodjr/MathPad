@@ -139,14 +139,14 @@ function renderSidebar(useSavedScroll = false) {
         html += `
             <div class="category-group" data-category="${escapedCat}">
                 <div class="category-header ${isCollapsed ? 'collapsed' : ''}"
-                     onclick="toggleCategory('${escapedCat}')">
+                     onclick="toggleCategory(this.closest('.category-group').dataset.category)">
                     <span class="category-arrow">${isCollapsed ? '▶' : '▼'}</span>
                     <span class="category-name">${escapeHtmlText(category)}</span>
                     <span class="category-count">(${records.length})</span>
                     <span class="category-sort ${isAlpha ? 'active' : ''}"
-                          onclick="event.stopPropagation(); toggleCategorySort('${escapedCat}')"
+                          onclick="event.stopPropagation(); toggleCategorySort(this.closest('.category-group').dataset.category)"
                           title="${isAlpha ? 'Sorted alphabetically (click for insertion order)' : 'Insertion order (click for alphabetical)'}">A↓</span>${canDelete ? `<span class="category-delete"
-                          onclick="event.stopPropagation(); deleteSidebarCategory('${escapedCat}')"
+                          onclick="event.stopPropagation(); deleteSidebarCategory(this.closest('.category-group').dataset.category)"
                           title="Delete empty category">✕</span>` : ''}
                 </div>
                 <div class="category-records ${isCollapsed ? 'hidden' : ''}">
@@ -1506,6 +1506,7 @@ async function handleFileSelect(e) {
         }
         UI.editors.clear();
         UI.openTabs = [];
+        UI.previewTabId = null;
         UI.currentRecordId = null;
 
         // Re-render UI
@@ -1568,6 +1569,7 @@ function handleReset() {
         }
         UI.editors.clear();
         UI.openTabs = [];
+        UI.previewTabId = null;
         UI.currentRecordId = null;
 
         // Reset data to defaults
