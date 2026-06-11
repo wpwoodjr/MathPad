@@ -1,0 +1,14 @@
+# Normalize all text files to LF in the repo and working tree.
+* text=auto eol=lf
+
+# Legacy PalmOS archive — historical files, keep byte-for-byte as-is.
+"mathpad 1.5/**" -text
+
+# Binary types (explicit, so auto-detection can never misfire).
+*.png binary
+*.gif binary
+*.zip binary
+*.exe binary
+*.prc binary
+*.PRC binary
+*.pdb binary
