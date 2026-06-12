@@ -56,6 +56,15 @@ function findErrorLines(errors) {
     return lines;
 }
 
+/** SVG namespace + element builder: one-call createElementNS + attributes. */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs = {}, textContent = null) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    if (textContent != null) el.textContent = textContent;
+    return el;
+}
+
 /**
  * Shared hidden span for measuring input text width. Module-level singleton:
  * panels are created/destroyed constantly (preview tabs), and a per-panel
@@ -1296,14 +1305,10 @@ class VariablesPanel {
         }
 
         for (const table of tables) {
-            if (table.type === 'graph') {
-                this._renderGraph(table);
-                continue;
-            }
-            if (table.type === 'gridGraph') {
-                // Route gridGraph through tableGraph's _renderGraph — solve-engine
-                // emits a flat rawRows shape and forces col 1 as the grouping
-                // column to preserve gridGraph's positional contract.
+            if (table.type === 'graph' || table.type === 'gridGraph') {
+                // gridGraph routes through tableGraph's _renderGraph too —
+                // solve-engine emits a flat rawRows shape and forces col 1 as
+                // the grouping column to preserve gridGraph's positional contract.
                 this._renderGraph(table);
                 continue;
             }
@@ -1579,9 +1584,7 @@ class VariablesPanel {
         const sy = (y) => margin.top + (1 - (y - yMin) / (yMax - yMin)) * plotH;
 
         // Build SVG
-        const ns = 'http://www.w3.org/2000/svg';
-        const svg = document.createElementNS(ns, 'svg');
-        svg.setAttribute('class', 'mathpad-graph');
+        const svg = svgEl('svg', { class: 'mathpad-graph' });
         svg.style.width = '100%';
         svg.style.maxWidth = width + 'px';
 
@@ -1606,11 +1609,13 @@ class VariablesPanel {
                 if (lineMeta.rowPrefix) {
                     if (i > 0) { legendY += legendLineHeight; }
                     legendX = margin.left;
-                    const text = document.createElementNS(ns, 'text');
-                    text.setAttribute('x', legendX); text.setAttribute('y', legendY);
-                    text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '11');
-                    text.setAttribute('font-weight', 'bold');
-                    text.textContent = lineMeta.rowPrefix;
+                    const text = svgEl('text', {
+                        x: legendX,
+                        y: legendY,
+                        class: 'graph-text',
+                        'font-size': '11',
+                        'font-weight': 'bold'
+                    }, lineMeta.rowPrefix);
                     svg.appendChild(text);
                     legendX += lineMeta.rowPrefix.length * 7 + 10;
                     rowIndent = legendX;
@@ -1622,15 +1627,21 @@ class VariablesPanel {
                     legendY += legendLineHeight;
                 }
                 const color = colors[i % colors.length];
-                const line = document.createElementNS(ns, 'line');
-                line.setAttribute('x1', legendX); line.setAttribute('x2', legendX + 12);
-                line.setAttribute('y1', legendY - 4); line.setAttribute('y2', legendY - 4);
-                line.setAttribute('stroke', color); line.setAttribute('stroke-width', '2');
+                const line = svgEl('line', {
+                    x1: legendX,
+                    x2: legendX + 12,
+                    y1: legendY - 4,
+                    y2: legendY - 4,
+                    stroke: color,
+                    'stroke-width': '2'
+                });
                 svg.appendChild(line);
-                const text = document.createElementNS(ns, 'text');
-                text.setAttribute('x', legendX + 16); text.setAttribute('y', legendY);
-                text.setAttribute('class', 'graph-text'); text.setAttribute('font-size', '10');
-                text.textContent = label;
+                const text = svgEl('text', {
+                    x: legendX + 16,
+                    y: legendY,
+                    class: 'graph-text',
+                    'font-size': '10'
+                }, label);
                 svg.appendChild(text);
                 legendX += itemWidth;
             }
@@ -1645,7 +1656,7 @@ class VariablesPanel {
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
         const xTicks = this._niceTicks(xMin, xMax, 8, table.columns[xCol].format);
-        this._drawGraphAxes({ svg, ns, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines: true });
+        this._drawGraphAxes({ svg, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines: true });
 
         // Data lines — one per entry in `lines`
         for (let li = 0; li < lines.length; li++) {
@@ -1661,9 +1672,7 @@ class VariablesPanel {
                 started = true;
             }
             if (pathD) {
-                const path = document.createElementNS(ns, 'path');
-                path.setAttribute('d', pathD);
-                path.setAttribute('fill', 'none');
+                const path = svgEl('path', { d: pathD, fill: 'none' });
                 if (multiLine) {
                     path.setAttribute('stroke', colors[li % colors.length]);
                 } else {
@@ -1682,20 +1691,24 @@ class VariablesPanel {
         const yAxisCols = ySeriesCols.length > 0 ? ySeriesCols : yCols;
         const yLabel = yAxisCols.length === 1 ? (table.columns[yAxisCols[0]].header || table.columns[yAxisCols[0]].name) : '';
         if (xLabel) {
-            const text = document.createElementNS(ns, 'text');
-            text.setAttribute('x', margin.left + plotW / 2); text.setAttribute('y', height - 5);
-            text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'graph-text');
-            text.setAttribute('font-size', '12');
-            text.textContent = xLabel;
+            const text = svgEl('text', {
+                x: margin.left + plotW / 2,
+                y: height - 5,
+                'text-anchor': 'middle',
+                class: 'graph-text',
+                'font-size': '12'
+            }, xLabel);
             svg.appendChild(text);
         }
         if (yLabel) {
-            const text = document.createElementNS(ns, 'text');
-            text.setAttribute('x', 12); text.setAttribute('y', margin.top + plotH / 2);
-            text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'graph-text');
-            text.setAttribute('font-size', '12');
-            text.setAttribute('transform', `rotate(-90, 12, ${margin.top + plotH / 2})`);
-            text.textContent = yLabel;
+            const text = svgEl('text', {
+                x: 12,
+                y: margin.top + plotH / 2,
+                'text-anchor': 'middle',
+                class: 'graph-text',
+                'font-size': '12',
+                transform: `rotate(-90, 12, ${margin.top + plotH / 2})`
+            }, yLabel);
             svg.appendChild(text);
         }
 
@@ -1703,18 +1716,12 @@ class VariablesPanel {
         // viewBox coords (the SVG is CSS-scaled), then invert sx/sy to data
         // coords. Shown only inside the plot rectangle.
         const plotRight = margin.left + plotW, plotBottom = margin.top + plotH;
-        const cross = document.createElementNS(ns, 'g');
-        cross.setAttribute('class', 'graph-crosshair');
+        const cross = svgEl('g', { class: 'graph-crosshair' });
         cross.style.display = 'none';
-        const vLine = document.createElementNS(ns, 'line');
-        vLine.setAttribute('y1', margin.top); vLine.setAttribute('y2', plotBottom);
-        const hLine = document.createElementNS(ns, 'line');
-        hLine.setAttribute('x1', margin.left); hLine.setAttribute('x2', plotRight);
-        const readBg = document.createElementNS(ns, 'rect');
-        readBg.setAttribute('class', 'graph-crosshair-bg');
-        readBg.setAttribute('rx', '2');
-        const readText = document.createElementNS(ns, 'text');
-        readText.setAttribute('class', 'graph-crosshair-text');
+        const vLine = svgEl('line', { y1: margin.top, y2: plotBottom });
+        const hLine = svgEl('line', { x1: margin.left, x2: plotRight });
+        const readBg = svgEl('rect', { class: 'graph-crosshair-bg', rx: '2' });
+        const readText = svgEl('text', { class: 'graph-crosshair-text' });
         cross.appendChild(vLine); cross.appendChild(hLine);
         cross.appendChild(readBg); cross.appendChild(readText);
         svg.appendChild(cross);
@@ -1775,7 +1782,8 @@ class VariablesPanel {
 
         wrapper.appendChild(svg);
         this.insertRowInOrder(wrapper, table.startLine - 1);
-        this._setStickyHeaderOffsets(wrapper);
+        // (no _setStickyHeaderOffsets: SVG wrappers have no table/thead —
+        // the call was a no-op that still cost a rAF per render)
     }
 
     /**
@@ -1866,10 +1874,7 @@ class VariablesPanel {
         const tx = (x) => offX + x * scale;
         const ty = (y) => offY + y * scale;
 
-        const ns = 'http://www.w3.org/2000/svg';
-        const svg = document.createElementNS(ns, 'svg');
-        svg.setAttribute('class', 'mathpad-graph');
-        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        const svg = svgEl('svg', { class: 'mathpad-graph', viewBox: `0 0 ${width} ${height}` });
         svg.style.width = '100%';
         svg.style.maxWidth = width + 'px';
 
@@ -1878,20 +1883,19 @@ class VariablesPanel {
         // a hidden editor container; identical marker IDs would clash).
         if (!VariablesPanel._vdArrowCounter) VariablesPanel._vdArrowCounter = 0;
         const markerPrefix = `vd-arrow-${++VariablesPanel._vdArrowCounter}`;
-        const defs = document.createElementNS(ns, 'defs');
+        const defs = svgEl('defs');
         for (let i = 0; i < segs.length; i++) {
             const seg = segs[i];
             if (!seg) continue;
-            const marker = document.createElementNS(ns, 'marker');
-            marker.setAttribute('id', `${markerPrefix}-${i}`);
-            marker.setAttribute('markerWidth', '7');
-            marker.setAttribute('markerHeight', '5');
-            marker.setAttribute('refX', '7');
-            marker.setAttribute('refY', '2.5');
-            marker.setAttribute('orient', 'auto');
-            const poly = document.createElementNS(ns, 'polygon');
-            poly.setAttribute('points', '0 0, 7 2.5, 0 5');
-            poly.setAttribute('fill', seg.color);
+            const marker = svgEl('marker', {
+                id: `${markerPrefix}-${i}`,
+                markerWidth: '7',
+                markerHeight: '5',
+                refX: '7',
+                refY: '2.5',
+                orient: 'auto'
+            });
+            const poly = svgEl('polygon', { points: '0 0, 7 2.5, 0 5', fill: seg.color });
             marker.appendChild(poly);
             defs.appendChild(marker);
         }
@@ -1905,6 +1909,19 @@ class VariablesPanel {
         const plotTop = margin.top;
         const plotBottom = margin.top + plotH;
         const cx0 = tx(0), cy0 = ty(0);
+
+        // Faint backdrop label (axis ticks, compass degrees, ring radii) —
+        // shared by all three backdrop types.
+        const addLabel = (x, y, anchor, text) => {
+            svg.appendChild(svgEl('text', {
+                x: x,
+                y: y,
+                'text-anchor': anchor,
+                class: 'graph-text',
+                'font-size': '9',
+                opacity: '0.55'
+            }, text));
+        };
 
         if (vectorType === 'cartesian') {
             // Visible data range — invert tx/ty to get the data-coord values
@@ -1924,23 +1941,18 @@ class VariablesPanel {
             const yTicksRaw = this._niceTicks(yTopData, yBottomData, 8);
             const stepOf = (ticks) => ticks.length >= 2 ? Math.abs(ticks[1] - ticks[0]) : 1;
             const step = Math.max(stepOf(xTicksRaw), stepOf(yTicksRaw));
-            const ticksAt = (min, max, step) => {
-                const start = Math.ceil(min / step) * step;
-                const out = [];
-                for (let v = start; v <= max + step * 0.01; v += step) {
-                    out.push(Math.round(v / step) * step);
-                }
-                return out;
-            };
-            const xTicks = ticksAt(xLeftData, xRightData, step);
-            const yTicks = ticksAt(yTopData, yBottomData, step);
+            const xTicks = this._ticksFromStep(xLeftData, xRightData, step);
+            const yTicks = this._ticksFromStep(yTopData, yBottomData, step);
             const addLine = (x1, y1, x2, y2, isAxis) => {
-                const ln = document.createElementNS(ns, 'line');
-                ln.setAttribute('x1', x1); ln.setAttribute('y1', y1);
-                ln.setAttribute('x2', x2); ln.setAttribute('y2', y2);
-                ln.setAttribute('stroke', 'currentColor');
-                ln.setAttribute('opacity', isAxis ? '0.4' : '0.15');
-                ln.setAttribute('stroke-width', isAxis ? '0.8' : '0.5');
+                const ln = svgEl('line', {
+                    x1: x1,
+                    y1: y1,
+                    x2: x2,
+                    y2: y2,
+                    stroke: 'currentColor',
+                    opacity: isAxis ? '0.4' : '0.15',
+                    'stroke-width': isAxis ? '0.8' : '0.5'
+                });
                 svg.appendChild(ln);
             };
             for (const xv of xTicks) addLine(tx(xv), plotTop, tx(xv), plotBottom, xv === 0);
@@ -1953,16 +1965,6 @@ class VariablesPanel {
             // SVG y-down — see pairToXY above).
             const xAxisSvgY = Math.max(plotTop + 6, Math.min(plotBottom - 12, ty(0)));
             const yAxisSvgX = Math.max(plotLeft + 18, Math.min(plotRight - 4, tx(0)));
-            const addLabel = (x, y, anchor, text) => {
-                const t = document.createElementNS(ns, 'text');
-                t.setAttribute('x', x); t.setAttribute('y', y);
-                t.setAttribute('text-anchor', anchor);
-                t.setAttribute('class', 'graph-text');
-                t.setAttribute('font-size', '9');
-                t.setAttribute('opacity', '0.55');
-                t.textContent = text;
-                svg.appendChild(t);
-            };
             for (const xv of xTicks) {
                 if (xv === 0) continue;
                 addLabel(tx(xv), xAxisSvgY + 11, 'middle', this._formatTickLabel(xv, table.formatOpts || {}));
@@ -1979,13 +1981,15 @@ class VariablesPanel {
             const rMax = Math.max(Math.abs(minX), Math.abs(maxX), Math.abs(minY), Math.abs(maxY));
             const rTicks = rMax > 0 ? this._niceTicks(0, rMax, 5).filter(r => r > 0) : [];
             for (const r of rTicks) {
-                const c = document.createElementNS(ns, 'circle');
-                c.setAttribute('cx', cx0); c.setAttribute('cy', cy0);
-                c.setAttribute('r', Math.abs(r * scale));
-                c.setAttribute('fill', 'none');
-                c.setAttribute('stroke', 'currentColor');
-                c.setAttribute('opacity', '0.18');
-                c.setAttribute('stroke-width', '0.5');
+                const c = svgEl('circle', {
+                    cx: cx0,
+                    cy: cy0,
+                    r: Math.abs(r * scale),
+                    fill: 'none',
+                    stroke: 'currentColor',
+                    opacity: '0.18',
+                    'stroke-width': '0.5'
+                });
                 svg.appendChild(c);
             }
             const spokeR = (rTicks.length > 0 ? rTicks[rTicks.length - 1] : rMax) * scale;
@@ -1994,12 +1998,15 @@ class VariablesPanel {
                 // Polar convention: 0° = +x, 90° = +y. SVG y-down → -sin.
                 const x2 = cx0 + Math.cos(r) * spokeR;
                 const y2 = cy0 - Math.sin(r) * spokeR;
-                const ln = document.createElementNS(ns, 'line');
-                ln.setAttribute('x1', cx0); ln.setAttribute('y1', cy0);
-                ln.setAttribute('x2', x2); ln.setAttribute('y2', y2);
-                ln.setAttribute('stroke', 'currentColor');
-                ln.setAttribute('opacity', '0.18');
-                ln.setAttribute('stroke-width', '0.5');
+                const ln = svgEl('line', {
+                    x1: cx0,
+                    y1: cy0,
+                    x2: x2,
+                    y2: y2,
+                    stroke: 'currentColor',
+                    opacity: '0.18',
+                    'stroke-width': '0.5'
+                });
                 svg.appendChild(ln);
             }
             // Angle labels at each spoke (every 30°), just outside the
@@ -2011,15 +2018,7 @@ class VariablesPanel {
                 const r = deg * Math.PI / 180;
                 const lx = cx0 + Math.cos(r) * angleLabelR;
                 const ly = cy0 - Math.sin(r) * angleLabelR;
-                const t = document.createElementNS(ns, 'text');
-                t.setAttribute('x', lx);
-                t.setAttribute('y', ly + 3);
-                t.setAttribute('text-anchor', 'middle');
-                t.setAttribute('class', 'graph-text');
-                t.setAttribute('font-size', '9');
-                t.setAttribute('opacity', '0.55');
-                t.textContent = deg + '°';
-                svg.appendChild(t);
+                addLabel(lx, ly + 3, 'middle', deg + '°');
             }
             // Radius labels along whichever cardinal axis has the largest
             // data extent — ensures the labels land inside the visible plot.
@@ -2044,15 +2043,9 @@ class VariablesPanel {
             const pad = 3;
             for (const r of rTicks) {
                 const d = r * scale - pad;
-                const t = document.createElementNS(ns, 'text');
-                t.setAttribute('x', cx0 + labelAxis.dx * d + labelAxis.xOff);
-                t.setAttribute('y', cy0 + labelAxis.dy * d + labelAxis.yOff);
-                t.setAttribute('text-anchor', labelAxis.anchor);
-                t.setAttribute('class', 'graph-text');
-                t.setAttribute('font-size', '9');
-                t.setAttribute('opacity', '0.55');
-                t.textContent = this._formatTickLabel(r, table.formatOpts || {});
-                svg.appendChild(t);
+                addLabel(cx0 + labelAxis.dx * d + labelAxis.xOff,
+                    cy0 + labelAxis.dy * d + labelAxis.yOff,
+                    labelAxis.anchor, this._formatTickLabel(r, table.formatOpts || {}));
             }
         } else if (vectorType === 'navigation') {
             // Compass rose at a nice data radius:
@@ -2069,13 +2062,15 @@ class VariablesPanel {
                 return { dx: Math.sin(r), dy: -Math.cos(r) };
             };
             // Outer ring
-            const ring = document.createElementNS(ns, 'circle');
-            ring.setAttribute('cx', cx0); ring.setAttribute('cy', cy0);
-            ring.setAttribute('r', roseR);
-            ring.setAttribute('fill', 'none');
-            ring.setAttribute('stroke', 'currentColor');
-            ring.setAttribute('opacity', '0.30');
-            ring.setAttribute('stroke-width', '0.7');
+            const ring = svgEl('circle', {
+                cx: cx0,
+                cy: cy0,
+                r: roseR,
+                fill: 'none',
+                stroke: 'currentColor',
+                opacity: '0.30',
+                'stroke-width': '0.7'
+            });
             svg.appendChild(ring);
             // Radial tick marks pointing inward from the ring (every 5°)
             const tickBandLen = roseR * 0.10;
@@ -2083,39 +2078,33 @@ class VariablesPanel {
                 const isMajor = deg % 10 === 0;
                 const tickLen = tickBandLen * (isMajor ? 1.0 : 0.4);
                 const u = navUnit(deg);
-                const ln = document.createElementNS(ns, 'line');
-                ln.setAttribute('x1', cx0 + u.dx * (roseR - tickLen));
-                ln.setAttribute('y1', cy0 + u.dy * (roseR - tickLen));
-                ln.setAttribute('x2', cx0 + u.dx * roseR);
-                ln.setAttribute('y2', cy0 + u.dy * roseR);
-                ln.setAttribute('stroke', 'currentColor');
-                ln.setAttribute('opacity', isMajor ? '0.45' : '0.18');
-                ln.setAttribute('stroke-width', isMajor ? '0.8' : '0.5');
+                const ln = svgEl('line', {
+                    x1: cx0 + u.dx * (roseR - tickLen),
+                    y1: cy0 + u.dy * (roseR - tickLen),
+                    x2: cx0 + u.dx * roseR,
+                    y2: cy0 + u.dy * roseR,
+                    stroke: 'currentColor',
+                    opacity: isMajor ? '0.45' : '0.18',
+                    'stroke-width': isMajor ? '0.8' : '0.5'
+                });
                 svg.appendChild(ln);
             }
             // Degree labels every 10° just outside the ring
             const labelR = roseR + 10;
             for (let deg = 0; deg < 360; deg += 10) {
                 const u = navUnit(deg);
-                const t = document.createElementNS(ns, 'text');
-                t.setAttribute('x', cx0 + u.dx * labelR);
-                t.setAttribute('y', cy0 + u.dy * labelR + 3);
-                t.setAttribute('text-anchor', 'middle');
-                t.setAttribute('class', 'graph-text');
-                t.setAttribute('font-size', '9');
-                t.setAttribute('opacity', '0.55');
-                t.textContent = String(deg);
-                svg.appendChild(t);
+                addLabel(cx0 + u.dx * labelR, cy0 + u.dy * labelR + 3, 'middle', String(deg));
             }
         }
 
         // Origin dot
-        const originDot = document.createElementNS(ns, 'circle');
-        originDot.setAttribute('cx', cx0);
-        originDot.setAttribute('cy', cy0);
-        originDot.setAttribute('r', '3');
-        originDot.setAttribute('class', 'graph-text');
-        originDot.setAttribute('fill', 'currentColor');
+        const originDot = svgEl('circle', {
+            cx: cx0,
+            cy: cy0,
+            r: '3',
+            class: 'graph-text',
+            fill: 'currentColor'
+        });
         svg.appendChild(originDot);
 
         for (let i = 0; i < segs.length; i++) {
@@ -2123,14 +2112,15 @@ class VariablesPanel {
             if (!seg) continue;
             const x1 = tx(seg.start.x), y1 = ty(seg.start.y);
             const x2 = tx(seg.end.x), y2 = ty(seg.end.y);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', x1.toFixed(1));
-            line.setAttribute('y1', y1.toFixed(1));
-            line.setAttribute('x2', x2.toFixed(1));
-            line.setAttribute('y2', y2.toFixed(1));
-            line.setAttribute('stroke', seg.color);
-            line.setAttribute('stroke-width', '2.5');
-            line.setAttribute('marker-end', `url(#${markerPrefix}-${i})`);
+            const line = svgEl('line', {
+                x1: x1.toFixed(1),
+                y1: y1.toFixed(1),
+                x2: x2.toFixed(1),
+                y2: y2.toFixed(1),
+                stroke: seg.color,
+                'stroke-width': '2.5',
+                'marker-end': `url(#${markerPrefix}-${i})`
+            });
             svg.appendChild(line);
         }
 
@@ -2148,11 +2138,12 @@ class VariablesPanel {
         // background (the table container is always transparent over it, hover
         // included) so nothing shows through behind the legend. Drawn after the
         // rose + vectors, before the legend swatches/text.
-        const legendMask = document.createElementNS(ns, 'rect');
-        legendMask.setAttribute('x', 0);
-        legendMask.setAttribute('y', margin.top + plotH);
-        legendMask.setAttribute('width', width);
-        legendMask.setAttribute('height', height - (margin.top + plotH));
+        const legendMask = svgEl('rect', {
+            x: 0,
+            y: margin.top + plotH,
+            width: width,
+            height: height - (margin.top + plotH)
+        });
         legendMask.style.fill = 'var(--bg-secondary)';
         svg.appendChild(legendMask);
 
@@ -2163,13 +2154,14 @@ class VariablesPanel {
             const color = colors[i % colors.length];
             const y = legendTop + i * legendLineHeight + 12;
             // Color swatch line
-            const swatch = document.createElementNS(ns, 'line');
-            swatch.setAttribute('x1', margin.left + 4);
-            swatch.setAttribute('x2', margin.left + 24);
-            swatch.setAttribute('y1', y - 4);
-            swatch.setAttribute('y2', y - 4);
-            swatch.setAttribute('stroke', color);
-            swatch.setAttribute('stroke-width', '3');
+            const swatch = svgEl('line', {
+                x1: margin.left + 4,
+                x2: margin.left + 24,
+                y1: y - 4,
+                y2: y - 4,
+                stroke: color,
+                'stroke-width': '3'
+            });
             svg.appendChild(swatch);
             // Label text — use column format info for proper places/degrees/money
             const dirLabel = v.dirLabel || v.dirName;
@@ -2178,20 +2170,21 @@ class VariablesPanel {
             const emCol = v.cols ? v.cols[3] : null;
             const dirText = fmtVal(v.endDir, edCol);
             const magText = fmtVal(v.endMag, emCol);
-            const text = document.createElementNS(ns, 'text');
-            text.setAttribute('x', margin.left + 30);
-            text.setAttribute('y', y);
-            text.setAttribute('class', 'graph-text');
-            text.setAttribute('font-size', '12');
-            text.setAttribute('fill', color);
-            text.setAttribute('font-weight', 'bold');
-            text.textContent = `${dirLabel} = ${dirText}, ${magLabel} = ${magText}`;
+            const text = svgEl('text', {
+                x: margin.left + 30,
+                y: y,
+                class: 'graph-text',
+                'font-size': '12',
+                fill: color,
+                'font-weight': 'bold'
+            }, `${dirLabel} = ${dirText}, ${magLabel} = ${magText}`);
             svg.appendChild(text);
         }
 
         wrapper.appendChild(svg);
         this.insertRowInOrder(wrapper, table.startLine - 1);
-        this._setStickyHeaderOffsets(wrapper);
+        // (no _setStickyHeaderOffsets: SVG wrappers have no table/thead —
+        // the call was a no-op that still cost a rAF per render)
     }
 
     /**
@@ -2199,33 +2192,43 @@ class VariablesPanel {
      */
     /**
      * Draw axes, grid lines, tick labels, and border for a graph.
-     * @param {object} opts - { svg, ns, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines }
+     * @param {object} opts - { svg, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines }
      */
     _drawGraphAxes(opts) {
-        const { svg, ns, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines } = opts;
+        const { svg, margin, plotW, plotH, xMin, xMax, yMin, yMax, sx, sy, xTicks, yTicks, xFmt, yFmt, showZeroLines } = opts;
 
         // Y-axis secondary grid
         for (let i = 0; i < yTicks.length - 1; i++) {
             const mid = sy((yTicks[i] + yTicks[i + 1]) / 2);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
-            line.setAttribute('y1', mid); line.setAttribute('y2', mid);
-            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
+            const line = svgEl('line', {
+                x1: margin.left,
+                x2: margin.left + plotW,
+                y1: mid,
+                y2: mid,
+                class: 'graph-subgrid',
+                'stroke-width': '0.5'
+            });
             svg.appendChild(line);
         }
         // Y-axis primary grid + labels
         for (const tick of yTicks) {
             const y = sy(tick);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
-            line.setAttribute('y1', y); line.setAttribute('y2', y);
-            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
+            const line = svgEl('line', {
+                x1: margin.left,
+                x2: margin.left + plotW,
+                y1: y,
+                y2: y,
+                class: 'graph-grid',
+                'stroke-width': '0.5'
+            });
             svg.appendChild(line);
-            const label = document.createElementNS(ns, 'text');
-            label.setAttribute('x', margin.left - 5); label.setAttribute('y', y + 4);
-            label.setAttribute('text-anchor', 'end'); label.setAttribute('class', 'graph-text');
-            label.setAttribute('font-size', '11');
-            label.textContent = yFmt(tick);
+            const label = svgEl('text', {
+                x: margin.left - 5,
+                y: y + 4,
+                'text-anchor': 'end',
+                class: 'graph-text',
+                'font-size': '11'
+            }, yFmt(tick));
             svg.appendChild(label);
         }
 
@@ -2236,26 +2239,36 @@ class VariablesPanel {
         // Secondary grid
         for (let i = 0; i < xTicks.length - 1; i++) {
             const mid = sx((xTicks[i] + xTicks[i + 1]) / 2);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', mid); line.setAttribute('x2', mid);
-            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-            line.setAttribute('class', 'graph-subgrid'); line.setAttribute('stroke-width', '0.5');
+            const line = svgEl('line', {
+                x1: mid,
+                x2: mid,
+                y1: margin.top,
+                y2: margin.top + plotH,
+                class: 'graph-subgrid',
+                'stroke-width': '0.5'
+            });
             svg.appendChild(line);
         }
         // Primary grid + labels
         for (let ti = 0; ti < xTicks.length; ti++) {
             const x = sx(xTicks[ti]);
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', x); line.setAttribute('x2', x);
-            line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-            line.setAttribute('class', 'graph-grid'); line.setAttribute('stroke-width', '0.5');
+            const line = svgEl('line', {
+                x1: x,
+                x2: x,
+                y1: margin.top,
+                y2: margin.top + plotH,
+                class: 'graph-grid',
+                'stroke-width': '0.5'
+            });
             svg.appendChild(line);
             if (ti % xLabelSkip === 0) {
-                const label = document.createElementNS(ns, 'text');
-                label.setAttribute('x', x); label.setAttribute('y', margin.top + plotH + 15);
-                label.setAttribute('text-anchor', 'middle'); label.setAttribute('class', 'graph-text');
-                label.setAttribute('font-size', '11');
-                label.textContent = xFmt(xTicks[ti]);
+                const label = svgEl('text', {
+                    x: x,
+                    y: margin.top + plotH + 15,
+                    'text-anchor': 'middle',
+                    class: 'graph-text',
+                    'font-size': '11'
+                }, xFmt(xTicks[ti]));
                 svg.appendChild(label);
             }
         }
@@ -2263,26 +2276,38 @@ class VariablesPanel {
         // Zero lines
         if (showZeroLines) {
             if (yMin <= 0 && yMax >= 0) {
-                const line = document.createElementNS(ns, 'line');
-                line.setAttribute('x1', margin.left); line.setAttribute('x2', margin.left + plotW);
-                line.setAttribute('y1', sy(0)); line.setAttribute('y2', sy(0));
-                line.setAttribute('class', 'graph-zero'); line.setAttribute('stroke-width', '1');
+                const line = svgEl('line', {
+                    x1: margin.left,
+                    x2: margin.left + plotW,
+                    y1: sy(0),
+                    y2: sy(0),
+                    class: 'graph-zero',
+                    'stroke-width': '1'
+                });
                 svg.appendChild(line);
             }
             if (xMin <= 0 && xMax >= 0) {
-                const line = document.createElementNS(ns, 'line');
-                line.setAttribute('x1', sx(0)); line.setAttribute('x2', sx(0));
-                line.setAttribute('y1', margin.top); line.setAttribute('y2', margin.top + plotH);
-                line.setAttribute('class', 'graph-zero'); line.setAttribute('stroke-width', '1');
+                const line = svgEl('line', {
+                    x1: sx(0),
+                    x2: sx(0),
+                    y1: margin.top,
+                    y2: margin.top + plotH,
+                    class: 'graph-zero',
+                    'stroke-width': '1'
+                });
                 svg.appendChild(line);
             }
         }
 
         // Plot border
-        const border = document.createElementNS(ns, 'rect');
-        border.setAttribute('x', margin.left); border.setAttribute('y', margin.top);
-        border.setAttribute('width', plotW); border.setAttribute('height', plotH);
-        border.setAttribute('fill', 'none'); border.setAttribute('class', 'graph-border');
+        const border = svgEl('rect', {
+            x: margin.left,
+            y: margin.top,
+            width: plotW,
+            height: plotH,
+            fill: 'none',
+            class: 'graph-border'
+        });
         svg.appendChild(border);
     }
 
@@ -2303,6 +2328,16 @@ class VariablesPanel {
             const norm = rough / mag;
             step = norm < 1.5 ? mag : norm < 3 ? 2 * mag : norm < 7 ? 5 * mag : 10 * mag;
         }
+        return this._ticksFromStep(min, max, step);
+    }
+
+    /**
+     * Tick values from an explicit step: ceil-to-step start, with the
+     * 0.01*step end guard and round-to-step against FP drift. Used by
+     * _niceTicks and by the cartesian vectorDraw backdrop (which wants a
+     * single shared step across both axes so the grid stays square).
+     */
+    _ticksFromStep(min, max, step) {
         const start = Math.ceil(min / step) * step;
         const ticks = [];
         for (let v = start; v <= max + step * 0.01; v += step) {
@@ -2419,52 +2454,39 @@ class VariablesPanel {
         }
         tableEl.appendChild(tbody);
 
-        // Column + header hover highlighting
+        // Column + header hover highlighting. mouseenter/mouseleave pairs
+        // are exact mirrors, so each is one toggle helper called with on/off.
+        const setColCells = (col, on) => {
+            for (const cell of tbody.querySelectorAll(`td[data-col="${col}"]`)) {
+                cell.classList.toggle('col-hover', on);
+            }
+        };
+
         // Hovering a column header highlights that column
         for (const th of headerRow2.querySelectorAll('.grid-col-value')) {
-            th.addEventListener('mouseenter', () => {
-                const col = th.dataset.col;
-                th.classList.add('col-hover');
-                for (const cell of tbody.querySelectorAll(`td[data-col="${col}"]`)) {
-                    cell.classList.add('col-hover');
-                }
-            });
-            th.addEventListener('mouseleave', () => {
-                const col = th.dataset.col;
-                th.classList.remove('col-hover');
-                for (const cell of tbody.querySelectorAll(`td[data-col="${col}"]`)) {
-                    cell.classList.remove('col-hover');
-                }
-            });
+            const setHover = (on) => {
+                th.classList.toggle('col-hover', on);
+                setColCells(th.dataset.col, on);
+            };
+            th.addEventListener('mouseenter', () => setHover(true));
+            th.addEventListener('mouseleave', () => setHover(false));
         }
 
-        const colHeaderRow = thead.rows[1]; // row with column values
-        tableEl.addEventListener('mouseenter', (e) => {
+        // Hovering a cell highlights its column, column header, and row header
+        const setCellHover = (e, on) => {
             const td = e.target.closest('td');
             if (!td || td.dataset.col == null) return;
             const col = td.dataset.col;
-            for (const cell of tbody.querySelectorAll(`td[data-col="${col}"]`)) {
-                cell.classList.add('col-hover');
-            }
-            // Highlight column header (offset by 1 for the merged cell)
-            const colHeader = colHeaderRow && headerRow2.cells[parseInt(col) + 1];
-            if (colHeader) colHeader.classList.add('col-hover');
-            // Highlight row header (the <th> in the same <tr>)
+            setColCells(col, on);
+            // Column header (offset by 1 for the merged corner cell)
+            const colHeader = headerRow2.cells[parseInt(col) + 1];
+            if (colHeader) colHeader.classList.toggle('col-hover', on);
+            // Row header (the <th> in the same <tr>)
             const rowTh = td.parentElement.querySelector('.grid-row-value');
-            if (rowTh) rowTh.classList.add('col-hover');
-        }, true);
-        tableEl.addEventListener('mouseleave', (e) => {
-            const td = e.target.closest('td');
-            if (!td || td.dataset.col == null) return;
-            const col = td.dataset.col;
-            for (const cell of tbody.querySelectorAll(`td[data-col="${col}"]`)) {
-                cell.classList.remove('col-hover');
-            }
-            const colHeader = colHeaderRow && headerRow2.cells[parseInt(col) + 1];
-            if (colHeader) colHeader.classList.remove('col-hover');
-            const rowTh = td.parentElement.querySelector('.grid-row-value');
-            if (rowTh) rowTh.classList.remove('col-hover');
-        }, true);
+            if (rowTh) rowTh.classList.toggle('col-hover', on);
+        };
+        tableEl.addEventListener('mouseenter', (e) => setCellHover(e, true), true);
+        tableEl.addEventListener('mouseleave', (e) => setCellHover(e, false), true);
 
         wrapper.appendChild(tableEl);
         this.insertRowInOrder(wrapper, table.startLine - 1);
