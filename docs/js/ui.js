@@ -930,6 +930,10 @@ function renderDetailsPanel() {
     const record = findRecord(UI.data, UI.currentRecordId);
     if (!record) return;
 
+    // The Created/Modified info block below is deliberately panel-only (not
+    // in the shared fields or the mobile settings modal): bumpRecordModified
+    // updates #detail-modified in place on every keystroke, which needs a
+    // single id-bearing element, and the modal stays uncluttered.
     UI.detailsPanel.innerHTML = `
         <div class="details-header">Record Settings</div>
 
