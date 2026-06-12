@@ -64,6 +64,36 @@ function preParseEquations(equations) {
 }
 
 /**
+ * Evaluate a declaration's limit token ranges against the context.
+ * Returns { low, high } (plus step when withStep and stepTokens are present),
+ * with low/high auto-swapped. Limits are always linear; the `°` format is
+ * display-only. For wrap-through-0 search (e.g. cmg spanning 327.8° through
+ * 0° to 5.5°), write a linear range that extends past M, e.g. [327.8:365.5]
+ * — trig is periodic so Brent's evaluating 365° == evaluating 5°.
+ *
+ * Throws when an expression can't evaluate yet — callers decide whether
+ * that means defer, tolerate, or report. Parsed ASTs are cached on the
+ * limits object (tokens never change after parsing), so the per-branch,
+ * per-attempt re-parse cost is paid once per solve.
+ */
+function evalLimitRange(limits, context, withStep = false) {
+    let asts = limits._asts;
+    if (!asts) {
+        asts = limits._asts = {
+            low: parseTokens(limits.lowTokens),
+            high: parseTokens(limits.highTokens),
+            step: limits.stepTokens ? parseTokens(limits.stepTokens) : null
+        };
+    }
+    let low = evaluate(asts.low, context);
+    let high = evaluate(asts.high, context);
+    if (low > high) [low, high] = [high, low];
+    const range = { low, high };
+    if (withStep && asts.step) range.step = evaluate(asts.step, context);
+    return range;
+}
+
+/**
  * Solve a single equation in context
  *
  * @param {Object} [options] - { allRoots: boolean }. When true, returns all Brent's roots
@@ -134,21 +164,7 @@ function solveEquationInContext(eqLine, context, variables, substitutions = new 
     const varInfo = variables.get(unknown);
     if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
         try {
-            const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
-            const highAST = parseTokens(varInfo.declaration.limits.highTokens);
-            let low = evaluate(lowAST, context);
-            let high = evaluate(highAST, context);
-            // Auto-swap inverted ranges. Limits are always linear; the `°`
-            // format is display-only. For wrap-through-0 search (e.g. cmg
-            // spanning 327.8° through 0° to 5.5°), write a linear range
-            // that extends past M, e.g. [327.8:365.5] — trig is periodic so
-            // Brent's evaluating 365° == evaluating 5°.
-            if (low > high) [low, high] = [high, low];
-            limits = { low, high };
-            if (varInfo.declaration.limits.stepTokens) {
-                const stepAST = parseTokens(varInfo.declaration.limits.stepTokens);
-                limits.step = evaluate(stepAST, context);
-            }
+            limits = evalLimitRange(varInfo.declaration.limits, context, true);
         } catch (e) {
             // Limits can't evaluate yet — defer this variable.
             // Iterative loop will retry once dependencies are solved.
@@ -239,10 +255,8 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
     function valueInLimits(value) {
         if (!limits) return value;
         try {
-            const low = evaluate(parseTokens(limits.lowTokens), context);
-            const high = evaluate(parseTokens(limits.highTokens), context);
-            const lo = Math.min(low, high), hi = Math.max(low, high);
-            return (value >= lo && value <= hi) ? value : undefined;
+            const { low, high } = evalLimitRange(limits, context);
+            return (value >= low && value <= high) ? value : undefined;
         } catch (e) {
             return undefined;
         }
@@ -282,8 +296,7 @@ function resolveWithLimits(varName, decl, equations, declarations, context, reco
             lineIndex: targetLineIndex != null ? targetLineIndex : 0,
             declaration: {
                 type: VarType.INPUT,
-                limits,
-                format: decl.format
+                limits
             }
         },
         ...declarations
@@ -615,14 +628,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
         const varInfo = variables.get(varName);
         if (varInfo && varInfo.declaration && varInfo.declaration.limits) {
             try {
-                const lowAST = parseTokens(varInfo.declaration.limits.lowTokens);
-                const highAST = parseTokens(varInfo.declaration.limits.highTokens);
-                let low = evaluate(lowAST, context);
-                let high = evaluate(highAST, context);
-                // Auto-swap inverted ranges. Limits are always linear;
-                // `°` format is display-only. Wrap-through-0 is expressed
-                // via a linear range that extends past M (e.g. [350:370]).
-                if (low > high) [low, high] = [high, low];
+                const { low, high } = evalLimitRange(varInfo.declaration.limits, context);
                 const inRange = value >= low && value <= high;
                 if (!inRange) {
                     solveFailures.set(varName, {
@@ -1202,7 +1208,6 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                                      // collection so a var verified by any balanced equation in this
                                      // component counts — including equations AFTER firstFailedEq in
                                      // document order (writing order shouldn't determine highlight color).
-    let balancedAny = false;  // shorthand for balancedEqs.size > 0, kept for the green-branch check
     const definitionDeps = new Map(); // undeclared var → RHS vars (for highlighting expansion)
     const definedByEq = new Map();    // undeclared var → the FIRST equation that introduced it (its definition).
                                        // Subsequent equations with the same bare-undeclared LHS are real
@@ -1284,7 +1289,6 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
                 }
             } else {
                 balancedEqs.add(eq);
-                balancedAny = true;
             }
         } catch (e) {
             errors.push(`Line ${eq.startLine + 1}: ${e.message}`);
@@ -1341,7 +1345,7 @@ function solveEquations(context, declarations, record = {}, equations, bodyDefin
             if (!variables.has(v)) continue;
             equationVarStatus.set(v, priorBalanced.has(v) ? 'partial' : 'unsolved');
         }
-    } else if (balancedAny) {
+    } else if (balancedEqs.size > 0) {
         // Only mark vars green when at least one equation actually balanced.
         // Without this, a record like Ohm's Law with one input filled in
         // (rest blank) would skip all balance checks (every equation has
@@ -1620,7 +1624,7 @@ function formatOutput(text, declarations, context, computedValues, record, solve
     for (const output of exprOutputs) {
         const key = `__exprout_${output.startLine}`;
         if (computedValues.has(key)) {
-            const { value, fullPrecision, marker, format: varFormat, base: exprBase } = computedValues.get(key);
+            const { value, fullPrecision, format: varFormat, base: exprBase } = computedValues.get(key);
             const places = fullPrecision ? 15 : format.places;
             let formatted;
             try {
@@ -2034,10 +2038,28 @@ function buildLimitsSuffix(limits) {
     return `[${lo}:${hi}${step}]`;
 }
 
+/**
+ * Expand an evaluated iterator ({ start, end, step }) into its value list.
+ * Allows up to cap+1 entries (the length check runs after push); callers
+ * compare totals against their own row limits afterward.
+ */
+function buildIterValues(iter, cap = 10000) {
+    const arr = [];
+    for (let i = 0; ; i++) {
+        const v = iter.start + i * iter.step;
+        if (iter.step > 0 ? v > iter.end : v < iter.end) break;
+        arr.push(v);
+        if (arr.length > cap) break;
+    }
+    return arr;
+}
+
 function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) {
     const errors = [];
     const isGrid = tableDef.keyword === 'grid' || tableDef.keyword === 'gridgraph';
+    const isGridGraph = tableDef.keyword === 'gridgraph';
     const isVectorDraw = tableDef.keyword === 'vectordraw';
+    const isTable = tableDef.keyword === 'table' || tableDef.keyword === 'tablegraph';
     const keyword = tableDef.keyword;
     const emptyResult = () => {
         if (isGrid) return { type: 'grid', keyword, title: tableDef.title, iter1Label: '', iter2Label: '', rowValues: [], colValues: [], cellHeader: '', grid: [], fontSize: null, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
@@ -2206,21 +2228,19 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         }
     }
 
-    // Check for unused declared variables (iterators, unknowns, definitions)
+    // Check for unused declared variables (iterators, unknowns, definitions).
+    // Definition and column var sets were already computed above (defASTs,
+    // col.astVars) — reuse them rather than re-parsing.
     const referencedVars = new Set();
     for (const eq of equations) {
         for (const v of eq.allVars) referencedVars.add(v);
     }
-    for (const def of definitions) {
-        if (def.exprText) {
-            try {
-                for (const v of findVariablesInAST(parseExpression(def.exprText.trim()))) referencedVars.add(v);
-            } catch (e) { }
-        }
+    for (const { vars } of defASTs) {
+        if (vars) for (const v of vars) referencedVars.add(v);
     }
     for (const col of columns) {
-        if (col.ast) {
-            for (const v of findVariablesInAST(col.ast)) referencedVars.add(v);
+        if (col.astVars) {
+            for (const v of col.astVars) referencedVars.add(v);
         }
         referencedVars.add(col.name);
     }
@@ -2345,10 +2365,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         // Solve with body definitions handled inside the iterative loop
         const solveResult = solveEquationsByComponent(context, tableDeclarations, record, equations, defASTs);
         // Collect variables that failed to solve
-        const badVars = new Set();
-        for (const [varName, failure] of solveResult.solveFailures) {
-            badVars.add(varName);
-        }
+        const badVars = new Set(solveResult.solveFailures.keys());
         // On balance failure, blank every variable in the failing equation
         // except iterators. Iterators are the user's input axis — blanking
         // them would hide which row failed. Other vars (outer INPUTs with
@@ -2441,7 +2458,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     }
 
     // ==================== VECTORDRAW (polar/cartesian vector diagram) ====================
-    if (tableDef.keyword === 'vectordraw') {
+    if (isVectorDraw) {
         // Coordinate type is required: navigation (default historic), polar,
         // or cartesian. Validates here so a typo or missing arg fails loudly
         // rather than silently picking a default.
@@ -2560,7 +2577,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     }
 
     // ==================== TABLE and TABLEGRAPH (columnar) ====================
-    if (tableDef.keyword === 'table' || tableDef.keyword === 'tablegraph') {
+    if (isTable) {
         if (evaledIterators.length === 0) {
             errors.push(`Line ${tableDef.startLine}: Table has no iterator (use x<- 0..10)`);
             return emptyResult();
@@ -2584,16 +2601,7 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         // outermost loop (changes slowest); last-declared changes fastest.
         // Iterator bounds are evaluated once up-front, so inner iterators
         // can't depend on outer iterator values.
-        const iterValueLists = evaledIterators.map(iter => {
-            const arr = [];
-            for (let i = 0; ; i++) {
-                const v = iter.start + i * iter.step;
-                if (iter.step > 0 ? v > iter.end : v < iter.end) break;
-                arr.push(v);
-                if (arr.length > maxRows) break;
-            }
-            return arr;
-        });
+        const iterValueLists = evaledIterators.map(iter => buildIterValues(iter, maxRows));
         const totalRowCount = iterValueLists.reduce((a, b) => a * b.length, 1);
         if (totalRowCount > maxRows) {
             errors.push(`Line ${tableDef.startLine}: Table exceeded ${maxRows} rows`);
@@ -2669,8 +2677,9 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 
         const type = tableDef.keyword === 'tablegraph' ? 'graph' : 'table';
         const solveInfo = goodRows < totalRows ? { solved: goodRows, total: totalRows } : null;
-        const iteratorNames = evaledIterators.map(it => it.name);
-        return { type, keyword, title: expandedTitle, columns, rows, rawRows, iteratorNames, formatOpts, fontSize, solveInfo, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
+        // Result payload wants an array (not the outer iteratorNames Set)
+        const iteratorNameList = evaledIterators.map(it => it.name);
+        return { type, keyword, title: expandedTitle, columns, rows, rawRows, iteratorNames: iteratorNameList, formatOpts, fontSize, solveInfo, startLine: tableDef.startLine, endLine: tableDef.endLine, errors };
     }
 
     // ==================== GRID (2D cell values) ====================
@@ -2695,18 +2704,8 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
     const iter2FullPrec = colHeaderCol ? colHeaderCol.fullPrecision : false;
 
     // Build value arrays
-    const rowValues = [];
-    for (let i = 0; ; i++) {
-        const v = iter1.start + i * iter1.step;
-        if (iter1.step > 0 ? v > iter1.end : v < iter1.end) break;
-        rowValues.push(v); if (rowValues.length > 10000) break;
-    }
-    const colValues = [];
-    for (let i = 0; ; i++) {
-        const v = iter2.start + i * iter2.step;
-        if (iter2.step > 0 ? v > iter2.end : v < iter2.end) break;
-        colValues.push(v); if (colValues.length > 10000) break;
-    }
+    const rowValues = buildIterValues(iter1);
+    const colValues = buildIterValues(iter2);
 
     // Thin wrapper around the shared getColumnValue that tolerates null col
     // (grid call sites pass rowHeaderCol/colHeaderCol/cellVar which may be absent).
@@ -2715,7 +2714,6 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
         return getColumnValue(col);
     }
 
-    const isGridGraph = tableDef.keyword === 'gridgraph';
     const grid = [];
     // For gridGraph: flat rows of [rowHdr, colHdr, cellVal] for _renderGraph.
     // Col headers (captured at r=0) are reused across rows, so kept as a 1D

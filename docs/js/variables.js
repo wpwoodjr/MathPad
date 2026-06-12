@@ -244,10 +244,6 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
                     errors.push(`Line ${i + 1}: Variable "${name}" is already defined`);
                     continue;
                 }
-                if (context.variables.has(name)) {
-                    errors.push(`Line ${i + 1}: Variable "${name}" is already defined`);
-                    continue;
-                }
                 definedVars.add(name);
             }
 
@@ -312,7 +308,11 @@ function getInlineEvalFormat(exprTokens, record, variables = null) {
     let base = 10;
     let baseName = null;
 
-    // Detect trailing format suffix from tokens: FORMATTER($/%/°), @d, @t, or FORMATTER(#)+NUMBER
+    // Detect trailing format suffix from tokens: FORMATTER($/%/°), @d, @t, or
+    // FORMATTER(#)+NUMBER. suffixTokenCount is how many trailing tokens the
+    // suffix occupies, so expandInlineExprs can strip it before parsing —
+    // single source of truth for what counts as a suffix.
+    let suffixTokenCount = 0;
     const lastTok = exprTokens.length > 0 ? exprTokens[exprTokens.length - 1] : null;
     const prevTok = exprTokens.length > 1 ? exprTokens[exprTokens.length - 2] : null;
     const formatMap = { '$': 'money', '%': 'percent', '°': 'degrees' };
@@ -320,11 +320,15 @@ function getInlineEvalFormat(exprTokens, record, variables = null) {
     if (lastTok && lastTok.type === TokenType.IDENTIFIER && (lastTok.value === 'd' || lastTok.value === 't') &&
         prevTok && prevTok.type === TokenType.FORMATTER && prevTok.value === '@') {
         varFormat = lastTok.value === 'd' ? 'date' : 'duration';
-    } else if (lastTok && lastTok.type === TokenType.FORMATTER && formatMap[lastTok.value]) {
-        varFormat = formatMap[lastTok.value];
+        suffixTokenCount = 2;
+    } else if (lastTok && lastTok.type === TokenType.FORMATTER) {
+        // Any trailing formatter is a suffix to strip; only $/%/° map to a format
+        varFormat = formatMap[lastTok.value] || varFormat;
+        suffixTokenCount = 1;
     } else if (exprTokens.length >= 2 && lastTok && lastTok.type === TokenType.NUMBER &&
                prevTok && prevTok.type === TokenType.FORMATTER && prevTok.value === '#') {
         base = lastTok.value.value;
+        suffixTokenCount = 2;
     }
 
     // If expression is a single identifier (possibly with suffix stripped), look up its format
@@ -348,7 +352,8 @@ function getInlineEvalFormat(exprTokens, record, variables = null) {
         numberFormat: record.format || 'float',
         currencySymbol: record.currencySymbol || '$',
         varFormat: varFormat,
-        base: base
+        base: base,
+        suffixTokenCount: suffixTokenCount
     };
 }
 
@@ -533,7 +538,7 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
     // Process per-line token arrays
     for (let lineIdx = 0; lineIdx < allTokens.length && lineIdx < maxLine; lineIdx++) {
         if (functionDefLines && functionDefLines.has(lineIdx + 1)) continue;
-        const lineTokens = allTokens[lineIdx].filter(t => t.type !== TokenType.EOF);
+        const lineTokens = getLineTokens(allTokens, lineIdx);
         if (lineTokens.length > 0) processLine(lineIdx + 1, lineTokens);
     }
 
@@ -606,7 +611,7 @@ function findEquationsAndOutputs(text, allTokens, functionDefLines) {
                     isBraced: true,
                     startCol: braceStartTok.col - 1,
                     endCol: rbraceTok.col,
-                    modN: eqTok && eqTok.value === '°=' ? true : null
+                    modN: eqTok ? (eqTok.modN || null) : null
                 });
                 inBrace = false;
             }
@@ -675,10 +680,10 @@ function findExpressionOutputs(text, allTokens) {
  * For example: "equation c = a + b test" -> "c = a + b"
  * Returns the extracted equation text, or the original if it parses fine or can't be fixed.
  */
-function extractEquationFromLine(lineText, lineTokens) {
+function extractEquationFromLine(lineText, lineTokens, eqTok) {
     let leftText, rightText;
 
-    const eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '°='));
+    if (!eqTok) eqTok = lineTokens.find(t => t.type === TokenType.OPERATOR && (t.value === '=' || t.value === '°='));
     if (!eqTok) return { text: lineText, leftText: null, rightText: null };
     const eqWidth = eqTok.value.length; // 1 for '=', 2 for '°='
     leftText = lineText.substring(0, eqTok.col - 1).trim();
@@ -740,7 +745,7 @@ function extractEquationFromLine(lineText, lineTokens) {
                     if (i < rhsTokens.length) {
                         const nextType = rhsTokens[i].type;
                         if (nextType !== TokenType.IDENTIFIER && nextType !== TokenType.NUMBER
-                            && nextType !== TokenType.STRING && nextType !== TokenType.LPAREN) continue;
+                            && nextType !== TokenType.LPAREN) continue;
                     }
                     extractedRight = tokensToText(rhsTokens.slice(0, i)).trim();
                     break;
@@ -1103,21 +1108,11 @@ function findTableDefinitions(text, allTokens) {
 function expandInlineExprs(text, context, record) {
     return text.replace(/\\([^\\]+)\\/g, (match, expr) => {
         try {
-            const tokens = new Tokenizer(expr).tokenize()[0].filter(t => t.type !== TokenType.EOF);
+            const tokens = getLineTokens(new Tokenizer(expr).tokenize(), 0);
             const fmt = getInlineEvalFormat(tokens, record || {});
-            // Strip format suffix tokens before parsing expression
-            let exprTokens = tokens;
-            const last = tokens[tokens.length - 1];
-            const prev = tokens.length >= 2 ? tokens[tokens.length - 2] : null;
-            if (last && last.type === TokenType.IDENTIFIER && (last.value === 'd' || last.value === 't') &&
-                prev && prev.type === TokenType.FORMATTER && prev.value === '@') {
-                exprTokens = tokens.slice(0, -2); // strip @d or @t
-            } else if (last && last.type === TokenType.FORMATTER) {
-                exprTokens = tokens.slice(0, -1);
-            } else if (last && last.type === TokenType.NUMBER &&
-                       prev && prev.type === TokenType.FORMATTER && prev.value === '#') {
-                exprTokens = tokens.slice(0, -2);
-            }
+            // Strip the format suffix (as measured by getInlineEvalFormat)
+            // before parsing the expression
+            const exprTokens = fmt.suffixTokenCount ? tokens.slice(0, -fmt.suffixTokenCount) : tokens;
             const ast = parseTokens(exprTokens);
             const value = evaluate(ast, context);
             if (fmt.varFormat) {

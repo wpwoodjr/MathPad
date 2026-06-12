@@ -708,10 +708,7 @@ function evaluate(node, context) {
             const userFunc = context.getUserFunction(funcName);
             if (userFunc) {
                 const expected = userFunc.params.length;
-                if (node.args.length < expected) {
-                    throw new EvalError(`${node.name}() requires ${expected} argument${expected !== 1 ? 's' : ''}, got ${node.args.length}`);
-                }
-                if (node.args.length > expected) {
+                if (node.args.length !== expected) {
                     throw new EvalError(`${node.name}() requires ${expected} argument${expected !== 1 ? 's' : ''}, got ${node.args.length}`);
                 }
                 // Evaluate arguments in the calling context
@@ -738,64 +735,37 @@ function evaluate(node, context) {
                 }
             }
 
-            // Special handling for 'sum' - sum(expr; var; start; end)
-            if (funcName === 'sum') {
+            // Binding-variable iteration forms: sum(expr; var; start; end)
+            // and prod(expr; var; start; end). Identical except for the
+            // accumulator identity and operation.
+            if (funcName === 'sum' || funcName === 'prod') {
                 if (node.args.length !== 4) {
-                    throw new EvalError('sum() requires 4 arguments: sum(expr; var; start; end)');
+                    throw new EvalError(`${funcName}() requires 4 arguments: ${funcName}(expr; var; start; end)`);
                 }
                 const exprNode = node.args[0];
                 const varNode = node.args[1];
                 if (varNode.type !== 'VARIABLE') {
-                    throw new EvalError('sum() second argument must be a variable name');
+                    throw new EvalError(`${funcName}() second argument must be a variable name`);
                 }
                 const varName = varNode.name;
                 const start = Math.floor(evaluate(node.args[2], context));
                 const end = Math.floor(evaluate(node.args[3], context));
 
                 if (!isFinite(start) || !isFinite(end)) {
-                    throw new EvalError('sum() start and end must be finite numbers');
+                    throw new EvalError(`${funcName}() start and end must be finite numbers`);
                 }
                 const iterations = end - start + 1;
                 if (iterations > 10000000) {
-                    throw new EvalError(`sum() too many iterations (${iterations}). Max is 10,000,000`);
+                    throw new EvalError(`${funcName}() too many iterations (${iterations}). Max is 10,000,000`);
                 }
 
-                let total = 0;
-                const sumContext = context.clone();
+                const isSum = funcName === 'sum';
+                let total = isSum ? 0 : 1;
+                const iterContext = context.clone();
                 for (let i = start; i <= end; i++) {
-                    sumContext.setVariable(varName, i);
-                    total += evaluate(exprNode, sumContext);
-                }
-                return total;
-            }
-
-            // Special handling for 'prod' - prod(expr; var; start; end)
-            if (funcName === 'prod') {
-                if (node.args.length !== 4) {
-                    throw new EvalError('prod() requires 4 arguments: prod(expr; var; start; end)');
-                }
-                const exprNode = node.args[0];
-                const varNode = node.args[1];
-                if (varNode.type !== 'VARIABLE') {
-                    throw new EvalError('prod() second argument must be a variable name');
-                }
-                const varName = varNode.name;
-                const start = Math.floor(evaluate(node.args[2], context));
-                const end = Math.floor(evaluate(node.args[3], context));
-
-                if (!isFinite(start) || !isFinite(end)) {
-                    throw new EvalError('prod() start and end must be finite numbers');
-                }
-                const iterations = end - start + 1;
-                if (iterations > 10000000) {
-                    throw new EvalError(`prod() too many iterations (${iterations}). Max is 10,000,000`);
-                }
-
-                let total = 1;
-                const prodContext = context.clone();
-                for (let i = start; i <= end; i++) {
-                    prodContext.setVariable(varName, i);
-                    total *= evaluate(exprNode, prodContext);
+                    iterContext.setVariable(varName, i);
+                    const v = evaluate(exprNode, iterContext);
+                    total = isSum ? total + v : total * v;
                 }
                 return total;
             }
