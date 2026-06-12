@@ -718,7 +718,6 @@ class SimpleEditor {
         // Need at least 2 entries: current state on top + a previous state to restore
         if (this.undoStack.length < 2) return false;
 
-        const scrollTop = this.textarea.scrollTop;
         const cursorStart = this.textarea.selectionStart;
         const cursorEnd = this.textarea.selectionEnd;
 
@@ -729,25 +728,9 @@ class SimpleEditor {
         // Restore previous state's value, use popped entry's beforeCursor if available
         // (where user was before this edit group started), otherwise keep current cursor
         const state = this.undoStack[this.undoStack.length - 1];
-        this.textarea.value = state.value;
-        if (document.activeElement === this.textarea) {
-            const len = state.value.length;
-            this.textarea.selectionStart = Math.min(popped.beforeCursorStart ?? cursorStart, len);
-            this.textarea.selectionEnd = Math.min(popped.beforeCursorEnd ?? cursorEnd, len);
-        }
-
-        this.updateHighlighting();
-        this.updateLineNumbers();
-
-        this.textarea.scrollTop = scrollTop;
-        this.highlightLayer.scrollTop = scrollTop;
-        this.lineNumbers.scrollTop = scrollTop;
-
-        // Restore lastUserEditAt to the restored state's modifiedAt
-        this.lastUserEditAt = state.modifiedAt ?? null;
-        this.notifyChange(state.metadata, true, false, this.lastUserEditAt);
-        this.notifyUndoState();
-
+        this._restoreState(state,
+            popped.beforeCursorStart ?? cursorStart,
+            popped.beforeCursorEnd ?? cursorEnd);
         return true;
     }
 
@@ -757,16 +740,28 @@ class SimpleEditor {
     redo() {
         if (this.redoStack.length === 0) return false;
 
-        const scrollTop = this.textarea.scrollTop;
-
         // Pop from redo and push to undo stack (becomes new top = current state)
         const state = this.redoStack.pop();
         this.undoStack.push(state);
 
+        this._restoreState(state, state.cursorStart, state.cursorEnd);
+        return true;
+    }
+
+    /**
+     * Shared undo/redo tail: write the state's text, set the cursor (only
+     * when the textarea has focus; clamped to the new length), re-render,
+     * restore scroll, and notify listeners with the state's metadata and
+     * modifiedAt.
+     */
+    _restoreState(state, cursorStart, cursorEnd) {
+        const scrollTop = this.textarea.scrollTop;
+
         this.textarea.value = state.value;
         if (document.activeElement === this.textarea) {
-            this.textarea.selectionStart = state.cursorStart;
-            this.textarea.selectionEnd = state.cursorEnd;
+            const len = state.value.length;
+            this.textarea.selectionStart = Math.min(cursorStart, len);
+            this.textarea.selectionEnd = Math.min(cursorEnd, len);
         }
 
         this.updateHighlighting();
@@ -780,8 +775,6 @@ class SimpleEditor {
         this.lastUserEditAt = state.modifiedAt ?? null;
         this.notifyChange(state.metadata, true, false, this.lastUserEditAt);
         this.notifyUndoState();
-
-        return true;
     }
 
     canUndo() {
@@ -839,7 +832,9 @@ class SimpleEditor {
             this.textarea.selectionStart = Math.min(cursorStart, len);
             this.textarea.selectionEnd = Math.min(cursorEnd, len);
         }
-        this.textarea.scrollTop = scrollTop;
+        // (scroll restored once, below, after re-render — no paint happens
+        // between here and there, so the transient scroll reset from setting
+        // .value is never visible)
 
         if (undoable && changed) {
             // Push new state as current top of stack
@@ -1012,6 +1007,20 @@ class SimpleEditor {
     }
 
     /**
+     * Expand a selection [start, end] to whole lines. If the selection end
+     * sits at the start of a line (just past a newline), that line is NOT
+     * included. Returns { lineStart, blockEnd } text offsets.
+     */
+    _getLineBlock(start, end) {
+        const value = this.textarea.value;
+        const effectiveEnd = (end > start && end > 0 && value[end - 1] === '\n') ? end - 1 : end;
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+        const lineEnd = value.indexOf('\n', effectiveEnd);
+        const blockEnd = lineEnd === -1 ? value.length : lineEnd;
+        return { lineStart, blockEnd };
+    }
+
+    /**
      * Toggle // comment on selected or current lines
      */
     toggleLineComment() {
@@ -1020,12 +1029,7 @@ class SimpleEditor {
         const start = ta.selectionStart;
         const end = ta.selectionEnd;
 
-        // Find the full line range
-        // If selection end is at the start of a line, don't include that line
-        const effectiveEnd = (end > start && end > 0 && value[end - 1] === '\n') ? end - 1 : end;
-        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-        const lineEnd = value.indexOf('\n', effectiveEnd);
-        const blockEnd = lineEnd === -1 ? value.length : lineEnd;
+        const { lineStart, blockEnd } = this._getLineBlock(start, end);
 
         const block = value.substring(lineStart, blockEnd);
         const lines = block.split('\n');
@@ -1070,12 +1074,7 @@ class SimpleEditor {
         const ta = this.textarea;
         const value = ta.value;
 
-        // Find the full line range
-        // If selection end is at the start of a line, don't include that line
-        const effectiveEnd = (end > start && end > 0 && value[end - 1] === '\n') ? end - 1 : end;
-        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-        const lineEnd = value.indexOf('\n', effectiveEnd);
-        const blockEnd = lineEnd === -1 ? value.length : lineEnd;
+        const { lineStart, blockEnd } = this._getLineBlock(start, end);
 
         const block = value.substring(lineStart, blockEnd);
         const lines = block.split('\n');
@@ -1106,12 +1105,7 @@ class SimpleEditor {
         const ta = this.textarea;
         const value = ta.value;
 
-        // Find the full line range
-        // If selection end is at the start of a line, don't include that line
-        const effectiveEnd = (end > start && end > 0 && value[end - 1] === '\n') ? end - 1 : end;
-        const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-        const lineEnd = value.indexOf('\n', effectiveEnd);
-        const blockEnd = lineEnd === -1 ? value.length : lineEnd;
+        const { lineStart, blockEnd } = this._getLineBlock(start, end);
 
         const block = value.substring(lineStart, blockEnd);
         const lines = block.split('\n');

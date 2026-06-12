@@ -41,6 +41,22 @@ function highlightLabelText(text, options = {}) {
 }
 
 /**
+ * Parse 0-based line indices out of an errors array. Each error string
+ * starts with "Line N: ..." per the solver's convention; everything
+ * else is ignored. Single source for the error-line convention — used by
+ * the panel's setErrors and by ui.js to mark editor gutter lines.
+ */
+function findErrorLines(errors) {
+    const lines = new Set();
+    if (!errors) return lines;
+    for (const e of errors) {
+        const m = e.match(/^Line (\d+):/);
+        if (m) lines.add(parseInt(m[1], 10) - 1);
+    }
+    return lines;
+}
+
+/**
  * Shared hidden span for measuring input text width. Module-level singleton:
  * panels are created/destroyed constantly (preview tabs), and a per-panel
  * span appended to document.body would be orphaned on every panel destroy.
@@ -1101,12 +1117,8 @@ class VariablesPanel {
         if (!errors || errors.length === 0) return;
 
         // Parse line numbers from errors
-        for (const error of errors) {
-            const match = error.match(/^Line (\d+):/);
-            if (match) {
-                const lineNum = parseInt(match[1], 10) - 1; // Convert to 0-indexed
-                this.errorLines.add(lineNum);
-            }
+        for (const lineNum of findErrorLines(errors)) {
+            this.errorLines.add(lineNum);
         }
 
         // Mark rows with errors

@@ -290,22 +290,6 @@ function saveOpenTabsToSettings() {
 }
 
 /**
- * Parse 0-based line indices out of an errors array. Each error string
- * starts with "Line N: ..." per the solver's convention; everything
- * else is ignored. Used to mark every error-bearing line in the editor
- * gutter regardless of error kind (balance, value, root, limit, etc.).
- */
-function findErrorLines(errors) {
-    const lines = new Set();
-    if (!errors) return lines;
-    for (const e of errors) {
-        const m = e.match(/^Line (\d+):/);
-        if (m) lines.add(parseInt(m[1], 10) - 1);
-    }
-    return lines;
-}
-
-/**
  * Vars panel debounce for the typing path. The user isn't watching the
  * vars panel while typing in the formulas editor, so we coalesce the
  * expensive updateFromText / stripStaleSections / reference-info work
