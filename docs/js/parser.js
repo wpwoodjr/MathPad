@@ -124,6 +124,37 @@ class Tokenizer {
         return ch && /[a-zA-Z0-9_]/.test(ch);
     }
 
+    /**
+     * Match a declaration marker starting at lookahead `offset` from the
+     * current position. Returns { type, marker } or null. Single source of
+     * the marker cascade (->> -> <<- <- :>> :> :: :) shared by the @d/@t,
+     * $/%/°, and #base suffix-merge paths in tokenize(). Marker metadata
+     * (isMarker, varType, clearBehavior, fullPrecision) attaches in
+     * makeToken from the returned type.
+     */
+    matchMarkerAt(offset) {
+        const p1 = this.peek(offset);
+        const p2 = this.peek(offset + 1);
+        const p3 = this.peek(offset + 2);
+        if (p1 === '-' && p2 === '>') {
+            return p3 === '>' ? { type: TokenType.ARROW_FULL, marker: '->>' }
+                              : { type: TokenType.ARROW_RIGHT, marker: '->' };
+        }
+        if (p1 === '<' && p2 === '<' && p3 === '-') {
+            return { type: TokenType.ARROW_LEFT_FULL, marker: '<<-' };
+        }
+        if (p1 === '<' && p2 === '-') {
+            return { type: TokenType.ARROW_LEFT, marker: '<-' };
+        }
+        if (p1 === ':') {
+            if (p2 === '>' && p3 === '>') return { type: TokenType.ARROW_PERSIST_FULL, marker: ':>>' };
+            if (p2 === '>') return { type: TokenType.ARROW_PERSIST, marker: ':>' };
+            if (p2 === ':') return { type: TokenType.DOUBLE_COLON, marker: '::' };
+            return { type: TokenType.COLON, marker: ':' };
+        }
+        return null;
+    }
+
     makeToken(type, value, startLine, startCol) {
         const token = { type, value, line: startLine, col: startCol };
         // Attach pending whitespace to token
@@ -625,127 +656,42 @@ class Tokenizer {
             }
 
             // Format suffixes: $ (money), % (percent), ° (degrees), @d (date), @t (duration), # (base)
+            // Each checks for a following declaration marker (via matchMarkerAt)
+            // and merges suffix + marker into one token; otherwise falls through
+            // to a plain FORMATTER token for the suffix character alone.
             if (ch === '$' || ch === '%' || ch === '°' || ch === '#' || (ch === '@' && (this.peek(1) === 'd' || this.peek(1) === 't'))) {
                 // @d (date) and @t (duration) — two-char prefixes
-                if (ch === '@' && (this.peek(1) === 'd' || this.peek(1) === 't')) {
+                if (ch === '@') {
                     const prefix = '@' + this.peek(1);
                     const format = this.peek(1) === 'd' ? 'date' : 'duration';
-                    const p2 = this.peek(2);
-                    if (p2 === '-' && this.peek(3) === '>') {
-                        const type = this.peek(4) === '>' ? TokenType.ARROW_FULL : TokenType.ARROW_RIGHT;
-                        const marker = type === TokenType.ARROW_FULL ? '->>' : '->';
-                        this.advance(2 + marker.length);
-                        const token = this.makeToken(type, prefix + marker, startLine, startCol);
+                    const m = this.matchMarkerAt(2);
+                    if (m) {
+                        this.advance(2 + m.marker.length);
+                        const token = this.makeToken(m.type, prefix + m.marker, startLine, startCol);
                         token.format = format;
                         pushToken(token);
                         continue;
                     }
-                    if (p2 === '<' && this.peek(3) === '<' && this.peek(4) === '-') {
-                        this.advance(5);
-                        const token = this.makeToken(TokenType.ARROW_LEFT_FULL, prefix + '<<-', startLine, startCol);
-                        token.format = format;
-                        pushToken(token);
-                        continue;
-                    }
-                    if (p2 === '<' && this.peek(3) === '-') {
-                        this.advance(4);
-                        const token = this.makeToken(TokenType.ARROW_LEFT, prefix + '<-', startLine, startCol);
-                        token.format = format;
-                        pushToken(token);
-                        continue;
-                    }
-                    if (p2 === ':') {
-                        let type, marker;
-                        if (this.peek(3) === '>' && this.peek(4) === '>') {
-                            type = TokenType.ARROW_PERSIST_FULL; marker = ':>>';
-                        } else if (this.peek(3) === '>') {
-                            type = TokenType.ARROW_PERSIST; marker = ':>';
-                        } else if (this.peek(3) === ':') {
-                            type = TokenType.DOUBLE_COLON; marker = '::';
-                        } else {
-                            type = TokenType.COLON; marker = ':';
-                        }
-                        this.advance(2 + marker.length);
-                        const token = this.makeToken(type, prefix + marker, startLine, startCol);
-                        token.format = format;
-                        pushToken(token);
-                        continue;
-                    }
-                }
-                // For $, %, °, check if followed by a declaration marker — merge into one token
-                if (ch === '$' || ch === '%' || ch === '°') {
+                } else if (ch === '$' || ch === '%' || ch === '°') {
                     const format = ch === '$' ? 'money' : ch === '%' ? 'percent' : 'degrees';
-                    const next = this.peek(1);
-                    if (next === '-' && this.peek(2) === '>') {
-                        const type = this.peek(3) === '>' ? TokenType.ARROW_FULL : TokenType.ARROW_RIGHT;
-                        const marker = type === TokenType.ARROW_FULL ? '->>' : '->';
-                        this.advance(1 + marker.length);
-                        const token = this.makeToken(type, ch + marker, startLine, startCol);
+                    const m = this.matchMarkerAt(1);
+                    if (m) {
+                        this.advance(1 + m.marker.length);
+                        const token = this.makeToken(m.type, ch + m.marker, startLine, startCol);
                         token.format = format;
                         pushToken(token);
                         continue;
                     }
-                    if (next === '<' && this.peek(2) === '<' && this.peek(3) === '-') {
-                        this.advance(4);
-                        const token = this.makeToken(TokenType.ARROW_LEFT_FULL, ch + '<<-', startLine, startCol);
-                        token.format = format;
-                        pushToken(token);
-                        continue;
-                    }
-                    if (next === '<' && this.peek(2) === '-') {
-                        this.advance(3);
-                        const token = this.makeToken(TokenType.ARROW_LEFT, ch + '<-', startLine, startCol);
-                        token.format = format;
-                        pushToken(token);
-                        continue;
-                    }
-                    if (next === ':') {
-                        let type, marker;
-                        if (this.peek(2) === '>' && this.peek(3) === '>') {
-                            type = TokenType.ARROW_PERSIST_FULL; marker = ':>>';
-                        } else if (this.peek(2) === '>') {
-                            type = TokenType.ARROW_PERSIST; marker = ':>';
-                        } else if (this.peek(2) === ':') {
-                            type = TokenType.DOUBLE_COLON; marker = '::';
-                        } else {
-                            type = TokenType.COLON; marker = ':';
-                        }
-                        this.advance(1 + marker.length);
-                        const token = this.makeToken(type, ch + marker, startLine, startCol);
-                        token.format = format;
-                        pushToken(token);
-                        continue;
-                    }
-                } else if (ch === '#') {
+                } else {
                     // For #, check if followed by digits then a marker — merge #base<marker> into one token
                     let baseLen = 0;
                     while (this.isDigit(this.peek(1 + baseLen))) baseLen++;
                     if (baseLen > 0) {
-                        const afterBase = 1 + baseLen;
-                        const p1 = this.peek(afterBase);
-                        const p2 = this.peek(afterBase + 1);
-                        const p3 = this.peek(afterBase + 2);
-                        let markerType = null, markerStr = null;
-                        if (p1 === '-' && p2 === '>') {
-                            if (p3 === '>') { markerType = TokenType.ARROW_FULL; markerStr = '->>'; }
-                            else { markerType = TokenType.ARROW_RIGHT; markerStr = '->'; }
-                        } else if (p1 === '<' && p2 === '<' && p3 === '-') {
-                            markerType = TokenType.ARROW_LEFT_FULL;
-                            markerStr = '<<-';
-                        } else if (p1 === '<' && p2 === '-') {
-                            markerType = TokenType.ARROW_LEFT;
-                            markerStr = '<-';
-                        } else if (p1 === ':') {
-                            if (p2 === '>' && p3 === '>') { markerType = TokenType.ARROW_PERSIST_FULL; markerStr = ':>>'; }
-                            else if (p2 === '>') { markerType = TokenType.ARROW_PERSIST; markerStr = ':>'; }
-                            else if (p2 === ':') { markerType = TokenType.DOUBLE_COLON; markerStr = '::'; }
-                            else { markerType = TokenType.COLON; markerStr = ':'; }
-                        }
-                        if (markerType) {
+                        const m = this.matchMarkerAt(1 + baseLen);
+                        if (m) {
                             const digits = this.text.slice(this.pos + 1, this.pos + 1 + baseLen);
-                            this.advance(1 + baseLen + markerStr.length);
-                            const value = '#' + digits + markerStr;
-                            const token = this.makeToken(markerType, value, startLine, startCol);
+                            this.advance(1 + baseLen + m.marker.length);
+                            const token = this.makeToken(m.type, '#' + digits + m.marker, startLine, startCol);
                             token.base = parseInt(digits);
                             pushToken(token);
                             continue;
