@@ -12,14 +12,17 @@
 
 /**
  * Marker precedence - higher precedence markers take priority.
- * Input arrows (<-, <<-) are handled by findBestMarker's early return
- * and never reach a precedence lookup.
+ * Input arrows (<-, <<-) are listed for completeness but in practice are
+ * handled by findBestMarker's early return (first input arrow always wins),
+ * so they never reach a precedence comparison.
  */
 const MARKER_PRECEDENCE = {
     '->>': 3,
     ':>>': 3,
+    '<<-': 3,
     '->': 2,
     ':>': 2,
+    '<-': 2,
     '::': 1,
     ':': 0
 };
