@@ -2616,6 +2616,92 @@ function debouncedSave(data, delay = 500, localOnly = false) {
     }, delay);
 }
 /**
+ * Record metadata line types for the PalmOS-compatible export format.
+ * Each entry owns one line type in BOTH directions: `serialize(record, ctx)`
+ * emits the line for exportToText (null = omit), and `match`/`apply` parse it
+ * in importFromText. Adding a metadata line means adding ONE entry here --
+ * the import scan depth is RECORD_META_LINES.length, so it self-extends
+ * (the old hand-rolled version scanned a hard-coded 5 lines, which would
+ * have silently dropped a sixth line type into the record text).
+ *
+ * `Secret` is PalmOS-era: accepted on import and always emitted for format
+ * compatibility, but not stored on records (migrateData drops it).
+ */
+const RECORD_META_LINES = [
+    {
+        // Category = "Finance"; Secret = 0[; Selected = 1]
+        match: /Category\s*=\s*"([^"]*)"\s*;\s*Secret\s*=\s*(\d+)(?:\s*;\s*Selected\s*=\s*(\d+))?/i,
+        apply(meta, m) {
+            meta.category = m[1];
+            meta.selected = m[3] === '1';
+        },
+        serialize(record, ctx) {
+            const selectedFlag = ctx.isSelected ? '; Selected = 1' : '';
+            return `Category = "${record.category || 'Unfiled'}"; Secret = ${record.secret ? 1 : 0}${selectedFlag}`;
+        }
+    },
+    {
+        // Places = 2; StripZeros = 1
+        match: /Places\s*=\s*(\d+)\s*;\s*StripZeros\s*=\s*(\d+)/i,
+        apply(meta, m) {
+            meta.places = parseInt(m[1]);
+            meta.stripZeros = m[2] === '1';
+        },
+        serialize(record) {
+            return `Places = ${record.places != null ? record.places : 4}; StripZeros = ${record.stripZeros !== false ? 1 : 0}`;
+        }
+    },
+    {
+        // Format = "float"; GroupDigits = 0; DegreesMode = 1[; CurrencySymbol = "X"]
+        // (later fields optional; ShadowConstants accepted but ignored)
+        match: /Format\s*=\s*"([^"]*)"\s*;\s*GroupDigits\s*=\s*(\d+)(?:\s*;\s*DegreesMode\s*=\s*(\d+))?(?:\s*;\s*ShadowConstants\s*=\s*(\d+))?(?:\s*;\s*CurrencySymbol\s*=\s*"([^"]*)")?/i,
+        apply(meta, m) {
+            meta.format = m[1];
+            meta.groupDigits = m[2] === '1';
+            if (m[3] !== undefined) meta.degreesMode = m[3] === '1';
+            // m[4] is ShadowConstants -- accepted for backwards compatibility, ignored
+            if (m[5] !== undefined) meta.currencySymbol = m[5];
+        },
+        serialize(record) {
+            return `Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}${record.currencySymbol && record.currencySymbol !== '$' ? `; CurrencySymbol = "${record.currencySymbol}"` : ''}`;
+        }
+    },
+    {
+        // Status = "Solved 2 equations"; StatusIsError = 0 (quotes/newlines escaped)
+        match: /Status\s*=\s*"(.*)"\s*;\s*StatusIsError\s*=\s*(\d+)/i,
+        apply(meta, m) {
+            meta.status = m[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+            meta.statusIsError = m[2] === '1';
+        },
+        serialize(record) {
+            if (!record.status) return null;
+            const escapedStatus = record.status.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+            return `Status = "${escapedStatus}"; StatusIsError = ${record.statusIsError ? 1 : 0}`;
+        }
+    },
+    {
+        // Created = "ISO8601"; Modified = "ISO8601" (either may be empty)
+        match: /Created\s*=\s*"([^"]*)"\s*;\s*Modified\s*=\s*"([^"]*)"/i,
+        apply(meta, m) {
+            if (m[1]) {
+                const t = Date.parse(m[1]);
+                if (!isNaN(t)) meta.created = t;
+            }
+            if (m[2]) {
+                const t = Date.parse(m[2]);
+                if (!isNaN(t)) meta.modified = t;
+            }
+        },
+        serialize(record) {
+            if (!record.created && !record.modified) return null;
+            const c = record.created ? new Date(record.created).toISOString() : '';
+            const m = record.modified ? new Date(record.modified).toISOString() : '';
+            return `Created = "${c}"; Modified = "${m}"`;
+        }
+    }
+];
+
+/**
  * Export data to MpExport text format
  * Compatible with original MathPad export format
  * @param {object} data - The data to export
@@ -2628,21 +2714,11 @@ function exportToText(data, options = {}) {
     const { selectedRecordId } = options;
 
     for (const record of data.records) {
-        // Record metadata
-        const isSelected = selectedRecordId && record.id === selectedRecordId;
-        const selectedFlag = isSelected ? '; Selected = 1' : '';
-        lines.push(`Category = "${record.category || 'Unfiled'}"; Secret = ${record.secret ? 1 : 0}${selectedFlag}`);
-        lines.push(`Places = ${record.places != null ? record.places : 4}; StripZeros = ${record.stripZeros !== false ? 1 : 0}`);
-        lines.push(`Format = "${record.format || 'float'}"; GroupDigits = ${record.groupDigits ? 1 : 0}; DegreesMode = ${record.degreesMode ? 1 : 0}${record.currencySymbol && record.currencySymbol !== '$' ? `; CurrencySymbol = "${record.currencySymbol}"` : ''}`);
-        if (record.status) {
-            // Escape quotes and newlines in status message
-            const escapedStatus = record.status.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-            lines.push(`Status = "${escapedStatus}"; StatusIsError = ${record.statusIsError ? 1 : 0}`);
-        }
-        if (record.created || record.modified) {
-            const c = record.created ? new Date(record.created).toISOString() : '';
-            const m = record.modified ? new Date(record.modified).toISOString() : '';
-            lines.push(`Created = "${c}"; Modified = "${m}"`);
+        // Record metadata -- one line per RECORD_META_LINES entry (null = omit)
+        const ctx = { isSelected: !!(selectedRecordId && record.id === selectedRecordId) };
+        for (const entry of RECORD_META_LINES) {
+            const line = entry.serialize(record, ctx);
+            if (line != null) lines.push(line);
         }
 
         // Reference records have their title stripped on import, so add it back
@@ -2683,83 +2759,27 @@ function importFromText(text, existingData = null, options = {}) {
         if (!trimmed) continue;
 
         const lines = trimmed.split('\n');
-        let category = 'Unfiled';
-        let secret = false;
-        let selected = false;
-        let places = 4;
-        let stripZeros = true;
-        let format = 'float';
-        let groupDigits = false;
-        let degreesMode = false;
-        let currencySymbol = '$';
-        let status = '';
-        let statusIsError = false;
-        let created = null;
-        let modified = null;
+        const meta = {
+            category: 'Unfiled', selected: false,
+            places: 4, stripZeros: true,
+            format: 'float', groupDigits: false, degreesMode: false,
+            currencySymbol: '$',
+            status: '', statusIsError: false,
+            created: null, modified: null
+        };
         let contentStart = 0;
 
-        // Parse metadata lines
-        for (let i = 0; i < Math.min(5, lines.length); i++) {
+        // Parse metadata lines: each of the first N lines is tested against
+        // every RECORD_META_LINES pattern (any order, N = table size).
+        for (let i = 0; i < Math.min(RECORD_META_LINES.length, lines.length); i++) {
             const line = lines[i].trim();
-
-            // Category, Secret, and optional Selected flag
-            const catMatch = line.match(/Category\s*=\s*"([^"]*)"\s*;\s*Secret\s*=\s*(\d+)(?:\s*;\s*Selected\s*=\s*(\d+))?/i);
-            if (catMatch) {
-                category = catMatch[1];
-                secret = catMatch[2] === '1';
-                selected = catMatch[3] === '1';
-                contentStart = i + 1;
-                continue;
-            }
-
-            // Places and StripZeros line
-            const placesMatch = line.match(/Places\s*=\s*(\d+)\s*;\s*StripZeros\s*=\s*(\d+)/i);
-            if (placesMatch) {
-                places = parseInt(placesMatch[1]);
-                stripZeros = placesMatch[2] === '1';
-                contentStart = i + 1;
-                continue;
-            }
-
-            // Format, GroupDigits, DegreesMode line (later fields optional; ShadowConstants accepted but ignored)
-            const formatMatch = line.match(/Format\s*=\s*"([^"]*)"\s*;\s*GroupDigits\s*=\s*(\d+)(?:\s*;\s*DegreesMode\s*=\s*(\d+))?(?:\s*;\s*ShadowConstants\s*=\s*(\d+))?(?:\s*;\s*CurrencySymbol\s*=\s*"([^"]*)")?/i);
-            if (formatMatch) {
-                format = formatMatch[1];
-                groupDigits = formatMatch[2] === '1';
-                if (formatMatch[3] !== undefined) {
-                    degreesMode = formatMatch[3] === '1';
+            for (const entry of RECORD_META_LINES) {
+                const m = line.match(entry.match);
+                if (m) {
+                    entry.apply(meta, m);
+                    contentStart = i + 1;
+                    break;
                 }
-                // formatMatch[4] is ShadowConstants — accepted for backwards compatibility, ignored
-                if (formatMatch[5] !== undefined) {
-                    currencySymbol = formatMatch[5];
-                }
-                contentStart = i + 1;
-                continue;
-            }
-
-            // Status line (new in v3)
-            const statusMatch = line.match(/Status\s*=\s*"(.*)"\s*;\s*StatusIsError\s*=\s*(\d+)/i);
-            if (statusMatch) {
-                // Unescape quotes and newlines in status message
-                status = statusMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
-                statusIsError = statusMatch[2] === '1';
-                contentStart = i + 1;
-                continue;
-            }
-
-            // Created/Modified timestamps (ISO format)
-            const datesMatch = line.match(/Created\s*=\s*"([^"]*)"\s*;\s*Modified\s*=\s*"([^"]*)"/i);
-            if (datesMatch) {
-                if (datesMatch[1]) {
-                    const t = Date.parse(datesMatch[1]);
-                    if (!isNaN(t)) created = t;
-                }
-                if (datesMatch[2]) {
-                    const t = Date.parse(datesMatch[2]);
-                    if (!isNaN(t)) modified = t;
-                }
-                contentStart = i + 1;
-                continue;
             }
         }
 
@@ -2790,25 +2810,25 @@ function importFromText(text, existingData = null, options = {}) {
         }
 
         const recordId = generateId();
-        if (selected) {
+        if (meta.selected) {
             selectedRecordIndex = records.length;
         }
         const recordObj = {
             id: recordId,
             title: title,
             text: textContent,
-            category: category,
-            places: places,
-            stripZeros: stripZeros,
-            groupDigits: groupDigits,
-            format: format,
-            degreesMode: degreesMode,
-            currencySymbol: currencySymbol,
-            status: status,
-            statusIsError: statusIsError
+            category: meta.category,
+            places: meta.places,
+            stripZeros: meta.stripZeros,
+            groupDigits: meta.groupDigits,
+            format: meta.format,
+            degreesMode: meta.degreesMode,
+            currencySymbol: meta.currencySymbol,
+            status: meta.status,
+            statusIsError: meta.statusIsError
         };
-        if (created != null) recordObj.created = created;
-        if (modified != null) recordObj.modified = modified;
+        if (meta.created != null) recordObj.created = meta.created;
+        if (meta.modified != null) recordObj.modified = meta.modified;
         records.push(recordObj);
     }
 
@@ -2853,7 +2873,6 @@ function importFromText(text, existingData = null, options = {}) {
         records: records,
         categories: [...categories],
         settings: {
-            degreesMode: false,
             lastRecordId: selectedRecordId
         }
     };
