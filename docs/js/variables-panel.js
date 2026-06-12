@@ -1874,7 +1874,7 @@ class VariablesPanel {
         const tx = (x) => offX + x * scale;
         const ty = (y) => offY + y * scale;
 
-        const svg = svgEl('svg', { class: 'mathpad-graph', viewBox: `0 0 ${width} ${height}` });
+        const svg = svgEl('svg', { class: 'mathpad-graph mathpad-vectordraw', viewBox: `0 0 ${width} ${height}` });
         svg.style.width = '100%';
         svg.style.maxWidth = width + 'px';
 
@@ -1910,16 +1910,16 @@ class VariablesPanel {
         const plotBottom = margin.top + plotH;
         const cx0 = tx(0), cy0 = ty(0);
 
-        // Faint backdrop label (axis ticks, compass degrees, ring radii) —
-        // shared by all three backdrop types.
-        const addLabel = (x, y, anchor, text) => {
+        // Backdrop label (axis ticks, compass degrees, ring radii) — same
+        // style as tableGraph tick labels (graph-text, 11px). Shared by all
+        // three backdrop types.
+        const addLabel = (x, y, anchor, text, size = '11') => {
             svg.appendChild(svgEl('text', {
                 x: x,
                 y: y,
                 'text-anchor': anchor,
                 class: 'graph-text',
-                'font-size': '9',
-                opacity: '0.55'
+                'font-size': size
             }, text));
         };
 
@@ -1943,20 +1943,32 @@ class VariablesPanel {
             const step = Math.max(stepOf(xTicksRaw), stepOf(yTicksRaw));
             const xTicks = this._ticksFromStep(xLeftData, xRightData, step);
             const yTicks = this._ticksFromStep(yTopData, yBottomData, step);
-            const addLine = (x1, y1, x2, y2, isAxis) => {
-                const ln = svgEl('line', {
-                    x1: x1,
-                    y1: y1,
-                    x2: x2,
-                    y2: y2,
-                    stroke: 'currentColor',
-                    opacity: isAxis ? '0.4' : '0.15',
-                    'stroke-width': isAxis ? '0.8' : '0.5'
-                });
-                svg.appendChild(ln);
+            // Same three grid styles as _drawGraphAxes: minor midpoint
+            // lines (graph-subgrid), major tick lines (graph-grid), and the
+            // x=0 / y=0 axes (graph-zero). Drawn in that order so the axis
+            // renders on top.
+            const addLine = (x1, y1, x2, y2, cls, w) => {
+                svg.appendChild(svgEl('line', {
+                    x1: x1, y1: y1, x2: x2, y2: y2,
+                    class: cls, 'stroke-width': w
+                }));
             };
-            for (const xv of xTicks) addLine(tx(xv), plotTop, tx(xv), plotBottom, xv === 0);
-            for (const yv of yTicks) addLine(plotLeft, ty(yv), plotRight, ty(yv), yv === 0);
+            for (let i = 0; i < xTicks.length - 1; i++) {
+                const mid = tx((xTicks[i] + xTicks[i + 1]) / 2);
+                addLine(mid, plotTop, mid, plotBottom, 'graph-subgrid', '0.5');
+            }
+            for (let i = 0; i < yTicks.length - 1; i++) {
+                const mid = ty((yTicks[i] + yTicks[i + 1]) / 2);
+                addLine(plotLeft, mid, plotRight, mid, 'graph-subgrid', '0.5');
+            }
+            for (const xv of xTicks) {
+                if (xv !== 0) addLine(tx(xv), plotTop, tx(xv), plotBottom, 'graph-grid', '0.5');
+            }
+            for (const yv of yTicks) {
+                if (yv !== 0) addLine(plotLeft, ty(yv), plotRight, ty(yv), 'graph-grid', '0.5');
+            }
+            if (xTicks.includes(0)) addLine(tx(0), plotTop, tx(0), plotBottom, 'graph-zero', '1');
+            if (yTicks.includes(0)) addLine(plotLeft, ty(0), plotRight, ty(0), 'graph-zero', '1');
             // Tick value labels along the axes. Place X-axis labels just
             // below the y=0 line (clamped to plot bottom if y=0 isn't in
             // view); Y-axis labels just left of the x=0 line. The origin
@@ -1965,14 +1977,26 @@ class VariablesPanel {
             // SVG y-down — see pairToXY above).
             const xAxisSvgY = Math.max(plotTop + 6, Math.min(plotBottom - 12, ty(0)));
             const yAxisSvgX = Math.max(plotLeft + 18, Math.min(plotRight - 4, tx(0)));
-            for (const xv of xTicks) {
-                if (xv === 0) continue;
-                addLabel(tx(xv), xAxisSvgY + 11, 'middle', this._formatTickLabel(xv, table.formatOpts || {}));
+            const fmtTick = (v) => this._formatTickLabel(v, table.formatOpts || {});
+            // Skip labels that would crowd, same strategy as _drawGraphAxes:
+            // estimate the widest X label (chars × 7px at 11px font) and only
+            // label every Nth tick so neighbors keep a gap. Y labels stack
+            // vertically, so their guard is the ~12px line height against the
+            // tick pitch in pixels.
+            const maxXLabelLen = xTicks.length > 0
+                ? Math.max(...xTicks.map(t => fmtTick(t).length)) : 0;
+            const xLabelSkip = Math.max(1, Math.ceil(maxXLabelLen * 7 * xTicks.length / (plotRight - plotLeft)));
+            const yLabelSkip = Math.max(1, Math.ceil(12 / Math.max(1, step * scale)));
+            for (let ti = 0; ti < xTicks.length; ti++) {
+                const xv = xTicks[ti];
+                if (xv === 0 || ti % xLabelSkip !== 0) continue;
+                addLabel(tx(xv), xAxisSvgY + 11, 'middle', fmtTick(xv));
             }
-            for (const yv of yTicks) {
-                if (yv === 0) continue;
+            for (let ti = 0; ti < yTicks.length; ti++) {
+                const yv = yTicks[ti];
+                if (yv === 0 || ti % yLabelSkip !== 0) continue;
                 // Negate yv → user-space (positive up).
-                addLabel(yAxisSvgX - 4, ty(yv) + 3, 'end', this._formatTickLabel(-yv, table.formatOpts || {}));
+                addLabel(yAxisSvgX - 4, ty(yv) + 3, 'end', fmtTick(-yv));
             }
         } else if (vectorType === 'polar') {
             // Concentric circles + radial spokes every 30°. Use the data
@@ -1980,32 +2004,34 @@ class VariablesPanel {
             // the outermost ring.
             const rMax = Math.max(Math.abs(minX), Math.abs(maxX), Math.abs(minY), Math.abs(maxY));
             const rTicks = rMax > 0 ? this._niceTicks(0, rMax, 5).filter(r => r > 0) : [];
-            for (const r of rTicks) {
-                const c = svgEl('circle', {
-                    cx: cx0,
-                    cy: cy0,
-                    r: Math.abs(r * scale),
-                    fill: 'none',
-                    stroke: 'currentColor',
-                    opacity: '0.18',
-                    'stroke-width': '0.5'
-                });
-                svg.appendChild(c);
+            const addRing = (r, cls, w) => {
+                svg.appendChild(svgEl('circle', {
+                    cx: cx0, cy: cy0, r: Math.abs(r * scale),
+                    fill: 'none', class: cls, 'stroke-width': w
+                }));
+            };
+            // Minor rings at midpoints between major rings (incl. center→first),
+            // then major rings — same minor/major styles as _drawGraphAxes.
+            const ringSteps = [0, ...rTicks];
+            for (let i = 0; i < ringSteps.length - 1; i++) {
+                addRing((ringSteps[i] + ringSteps[i + 1]) / 2, 'graph-subgrid', '0.5');
             }
+            for (const r of rTicks) addRing(r, 'graph-grid', '0.8');
             const spokeR = (rTicks.length > 0 ? rTicks[rTicks.length - 1] : rMax) * scale;
-            for (let deg = 0; deg < 360; deg += 30) {
+            // Spokes every 10°: major at the labeled 30° positions
+            // (graph-grid, 0.8), minor in between styled like tableGraph's
+            // secondary grid (graph-subgrid, 0.5).
+            for (let deg = 0; deg < 360; deg += 10) {
+                const isMajor = deg % 30 === 0;
                 const r = deg * Math.PI / 180;
                 // Polar convention: 0° = +x, 90° = +y. SVG y-down → -sin.
-                const x2 = cx0 + Math.cos(r) * spokeR;
-                const y2 = cy0 - Math.sin(r) * spokeR;
                 const ln = svgEl('line', {
                     x1: cx0,
                     y1: cy0,
-                    x2: x2,
-                    y2: y2,
-                    stroke: 'currentColor',
-                    opacity: '0.18',
-                    'stroke-width': '0.5'
+                    x2: cx0 + Math.cos(r) * spokeR,
+                    y2: cy0 - Math.sin(r) * spokeR,
+                    class: isMajor ? 'graph-grid' : 'graph-subgrid',
+                    'stroke-width': isMajor ? '0.8' : '0.5'
                 });
                 svg.appendChild(ln);
             }
@@ -2045,7 +2071,7 @@ class VariablesPanel {
                 const d = r * scale - pad;
                 addLabel(cx0 + labelAxis.dx * d + labelAxis.xOff,
                     cy0 + labelAxis.dy * d + labelAxis.yOff,
-                    labelAxis.anchor, this._formatTickLabel(r, table.formatOpts || {}));
+                    labelAxis.anchor, this._formatTickLabel(r, table.formatOpts || {}), '10');
             }
         } else if (vectorType === 'navigation') {
             // Compass rose at a nice data radius:
@@ -2067,9 +2093,7 @@ class VariablesPanel {
                 cy: cy0,
                 r: roseR,
                 fill: 'none',
-                stroke: 'currentColor',
-                opacity: '0.30',
-                'stroke-width': '0.7'
+                class: 'graph-border'
             });
             svg.appendChild(ring);
             // Radial tick marks pointing inward from the ring (every 5°)
@@ -2083,8 +2107,7 @@ class VariablesPanel {
                     y1: cy0 + u.dy * (roseR - tickLen),
                     x2: cx0 + u.dx * roseR,
                     y2: cy0 + u.dy * roseR,
-                    stroke: 'currentColor',
-                    opacity: isMajor ? '0.45' : '0.18',
+                    class: 'graph-grid',
                     'stroke-width': isMajor ? '0.8' : '0.5'
                 });
                 svg.appendChild(ln);
@@ -2093,7 +2116,7 @@ class VariablesPanel {
             const labelR = roseR + 10;
             for (let deg = 0; deg < 360; deg += 10) {
                 const u = navUnit(deg);
-                addLabel(cx0 + u.dx * labelR, cy0 + u.dy * labelR + 3, 'middle', String(deg));
+                addLabel(cx0 + u.dx * labelR, cy0 + u.dy * labelR + 3, 'middle', String(deg), '10');
             }
         }
 

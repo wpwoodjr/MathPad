@@ -1730,6 +1730,9 @@ body.sidebar-resizing * {
 .mathpad-graph .graph-text { fill: var(--text-primary); }
 .mathpad-graph .graph-grid { stroke: var(--text-muted); }
 .mathpad-graph .graph-subgrid { stroke: var(--border-color); }
+/* vectorDraw backdrops have far less ink than table/grid graphs, so their
+   minor lines need more presence to register at all */
+.mathpad-vectordraw .graph-subgrid { stroke: var(--text-muted); stroke-opacity: 0.45; }
 .mathpad-graph .graph-zero { stroke: var(--text-primary); }
 .mathpad-graph .graph-border { stroke: var(--text-muted); }
 .mathpad-graph .graph-line { stroke: var(--accent-primary); }
