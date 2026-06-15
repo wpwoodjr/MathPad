@@ -84,12 +84,7 @@ function setupDriveListeners() {
     if (signInBtn) {
         signInBtn.addEventListener('click', async () => {
             const ok = await driveSignIn();
-            if (ok) {
-                updateDriveUI();
-                await runSyncCycle();
-                startDriveSync();
-                updateDriveStatus();
-            }
+            if (ok) await onDriveSignedIn();
         });
     }
 
@@ -99,12 +94,7 @@ function setupDriveListeners() {
             e.stopPropagation();
             if (!isDriveAuthenticated()) {
                 const ok = await driveSignIn();
-                if (ok) {
-                    updateDriveUI();
-                    await runSyncCycle();
-                    startDriveSync();
-                    updateDriveStatus();
-                }
+                if (ok) await onDriveSignedIn();
             }
             toggleDriveDropdown();
         });

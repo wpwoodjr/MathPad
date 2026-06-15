@@ -275,6 +275,10 @@ async function fetchUserEmail() {
 // ---- Folder ----
 
 const MATHPAD_FOLDER_NAME = 'MathPad';
+// The one file every device syncs to by default. New files are created with
+// this name, and a fresh device adopts the existing one by it on sign-in, so
+// data follows the user across browsers/hosts without manual file-picking.
+const CANONICAL_FILE_NAME = 'MathPad.mathpad.json';
 
 /**
  * Find or create the "MathPad" folder in the user's Drive root.
@@ -351,7 +355,7 @@ async function ensureMathPadFolder() {
 async function driveSaveFile(data, overrideName, forceNew) {
     if (!(await ensureToken())) return false;
 
-    const fileName = overrideName || DriveState.fileName || 'MathPad.mathpad.json';
+    const fileName = overrideName || DriveState.fileName || CANONICAL_FILE_NAME;
     // Strip stale generated sections (Tables, Trace, References) per record
     // before serializing — the Drive file shouldn't carry display artifacts
     // from the last solve. cleanDataForSave shallow-clones so in-memory
@@ -561,6 +565,68 @@ function stopDriveSync() {
         clearInterval(DriveState.statusInterval);
         DriveState.statusInterval = null;
     }
+}
+
+/**
+ * Find the canonical MathPad file in the MathPad folder (by name, most
+ * recently modified if duplicates exist). Returns { id, name } or null.
+ */
+async function findCanonicalFile() {
+    const folderId = await ensureMathPadFolder();
+    if (!folderId) return null;
+    const q = encodeURIComponent(
+        `name = '${CANONICAL_FILE_NAME}' and '${folderId}' in parents and trashed = false`
+    );
+    const resp = await driveFetch(
+        `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&orderBy=modifiedTime desc&pageSize=1`
+    );
+    if (!resp || !resp.ok) return null;
+    try {
+        const data = await resp.json();
+        if (data.files && data.files.length > 0) {
+            return { id: data.files[0].id, name: data.files[0].name };
+        }
+    } catch (e) {
+        console.error('Drive canonical-file search error:', e);
+    }
+    return null;
+}
+
+/**
+ * On a fresh device (signed in but no local fileId), bind to the existing
+ * canonical file so this browser syncs to the same file as every other.
+ * If the user has no pending local changes, load Drive's copy immediately
+ * so their data appears without manual file-picking — this is what makes
+ * the data follow them across browsers/hosts. If local IS dirty (edits
+ * made before signing in), leave it: runSyncCycle's conflict prompt then
+ * reconciles. If no canonical file exists yet, do nothing — the first
+ * dirty sync creates it.
+ */
+async function adoptCanonicalFile() {
+    if (DriveState.fileId) return;        // already bound to a file
+    if (!isDriveAuthenticated()) return;
+    const file = await findCanonicalFile();
+    if (!file) return;
+    DriveState.fileId = file.id;
+    DriveState.fileName = file.name;
+    saveDriveState();
+    if (!DriveState.driveDirty) {
+        const data = await driveLoadFile(file.id);
+        if (data) applyDriveData(data);
+    }
+}
+
+/**
+ * Post-sign-in sequence, shared by the Sign In button and the avatar
+ * button. Adopts the canonical file (cross-device load), runs an
+ * immediate sync, and starts the periodic timer.
+ */
+async function onDriveSignedIn() {
+    updateDriveUI();
+    await adoptCanonicalFile();
+    await runSyncCycle();
+    startDriveSync();
+    updateDriveStatus();
 }
 
 /**
@@ -902,7 +968,7 @@ async function handleDriveOpen() {
  * Handle saving as a new file on Drive.
  */
 async function handleDriveSaveAs() {
-    const name = prompt('File name:', DriveState.fileName || 'MathPad.mathpad.json');
+    const name = prompt('File name:', DriveState.fileName || CANONICAL_FILE_NAME);
     if (!name) return;
 
     if (UI.data) {
@@ -956,6 +1022,7 @@ function closeDriveDropdown() {
 // Export to global scope
 window.initDriveModule = initDriveModule;
 window.driveSignIn = driveSignIn;
+window.onDriveSignedIn = onDriveSignedIn;
 window.driveSignOut = driveSignOut;
 window.isDriveSignedIn = isDriveSignedIn;
 window.isDriveAuthenticated = isDriveAuthenticated;
