@@ -33,6 +33,7 @@ const DriveState = {
 };
 
 const SYNC_INTERVAL_MS = 15000;   // 15 seconds between sync cycles
+const RENEW_MARGIN_MS = 5 * 60 * 1000;  // renew the token this long before expiry
 
 // ---- localStorage keys for Drive state ----
 const DRIVE_KEYS = {
@@ -234,27 +235,41 @@ function isDriveSignedIn() {
 }
 
 /**
- * Ensure we have a valid token, requesting one if needed.
- * At most one popup per session (auto-selects account if possible).
+ * Ensure we have a valid token, renewing silently when needed.
+ *
+ * Renews PROACTIVELY at the RENEW_MARGIN — while the current token is still
+ * valid — because GIS silent renewal (an iframe) succeeds far more reliably
+ * against a live Google session than an expired one. Crucially, a failed
+ * proactive renewal does NOT throw away the still-valid token: driveSignIn
+ * leaves DriveState.accessToken untouched on failure, so we keep using the
+ * old token (with up to RENEW_MARGIN left) and retry next cycle. Net effect:
+ * while the user is signed into Google in this browser, the token rolls over
+ * automatically every ~hour and they stay logged in indefinitely.
+ *
  * @returns {Promise<boolean>}
  */
 async function ensureToken() {
-    if (DriveState.accessToken && Date.now() < DriveState.tokenExpiry - 60000) {
-        return true;
+    const now = Date.now();
+    if (DriveState.accessToken && now < DriveState.tokenExpiry - RENEW_MARGIN_MS) {
+        return true; // fresh enough
     }
-    // Token expired or missing — clear it so isDriveAuthenticated() returns false
-    console.log('Token expired at', new Date().toLocaleTimeString(), 'expiry was', DriveState.tokenExpiry ? new Date(DriveState.tokenExpiry).toLocaleTimeString() : 'none');
-    DriveState.accessToken = null;
-    DriveState.tokenExpiry = 0;
-    saveDriveState();
-    // Try silent renewal once — if it fails, user must click avatar
-    if (DriveState.silentRenewalFailed || !DriveState.userEmail) return false;
-    const ok = await driveSignIn('');
-    if (!ok) {
+    const hadValidToken = DriveState.accessToken && now < DriveState.tokenExpiry;
+
+    // Attempt a silent renewal (once per latch — see silentRenewalFailed).
+    if (!DriveState.silentRenewalFailed && DriveState.userEmail) {
+        const ok = await driveSignIn(''); // sets a new token on success, untouched on failure
+        if (ok) return true;
         console.warn('Silent token renewal failed at', new Date().toLocaleTimeString());
         DriveState.silentRenewalFailed = true;
     }
-    return ok;
+
+    // Renewal not attempted or failed. Keep a still-valid token (retry next
+    // cycle / on tab refocus); otherwise clear so isDriveAuthenticated() is false.
+    if (hadValidToken) return true;
+    DriveState.accessToken = null;
+    DriveState.tokenExpiry = 0;
+    saveDriveState();
+    return false;
 }
 
 async function fetchUserEmail() {
@@ -636,6 +651,11 @@ async function onDriveSignedIn() {
  * 3. If not newer and dirty, push local data
  */
 async function runSyncCycle() {
+    // Proactively keep an existing token fresh (ensureToken renews at the
+    // RENEW_MARGIN while it's still valid; no-op if already fresh). Covers
+    // the idle/no-file case where nothing else would call ensureToken.
+    if (DriveState.accessToken) await ensureToken();
+
     if (!isDriveAuthenticated()) {
         // Token expired or not yet obtained — prompt user to reconnect
         if (isDriveSignedIn()) {

@@ -28,6 +28,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isDriveSignedIn()) {
                 startDriveSync();
             }
+
+            // Returning to a backgrounded tab: the token may have lapsed and
+            // the silent-renewal latch may have tripped while away. Clear the
+            // latch and attempt a renewal directly (ensureToken, even if the
+            // token fully expired — the periodic cycle skips renewal when no
+            // token remains), so a stale tab re-auths silently instead of
+            // forcing a click. Then sync.
+            document.addEventListener('visibilitychange', async () => {
+                if (document.visibilityState !== 'visible') return;
+                if (!isDriveSignedIn()) return;
+                DriveState.silentRenewalFailed = false;
+                await ensureToken();
+                runSyncCycle();
+            });
         });
     }
 
