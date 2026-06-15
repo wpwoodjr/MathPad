@@ -168,10 +168,8 @@ function driveSignIn(promptMode) {
             DriveState.tokenExpiry = Date.now() + (resp.expires_in * 1000);
             console.log('Drive token obtained at', new Date().toLocaleTimeString(), 'expires', new Date(DriveState.tokenExpiry).toLocaleTimeString());
             DriveState.silentRenewalFailed = false;
+            // fetchUserEmail catches its own errors and never rejects.
             fetchUserEmail().then(() => {
-                saveDriveState();
-                resolve(true);
-            }).catch(() => {
                 saveDriveState();
                 resolve(true);
             });
@@ -286,21 +284,17 @@ const MATHPAD_FOLDER_NAME = 'MathPad';
 async function ensureMathPadFolder() {
     if (DriveState.folderId) {
         // Verify folder still exists
-        try {
-            const resp = await fetch(
-                `https://www.googleapis.com/drive/v3/files/${DriveState.folderId}?fields=id,trashed`,
-                { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
-            );
-            if (resp.ok) {
-                const meta = await resp.json();
-                if (!meta.trashed) return DriveState.folderId;
-                // Folder trashed — clear and recreate
-            } else if (resp.status !== 404) {
-                // Transient error (403, 500, etc.) — keep cached ID, try again later
-                return DriveState.folderId;
-            }
-        } catch (e) {
-            // Network error — keep cached ID, try again later
+        const resp = await driveFetch(
+            `https://www.googleapis.com/drive/v3/files/${DriveState.folderId}?fields=id,trashed`
+        );
+        // Network/token error — keep cached ID, try again later
+        if (!resp) return DriveState.folderId;
+        if (resp.ok) {
+            const meta = await resp.json();
+            if (!meta.trashed) return DriveState.folderId;
+            // Folder trashed — clear and recreate
+        } else if (resp.status !== 404) {
+            // Transient error (403, 500, etc.) — keep cached ID, try again later
             return DriveState.folderId;
         }
         DriveState.folderId = null;
@@ -308,52 +302,41 @@ async function ensureMathPadFolder() {
     }
 
     // Search for existing folder
-    try {
-        const q = encodeURIComponent(
-            `name = '${MATHPAD_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and 'root' in parents and trashed = false`
-        );
-        const resp = await fetch(
-            `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&pageSize=1`,
-            { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
-        );
-        if (resp.ok) {
-            const data = await resp.json();
-            if (data.files && data.files.length > 0) {
-                DriveState.folderId = data.files[0].id;
-                saveDriveState();
-                return DriveState.folderId;
-            }
+    const q = encodeURIComponent(
+        `name = '${MATHPAD_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and 'root' in parents and trashed = false`
+    );
+    const searchResp = await driveFetch(
+        `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&pageSize=1`
+    );
+    if (searchResp && searchResp.ok) {
+        const data = await searchResp.json();
+        if (data.files && data.files.length > 0) {
+            DriveState.folderId = data.files[0].id;
+            saveDriveState();
+            return DriveState.folderId;
         }
-    } catch (e) {
-        console.error('Drive folder search error:', e);
+    } else if (!searchResp) {
         return null;
     }
 
     // Create folder
-    try {
-        const resp = await fetch(
-            'https://www.googleapis.com/drive/v3/files?fields=id',
-            {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + DriveState.accessToken,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: MATHPAD_FOLDER_NAME,
-                    mimeType: 'application/vnd.google-apps.folder',
-                    parents: ['root']
-                })
-            }
-        );
-        if (resp.ok) {
-            const data = await resp.json();
-            DriveState.folderId = data.id;
-            saveDriveState();
-            return DriveState.folderId;
+    const createResp = await driveFetch(
+        'https://www.googleapis.com/drive/v3/files?fields=id',
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: MATHPAD_FOLDER_NAME,
+                mimeType: 'application/vnd.google-apps.folder',
+                parents: ['root']
+            })
         }
-    } catch (e) {
-        console.error('Drive folder create error:', e);
+    );
+    if (createResp && createResp.ok) {
+        const data = await createResp.json();
+        DriveState.folderId = data.id;
+        saveDriveState();
+        return DriveState.folderId;
     }
     return null;
 }
@@ -459,26 +442,41 @@ async function driveMultipartRequest(url, method, metadata, content) {
 }
 
 /**
+ * Authenticated Drive fetch with one automatic 401 retry (token refresh).
+ * Injects the Authorization header; pass other headers/body via options as
+ * usual. Returns the Response so callers can inspect .ok / .status, or null
+ * if a token couldn't be obtained or the network failed. Single source of
+ * the ensure-token → fetch → on-401-refresh-and-retry policy.
+ */
+async function driveFetch(url, options = {}) {
+    if (!(await ensureToken())) return null;
+    const withAuth = () => fetch(url, {
+        ...options,
+        headers: { ...(options.headers || {}), 'Authorization': 'Bearer ' + DriveState.accessToken }
+    });
+    try {
+        let resp = await withAuth();
+        if (resp.status === 401) {
+            DriveState.accessToken = null;
+            if (!(await ensureToken())) return null;
+            resp = await withAuth();
+        }
+        return resp;
+    } catch (e) {
+        console.error('Drive fetch error:', url, e);
+        return null;
+    }
+}
+
+/**
  * Load file content from Drive.
  * @param {string} fileId
  * @returns {Promise<object|null>} parsed data or null
  */
 async function driveLoadFile(fileId) {
-    if (!(await ensureToken())) return null;
-
+    const resp = await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    if (!resp) return null;
     try {
-        let resp = await fetch(
-            `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-            { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
-        );
-        if (resp.status === 401) {
-            DriveState.accessToken = null;
-            if (!(await ensureToken())) return null;
-            resp = await fetch(
-                `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-                { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
-            );
-        }
         if (!resp.ok) {
             console.error('Drive load failed:', resp.status);
             return null;
@@ -507,21 +505,11 @@ async function driveLoadFile(fileId) {
  * @returns {Promise<{modifiedTime: string, lastModifyingUser: string}|null>}
  */
 async function driveGetMetadata(fileId) {
-    if (!(await ensureToken())) return null;
-
+    const resp = await driveFetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?fields=name,modifiedTime,lastModifyingUser,md5Checksum`
+    );
+    if (!resp) return null;
     try {
-        let resp = await fetch(
-            `https://www.googleapis.com/drive/v3/files/${fileId}?fields=name,modifiedTime,lastModifyingUser,md5Checksum`,
-            { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
-        );
-        if (resp.status === 401) {
-            DriveState.accessToken = null;
-            if (!(await ensureToken())) return null;
-            resp = await fetch(
-                `https://www.googleapis.com/drive/v3/files/${fileId}?fields=name,modifiedTime,lastModifyingUser,md5Checksum`,
-                { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
-            );
-        }
         if (!resp.ok) return null;
         const meta = await resp.json();
         return {
@@ -600,13 +588,7 @@ async function runSyncCycle() {
         // If no file yet, create one on first dirty
         if (!DriveState.fileId) {
             if (DriveState.driveDirty && UI.data) {
-                const ok = await driveSaveFile(UI.data);
-                if (ok) {
-                    clearDriveDirty();
-                    updateDriveStatus(savedDriveStatus());
-                } else {
-                    updateDriveStatus('Sync error •');
-                }
+                await pushLocalToDrive();
             }
             return;
         }
@@ -655,17 +637,27 @@ async function runSyncCycle() {
             }
         } else if (DriveState.driveDirty && UI.data) {
             // Push local data to Drive
-            const ok = await driveSaveFile(UI.data);
-            if (ok) {
-                clearDriveDirty();
-                updateDriveStatus(savedDriveStatus());
-            } else {
-                updateDriveStatus('Sync error •');
-            }
+            await pushLocalToDrive();
         }
     } finally {
         DriveState.syncInProgress = false;
     }
+}
+
+/**
+ * Push the current local data to Drive and update dirty flag + status.
+ * Shared by runSyncCycle's create-first-file and push-when-dirty branches.
+ * @returns {Promise<boolean>}
+ */
+async function pushLocalToDrive() {
+    const ok = await driveSaveFile(UI.data);
+    if (ok) {
+        clearDriveDirty();
+        updateDriveStatus(savedDriveStatus());
+    } else {
+        updateDriveStatus('Sync error •');
+    }
+    return ok;
 }
 
 /**
@@ -687,20 +679,17 @@ async function flushDriveSync() {
  * @returns {Promise<Array<{id: string, name: string, modifiedTime: string}>|null>}
  */
 async function driveListFiles() {
-    if (!(await ensureToken())) return null;
-
+    const folderId = await ensureMathPadFolder();
+    const q = folderId
+        ? `'${folderId}' in parents and trashed = false`
+        : 'trashed = false';
+    const query = encodeURIComponent(q);
+    const fields = encodeURIComponent('files(id,name,modifiedTime)');
+    const resp = await driveFetch(
+        `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&orderBy=modifiedTime desc&pageSize=20`
+    );
+    if (!resp || !resp.ok) return null;
     try {
-        const folderId = await ensureMathPadFolder();
-        const q = folderId
-            ? `'${folderId}' in parents and trashed = false`
-            : 'trashed = false';
-        const query = encodeURIComponent(q);
-        const fields = encodeURIComponent('files(id,name,modifiedTime)');
-        const resp = await fetch(
-            `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&orderBy=modifiedTime desc&pageSize=20`,
-            { headers: { 'Authorization': 'Bearer ' + DriveState.accessToken } }
-        );
-        if (!resp.ok) return null;
         const data = await resp.json();
         return data.files || [];
     } catch (e) {
@@ -820,7 +809,8 @@ function updateDriveStatus(override) {
         text = override;
     } else {
         const dirty = DriveState.driveDirty ? ' \u2022' : '';
-        if (isDriveSignedIn() && !isDriveAuthenticated()) {
+        // Already returned above if not signed in
+        if (!isDriveAuthenticated()) {
             const initial = (DriveState.userEmail || '?')[0].toUpperCase();
             text = `Click ${initial} to sync${dirty} | ${DriveState.userEmail}`;
         } else {
