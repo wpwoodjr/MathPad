@@ -643,8 +643,58 @@ async function adoptCanonicalFile() {
 }
 
 /**
+ * Promise-based modal with N explicit, labeled choices (no OK/Cancel
+ * ambiguity). Each option is a button with a bold label + a one-line
+ * explanation. Modal by design — there is no dismiss; the caller's choices
+ * are the only exits. Resolves to the chosen option's `key`.
+ * @param {{title: string, message: string, options: Array<{key, label, sub, primary}>}} cfg
+ * @returns {Promise<string>}
+ */
+function showChoiceDialog({ title, message, options }) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'choice-dialog';
+        const content = document.createElement('div');
+        content.className = 'choice-dialog-content';
+
+        const h = document.createElement('div');
+        h.className = 'choice-dialog-title';
+        h.textContent = title;
+        content.appendChild(h);
+
+        const msg = document.createElement('div');
+        msg.className = 'choice-dialog-message';
+        msg.textContent = message;
+        content.appendChild(msg);
+
+        const btns = document.createElement('div');
+        btns.className = 'choice-dialog-buttons';
+        const finish = (key) => { overlay.remove(); resolve(key); };
+        for (const opt of options) {
+            const b = document.createElement('button');
+            if (opt.primary) b.className = 'primary';
+            const label = document.createElement('span');
+            label.className = 'choice-label';
+            label.textContent = opt.label;
+            b.appendChild(label);
+            if (opt.sub) {
+                const sub = document.createElement('span');
+                sub.className = 'choice-sub';
+                sub.textContent = opt.sub;
+                b.appendChild(sub);
+            }
+            b.addEventListener('click', () => finish(opt.key));
+            btns.appendChild(b);
+        }
+        content.appendChild(btns);
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+    });
+}
+
+/**
  * Three-way resolution when a fresh device's local records meet an existing
- * Drive file. Presented as two confirm() steps (no custom UI):
+ * Drive file, via a single labeled-choice dialog:
  *   Load from Drive — join the canonical dataset (local records replaced).
  *   Keep both       — save THIS device's records as a NEW Drive file and
  *                     sync with that; the canonical file is left untouched.
@@ -657,43 +707,61 @@ async function resolveAdoptionConflict(meta) {
     const who = meta.lastModifyingUser || 'unknown';
     const n = (UI.data && UI.data.records) ? UI.data.records.length : 0;
 
-    const loadDrive = confirm(
-        `This device has its own records, and Drive already has a saved ` +
-        `MathPad file (modified ${ago} by ${who}).\n\n` +
-        `OK — Load the Drive file onto this device (replaces this device's ` +
-        `${n} record${n !== 1 ? 's' : ''}).\n` +
-        `Cancel — Keep this device's records (you'll choose how next).`
-    );
-    if (loadDrive) {
-        updateDriveStatus('Loading...');
-        const data = await driveLoadFile(DriveState.fileId);
-        if (data) applyDriveData(data);
-        else updateDriveStatus('Load failed');
-        return;
-    }
+    // Loop so cancelling the "keep both" name prompt goes BACK to the choices
+    // rather than committing — the only terminal exits are an actual decision.
+    while (true) {
+        const choice = await showChoiceDialog({
+            title: 'Sync with Google Drive',
+            message: `This device has its own records, and Drive already has a saved MathPad ` +
+                `file (modified ${ago} by ${who}). How would you like to combine them?`,
+            options: [
+                {
+                    key: 'load', primary: true, label: 'Load from Drive',
+                    sub: `Replace this device's ${n} record${n !== 1 ? 's' : ''} with the Drive file's contents.`
+                },
+                {
+                    key: 'both', label: 'Keep both',
+                    sub: "Save this device's records as a new Drive file and sync with that. The existing file is left untouched."
+                },
+                {
+                    key: 'mine', label: 'Keep mine',
+                    sub: "Overwrite the Drive file with this device's records."
+                }
+            ]
+        });
 
-    const keepBoth = confirm(
-        `Keep this device's records.\n\n` +
-        `OK — Keep BOTH: save this device's records as a NEW Drive file and ` +
-        `sync with that (the existing file is left untouched).\n` +
-        `Cancel — Keep MINE: overwrite the Drive file with this device's records.`
-    );
-    if (keepBoth) {
-        // Fork to a new file; this device now syncs to it (driveSaveFile with
-        // forceNew repoints fileId). Cancelling the name keeps the default —
-        // "keep both" is the committed choice, the name is just cosmetic.
-        const def = `MathPad-${new Date().toISOString().slice(0, 10)}.mathpad.json`;
-        const entered = prompt("Name for this device's new Drive file:", def);
-        const name = (entered && entered.trim()) || def;
-        updateDriveStatus('Saving...');
-        const ok = await driveSaveFile(UI.data, name, true);
-        if (ok) {
-            clearDriveDirty();
-            updateDriveStatus(savedDriveStatus());
-        } else {
-            updateDriveStatus('Sync error •');
+        if (choice === 'load') {
+            updateDriveStatus('Loading...');
+            const data = await driveLoadFile(DriveState.fileId);
+            if (data) applyDriveData(data);
+            else updateDriveStatus('Load failed');
+            return;
         }
-    } else {
+
+        if (choice === 'both') {
+            // Fork to a new file; this device now syncs to it (driveSaveFile
+            // with forceNew repoints fileId). Date + local HHMMSS so repeated
+            // forks don't collide even seconds apart. Cancelling the name
+            // prompt (null) backs out to the choices; OK with a blank name
+            // uses the default.
+            const d = new Date();
+            const p = (x) => String(x).padStart(2, '0');
+            const def = `MathPad-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+                `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.mathpad.json`;
+            const entered = prompt("Name for this device's new Drive file:", def);
+            if (entered === null) continue;   // cancelled → back to the choices
+            const name = entered.trim() || def;
+            updateDriveStatus('Saving...');
+            const ok = await driveSaveFile(UI.data, name, true);
+            if (ok) {
+                clearDriveDirty();
+                updateDriveStatus(savedDriveStatus());
+            } else {
+                updateDriveStatus('Sync error •');
+            }
+            return;
+        }
+
         // Keep mine: overwrite the canonical file. Match this remote checksum
         // (so the periodic cycle sees no conflict) and mark dirty so it pushes
         // local over the canonical file.
@@ -701,6 +769,7 @@ async function resolveAdoptionConflict(meta) {
         DriveState.lastChecksum = meta.md5Checksum || DriveState.lastChecksum;
         DriveState.driveDirty = true;
         saveDriveState();
+        return;
     }
 }
 
