@@ -25,6 +25,7 @@ const DriveState = {
     folderId: null,             // ID of "MathPad" folder on Drive
     declinedRemoteTime: null,   // Remote modifiedTime we already prompted about (prevents re-prompt)
     driveDirty: false,
+    dirtySeq: 0,                // bumped on every edit; guards against an in-flight save clearing a newer edit's dirty flag
     syncInProgress: false,
     syncTimer: null,
     statusInterval: null,
@@ -586,6 +587,7 @@ function clearDriveDirty() {
  */
 function markDriveDirty() {
     DriveState.driveDirty = true;
+    DriveState.dirtySeq++;
     saveDriveState();
     updateDriveStatus();
 }
@@ -919,9 +921,13 @@ async function runSyncCycle() {
  * @returns {Promise<boolean>}
  */
 async function pushLocalToDrive() {
+    const seq = DriveState.dirtySeq;
     const ok = await driveSaveFile(UI.data);
     if (ok) {
-        clearDriveDirty();
+        // Only clear dirty if no edit landed during the save — otherwise that
+        // edit's dirty flag would be wiped and its data never pushed (a newer
+        // value would be silently lost while the stale one sits on Drive).
+        if (DriveState.dirtySeq === seq) clearDriveDirty();
         updateDriveStatus(savedDriveStatus());
     } else {
         updateDriveStatus('Sync error •');
@@ -935,8 +941,9 @@ async function pushLocalToDrive() {
 async function flushDriveSync() {
     if (!isDriveAuthenticated() || !DriveState.driveDirty || DriveState.syncInProgress) return;
     if (UI.data) {
+        const seq = DriveState.dirtySeq;
         if (await driveSaveFile(UI.data)) {
-            clearDriveDirty();
+            if (DriveState.dirtySeq === seq) clearDriveDirty();
         }
     }
 }
