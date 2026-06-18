@@ -303,7 +303,13 @@ const MATHPAD_FOLDER_NAME = 'MathPad';
 // The one file every device syncs to by default. New files are created with
 // this name, and a fresh device adopts the existing one by it on sign-in, so
 // data follows the user across browsers/hosts without manual file-picking.
-const CANONICAL_FILE_NAME = 'MathPad.mathpad.json';
+const CANONICAL_FILE_NAME = 'MathPad.json';
+
+// Files live in the MathPad folder, so names stay short — .json is the only
+// extension. Append it to a user-entered name that doesn't already have it.
+function ensureJsonExt(name) {
+    return /\.json$/i.test(name) ? name : name + '.json';
+}
 
 /**
  * Find or create the "MathPad" folder in the user's Drive root.
@@ -391,9 +397,14 @@ async function driveSaveFile(data, overrideName, forceNew) {
         for (let attempt = 0; attempt < 2; attempt++) {
             let resp;
             if (DriveState.fileId && !forceNew) {
-                // Update existing file — content only, don't overwrite name
+                // Update existing file — content only, don't overwrite name.
+                // Request `trashed` so we can detect a file deleted in the
+                // Drive UI: "delete" there only moves it to Trash, where it's
+                // still reachable by id, so a PATCH silently updates the
+                // trashed copy unless we check (a 404 only fires on permanent
+                // deletion / emptied trash).
                 resp = await driveMultipartRequest(
-                    `https://www.googleapis.com/upload/drive/v3/files/${DriveState.fileId}?uploadType=multipart&fields=id,name,modifiedTime,lastModifyingUser,md5Checksum`,
+                    `https://www.googleapis.com/upload/drive/v3/files/${DriveState.fileId}?uploadType=multipart&fields=id,name,modifiedTime,lastModifyingUser,md5Checksum,trashed`,
                     'PATCH', { mimeType: 'application/json' }, content
                 );
             } else {
@@ -427,6 +438,15 @@ async function driveSaveFile(data, overrideName, forceNew) {
             }
 
             const result = await resp.json();
+
+            if (result.trashed && !forceNew && attempt === 0) {
+                // We just wrote to a trashed file (deleted in the Drive UI) —
+                // abandon it and retry, which creates a fresh file in its place.
+                DriveState.fileId = null;
+                localStorage.removeItem(DRIVE_KEYS.fileId);
+                continue;
+            }
+
             DriveState.fileId = result.id;
             DriveState.fileName = result.name;
             DriveState.lastModifiedTime = result.modifiedTime;
@@ -535,7 +555,7 @@ async function driveLoadFile(fileId) {
  */
 async function driveGetMetadata(fileId) {
     const resp = await driveFetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?fields=name,modifiedTime,lastModifyingUser,md5Checksum`
+        `https://www.googleapis.com/drive/v3/files/${fileId}?fields=name,modifiedTime,lastModifyingUser,md5Checksum,trashed`
     );
     if (!resp) return null;
     try {
@@ -545,7 +565,8 @@ async function driveGetMetadata(fileId) {
             name: meta.name,
             modifiedTime: meta.modifiedTime,
             lastModifyingUser: meta.lastModifyingUser?.emailAddress || null,
-            md5Checksum: meta.md5Checksum || null
+            md5Checksum: meta.md5Checksum || null,
+            trashed: !!meta.trashed
         };
     } catch (e) {
         console.error('Drive metadata error:', e);
@@ -638,19 +659,29 @@ async function adoptCanonicalFile() {
     saveDriveState();
     const meta = await driveGetMetadata(file.id);
     // If metadata can't be fetched (network), leave bound — runSyncCycle's
-    // binary "Drive has newer data — load?" prompt reconciles on a later cycle.
-    if (meta) await resolveAdoptionConflict(meta);
+    // conflict dialog reconciles on a later cycle.
+    if (meta) {
+        const ago = formatTimeAgo(meta.modifiedTime);
+        const who = meta.lastModifyingUser || 'unknown';
+        await resolveSyncConflict(meta, 'Sync with Google Drive',
+            `This device has its own records, and Drive already has a file ` +
+            `"${meta.name}" (modified ${ago} by ${who}). How would you like to combine them?`);
+    }
 }
 
 /**
  * Promise-based modal with N explicit, labeled choices (no OK/Cancel
- * ambiguity). Each option is a button with a bold label + a one-line
- * explanation. Modal by design — there is no dismiss; the caller's choices
- * are the only exits. Resolves to the chosen option's `key`.
- * @param {{title: string, message: string, options: Array<{key, label, sub, primary}>}} cfg
- * @returns {Promise<string>}
+ * ambiguity). Each option is a button with a bold label + an optional
+ * one-line explanation. Resolves to the chosen option's `key`.
+ *
+ * By default there is no dismiss (the buttons are the only exits — used for
+ * the adoption conflict, where a fresh device must not be left unresolved).
+ * Pass `dismissable: true` (e.g. the file picker, where opening is optional)
+ * to allow Escape / click-outside, which resolve to null.
+ * @param {{title, message, options: Array<{key, label, sub, primary}>, dismissable}} cfg
+ * @returns {Promise<string|null>}
  */
-function showChoiceDialog({ title, message, options }) {
+function showChoiceDialog({ title, message, options, dismissable = false }) {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
         overlay.className = 'choice-dialog';
@@ -662,14 +693,22 @@ function showChoiceDialog({ title, message, options }) {
         h.textContent = title;
         content.appendChild(h);
 
-        const msg = document.createElement('div');
-        msg.className = 'choice-dialog-message';
-        msg.textContent = message;
-        content.appendChild(msg);
+        if (message) {
+            const msg = document.createElement('div');
+            msg.className = 'choice-dialog-message';
+            msg.textContent = message;
+            content.appendChild(msg);
+        }
+
+        let onKey = null;
+        const finish = (key) => {
+            if (onKey) document.removeEventListener('keydown', onKey, true);
+            overlay.remove();
+            resolve(key);
+        };
 
         const btns = document.createElement('div');
         btns.className = 'choice-dialog-buttons';
-        const finish = (key) => { overlay.remove(); resolve(key); };
         for (const opt of options) {
             const b = document.createElement('button');
             if (opt.primary) b.className = 'primary';
@@ -687,33 +726,43 @@ function showChoiceDialog({ title, message, options }) {
             btns.appendChild(b);
         }
         content.appendChild(btns);
+
+        if (dismissable) {
+            const cancel = document.createElement('button');
+            cancel.className = 'choice-dialog-cancel';
+            cancel.textContent = 'Cancel';
+            cancel.addEventListener('click', () => finish(null));
+            content.appendChild(cancel);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) finish(null); });
+            onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); finish(null); } };
+            document.addEventListener('keydown', onKey, true);
+        }
+
         overlay.appendChild(content);
         document.body.appendChild(overlay);
     });
 }
 
 /**
- * Three-way resolution when a fresh device's local records meet an existing
- * Drive file, via a single labeled-choice dialog:
- *   Load from Drive — join the canonical dataset (local records replaced).
+ * Three-way resolution when this device's local records and the Drive file
+ * disagree — used both for fresh-device adoption and for an ongoing
+ * "Drive has newer data" conflict. A single labeled-choice dialog:
+ *   Load from Drive — take the Drive version (local records replaced).
  *   Keep both       — save THIS device's records as a NEW Drive file and
- *                     sync with that; the canonical file is left untouched.
- *   Keep mine       — overwrite the canonical file with this device's records.
+ *                     sync with that; the Drive file is left untouched.
+ *   Keep mine       — overwrite the Drive file with this device's records.
  * Every branch leaves sync state consistent so the periodic cycle won't
- * re-prompt.
+ * re-prompt. Caller supplies the title/message for the situation.
  */
-async function resolveAdoptionConflict(meta) {
-    const ago = formatTimeAgo(meta.modifiedTime);
-    const who = meta.lastModifyingUser || 'unknown';
+async function resolveSyncConflict(meta, title, message) {
     const n = (UI.data && UI.data.records) ? UI.data.records.length : 0;
 
     // Loop so cancelling the "keep both" name prompt goes BACK to the choices
     // rather than committing — the only terminal exits are an actual decision.
     while (true) {
         const choice = await showChoiceDialog({
-            title: 'Sync with Google Drive',
-            message: `This device has its own records, and Drive already has a saved MathPad ` +
-                `file (modified ${ago} by ${who}). How would you like to combine them?`,
+            title,
+            message,
             options: [
                 {
                     key: 'load', primary: true, label: 'Load from Drive',
@@ -747,10 +796,10 @@ async function resolveAdoptionConflict(meta) {
             const d = new Date();
             const p = (x) => String(x).padStart(2, '0');
             const def = `MathPad-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
-                `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.mathpad.json`;
+                `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
             const entered = prompt("Name for this device's new Drive file:", def);
             if (entered === null) continue;   // cancelled → back to the choices
-            const name = entered.trim() || def;
+            const name = ensureJsonExt(entered.trim() || def);
             updateDriveStatus('Saving...');
             const ok = await driveSaveFile(UI.data, name, true);
             if (ok) {
@@ -820,6 +869,18 @@ async function runSyncCycle() {
         const meta = await driveGetMetadata(DriveState.fileId);
         if (!meta) return; // Network error, try next cycle
 
+        // File was deleted in the Drive UI (moved to Trash but still reachable
+        // by id). Abandon it so we don't conflict-prompt against a trashed
+        // file; the pending dirty save then recreates a fresh one.
+        if (meta.trashed) {
+            DriveState.fileId = null;
+            DriveState.lastChecksum = null;
+            DriveState.lastModifiedTime = null;
+            localStorage.removeItem(DRIVE_KEYS.fileId);
+            if (DriveState.driveDirty && UI.data) await pushLocalToDrive();
+            return;
+        }
+
         // Sync file name if renamed on Drive
         if (meta.name && meta.name !== DriveState.fileName) {
             DriveState.fileName = meta.name;
@@ -836,28 +897,13 @@ async function runSyncCycle() {
             : remoteTime > knownTime + 1000;
 
         if (contentChanged) {
-            // Drive has newer data — prompt user
+            // Drive has a newer version of this file — same three-way as
+            // adoption (Load / Keep both / Keep mine), so a conflict never
+            // forces you to lose a side.
             const ago = formatTimeAgo(meta.modifiedTime);
             const who = meta.lastModifyingUser || 'unknown';
-            const load = confirm(
-                `Drive has newer data (modified ${ago} by ${who}).\n\nLoad from Drive?`
-            );
-            if (load) {
-                updateDriveStatus('Loading...');
-                const data = await driveLoadFile(DriveState.fileId);
-                if (data) {
-                    applyDriveData(data);
-                } else {
-                    updateDriveStatus('Load failed');
-                }
-            } else {
-                // User declined — keep local, it will overwrite Drive on next sync.
-                // Track declined values so we don't re-prompt for the same remote change.
-                DriveState.declinedRemoteTime = meta.modifiedTime;
-                DriveState.lastChecksum = meta.md5Checksum || DriveState.lastChecksum;
-                DriveState.driveDirty = true;
-                saveDriveState();
-            }
+            await resolveSyncConflict(meta, 'Drive has newer data',
+                `The Drive file "${meta.name}" was updated ${ago} by ${who}. How would you like to combine it with this device's records?`);
         } else if (DriveState.driveDirty && UI.data) {
             // Push local data to Drive
             await pushLocalToDrive();
@@ -898,7 +944,7 @@ async function flushDriveSync() {
 // ---- File Listing (replaces Picker — no API key needed) ----
 
 /**
- * List .mathpad.json files in the MathPad folder (falls back to all Drive files).
+ * List files in the MathPad folder (falls back to all Drive files).
  * @returns {Promise<Array<{id: string, name: string, modifiedTime: string}>|null>}
  */
 async function driveListFiles() {
@@ -932,21 +978,27 @@ async function openDriveFileChooser() {
         return null;
     }
     if (files.length === 0) {
-        alert('No .mathpad.json files found in your Drive.');
+        alert('No MathPad files found in your Drive.');
         return null;
     }
 
-    // Build a numbered list for prompt
-    const lines = files.map((f, i) =>
-        `${i + 1}. ${f.name} (${formatTimeAgo(f.modifiedTime)})`
-    );
-    const choice = prompt(
-        'Open MathPad file from Drive:\n\n' + lines.join('\n') + '\n\nEnter number:'
-    );
-    if (!choice) return null;
-    const idx = parseInt(choice, 10) - 1;
-    if (idx < 0 || idx >= files.length || isNaN(idx)) return null;
-    return { id: files[idx].id, name: files[idx].name };
+    // Click-to-select dialog: one button per file (current file marked).
+    // driveListFiles already returns them newest-first.
+    const chosenId = await showChoiceDialog({
+        title: 'Open from Google Drive',
+        message: 'Choose a file to sync with on this device.',
+        dismissable: true,
+        options: files.map(f => ({
+            key: f.id,
+            primary: f.id === DriveState.fileId,
+            label: f.name,
+            sub: `Modified ${formatTimeAgo(f.modifiedTime)}` +
+                (f.id === DriveState.fileId ? ' · current' : '')
+        }))
+    });
+    if (!chosenId) return null;  // dismissed
+    const f = files.find(x => x.id === chosenId);
+    return f ? { id: f.id, name: f.name } : null;
 }
 
 // ---- Status Helpers ----
@@ -1125,20 +1177,37 @@ async function handleDriveOpen() {
  * Handle saving as a new file on Drive.
  */
 async function handleDriveSaveAs() {
-    const name = prompt('File name:', DriveState.fileName || CANONICAL_FILE_NAME);
-    if (!name) return;
+    const entered = prompt('File name:', DriveState.fileName || CANONICAL_FILE_NAME);
+    if (!entered || !entered.trim()) return;
+    const name = ensureJsonExt(entered.trim());
+    if (!UI.data) return;
 
-    if (UI.data) {
-        updateDriveStatus('Saving...');
-        const ok = await driveSaveFile(UI.data, name, true);
-        if (ok) {
-            clearDriveDirty();
+    // If a file of that name already exists, offer to overwrite it rather than
+    // silently creating a duplicate (Drive allows same-named files). On
+    // overwrite, bind to and update that file; otherwise create a new one.
+    const files = await driveListFiles();
+    const existing = files && files.find(f => f.name === name);
+    let forceNew = true;
+    if (existing) {
+        if (!confirm(`A file named "${name}" already exists on Drive. Overwrite it?`)) {
             updateDriveStatus();
-            setStatus('Saved to Drive as ' + name, false, false);
-        } else {
-            updateDriveStatus();
-            setStatus('Failed to save to Drive', true, false);
+            return;
         }
+        DriveState.fileId = existing.id;
+        DriveState.fileName = name;
+        saveDriveState();
+        forceNew = false;   // update the existing file instead of creating new
+    }
+
+    updateDriveStatus('Saving...');
+    const ok = await driveSaveFile(UI.data, name, forceNew);
+    if (ok) {
+        clearDriveDirty();
+        updateDriveStatus();
+        setStatus((existing ? 'Saved to Drive: ' : 'Saved to Drive as ') + name, false, false);
+    } else {
+        updateDriveStatus();
+        setStatus('Failed to save to Drive', true, false);
     }
 }
 

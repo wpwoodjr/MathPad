@@ -1189,6 +1189,8 @@ button {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    max-height: 50vh;
+    overflow-y: auto;
 }
 
 .choice-dialog-buttons button {
@@ -1222,6 +1224,21 @@ button {
     margin-top: 3px;
     line-height: 1.4;
     white-space: normal;
+}
+
+.choice-dialog-cancel {
+    margin-top: 14px;
+    margin-left: auto;
+    display: block;
+    padding: 6px 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: transparent;
+}
+
+.choice-dialog-cancel:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
 }
 
 /* Responsive */
