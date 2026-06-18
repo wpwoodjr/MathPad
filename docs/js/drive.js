@@ -24,7 +24,6 @@ const DriveState = {
     lastChecksum: null,
     folderId: null,             // ID of "MathPad" folder on Drive
     declinedRemoteTime: null,   // Remote modifiedTime we already prompted about (prevents re-prompt)
-    silentRenewalFailed: false,
     driveDirty: false,
     syncInProgress: false,
     syncTimer: null,
@@ -168,7 +167,6 @@ function driveSignIn(promptMode) {
             DriveState.accessToken = resp.access_token;
             DriveState.tokenExpiry = Date.now() + (resp.expires_in * 1000);
             console.log('Drive token obtained at', new Date().toLocaleTimeString(), 'expires', new Date(DriveState.tokenExpiry).toLocaleTimeString());
-            DriveState.silentRenewalFailed = false;
             // fetchUserEmail catches its own errors and never rejects.
             fetchUserEmail().then(() => {
                 saveDriveState();
@@ -210,7 +208,6 @@ async function driveSignOut() {
     DriveState.lastModifiedTime = null;
     DriveState.lastModifiedBy = null;
     DriveState.declinedRemoteTime = null;
-    DriveState.silentRenewalFailed = false;
     clearDriveDirty();
     clearDriveStatusFlash();
     // Clear localStorage
@@ -235,41 +232,54 @@ function isDriveSignedIn() {
 }
 
 /**
- * Ensure we have a valid token, renewing silently when needed.
+ * Ensure we have a currently-valid token. VALIDATE-ONLY: never opens a popup.
  *
- * Renews PROACTIVELY at the RENEW_MARGIN — while the current token is still
- * valid — because GIS silent renewal (an iframe) succeeds far more reliably
- * against a live Google session than an expired one. Crucially, a failed
- * proactive renewal does NOT throw away the still-valid token: driveSignIn
- * leaves DriveState.accessToken untouched on failure, so we keep using the
- * old token (with up to RENEW_MARGIN left) and retry next cycle. Net effect:
- * while the user is signed into Google in this browser, the token rolls over
- * automatically every ~hour and they stay logged in indefinitely.
+ * GIS implicit-flow renewal (requestAccessToken) requires a user gesture for
+ * the popup to open — a timer or API-call context has no activation, so the
+ * popup is blocked. Renewal therefore happens in maybeRenewToken() on the
+ * user's own clicks/keystrokes, or via an explicit sign-in click. Here we
+ * just report whether a valid token exists, dropping an expired one so
+ * isDriveAuthenticated() reads false and the UI shows "click to sync".
  *
  * @returns {Promise<boolean>}
  */
 async function ensureToken() {
-    const now = Date.now();
-    if (DriveState.accessToken && now < DriveState.tokenExpiry - RENEW_MARGIN_MS) {
-        return true; // fresh enough
+    if (DriveState.accessToken && Date.now() < DriveState.tokenExpiry) {
+        return true;
     }
-    const hadValidToken = DriveState.accessToken && now < DriveState.tokenExpiry;
-
-    // Attempt a silent renewal (once per latch — see silentRenewalFailed).
-    if (!DriveState.silentRenewalFailed && DriveState.userEmail) {
-        const ok = await driveSignIn(''); // sets a new token on success, untouched on failure
-        if (ok) return true;
-        console.warn('Silent token renewal failed at', new Date().toLocaleTimeString());
-        DriveState.silentRenewalFailed = true;
+    if (DriveState.accessToken) {
+        DriveState.accessToken = null;
+        DriveState.tokenExpiry = 0;
+        saveDriveState();
     }
-
-    // Renewal not attempted or failed. Keep a still-valid token (retry next
-    // cycle / on tab refocus); otherwise clear so isDriveAuthenticated() is false.
-    if (hadValidToken) return true;
-    DriveState.accessToken = null;
-    DriveState.tokenExpiry = 0;
-    saveDriveState();
     return false;
+}
+
+const RENEW_THROTTLE_MS = 60000;  // min gap between gesture-triggered renewals
+let _lastRenewAttempt = 0;
+
+/**
+ * Renew the token opportunistically from a user gesture (click/keypress) when
+ * it's near expiry or already expired. The gesture supplies the activation the
+ * GIS renewal popup needs, so during active use the token rolls over
+ * seamlessly. Throttled so a failing renewal can't pop on every keystroke.
+ * No-op unless signed in and actually near expiry. Attached to document
+ * pointerdown/keydown in app.js.
+ */
+function maybeRenewToken() {
+    if (!isDriveSignedIn() || !DriveState.userEmail) return;
+    if (_tokenPromise) return;  // a token request is already in flight
+    if (DriveState.accessToken && Date.now() < DriveState.tokenExpiry - RENEW_MARGIN_MS) return;
+    const now = Date.now();
+    if (now - _lastRenewAttempt < RENEW_THROTTLE_MS) return;
+    _lastRenewAttempt = now;
+    // Synchronous call within the gesture so requestAccessToken keeps the
+    // user activation; the 5s ('') timeout bails fast if it can't complete.
+    driveSignIn('').then((ok) => {
+        if (!ok) return;
+        updateDriveUI();   // un-gray the avatar (isDriveAuthenticated() is true again)
+        runSyncCycle();
+    });
 }
 
 async function fetchUserEmail() {
@@ -609,13 +619,14 @@ async function findCanonicalFile() {
 
 /**
  * On a fresh device (signed in but no local fileId), bind to the existing
- * canonical file so this browser syncs to the same file as every other.
- * If the user has no pending local changes, load Drive's copy immediately
- * so their data appears without manual file-picking — this is what makes
- * the data follow them across browsers/hosts. If local IS dirty (edits
- * made before signing in), leave it: runSyncCycle's conflict prompt then
- * reconciles. If no canonical file exists yet, do nothing — the first
- * dirty sync creates it.
+ * canonical file, then resolve the first-encounter conflict explicitly —
+ * this device's records and the Drive file are two datasets meeting for the
+ * first time, and we never replace local silently. If no canonical file
+ * exists yet, do nothing — the first dirty sync creates it.
+ *
+ * One-shot: the three-way runs here (right after sign-in), not in the periodic
+ * runSyncCycle, so it can't re-prompt every 15s. Each outcome leaves clean
+ * sync state, so the runSyncCycle that follows in onDriveSignedIn is a no-op.
  */
 async function adoptCanonicalFile() {
     if (DriveState.fileId) return;        // already bound to a file
@@ -625,9 +636,71 @@ async function adoptCanonicalFile() {
     DriveState.fileId = file.id;
     DriveState.fileName = file.name;
     saveDriveState();
-    if (!DriveState.driveDirty) {
-        const data = await driveLoadFile(file.id);
+    const meta = await driveGetMetadata(file.id);
+    // If metadata can't be fetched (network), leave bound — runSyncCycle's
+    // binary "Drive has newer data — load?" prompt reconciles on a later cycle.
+    if (meta) await resolveAdoptionConflict(meta);
+}
+
+/**
+ * Three-way resolution when a fresh device's local records meet an existing
+ * Drive file. Presented as two confirm() steps (no custom UI):
+ *   Load from Drive — join the canonical dataset (local records replaced).
+ *   Keep both       — save THIS device's records as a NEW Drive file and
+ *                     sync with that; the canonical file is left untouched.
+ *   Keep mine       — overwrite the canonical file with this device's records.
+ * Every branch leaves sync state consistent so the periodic cycle won't
+ * re-prompt.
+ */
+async function resolveAdoptionConflict(meta) {
+    const ago = formatTimeAgo(meta.modifiedTime);
+    const who = meta.lastModifyingUser || 'unknown';
+    const n = (UI.data && UI.data.records) ? UI.data.records.length : 0;
+
+    const loadDrive = confirm(
+        `This device has its own records, and Drive already has a saved ` +
+        `MathPad file (modified ${ago} by ${who}).\n\n` +
+        `OK — Load the Drive file onto this device (replaces this device's ` +
+        `${n} record${n !== 1 ? 's' : ''}).\n` +
+        `Cancel — Keep this device's records (you'll choose how next).`
+    );
+    if (loadDrive) {
+        updateDriveStatus('Loading...');
+        const data = await driveLoadFile(DriveState.fileId);
         if (data) applyDriveData(data);
+        else updateDriveStatus('Load failed');
+        return;
+    }
+
+    const keepBoth = confirm(
+        `Keep this device's records.\n\n` +
+        `OK — Keep BOTH: save this device's records as a NEW Drive file and ` +
+        `sync with that (the existing file is left untouched).\n` +
+        `Cancel — Keep MINE: overwrite the Drive file with this device's records.`
+    );
+    if (keepBoth) {
+        // Fork to a new file; this device now syncs to it (driveSaveFile with
+        // forceNew repoints fileId). Cancelling the name keeps the default —
+        // "keep both" is the committed choice, the name is just cosmetic.
+        const def = `MathPad-${new Date().toISOString().slice(0, 10)}.mathpad.json`;
+        const entered = prompt("Name for this device's new Drive file:", def);
+        const name = (entered && entered.trim()) || def;
+        updateDriveStatus('Saving...');
+        const ok = await driveSaveFile(UI.data, name, true);
+        if (ok) {
+            clearDriveDirty();
+            updateDriveStatus(savedDriveStatus());
+        } else {
+            updateDriveStatus('Sync error •');
+        }
+    } else {
+        // Keep mine: overwrite the canonical file. Match this remote checksum
+        // (so the periodic cycle sees no conflict) and mark dirty so it pushes
+        // local over the canonical file.
+        DriveState.declinedRemoteTime = meta.modifiedTime;
+        DriveState.lastChecksum = meta.md5Checksum || DriveState.lastChecksum;
+        DriveState.driveDirty = true;
+        saveDriveState();
     }
 }
 
@@ -651,11 +724,6 @@ async function onDriveSignedIn() {
  * 3. If not newer and dirty, push local data
  */
 async function runSyncCycle() {
-    // Proactively keep an existing token fresh (ensureToken renews at the
-    // RENEW_MARGIN while it's still valid; no-op if already fresh). Covers
-    // the idle/no-file case where nothing else would call ensureToken.
-    if (DriveState.accessToken) await ensureToken();
-
     if (!isDriveAuthenticated()) {
         // Token expired or not yet obtained — prompt user to reconnect
         if (isDriveSignedIn()) {
@@ -1043,6 +1111,7 @@ function closeDriveDropdown() {
 window.initDriveModule = initDriveModule;
 window.driveSignIn = driveSignIn;
 window.onDriveSignedIn = onDriveSignedIn;
+window.maybeRenewToken = maybeRenewToken;
 window.driveSignOut = driveSignOut;
 window.isDriveSignedIn = isDriveSignedIn;
 window.isDriveAuthenticated = isDriveAuthenticated;

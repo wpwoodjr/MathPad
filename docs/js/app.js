@@ -29,19 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 startDriveSync();
             }
 
-            // Returning to a backgrounded tab: the token may have lapsed and
-            // the silent-renewal latch may have tripped while away. Clear the
-            // latch and attempt a renewal directly (ensureToken, even if the
-            // token fully expired — the periodic cycle skips renewal when no
-            // token remains), so a stale tab re-auths silently instead of
-            // forcing a click. Then sync.
-            document.addEventListener('visibilitychange', async () => {
-                if (document.visibilityState !== 'visible') return;
-                if (!isDriveSignedIn()) return;
-                DriveState.silentRenewalFailed = false;
-                await ensureToken();
-                runSyncCycle();
-            });
+            // Keep the token alive by renewing on the user's own gestures
+            // when it's near expiry. GIS implicit-flow tokens can only be
+            // renewed during user activation (the popup needs a gesture), so
+            // a timer can't do it — but the user's normal clicks/keystrokes
+            // can. maybeRenewToken no-ops unless signed in and near expiry.
+            document.addEventListener('pointerdown', maybeRenewToken, true);
+            document.addEventListener('keydown', maybeRenewToken, true);
         });
     }
 
