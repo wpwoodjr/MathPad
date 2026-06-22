@@ -825,6 +825,74 @@ async function resolveSyncConflict(meta, title, message) {
 }
 
 /**
+ * The synced file was deleted in the Drive UI (trashed). Unbind from it and
+ * ask what to do — recreate the same file, save to a new one, or stop
+ * syncing entirely (sign out). No "signed in but not syncing" limbo state.
+ */
+async function resolveTrashedFile(trashedName) {
+    // Unbind from the trashed file up front.
+    DriveState.fileId = null;
+    DriveState.lastChecksum = null;
+    DriveState.lastModifiedTime = null;
+    localStorage.removeItem(DRIVE_KEYS.fileId);
+
+    while (true) {
+        const choice = await showChoiceDialog({
+            title: 'Drive file was deleted',
+            message: `The Drive file "${trashedName}" was moved to Trash. ` +
+                `What would you like to do with this device's records?`,
+            options: [
+                {
+                    key: 'recreate', primary: true, label: 'Recreate it',
+                    sub: `Save to a fresh "${trashedName}" and keep syncing.`
+                },
+                {
+                    key: 'new', label: 'Save to a new file',
+                    sub: 'Pick a new name; this device syncs to that file instead.'
+                },
+                {
+                    key: 'stop', label: 'Stop syncing and sign out',
+                    sub: 'Leave it deleted and sign out of Google Drive.'
+                }
+            ]
+        });
+
+        if (choice === 'stop') {
+            // Clear dirty first so driveSignOut's flush doesn't recreate the
+            // file we're choosing to leave deleted. Records stay in localStorage.
+            clearDriveDirty();
+            await driveSignOut();
+            updateDriveUI();
+            return;
+        }
+
+        let name = trashedName;
+        if (choice === 'new') {
+            const d = new Date();
+            const p = (x) => String(x).padStart(2, '0');
+            const def = `MathPad-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+                `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
+            const entered = prompt('Name for the new Drive file:', def);
+            if (entered === null) continue;   // cancelled → back to the choices
+            name = ensureJsonExt(entered.trim() || def);
+        }
+
+        // Recreate or new: create a fresh file with `name` and sync to it.
+        DriveState.fileName = name;
+        saveDriveState();
+        updateDriveStatus('Saving...');
+        const ok = await driveSaveFile(UI.data, name, true);
+        if (ok) {
+            clearDriveDirty();
+            updateDriveStatus(savedDriveStatus());
+        } else {
+            updateDriveStatus('Sync error •');
+        }
+        return;
+    }
+}
+
+/**
  * Post-sign-in sequence, shared by the Sign In button and the avatar
  * button. Adopts the canonical file (cross-device load), runs an
  * immediate sync, and starts the periodic timer.
@@ -872,14 +940,9 @@ async function runSyncCycle() {
         if (!meta) return; // Network error, try next cycle
 
         // File was deleted in the Drive UI (moved to Trash but still reachable
-        // by id). Abandon it so we don't conflict-prompt against a trashed
-        // file; the pending dirty save then recreates a fresh one.
+        // by id). Ask what to do rather than silently recreating.
         if (meta.trashed) {
-            DriveState.fileId = null;
-            DriveState.lastChecksum = null;
-            DriveState.lastModifiedTime = null;
-            localStorage.removeItem(DRIVE_KEYS.fileId);
-            if (DriveState.driveDirty && UI.data) await pushLocalToDrive();
+            await resolveTrashedFile(meta.name);
             return;
         }
 
