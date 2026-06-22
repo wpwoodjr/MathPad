@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MathPad is an algebraic equation solver web application, reimplemented from the original PalmOS app (1997-2000) by Rick Huebner. It solves systems of equations using Brent's root-finding method and supports 50+ built-in functions. (A Google Drive sync layer exists in `drive.js` but is currently in private testing — not surfaced in tutorials, README, or help.)
+MathPad is an algebraic equation solver web application, reimplemented from the original PalmOS app (1997-2000) by Rick Huebner. It solves systems of equations using Brent's root-finding method and supports 50+ built-in functions. (An optional Google Drive sync layer in `drive.js` provides cross-device sync — surfaced via the header Drive control, listed in the README features, and documented in help; not covered in the in-app tutorials.)
 
 - **Web Application** (`docs/`) - Full-featured browser-based app, no build system
 - **Legacy PalmOS** (`mathpad 1.5/`) - Original C source and utilities
@@ -156,12 +156,13 @@ node tests/gen-expected.js TESTNAME
 - Export: all records to text format
 
 ### Google Drive Integration
-- OAuth via Google Identity Services (GIS); `drive.file` scope
-- Files saved in "MathPad" folder on Drive root
-- 15-second sync cycle: checks md5Checksum for conflicts, prompts user if Drive has newer data
-- Dirty flag tracking with `localOnly` parameter to avoid spurious syncing
-- Token persistence across refreshes; 5-second timeout for blocked popups
-- Graceful degradation if Google scripts fail to load
+- OAuth via Google Identity Services (GIS); `drive.file` scope (per-file — the app only ever sees files it created)
+- **Canonical single file** `MathPad.json` in a "MathPad" folder on Drive root. On sign-in, a fresh device auto-discovers and adopts it by name (`findCanonicalFile`/`adoptCanonicalFile`), so the same data follows the user across browsers/hosts. The chooser ("Open") and Save As are escape hatches for additional files.
+- 15-second sync cycle: checks md5Checksum for conflicts; when Drive has a different version, a **labeled 3-button dialog** (`showChoiceDialog`) offers Load from Drive / Keep both (fork to a new file) / Keep mine (overwrite). Same dialog drives fresh-device adoption (`resolveSyncConflict`) and the trashed-file recovery (`resolveTrashedFile`).
+- **Gesture-coupled token renewal**: GIS implicit-flow tokens (~1h, no refresh token) can only be renewed inside a user gesture — `ensureToken` is validate-only (never popups); `maybeRenewToken` (on document pointerdown/keydown) renews near expiry. Brief GIS popup flash ~hourly is the tradeoff.
+- Dirty flag tracking (`localOnly` param avoids spurious syncing); a `dirtySeq` counter guards against an in-flight save clearing a newer edit's dirty flag (data-loss race).
+- **Trashed-file recovery**: deleting the file in the Drive UI only trashes it (still reachable by id); detected via the `trashed` metadata flag, the user is asked to recreate / save to a new file / stop syncing and sign out.
+- Token persistence across refreshes; graceful degradation if Google scripts fail to load.
 
 ## Architecture
 
@@ -172,7 +173,7 @@ app.js (entry point, ~200 lines)
   ↓
 ui.js (main orchestration, ~2010 lines)
   ├→ storage.js (localStorage, import/export, tutorial + example records, ~3045 lines)
-  ├→ drive.js (Google Drive sync — testing only, not exposed, ~990 lines)
+  ├→ drive.js (Google Drive cross-device sync — canonical file, gesture-renewed auth, conflict dialogs, ~1330 lines)
   ├→ editor.js (syntax highlighting editor, ~1435 lines)
   ├→ variables-panel.js (structured variable display, ~2455 lines)
   ├→ solve-engine.js (solving + table/grid eval, ~2810 lines)
@@ -248,10 +249,10 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 **DriveState** (in `drive.js`):
 ```javascript
 {
-  tokenClient, accessToken, tokenExpiry, silentRenewalFailed,
+  tokenClient, accessToken, tokenExpiry,
   userEmail, fileId, fileName, folderId,
   lastModifiedTime, lastModifiedBy, lastChecksum, declinedRemoteTime,
-  driveDirty, syncInProgress, syncTimer, statusInterval, ready
+  driveDirty, dirtySeq, syncInProgress, syncTimer, statusInterval, ready
 }
 ```
 
@@ -329,29 +330,33 @@ Contrast with bare `x:` (empty slot): it also shadows the constant, but the solv
 
 ### Sync Architecture
 ```
-User types → debouncedSave(500ms) → localStorage + markDriveDirty()
+User types → debouncedSave(500ms) → localStorage + markDriveDirty() (bumps dirtySeq)
                                           ↓
                              15-second timer checks flag
                                           ↓
-                             if dirty → Drive REST API save → clear flag
+              if dirty → pushLocalToDrive → driveSaveFile (clears dirty only if dirtySeq unchanged)
 
-App loads → localStorage (instant) → check Drive metadata
-              ↓                           ↓
-         render UI immediately      if Drive is newer → prompt user → swap data
+Sign in → adoptCanonicalFile (find MathPad.json by name) → resolveSyncConflict dialog
+              ↓                                                ↓
+         bind the file                          Load / Keep both / Keep mine
 ```
 
 ### Key Patterns
 - `DriveState` + `DRIVE_KEYS` for localStorage persistence across refreshes
 - `fileId`/`fileName`/`folderId` use protective write pattern (never removed by `saveDriveState`, only by `driveSignOut`)
-- `ensureToken()` is a pure auth helper with no UI side effects
-- `driveSaveFile` uses bounded retry loop (max 2 attempts) for 401/404
-- `applyDriveData(data)` is the consolidated load-from-Drive helper
-- `cancelPendingSave()` clears debounce timer before `reloadUIWithData`
+- **`driveFetch(url, opts)`** is the one authenticated-fetch helper (injects the token, retries once on 401); `driveLoadFile`/`driveGetMetadata`/`driveListFiles`/folder ops all route through it
+- **`ensureToken()` is validate-only** (never opens a popup — see gesture renewal above); `maybeRenewToken` is the only renewal path
+- **`showChoiceDialog({title, message, options, dismissable})`** — promise-based labeled-button modal; `resolveSyncConflict` (adoption + newer-data) and `resolveTrashedFile` are built on it
+- `CANONICAL_FILE_NAME` (`MathPad.json`); `ensureJsonExt` appends `.json` to user-entered names
+- `applyDriveData(data)` is the consolidated load-from-Drive helper; `cancelPendingSave()` clears the debounce before `reloadUIWithData`
 
-### Error Handling
-- 401: clear token, `ensureToken()` retry, re-attempt once (save/load/metadata)
-- 404 on save: file deleted → clear fileId, retry creates new file
-- `flushDriveSync`: skips if `syncInProgress` (prevents concurrent saves)
+### Error / Edge Handling
+- 401: `driveFetch` clears the token and retries once; if no valid token remains, the op fails and the UI shows "click to sync" (the next gesture renews)
+- 404 on save: file permanently deleted → clear fileId, retry creates new file
+- **Trashed** (soft-deleted in Drive UI): `driveSaveFile` requests the `trashed` field and self-heals by recreating; `runSyncCycle` routes to `resolveTrashedFile`
+- **dirtySeq guard**: `pushLocalToDrive`/`flushDriveSync` clear the dirty flag only if no edit landed during the upload — otherwise the newer value is kept dirty and re-pushed
+- **Save As to an existing name** offers to overwrite that file instead of creating a duplicate
+- `flushDriveSync`: skips if `syncInProgress`; only called by `driveSignOut` (beforeunload saves to localStorage, not Drive)
 - `driveSignOut`: async, awaits flush before revoking token
 
 ## Common Development Patterns

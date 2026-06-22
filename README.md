@@ -48,6 +48,7 @@ Open `docs/index.html` in any browser — no build step, no server — or use th
 - **Tables, Grids, and Graphs** — iterate variables over ranges to produce columnar tables or 2D grids, then click `as graph` to visualize it
 - **Vector Diagrams** — `vectorDraw` renders SVG vector diagrams in navigation, polar, or cartesian coordinates with legend and per-vector solving
 - **Import/Export** — compatible with original PalmOS MathPad export format
+- **Optional Google Drive sync** — keep your records in the cloud and synced across devices; works entirely in the browser without it
 
 ### Editor
 

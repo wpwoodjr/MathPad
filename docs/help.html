@@ -103,6 +103,7 @@
             <li><a href="#pre-solve">Pre-solve Values</a></li>
             <li><a href="#tables-grids">Tables, Grids, and Vector Diagrams</a></li>
             <li><a href="#import-export">Import / Export</a></li>
+            <li><a href="#drive-sync">Google Drive Sync</a></li>
             <li><a href="#keyboard-shortcuts">Keyboard Shortcuts</a></li>
             <li><a href="#settings">Record Settings</a></li>
             <li><a href="#example">Example: Loan Calculator</a></li>
@@ -502,6 +503,30 @@ x: 42    "the answer"</pre>
         <li>Records are separated by a line of 27 tildes (<code>~~~~~~~~~~~~~~~~~~~~~~~~~~~</code>); each block starts with metadata (Category, Places, Format, etc.) and is followed by the record's raw text. The file is plain text — open it in any editor to trim, fix, or stitch together exports.</li>
     </ul>
     <p>Access Import/Export from the sidebar buttons.</p>
+
+    <h2 id="drive-sync">Google Drive Sync</h2>
+    <p>Optional cloud sync keeps all your records on Google Drive and across your devices. Use the <strong>Drive control in the header</strong> (the cloud / your initial) to sign in. Without it, MathPad still works entirely in your browser &mdash; Drive is purely additive.</p>
+    <ul>
+        <li><strong>Cross-device by default</strong>: sign in with the same Google account in another browser or on another computer, and your records appear automatically. MathPad keeps one canonical file, <code>MathPad.json</code>, in a <code>MathPad</code> folder on your Drive, and every device syncs to it.</li>
+        <li><strong>Automatic saving</strong>: edits save to Drive within a few seconds. The status bar (right side) shows when it last synced.</li>
+        <li><strong>Staying signed in</strong>: your session is kept alive as you work. Renewing the connection happens during normal clicks/keystrokes, so you may notice a brief Google popup flash about once an hour &mdash; that's expected.</li>
+        <li><strong>Your data, your control</strong>: MathPad uses Drive's per-file permission &mdash; it can only see files it created. <code>MathPad.json</code> is plain text you can open, download, or back up yourself.</li>
+    </ul>
+
+    <h3>When two devices disagree</h3>
+    <p>If this device's records and the Drive file differ (e.g. you edited on another device), MathPad asks how to combine them &mdash; never overwriting silently:</p>
+    <ul>
+        <li><strong>Load from Drive</strong> &mdash; replace this device's records with the Drive version.</li>
+        <li><strong>Keep both</strong> &mdash; save this device's records to a <em>new, separate</em> Drive file and sync with that; the original is left untouched.</li>
+        <li><strong>Keep mine</strong> &mdash; overwrite the Drive file with this device's records.</li>
+    </ul>
+
+    <h3>Open, Save As, and deleting the file</h3>
+    <ul>
+        <li><strong>Open</strong> (Drive menu) lists your MathPad files; pick one to switch this device to it.</li>
+        <li><strong>Save As</strong> saves to a named file (<code>.json</code> is added automatically); saving over an existing name asks before overwriting.</li>
+        <li>If you delete the synced file in the Drive web interface, MathPad notices and asks whether to <strong>recreate it</strong>, <strong>save to a new file</strong>, or <strong>stop syncing and sign out</strong>.</li>
+    </ul>
 
     <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
     <p>Cmd substitutes for Ctrl on Mac.</p>
