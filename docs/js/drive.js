@@ -754,9 +754,12 @@ function showChoiceDialog({ title, message, options, dismissable = false }) {
  *                     sync with that; the Drive file is left untouched.
  *   Keep mine       — overwrite the Drive file with this device's records.
  * Every branch leaves sync state consistent so the periodic cycle won't
- * re-prompt. Caller supplies the title/message for the situation.
+ * re-prompt. Caller supplies the title/message for the situation. When
+ * `dismissable` is true the dialog can be cancelled (returns false, no
+ * action taken); otherwise the three choices are the only exits. Returns
+ * true once a choice is acted on.
  */
-async function resolveSyncConflict(meta, title, message) {
+async function resolveSyncConflict(meta, title, message, dismissable = false) {
     const n = (UI.data && UI.data.records) ? UI.data.records.length : 0;
 
     // Loop so cancelling the "keep both" name prompt goes BACK to the choices
@@ -765,6 +768,7 @@ async function resolveSyncConflict(meta, title, message) {
         const choice = await showChoiceDialog({
             title,
             message,
+            dismissable,
             options: [
                 {
                     key: 'load', primary: true, label: 'Load from Drive',
@@ -781,20 +785,20 @@ async function resolveSyncConflict(meta, title, message) {
             ]
         });
 
+        if (choice === null) return false;   // dismissed (only when dismissable)
+
         if (choice === 'load') {
             updateDriveStatus('Loading...');
             const data = await driveLoadFile(DriveState.fileId);
             if (data) applyDriveData(data);
             else updateDriveStatus('Load failed');
-            return;
+            return true;
         }
 
         if (choice === 'both') {
-            // Fork to a new file; this device now syncs to it (driveSaveFile
-            // with forceNew repoints fileId). Date + local HHMMSS so repeated
-            // forks don't collide even seconds apart. Cancelling the name
-            // prompt (null) backs out to the choices; OK with a blank name
-            // uses the default.
+            // Fork to a NEW file; this device now syncs to it (driveSaveFile
+            // with forceNew repoints fileId). Date + local HHMMSS so the default
+            // doesn't collide. Cancelling the name backs out to the choices.
             const d = new Date();
             const p = (x) => String(x).padStart(2, '0');
             const def = `MathPad-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
@@ -802,6 +806,14 @@ async function resolveSyncConflict(meta, title, message) {
             const entered = prompt("Name for this device's new Drive file:", def);
             if (entered === null) continue;   // cancelled → back to the choices
             const name = ensureJsonExt(entered.trim() || def);
+            // If that name is already taken, reconcile with it (same dialog)
+            // rather than letting Drive make a "<name> (1)" duplicate.
+            const files = await driveListFiles();
+            const existing = files && files.find(f => f.name === name);
+            if (existing) {
+                await reconcileExistingFile(existing, name, false);
+                return true;
+            }
             updateDriveStatus('Saving...');
             const ok = await driveSaveFile(UI.data, name, true);
             if (ok) {
@@ -810,7 +822,7 @@ async function resolveSyncConflict(meta, title, message) {
             } else {
                 updateDriveStatus('Sync error •');
             }
-            return;
+            return true;
         }
 
         // Keep mine: overwrite the canonical file. Match this remote checksum
@@ -820,8 +832,26 @@ async function resolveSyncConflict(meta, title, message) {
         DriveState.lastChecksum = meta.md5Checksum || DriveState.lastChecksum;
         DriveState.driveDirty = true;
         saveDriveState();
-        return;
+        return true;
     }
+}
+
+/**
+ * Saving to a name that already exists on Drive (another device made it, etc.).
+ * Bind to that file and reconcile via the shared 3-way dialog instead of
+ * letting Drive create a "<name> (1)" duplicate. Returns resolveSyncConflict's
+ * result (true acted / false dismissed). Used by Save As, the keep-both fork,
+ * and trashed-file recovery.
+ */
+async function reconcileExistingFile(existing, name, dismissable) {
+    DriveState.fileId = existing.id;
+    DriveState.fileName = name;
+    saveDriveState();
+    const meta = await driveGetMetadata(existing.id);
+    if (!meta) return false;
+    return await resolveSyncConflict(meta, 'A file already exists',
+        `A file named "${name}" already exists on Drive. How would you like to ` +
+        `combine it with this device's records?`, dismissable);
 }
 
 /**
@@ -877,7 +907,17 @@ async function resolveTrashedFile(trashedName) {
             name = ensureJsonExt(entered.trim() || def);
         }
 
-        // Recreate or new: create a fresh file with `name` and sync to it.
+        // A file of this name may already exist — e.g. another device already
+        // recreated the deleted file. Adopt it and reconcile rather than
+        // creating a duplicate (which Drive would name "<name> (1)").
+        const files = await driveListFiles();
+        const existing = files && files.find(f => f.name === name);
+        if (existing) {
+            await reconcileExistingFile(existing, name, false);
+            return;
+        }
+
+        // No collision: create a fresh file with `name` and sync to it.
         DriveState.fileName = name;
         saveDriveState();
         updateDriveStatus('Saving...');
@@ -1008,6 +1048,22 @@ async function flushDriveSync() {
         if (await driveSaveFile(UI.data)) {
             if (DriveState.dirtySeq === seq) clearDriveDirty();
         }
+    }
+}
+
+/**
+ * Run a user-initiated Drive operation (Save As / Open) while holding
+ * syncInProgress, so the periodic runSyncCycle can't fire inside it and stack
+ * a second "Drive has newer data" dialog on top of its async dialogs. No-ops
+ * if a cycle is already running.
+ */
+async function withSyncSuspended(fn) {
+    if (DriveState.syncInProgress) return;
+    DriveState.syncInProgress = true;
+    try {
+        return await fn();
+    } finally {
+        DriveState.syncInProgress = false;
     }
 }
 
@@ -1215,32 +1271,34 @@ function clearDriveStatusFlash() {
  * Handle opening a file from Drive picker.
  */
 async function handleDriveOpen() {
-    // Flush any pending changes to current file before switching
-    if (DriveState.driveDirty && DriveState.fileId && UI.data) {
-        updateDriveStatus('Saving...');
-        const saved = await driveSaveFile(UI.data);
-        if (saved) {
-            clearDriveDirty();
-        } else if (!confirm('Failed to save current file to Drive. Open new file anyway?')) {
-            updateDriveStatus();
-            return;
+    await withSyncSuspended(async () => {
+        // Flush any pending changes to current file before switching
+        if (DriveState.driveDirty && DriveState.fileId && UI.data) {
+            updateDriveStatus('Saving...');
+            const saved = await driveSaveFile(UI.data);
+            if (saved) {
+                clearDriveDirty();
+            } else if (!confirm('Failed to save current file to Drive. Open new file anyway?')) {
+                updateDriveStatus();
+                return;
+            }
         }
-    }
 
-    const picked = await openDriveFileChooser();
-    if (!picked) return;
+        const picked = await openDriveFileChooser();
+        if (!picked) return;
 
-    updateDriveStatus('Loading...');
-    const data = await driveLoadFile(picked.id);
-    if (data) {
-        DriveState.fileId = picked.id;
-        DriveState.fileName = picked.name;
-        saveDriveState();
-        applyDriveData(data);
-    } else {
-        updateDriveStatus();
-        setStatus('Failed to load from Drive', true, false);
-    }
+        updateDriveStatus('Loading...');
+        const data = await driveLoadFile(picked.id);
+        if (data) {
+            DriveState.fileId = picked.id;
+            DriveState.fileName = picked.name;
+            saveDriveState();
+            applyDriveData(data);
+        } else {
+            updateDriveStatus();
+            setStatus('Failed to load from Drive', true, false);
+        }
+    });
 }
 
 /**
@@ -1252,33 +1310,40 @@ async function handleDriveSaveAs() {
     const name = ensureJsonExt(entered.trim());
     if (!UI.data) return;
 
-    // If a file of that name already exists, offer to overwrite it rather than
-    // silently creating a duplicate (Drive allows same-named files). On
-    // overwrite, bind to and update that file; otherwise create a new one.
-    const files = await driveListFiles();
-    const existing = files && files.find(f => f.name === name);
-    let forceNew = true;
-    if (existing) {
-        if (!confirm(`A file named "${name}" already exists on Drive. Overwrite it?`)) {
-            updateDriveStatus();
+    await withSyncSuspended(async () => {
+        // If a file of that name already exists (Drive allows same-named files
+        // — e.g. another device made it), reconcile rather than creating a
+        // duplicate. Dismissable so the user can back out and pick a new name.
+        const files = await driveListFiles();
+        const existing = files && files.find(f => f.name === name);
+        if (existing) {
+            const prev = {
+                fileId: DriveState.fileId, fileName: DriveState.fileName,
+                lastChecksum: DriveState.lastChecksum, lastModifiedTime: DriveState.lastModifiedTime
+            };
+            const resolved = await reconcileExistingFile(existing, name, true);
+            if (!resolved) {
+                // Cancelled (or metadata fetch failed) — restore prior binding.
+                Object.assign(DriveState, prev);
+                saveDriveState();
+                updateDriveStatus();
+            }
             return;
         }
-        DriveState.fileId = existing.id;
-        DriveState.fileName = name;
-        saveDriveState();
-        forceNew = false;   // update the existing file instead of creating new
-    }
 
-    updateDriveStatus('Saving...');
-    const ok = await driveSaveFile(UI.data, name, forceNew);
-    if (ok) {
-        clearDriveDirty();
-        updateDriveStatus();
-        setStatus((existing ? 'Saved to Drive: ' : 'Saved to Drive as ') + name, false, false);
-    } else {
-        updateDriveStatus();
-        setStatus('Failed to save to Drive', true, false);
-    }
+        // No collision — create a new file and sync to it.
+        DriveState.fileName = name;
+        updateDriveStatus('Saving...');
+        const ok = await driveSaveFile(UI.data, name, true);
+        if (ok) {
+            clearDriveDirty();
+            updateDriveStatus();
+            setStatus('Saved to Drive as ' + name, false, false);
+        } else {
+            updateDriveStatus();
+            setStatus('Failed to save to Drive', true, false);
+        }
+    });
 }
 
 /**
