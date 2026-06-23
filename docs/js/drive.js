@@ -143,26 +143,25 @@ function driveSignIn(promptMode) {
     }
 
     _tokenPromise = new Promise((resolve) => {
-        // Timeout: if GIS blocks the popup, the callback never fires.
+        // Timeout: if GIS blocks the popup, neither callback fires.
         // 5s for silent renewal (iframe), 120s for interactive (account picker / consent).
         const timeoutMs = (promptMode === '') ? 5000 : 120000;
         let settled = false;
-        const timeout = setTimeout(() => {
-            if (!settled) {
-                settled = true;
-                _tokenPromise = null;
-                resolve(false);
-            }
-        }, timeoutMs);
-
-        DriveState.tokenClient.callback = (resp) => {
+        // Single settle path — always frees the in-flight guard so the next
+        // Sign In click can retry, whatever the outcome.
+        const settle = (result) => {
             if (settled) return;
             settled = true;
             clearTimeout(timeout);
             _tokenPromise = null;
+            resolve(result);
+        };
+        const timeout = setTimeout(() => settle(false), timeoutMs);
+
+        DriveState.tokenClient.callback = (resp) => {
             if (resp.error) {
                 console.error('Drive auth error:', resp.error);
-                resolve(false);
+                settle(false);
                 return;
             }
             DriveState.accessToken = resp.access_token;
@@ -171,8 +170,16 @@ function driveSignIn(promptMode) {
             // fetchUserEmail catches its own errors and never rejects.
             fetchUserEmail().then(() => {
                 saveDriveState();
-                resolve(true);
+                settle(true);
             });
+        };
+        // GIS routes user cancellation (closing the popup) and other non-OAuth
+        // failures here — e.g. err.type 'popup_closed' / 'popup_failed_to_open' —
+        // NOT through callback. Without this the promise would hang until the
+        // timeout and the in-flight guard would swallow further Sign In clicks.
+        DriveState.tokenClient.error_callback = (err) => {
+            console.warn('Drive auth dismissed:', err && err.type);
+            settle(false);
         };
         DriveState.tokenClient.requestAccessToken({
             prompt: promptMode || '',
