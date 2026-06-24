@@ -126,68 +126,70 @@ function saveDriveState() {
 
 // ---- Auth ----
 
-// In-flight token request promise (prevents concurrent popups)
-let _tokenPromise = null;
+// True while a token request is open (popup/iframe in flight). Stops the
+// incidental gesture-renewal from stacking a second popup. An explicit Sign In
+// click (requestDriveSignIn) clears it first, so a wedged request — e.g. GIS
+// went silent and called neither callback — can never swallow a user click.
+let _signInProgress = false;
 
 /**
- * Request an access token (one popup at most).
- * Uses stored email as hint to auto-select account when possible.
- * @param {string} [promptMode] - GIS prompt value: '' (auto), 'consent', 'select_account'
- * @returns {Promise<boolean>}
+ * Fire a token request (fire-and-forget — there is no returned promise to
+ * await). At most one request is open at a time. The outcome arrives via the
+ * GIS callbacks:
+ *   - success → store the token, then run the full post-sign-in sequence
+ *   - cancel / blocked / error → clear the guard and refresh the UI
+ * No timeout: there is nothing to "settle", and a wedged guard is cleared by
+ * the next explicit sign-in click (requestDriveSignIn) rather than a timer.
+ * @param {string} [promptMode] - GIS prompt: '' (auto), 'consent', 'select_account'
  */
 function driveSignIn(promptMode) {
-    if (_tokenPromise) return _tokenPromise;
+    if (!DriveState.tokenClient) return;
+    if (_signInProgress) return;
+    _signInProgress = true;
 
-    if (!DriveState.tokenClient) {
-        return Promise.resolve(false);
-    }
-
-    _tokenPromise = new Promise((resolve) => {
-        // Timeout: if GIS blocks the popup, neither callback fires.
-        // 5s for silent renewal (iframe), 120s for interactive (account picker / consent).
-        const timeoutMs = (promptMode === '') ? 5000 : 120000;
-        let settled = false;
-        // Single settle path — always frees the in-flight guard so the next
-        // Sign In click can retry, whatever the outcome.
-        const settle = (result) => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timeout);
-            _tokenPromise = null;
-            resolve(result);
-        };
-        const timeout = setTimeout(() => settle(false), timeoutMs);
-
-        DriveState.tokenClient.callback = (resp) => {
-            if (resp.error) {
-                console.error('Drive auth error:', resp.error);
-                settle(false);
-                return;
-            }
-            DriveState.accessToken = resp.access_token;
-            DriveState.tokenExpiry = Date.now() + (resp.expires_in * 1000);
-            console.log('Drive token obtained at', new Date().toLocaleTimeString(), 'expires', new Date(DriveState.tokenExpiry).toLocaleTimeString());
-            // fetchUserEmail catches its own errors and never rejects.
-            fetchUserEmail().then(() => {
-                saveDriveState();
-                settle(true);
-            });
-        };
-        // GIS routes user cancellation (closing the popup) and other non-OAuth
-        // failures here — e.g. err.type 'popup_closed' / 'popup_failed_to_open' —
-        // NOT through callback. Without this the promise would hang until the
-        // timeout and the in-flight guard would swallow further Sign In clicks.
-        DriveState.tokenClient.error_callback = (err) => {
-            console.warn('Drive auth dismissed:', err && err.type);
-            settle(false);
-        };
-        DriveState.tokenClient.requestAccessToken({
-            prompt: promptMode || '',
-            hint: DriveState.userEmail || ''
+    DriveState.tokenClient.callback = (resp) => {
+        _signInProgress = false;
+        if (resp.error) {
+            console.error('Drive auth error:', resp.error);
+            updateDriveUI();
+            return;
+        }
+        DriveState.accessToken = resp.access_token;
+        DriveState.tokenExpiry = Date.now() + (resp.expires_in * 1000);
+        console.log('Drive token obtained at', new Date().toLocaleTimeString(), 'expires', new Date(DriveState.tokenExpiry).toLocaleTimeString());
+        // fetchUserEmail catches its own errors and never rejects.
+        fetchUserEmail().then(() => {
+            saveDriveState();
+            onDriveSignedIn();   // un-gray + adopt (no-op if already bound) + sync + timer
         });
-    });
+    };
 
-    return _tokenPromise;
+    // GIS routes user cancellation (closing the popup) and other non-OAuth
+    // failures here — e.g. err.type 'popup_closed' / 'popup_failed_to_open' —
+    // NOT through callback. Just clear the guard and reflect the (still
+    // signed-out / "click to sync") state.
+    DriveState.tokenClient.error_callback = (err) => {
+        _signInProgress = false;
+        console.warn('Drive auth dismissed:', err && err.type);
+        updateDriveUI();
+    };
+
+    DriveState.tokenClient.requestAccessToken({
+        prompt: promptMode || '',
+        hint: DriveState.userEmail || ''
+    });
+}
+
+/**
+ * Explicit, user-initiated sign-in (Sign In button / avatar click). Clears any
+ * stale in-flight flag first, so the click is always an immediate retry — even
+ * if a previous request wedged (GIS returned neither callback). The incidental
+ * gesture-renewal path calls driveSignIn directly and DOES respect the guard.
+ * @param {string} [promptMode]
+ */
+function requestDriveSignIn(promptMode) {
+    _signInProgress = false;
+    driveSignIn(promptMode);
 }
 
 /**
@@ -276,18 +278,14 @@ let _lastRenewAttempt = 0;
  */
 function maybeRenewToken() {
     if (!isDriveSignedIn() || !DriveState.userEmail) return;
-    if (_tokenPromise) return;  // a token request is already in flight
+    if (_signInProgress) return;  // a token request is already in flight
     if (DriveState.accessToken && Date.now() < DriveState.tokenExpiry - RENEW_MARGIN_MS) return;
     const now = Date.now();
     if (now - _lastRenewAttempt < RENEW_THROTTLE_MS) return;
     _lastRenewAttempt = now;
-    // Synchronous call within the gesture so requestAccessToken keeps the
-    // user activation; the 5s ('') timeout bails fast if it can't complete.
-    driveSignIn('').then((ok) => {
-        if (!ok) return;
-        updateDriveUI();   // un-gray the avatar (isDriveAuthenticated() is true again)
-        runSyncCycle();
-    });
+    // Synchronous call within the gesture so requestAccessToken keeps the user
+    // activation. Fire-and-forget: the success callback runs onDriveSignedIn.
+    driveSignIn('');
 }
 
 async function fetchUserEmail() {
@@ -674,7 +672,8 @@ async function adoptCanonicalFile() {
         const who = meta.lastModifyingUser || 'unknown';
         await resolveSyncConflict(meta, 'Sync with Google Drive',
             `This device has its own records, and Drive already has a file ` +
-            `"${meta.name}" (modified ${ago} by ${who}). How would you like to combine them?`);
+            `"${meta.name}" (modified ${ago} by ${who}). Which version do you want to keep?`,
+            false, true);
     }
 }
 
@@ -766,8 +765,16 @@ function showChoiceDialog({ title, message, options, dismissable = false }) {
  * action taken); otherwise the three choices are the only exits. Returns
  * true once a choice is acted on.
  */
-async function resolveSyncConflict(meta, title, message, dismissable = false) {
+async function resolveSyncConflict(meta, title, message, dismissable = false, allowChooseOther = false) {
     const n = (UI.data && UI.data.records) ? UI.data.records.length : 0;
+
+    // "Keep both — sync to an existing file" is only useful if there's a file
+    // other than the one currently bound to switch to.
+    let canChoose = false;
+    if (allowChooseOther) {
+        const allFiles = await driveListFiles();
+        canChoose = !!(allFiles && allFiles.some(f => f.id !== DriveState.fileId));
+    }
 
     // Loop so cancelling the "keep both" name prompt goes BACK to the choices
     // rather than committing — the only terminal exits are an actual decision.
@@ -782,17 +789,41 @@ async function resolveSyncConflict(meta, title, message, dismissable = false) {
                     sub: `Replace this device's ${n} record${n !== 1 ? 's' : ''} with the Drive file's contents.`
                 },
                 {
-                    key: 'both', label: 'Keep both',
-                    sub: "Save this device's records as a new Drive file and sync with that. The existing file is left untouched."
-                },
-                {
                     key: 'mine', label: 'Keep mine',
                     sub: "Overwrite the Drive file with this device's records."
-                }
+                },
+                {
+                    key: 'both', label: 'Keep both — sync to a new file',
+                    sub: "Save this device's records as a new Drive file and sync with that. The existing file is left untouched."
+                },
+                ...(canChoose ? [{
+                    key: 'choose', label: 'Keep both — sync to an existing file',
+                    sub: 'Leave this file untouched and sync this device with a different existing Drive file, then choose how to resolve it.'
+                }] : [])
             ]
         });
 
         if (choice === null) return false;   // dismissed (only when dismissable)
+
+        if (choice === 'choose') {
+            // "Keep both — sync to an existing file": leave the current file
+            // untouched, pick a different existing one, bind to it, and re-show
+            // this dialog to resolve against THAT file (load it / keep mine /
+            // fork / pick yet another). Replaces the old keep-both-then-type-
+            // the-existing-name workaround.
+            const picked = await openDriveFileChooser();
+            if (!picked) continue;   // dismissed the picker → back to the choices
+            DriveState.fileId = picked.id;
+            DriveState.fileName = picked.name;
+            saveDriveState();
+            const pmeta = await driveGetMetadata(picked.id);
+            if (!pmeta) { updateDriveStatus('Sync error •'); return true; }
+            const ago = formatTimeAgo(pmeta.modifiedTime);
+            const who = pmeta.lastModifyingUser || 'unknown';
+            return await resolveSyncConflict(pmeta, 'Sync with Google Drive',
+                `Drive file "${pmeta.name}" was modified ${ago} by ${who}. ` +
+                `Which version do you want to keep?`, dismissable, true);
+        }
 
         if (choice === 'load') {
             updateDriveStatus('Loading...');
@@ -816,9 +847,9 @@ async function resolveSyncConflict(meta, title, message, dismissable = false) {
             // If that name is already taken, reconcile with it (same dialog)
             // rather than letting Drive make a "<name> (1)" duplicate.
             const files = await driveListFiles();
-            const existing = files && files.find(f => f.name === name);
+            const existing = findByName(files, name);
             if (existing) {
-                await reconcileExistingFile(existing, name, false);
+                await reconcileExistingFile(existing, false);
                 return true;
             }
             updateDriveStatus('Saving...');
@@ -850,15 +881,27 @@ async function resolveSyncConflict(meta, title, message, dismissable = false) {
  * result (true acted / false dismissed). Used by Save As, the keep-both fork,
  * and trashed-file recovery.
  */
-async function reconcileExistingFile(existing, name, dismissable) {
+async function reconcileExistingFile(existing, dismissable) {
     DriveState.fileId = existing.id;
-    DriveState.fileName = name;
+    DriveState.fileName = existing.name;   // adopt the existing file's actual name/casing
     saveDriveState();
     const meta = await driveGetMetadata(existing.id);
     if (!meta) return false;
     return await resolveSyncConflict(meta, 'A file already exists',
-        `A file named "${name}" already exists on Drive. How would you like to ` +
-        `combine it with this device's records?`, dismissable);
+        `A file named "${existing.name}" already exists on Drive. ` +
+        `Which version do you want to keep?`, dismissable);
+}
+
+/**
+ * Case-insensitive filename lookup in a Drive file list. Drive permits multiple
+ * files with the same name differing only in case, so a collision check must
+ * fold case — otherwise a "Foo.json" vs "foo.json" mismatch slips through and
+ * Drive creates a "<name> (1)" duplicate.
+ */
+function findByName(files, name) {
+    if (!files) return null;
+    const lower = name.toLowerCase();
+    return files.find(f => f.name.toLowerCase() === lower) || null;
 }
 
 /**
@@ -918,9 +961,9 @@ async function resolveTrashedFile(trashedName) {
         // recreated the deleted file. Adopt it and reconcile rather than
         // creating a duplicate (which Drive would name "<name> (1)").
         const files = await driveListFiles();
-        const existing = files && files.find(f => f.name === name);
+        const existing = findByName(files, name);
         if (existing) {
-            await reconcileExistingFile(existing, name, false);
+            await reconcileExistingFile(existing, false);
             return;
         }
 
@@ -1015,7 +1058,7 @@ async function runSyncCycle() {
             const ago = formatTimeAgo(meta.modifiedTime);
             const who = meta.lastModifyingUser || 'unknown';
             await resolveSyncConflict(meta, 'Drive has newer data',
-                `The Drive file "${meta.name}" was updated ${ago} by ${who}. How would you like to combine it with this device's records?`);
+                `The Drive file "${meta.name}" was updated ${ago} by ${who}. Which version do you want to keep?`);
         } else if (DriveState.driveDirty && UI.data) {
             // Push local data to Drive
             await pushLocalToDrive();
@@ -1322,13 +1365,13 @@ async function handleDriveSaveAs() {
         // — e.g. another device made it), reconcile rather than creating a
         // duplicate. Dismissable so the user can back out and pick a new name.
         const files = await driveListFiles();
-        const existing = files && files.find(f => f.name === name);
+        const existing = findByName(files, name);
         if (existing) {
             const prev = {
                 fileId: DriveState.fileId, fileName: DriveState.fileName,
                 lastChecksum: DriveState.lastChecksum, lastModifiedTime: DriveState.lastModifiedTime
             };
-            const resolved = await reconcileExistingFile(existing, name, true);
+            const resolved = await reconcileExistingFile(existing, true);
             if (!resolved) {
                 // Cancelled (or metadata fetch failed) — restore prior binding.
                 Object.assign(DriveState, prev);
@@ -1390,6 +1433,7 @@ function closeDriveDropdown() {
 // Export to global scope
 window.initDriveModule = initDriveModule;
 window.driveSignIn = driveSignIn;
+window.requestDriveSignIn = requestDriveSignIn;
 window.onDriveSignedIn = onDriveSignedIn;
 window.maybeRenewToken = maybeRenewToken;
 window.driveSignOut = driveSignOut;

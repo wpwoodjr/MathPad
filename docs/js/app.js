@@ -90,19 +90,17 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupDriveListeners() {
     const signInBtn = document.getElementById('btn-drive-signin');
     if (signInBtn) {
-        signInBtn.addEventListener('click', async () => {
-            const ok = await driveSignIn();
-            if (ok) await onDriveSignedIn();
+        signInBtn.addEventListener('click', () => {
+            requestDriveSignIn();
         });
     }
 
     const avatarBtn = document.getElementById('btn-drive-menu');
     if (avatarBtn) {
-        avatarBtn.addEventListener('click', async (e) => {
+        avatarBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (!isDriveAuthenticated()) {
-                const ok = await driveSignIn();
-                if (ok) await onDriveSignedIn();
+                requestDriveSignIn();
             }
             toggleDriveDropdown();
         });
