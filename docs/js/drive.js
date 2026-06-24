@@ -626,23 +626,24 @@ function stopDriveSync() {
  */
 async function findCanonicalFile() {
     const folderId = await ensureMathPadFolder();
-    if (!folderId) return null;
+    if (!folderId) return false;   // couldn't determine (folder lookup failed)
     const q = encodeURIComponent(
         `name = '${CANONICAL_FILE_NAME}' and '${folderId}' in parents and trashed = false`
     );
     const resp = await driveFetch(
         `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&orderBy=modifiedTime desc&pageSize=1`
     );
-    if (!resp || !resp.ok) return null;
+    if (!resp || !resp.ok) return false;   // couldn't determine (query failed)
     try {
         const data = await resp.json();
         if (data.files && data.files.length > 0) {
             return { id: data.files[0].id, name: data.files[0].name };
         }
+        return null;   // query succeeded: no canonical file exists
     } catch (e) {
         console.error('Drive canonical-file search error:', e);
+        return false;  // couldn't determine (parse error)
     }
-    return null;
 }
 
 /**
@@ -650,7 +651,8 @@ async function findCanonicalFile() {
  * canonical file, then resolve the first-encounter conflict explicitly —
  * this device's records and the Drive file are two datasets meeting for the
  * first time, and we never replace local silently. If no canonical file
- * exists yet, do nothing — the first dirty sync creates it.
+ * exists yet, create it immediately — signing in should persist to Drive
+ * right away, not wait for the first edit to flip the dirty flag.
  *
  * One-shot: the three-way runs here (right after sign-in), not in the periodic
  * runSyncCycle, so it can't re-prompt every 15s. Each outcome leaves clean
@@ -660,7 +662,25 @@ async function adoptCanonicalFile() {
     if (DriveState.fileId) return;        // already bound to a file
     if (!isDriveAuthenticated()) return;
     const file = await findCanonicalFile();
-    if (!file) return;
+    if (file === false) return;   // lookup failed — try again on a later sign-in
+    if (!file) {
+        // No canonical file on Drive yet.
+        if (!UI.data) return;
+        const files = await driveListFiles();
+        if (!files) return;   // couldn't list — defer to a later sign-in
+        if (files.length === 0) {
+            // Nothing on Drive — create the canonical now with this device's
+            // records so signing in persists immediately (driveSaveFile creates
+            // MathPad.json when fileId is unset), not waiting for the first edit.
+            await pushLocalToDrive();
+        } else {
+            // Other files exist — the user's real data may be in one of them,
+            // so ask rather than silently seeding a fresh canonical that this
+            // device (and others) would then adopt over the real data.
+            await resolveNoCanonical(files);
+        }
+        return;
+    }
     DriveState.fileId = file.id;
     DriveState.fileName = file.name;
     saveDriveState();
@@ -674,6 +694,67 @@ async function adoptCanonicalFile() {
             `This device has its own records, and Drive already has a file ` +
             `"${meta.name}" (modified ${ago} by ${who}). Which version do you want to keep?`,
             false, true);
+    }
+}
+
+/**
+ * Sign-in found no MathPad.json but the user has other Drive files — their real
+ * data may live in one, so don't silently seed a fresh canonical. Offer to
+ * create MathPad.json from this device's records, OR pick an existing file to
+ * sync with (then resolve against it). Non-dismissable: signing in must end
+ * bound to a file. Loops so backing out of the picker returns to the choices.
+ */
+async function resolveNoCanonical(files) {
+    while (true) {
+        const choice = await showChoiceDialog({
+            title: 'Set up Drive sync',
+            message: `You don't have a "${CANONICAL_FILE_NAME}" yet, but you have ` +
+                `${files.length} other file${files.length !== 1 ? 's' : ''} in your Drive. ` +
+                `How should this device sync?`,
+            options: [
+                {
+                    key: 'choose', primary: true, label: 'Use an existing file…',
+                    sub: 'Sync this device with one of your existing Drive files (likely where your records already are).'
+                },
+                {
+                    key: 'create', label: `Create ${CANONICAL_FILE_NAME}`,
+                    sub: `Save this device's records as ${CANONICAL_FILE_NAME}, the default file other devices adopt automatically.`
+                },
+                {
+                    key: 'new', label: 'Sync to a new file…',
+                    sub: "Save this device's records to a new file with a name you choose."
+                }
+            ]
+        });
+
+        if (choice === 'create') {
+            await pushLocalToDrive();
+            return;
+        }
+
+        if (choice === 'new') {
+            if (await syncToNewFile() === 'cancelled') continue;   // back to the choices
+            return;
+        }
+
+        if (choice === 'choose') {
+            // Pick an existing file, bind to it, and resolve against it (load it
+            // / keep mine / fork / pick another) — same path as the adoption
+            // dialog's "Keep both — sync to an existing file".
+            const picked = await openDriveFileChooser();
+            if (!picked) continue;   // dismissed the picker → back to the choices
+            DriveState.fileId = picked.id;
+            DriveState.fileName = picked.name;
+            saveDriveState();
+            const pmeta = await driveGetMetadata(picked.id);
+            if (!pmeta) { updateDriveStatus('Sync error •'); return; }
+            const ago = formatTimeAgo(pmeta.modifiedTime);
+            const who = pmeta.lastModifyingUser || 'unknown';
+            await resolveSyncConflict(pmeta, 'Sync with Google Drive',
+                `Drive file "${pmeta.name}" was modified ${ago} by ${who}. ` +
+                `Which version do you want to keep?`, false, true);
+            return;
+        }
     }
 }
 
@@ -749,6 +830,39 @@ function showChoiceDialog({ title, message, options, dismissable = false }) {
         overlay.appendChild(content);
         document.body.appendChild(overlay);
     });
+}
+
+/**
+ * Prompt for a name and save this device's records to a NEW Drive file, then
+ * sync with it (driveSaveFile forceNew repoints fileId). The date + local
+ * HHMMSS default avoids collisions; a name collision (case-insensitive)
+ * reconciles with the existing file instead of making a "<name> (1)" duplicate.
+ * Returns 'cancelled' if the user backs out of the name prompt (caller should
+ * loop back to its choices), otherwise 'done'.
+ */
+async function syncToNewFile() {
+    const d = new Date();
+    const p = (x) => String(x).padStart(2, '0');
+    const def = `MathPad-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+        `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
+    const entered = prompt("Name for this device's new Drive file:", def);
+    if (entered === null) return 'cancelled';
+    const name = ensureJsonExt(entered.trim() || def);
+    const files = await driveListFiles();
+    const existing = findByName(files, name);
+    if (existing) {
+        await reconcileExistingFile(existing, false);
+        return 'done';
+    }
+    updateDriveStatus('Saving...');
+    const ok = await driveSaveFile(UI.data, name, true);
+    if (ok) {
+        clearDriveDirty();
+        updateDriveStatus(savedDriveStatus());
+    } else {
+        updateDriveStatus('Sync error •');
+    }
+    return 'done';
 }
 
 /**
@@ -834,32 +948,9 @@ async function resolveSyncConflict(meta, title, message, dismissable = false, al
         }
 
         if (choice === 'both') {
-            // Fork to a NEW file; this device now syncs to it (driveSaveFile
-            // with forceNew repoints fileId). Date + local HHMMSS so the default
-            // doesn't collide. Cancelling the name backs out to the choices.
-            const d = new Date();
-            const p = (x) => String(x).padStart(2, '0');
-            const def = `MathPad-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
-                `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
-            const entered = prompt("Name for this device's new Drive file:", def);
-            if (entered === null) continue;   // cancelled → back to the choices
-            const name = ensureJsonExt(entered.trim() || def);
-            // If that name is already taken, reconcile with it (same dialog)
-            // rather than letting Drive make a "<name> (1)" duplicate.
-            const files = await driveListFiles();
-            const existing = findByName(files, name);
-            if (existing) {
-                await reconcileExistingFile(existing, false);
-                return true;
-            }
-            updateDriveStatus('Saving...');
-            const ok = await driveSaveFile(UI.data, name, true);
-            if (ok) {
-                clearDriveDirty();
-                updateDriveStatus(savedDriveStatus());
-            } else {
-                updateDriveStatus('Sync error •');
-            }
+            // Fork to a new file (this device then syncs it). Cancelling the
+            // name prompt backs out to the choices.
+            if (await syncToNewFile() === 'cancelled') continue;
             return true;
         }
 
