@@ -1029,18 +1029,32 @@ async function resolveTrashedFile(trashedName) {
     DriveState.lastModifiedTime = null;
     localStorage.removeItem(DRIVE_KEYS.fileId);
 
-    // Other files enable a "use an existing file" option — the user's real data
-    // may now live in one of them. (Lists only app-created files; a same-name
-    // MathPad.json the user hand-copied in the Drive UI is invisible — see
-    // driveListFiles.)
+    // A DIFFERENTLY-named file enables a "use an existing file" option — the
+    // user's real data may live in one. A file with the SAME name as the trashed
+    // one is excluded: "Recreate it" already reconciles to that (its create
+    // branch does a findByName), so offering both would point at the same file.
+    // (Lists only app-created files; a same-name MathPad.json the user
+    // hand-copied in the Drive UI is invisible — see driveListFiles.)
     const otherFiles = await driveListFiles();
-    const canChoose = !!(otherFiles && otherFiles.length > 0);
+    const lowerTrashed = trashedName.toLowerCase();
+    const sameNameExists = !!(otherFiles && otherFiles.some(f => f.name.toLowerCase() === lowerTrashed));
+    const canChoose = !!(otherFiles && otherFiles.some(f => f.name.toLowerCase() !== lowerTrashed));
 
+    // When a live file already shares the trashed file's name, "recreate" really
+    // means "adopt that existing file and reconcile" — the create branch's
+    // findByName lands it in the 3-way dialog rather than making a fresh file —
+    // so label it honestly. (Same 'recreate' key either way; only the wording
+    // changes.)
     const options = [
-        {
-            key: 'recreate', primary: true, label: 'Recreate it',
-            sub: `Save to a fresh "${trashedName}" and keep syncing.`
-        }
+        sameNameExists
+            ? {
+                key: 'recreate', primary: true, label: `Use the existing "${trashedName}"`,
+                sub: `A "${trashedName}" already exists on Drive — sync with it and choose which version to keep.`
+            }
+            : {
+                key: 'recreate', primary: true, label: 'Recreate it',
+                sub: `Save to a fresh "${trashedName}" and keep syncing.`
+            }
     ];
     if (canChoose) {
         options.push({
