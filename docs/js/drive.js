@@ -317,6 +317,16 @@ function ensureJsonExt(name) {
     return /\.json$/i.test(name) ? name : name + '.json';
 }
 
+// A unique, timestamped default for a new Drive file (e.g.
+// MathPad-2026-06-25-143005.json). Used everywhere we prompt for a new-file
+// name so two devices saving at once don't collide on a shared default.
+function defaultNewFileName() {
+    const d = new Date();
+    const p = (x) => String(x).padStart(2, '0');
+    return `MathPad-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+        `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
+}
+
 /**
  * Find or create the "MathPad" folder in the user's Drive root.
  * Caches the folder ID in DriveState and localStorage.
@@ -622,7 +632,8 @@ function stopDriveSync() {
 
 /**
  * Find the canonical MathPad file in the MathPad folder (by name, most
- * recently modified if duplicates exist). Returns { id, name } or null.
+ * recently modified if duplicates exist). Tri-state: { id, name } found / null
+ * confirmed-none / false lookup-failed.
  */
 async function findCanonicalFile() {
     const folderId = await ensureMathPadFolder();
@@ -698,6 +709,29 @@ async function adoptCanonicalFile() {
 }
 
 /**
+ * Pick an existing Drive file, bind to it, and run the 3-way sync conflict
+ * against it (load it / keep mine / fork / pick another). Returns true when the
+ * device ends bound+resolved (caller should finish), or false when the picker
+ * was dismissed (caller should loop back to its own choices). Shared by the
+ * "no canonical" and "trashed file" setup dialogs.
+ */
+async function chooseExistingFileAndResolve() {
+    const picked = await openDriveFileChooser();
+    if (!picked) return false;   // dismissed the picker
+    DriveState.fileId = picked.id;
+    DriveState.fileName = picked.name;
+    saveDriveState();
+    const pmeta = await driveGetMetadata(picked.id);
+    if (!pmeta) { updateDriveStatus('Sync error •'); return true; }
+    const ago = formatTimeAgo(pmeta.modifiedTime);
+    const who = pmeta.lastModifyingUser || 'unknown';
+    await resolveSyncConflict(pmeta, 'Sync with Google Drive',
+        `Drive file "${pmeta.name}" was modified ${ago} by ${who}. ` +
+        `Which version do you want to keep?`, false, true);
+    return true;
+}
+
+/**
  * Sign-in found no MathPad.json but the user has other Drive files — their real
  * data may live in one, so don't silently seed a fresh canonical. Offer to
  * create MathPad.json from this device's records, OR pick an existing file to
@@ -738,22 +772,10 @@ async function resolveNoCanonical(files) {
         }
 
         if (choice === 'choose') {
-            // Pick an existing file, bind to it, and resolve against it (load it
-            // / keep mine / fork / pick another) — same path as the adoption
-            // dialog's "Keep both — sync to an existing file".
-            const picked = await openDriveFileChooser();
-            if (!picked) continue;   // dismissed the picker → back to the choices
-            DriveState.fileId = picked.id;
-            DriveState.fileName = picked.name;
-            saveDriveState();
-            const pmeta = await driveGetMetadata(picked.id);
-            if (!pmeta) { updateDriveStatus('Sync error •'); return; }
-            const ago = formatTimeAgo(pmeta.modifiedTime);
-            const who = pmeta.lastModifyingUser || 'unknown';
-            await resolveSyncConflict(pmeta, 'Sync with Google Drive',
-                `Drive file "${pmeta.name}" was modified ${ago} by ${who}. ` +
-                `Which version do you want to keep?`, false, true);
-            return;
+            // Pick an existing file, bind to it, and resolve against it — same
+            // path as the adoption dialog's "Keep both — sync to an existing file".
+            if (await chooseExistingFileAndResolve()) return;
+            continue;   // dismissed the picker → back to the choices
         }
     }
 }
@@ -841,10 +863,7 @@ function showChoiceDialog({ title, message, options, dismissable = false }) {
  * loop back to its choices), otherwise 'done'.
  */
 async function syncToNewFile() {
-    const d = new Date();
-    const p = (x) => String(x).padStart(2, '0');
-    const def = `MathPad-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
-        `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
+    const def = defaultNewFileName();
     const entered = prompt("Name for this device's new Drive file:", def);
     if (entered === null) return 'cancelled';
     const name = ensureJsonExt(entered.trim() || def);
@@ -996,9 +1015,12 @@ function findByName(files, name) {
 }
 
 /**
- * The synced file was deleted in the Drive UI (trashed). Unbind from it and
- * ask what to do — recreate the same file, save to a new one, or stop
- * syncing entirely (sign out). No "signed in but not syncing" limbo state.
+ * The synced file was deleted in the Drive UI (trashed). Unbind from it and ask
+ * what to do — recreate the same file, use one of the user's other Drive files,
+ * save to a new one, or stop syncing entirely (sign out). No "signed in but not
+ * syncing" limbo state. If "Recreate" (or "Save to a new file") lands on a name
+ * that already exists, the create branch reconciles via the 3-way dialog instead
+ * of making a duplicate — the user, not an up-front auto-adopt, makes that call.
  */
 async function resolveTrashedFile(trashedName) {
     // Unbind from the trashed file up front.
@@ -1007,26 +1029,49 @@ async function resolveTrashedFile(trashedName) {
     DriveState.lastModifiedTime = null;
     localStorage.removeItem(DRIVE_KEYS.fileId);
 
+    // Other files enable a "use an existing file" option — the user's real data
+    // may now live in one of them. (Lists only app-created files; a same-name
+    // MathPad.json the user hand-copied in the Drive UI is invisible — see
+    // driveListFiles.)
+    const otherFiles = await driveListFiles();
+    const canChoose = !!(otherFiles && otherFiles.length > 0);
+
+    const options = [
+        {
+            key: 'recreate', primary: true, label: 'Recreate it',
+            sub: `Save to a fresh "${trashedName}" and keep syncing.`
+        }
+    ];
+    if (canChoose) {
+        options.push({
+            key: 'choose', label: 'Use an existing file…',
+            sub: 'Sync this device with one of your other Drive files instead.'
+        });
+    }
+    options.push(
+        {
+            key: 'new', label: 'Save to a new file',
+            sub: 'Pick a new name; this device syncs to that file instead.'
+        },
+        {
+            key: 'stop', label: 'Stop syncing and sign out',
+            sub: 'Leave it deleted and sign out of Google Drive.'
+        }
+    );
+
     while (true) {
         const choice = await showChoiceDialog({
             title: 'Drive file was deleted',
             message: `The Drive file "${trashedName}" was moved to Trash. ` +
                 `What would you like to do with this device's records?`,
-            options: [
-                {
-                    key: 'recreate', primary: true, label: 'Recreate it',
-                    sub: `Save to a fresh "${trashedName}" and keep syncing.`
-                },
-                {
-                    key: 'new', label: 'Save to a new file',
-                    sub: 'Pick a new name; this device syncs to that file instead.'
-                },
-                {
-                    key: 'stop', label: 'Stop syncing and sign out',
-                    sub: 'Leave it deleted and sign out of Google Drive.'
-                }
-            ]
+            options
         });
+
+        if (choice === 'choose') {
+            // Pick an existing file, bind to it, and resolve against it.
+            if (await chooseExistingFileAndResolve()) return;
+            continue;   // dismissed the picker → back to the choices
+        }
 
         if (choice === 'stop') {
             // Clear dirty first so driveSignOut's flush doesn't recreate the
@@ -1039,10 +1084,7 @@ async function resolveTrashedFile(trashedName) {
 
         let name = trashedName;
         if (choice === 'new') {
-            const d = new Date();
-            const p = (x) => String(x).padStart(2, '0');
-            const def = `MathPad-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
-                `-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
+            const def = defaultNewFileName();
             const entered = prompt('Name for the new Drive file:', def);
             if (entered === null) continue;   // cancelled → back to the choices
             name = ensureJsonExt(entered.trim() || def);
@@ -1212,6 +1254,14 @@ async function withSyncSuspended(fn) {
 
 /**
  * List files in the MathPad folder (falls back to all Drive files).
+ *
+ * Hard limit of the drive.file scope: the app can only ever see files it
+ * CREATED or that the user explicitly OPENED through the app. A MathPad.json the
+ * user made by copying/duplicating in the Drive web UI was neither, so it is
+ * invisible here by design — files.list won't return it and files.get on its id
+ * would 403. There's no client-side way around it without the Google Picker
+ * (which grants per-file access on selection). Normal cross-device sync is
+ * unaffected: every file the app makes is app-created and thus visible.
  * @returns {Promise<Array<{id: string, name: string, modifiedTime: string}>|null>}
  */
 async function driveListFiles() {
@@ -1446,9 +1496,13 @@ async function handleDriveOpen() {
  * Handle saving as a new file on Drive.
  */
 async function handleDriveSaveAs() {
-    const entered = prompt('File name:', DriveState.fileName || CANONICAL_FILE_NAME);
-    if (!entered || !entered.trim()) return;
-    const name = ensureJsonExt(entered.trim());
+    // Default to a fresh, unique name — "Save As" creates a NEW file, so
+    // pre-filling the current file's name would invite an accidental
+    // same-name collision/reconcile instead of a new file.
+    const def = defaultNewFileName();
+    const entered = prompt('File name:', def);
+    if (entered === null) return;
+    const name = ensureJsonExt(entered.trim() || def);
     if (!UI.data) return;
 
     await withSyncSuspended(async () => {
