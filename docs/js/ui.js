@@ -1479,7 +1479,14 @@ async function handleFileSelect(e) {
     try {
         setStatus('Importing...', false, false);
         const text = await readTextFile(file);
-        UI.data = importFromText(text, UI.data, { clearExisting: true });
+        // A .json file is a MathPad data file (e.g. a MathPad.json copied out of
+        // Drive); anything else is the PalmOS-style .txt export format. Fall back
+        // to sniffing the content for files with no/odd extension.
+        const isJson = /\.json$/i.test(file.name) ||
+            (!/\.txt$/i.test(file.name) && text.trim().startsWith('{'));
+        UI.data = isJson
+            ? importFromJson(text)
+            : importFromText(text, UI.data, { clearExisting: true });
         backfillRecordTimestamps(UI.data);
         saveData(UI.data);
 

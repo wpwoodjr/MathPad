@@ -1734,7 +1734,7 @@ table("vv Investment growth, $5,000/yr at 7%") = {
 "*Import"
 ---
 
-"The 'Import' button opens a file picker. Pick a previously-exported MathPad .txt file and confirm — IMPORT REPLACES ALL EXISTING RECORDS, so export first if you want to keep what you have."
+"The 'Import' button opens a file picker. Pick a previously-exported MathPad .txt file, or a MathPad .json data file (for example one you downloaded from your Google Drive), and confirm — IMPORT REPLACES ALL EXISTING RECORDS, so export first if you want to keep what you have."
 
 "The exported text format is also accepted from the original 1997 PalmOS MathPad's MpExport utility, so old PalmOS archives can be imported as-is."
 
@@ -2879,6 +2879,42 @@ function importFromText(text, existingData = null, options = {}) {
 }
 
 /**
+ * Import a MathPad JSON data file (the same shape stored in localStorage and on
+ * Drive — `{ records, categories, settings, version }`). Lets a user re-import a
+ * MathPad.json they downloaded/copied out of Drive, which the drive.file scope
+ * can't otherwise surface to the app. Returns a ready-to-use data object;
+ * throws (with a friendly message) if the text isn't a MathPad data file.
+ */
+function importFromJson(jsonText) {
+    let data;
+    try {
+        data = JSON.parse(jsonText);
+    } catch (e) {
+        throw new Error('Not valid JSON');
+    }
+    if (!data || typeof data !== 'object' || !Array.isArray(data.records)) {
+        throw new Error('Not a MathPad data file (missing records array)');
+    }
+
+    // Defensive defaults so a partial/older file doesn't crash the UI rebuild,
+    // which reads data.settings / data.categories.
+    if (!data.settings || typeof data.settings !== 'object' || !Array.isArray(data.categories)) {
+        const defaults = createDefaultData();
+        if (!data.settings || typeof data.settings !== 'object') data.settings = defaults.settings;
+        if (!Array.isArray(data.categories)) data.categories = defaults.categories;
+    }
+
+    // Same normalization loadData applies to localStorage data, so a file from
+    // an older app version loads cleanly.
+    if (!data.version || data.version < STORAGE_VERSION) {
+        data = migrateData(data);
+    } else {
+        ensureDefaultSettingsRecord(data);
+    }
+    return backfillRecordTimestamps(data);
+}
+
+/**
  * Download text as a file
  */
 function downloadTextFile(text, filename = 'mathpad_export.txt') {
@@ -3001,7 +3037,7 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         STORAGE_KEY, createDefaultData, isReferenceRecord, isReferenceTitle, generateId,
         loadData, saveData, debouncedSave, stripStaleSections, cleanDataForSave,
-        exportToText, importFromText, downloadTextFile, readTextFile,
+        exportToText, importFromText, importFromJson, downloadTextFile, readTextFile,
         createRecord, deleteRecord, findRecord,
         deleteCategory, getRecordsByCategory
     };
