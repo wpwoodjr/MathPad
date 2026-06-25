@@ -1521,26 +1521,39 @@ function handleExport() {
 }
 
 /**
- * Handle reset to defaults
+ * Handle reset to defaults. Offers two choices (default = refresh-only):
+ *  - refresh the built-in tutorial/example records, keeping the user's own
+ *    records (and their Constants/Functions), or
+ *  - erase everything and restore all defaults.
  */
-function handleReset() {
-    const confirmed = confirm(
-        'Reset to default records?\n\n' +
-        'This will DELETE ALL your records and restore the original examples.\n\n' +
-        'Consider exporting your records first if you want to keep them.'
-    );
+async function handleReset() {
+    const choice = await showChoiceDialog({
+        title: 'Reset records',
+        message: 'Restore the built-in tutorial and example records?',
+        dismissable: true,
+        options: [
+            {
+                key: 'refresh', primary: true, label: 'Refresh built-in records only',
+                sub: "Restore the tutorials and examples to their latest versions. Your own records — and your Constants and Functions — are kept."
+            },
+            {
+                key: 'all', label: 'Reset everything',
+                sub: 'Erase ALL records and restore the original defaults. Export first if you want to keep anything.'
+            }
+        ]
+    });
+    if (!choice) return;                 // dismissed
+    const fullReset = (choice === 'all');
 
-    if (confirmed) {
-        destroyAllEditors();
+    destroyAllEditors();
 
-        // Reset data to defaults; resetUIForData opens the default record
-        // (lastRecordId set by createDefaultData), or the first one
-        UI.data = createDefaultData();
-        saveData(UI.data);
-        resetUIForData();
+    // resetUIForData opens lastRecordId (preserved on a refresh, or the default
+    // Welcome record on a full reset), falling back to the first record.
+    UI.data = resetDefaultRecords(UI.data, { fullReset });
+    saveData(UI.data);
+    resetUIForData();
 
-        setStatus('Reset to default records', false, false);
-    }
+    setStatus(fullReset ? 'Reset to default records' : 'Refreshed built-in records', false, false);
 }
 
 /**

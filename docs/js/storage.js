@@ -58,10 +58,10 @@ const DEFAULT_SETTINGS_RECORD = {
  * Default data structure
  */
 function createDefaultData() {
-    // Generate Welcome record ID first so we can set it as the initial record
+    // Welcome is the initial selection; its real id is stamped in below.
     const welcomeRecordId = generateId();
 
-    return backfillRecordTimestamps({
+    const data = backfillRecordTimestamps({
         version: STORAGE_VERSION,
         records: [
             {
@@ -1613,7 +1613,7 @@ table("vv Investment growth, $5,000/yr at 7%") = {
 "  •  + New Record         creates a blank record in the 'Unfiled' category"
 "  •  Import               loads records from a text file (covered in 6.3)"
 "  •  Export               saves all records to a text file (covered in 6.3)"
-"  •  Reset                wipes everything back to the default starter records"
+"  •  Reset                refreshes the built-in tutorial/example records (or, optionally, wipes everything back to defaults)"
 
 "To move a record into a different category, open its detail panel (⚙ button in the header) and pick from the Category dropdown. The dropdown also includes a 'New category…' option that prompts you for a new name."
 
@@ -1772,7 +1772,7 @@ table("vv Investment growth, $5,000/yr at 7%") = {
 
 "  •  SHARING ONE RECORD — copy a single block from your export file (everything from one tilde line through the next) and paste it as a snippet. The recipient can wrap it with their own export-style header lines if needed, or just type the formulas directly into a new record."
 
-"  •  RESET — the 'Reset' button next to Import/Export wipes your current MathPad back to the default starter records (Welcome, tutorials, examples). Export first if you've made changes you'd like to keep."
+"  •  RESET — the 'Reset' button next to Import/Export offers two choices. 'Refresh built-in records only' (the default) restores the tutorials and examples to their latest versions while keeping your own records — and your Constants and Functions — untouched. 'Reset everything' wipes your current MathPad back to the default starter records. Export first if you've made changes you'd like to keep."
 `,
                 category: 'Tutorial',
                 places: 2,
@@ -2455,6 +2455,15 @@ disc(a; b; c) = b**2 - 4*a*c`,
             lastRecordId: welcomeRecordId
         }
     });
+
+    // Stamp sequential seed_N ids over the generateId() placeholders. A "refresh
+    // defaults" reset identifies the built-in records purely by this `seed_`
+    // prefix (which never collides with a user record's `r_` id), so the numbers
+    // need not be meaningful or stable — adding/removing/reordering a seed record
+    // needs no other bookkeeping.
+    data.records.forEach((r, i) => { r.id = 'seed_' + (i + 1); });
+    data.settings.lastRecordId = data.records[0].id;   // the Welcome record
+    return data;
 }
 
 /**
@@ -2915,6 +2924,56 @@ function importFromJson(jsonText) {
 }
 
 /**
+ * Reset records to the built-in defaults.
+ *  - fullReset: erase everything and return fresh defaults.
+ *  - default ("refresh only"): replace just the built-in tutorial/example
+ *    records (matched by their canonical `seed_*` id) with fresh copies, while
+ *    KEEPING the user's own records. Reference records (Constants / Functions /
+ *    Default Settings) are kept untouched too — they hold the user's own
+ *    constants / functions / preferences. The user's view settings (selected
+ *    record, open tabs, sidebar width) are preserved.
+ * Returns a new data object.
+ */
+function resetDefaultRecords(data, options = {}) {
+    const fresh = createDefaultData();
+    if (options.fullReset || !data || !Array.isArray(data.records)) {
+        return fresh;
+    }
+
+    // A "refreshable" seed is a built-in record we replace wholesale: identified
+    // by its canonical seed_* id, excluding the reference records (their fresh
+    // copies are handled separately below).
+    const isRefreshableSeed = (r) =>
+        typeof r.id === 'string' && r.id.indexOf('seed_') === 0 && !isReferenceRecord(r);
+
+    // Reference records the user still has are kept untouched (they hold the
+    // user's own constants / functions / preferences) — but if one was DELETED,
+    // restore the fresh copy so the user isn't left without a Constants /
+    // Functions / Default Settings record.
+    const haveRef = new Set(data.records.filter(r => isReferenceRecord(r)).map(r => r.title));
+
+    const kept = data.records.filter(r => !isRefreshableSeed(r));   // user records + reference records
+    const freshSeeds = fresh.records.filter(r =>
+        isRefreshableSeed(r) ||                                     // fresh tutorials/examples
+        (isReferenceRecord(r) && !haveRef.has(r.title)));          // + any reference record the user deleted
+
+    // Default categories first (canonical order), then any extra user categories.
+    const categories = [...fresh.categories];
+    for (const c of (data.categories || [])) {
+        if (!categories.includes(c)) categories.push(c);
+    }
+
+    const merged = {
+        version: STORAGE_VERSION,
+        records: [...freshSeeds, ...kept],
+        categories,
+        settings: { ...(data.settings || {}) }   // keep the user's selected record / tabs / width
+    };
+    ensureDefaultSettingsRecord(merged);          // belt-and-suspenders: template must exist
+    return backfillRecordTimestamps(merged);
+}
+
+/**
  * Download text as a file
  */
 function downloadTextFile(text, filename = 'mathpad_export.txt') {
@@ -3037,7 +3096,7 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         STORAGE_KEY, createDefaultData, isReferenceRecord, isReferenceTitle, generateId,
         loadData, saveData, debouncedSave, stripStaleSections, cleanDataForSave,
-        exportToText, importFromText, importFromJson, downloadTextFile, readTextFile,
+        exportToText, importFromText, importFromJson, resetDefaultRecords, downloadTextFile, readTextFile,
         createRecord, deleteRecord, findRecord,
         deleteCategory, getRecordsByCategory
     };

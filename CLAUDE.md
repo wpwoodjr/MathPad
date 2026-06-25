@@ -149,6 +149,8 @@ node tests/gen-expected.js TESTNAME
 - Default category order (`createDefaultData` in storage.js): `Tutorial`, `Examples`, `Unfiled`, `Finance`, `Math`, `Medical`, `Science`, `Reference`
 - **Examples** holds standalone demo records: "Sample tables", "Sample tableGraphs", "Table inheritance" (shows a table inheriting the record's equation/inputs and overriding `rate`/`pmt` per row). The `Finance`/`Math`/etc. categories hold the "Example: …" worked records (Retirement, Loan, …)
 - Seeded records (and changes to them) only apply to **new** data / after Reset or Import — existing localStorage isn't migrated
+- **Seed ids**: `createDefaultData` stamps sequential `seed_N` ids (`seed_1`…`seed_n`) over the `generateId()` placeholders. User records keep `r_*` ids, so the prefixes never collide. Reset matches built-ins purely by the `seed_` prefix (not specific numbers), so adding/removing/reordering a seed needs no bookkeeping. The numbers aren't stable across app versions (reordering shifts them) — only cosmetic, affecting which record a preserved tab/selection reopens after a refresh.
+- **Reset has two modes** (`resetDefaultRecords` in storage.js; `handleReset` in ui.js shows the Drive `showChoiceDialog`): *Refresh built-in records only* (default) replaces just the `seed_*` records (matched by id) with fresh copies and keeps the user's own records — **Constants/Functions/Default Settings are excluded** from the refresh since they hold user data (but a deleted one IS recreated) — preserving `settings` (selected record/tabs/width); *Reset everything* returns fresh `createDefaultData()`.
 
 ### Import/Export
 - PalmOS-compatible text format with `~~~~~~~~~~~~~~~~~~~~~~~~~~~` record separator
