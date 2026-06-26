@@ -1143,6 +1143,17 @@ async function onDriveSignedIn() {
 }
 
 /**
+ * True if a blocking modal is open — the record-settings modal or any choice
+ * dialog. The sync cycle checks this so a "Drive has newer data" / trashed-file
+ * prompt can't stack on top of (or rebuild the UI under) a modal the user is
+ * mid-interaction with; it just retries on the next cycle.
+ */
+function aModalIsOpen() {
+    return !!(document.querySelector('.settings-modal.visible') ||
+              document.querySelector('.choice-dialog'));
+}
+
+/**
  * Run one sync cycle:
  * 1. Check Drive metadata for newer data
  * 2. If newer, prompt user to load
@@ -1175,6 +1186,12 @@ async function runSyncCycle() {
         // Check remote metadata
         const meta = await driveGetMetadata(DriveState.fileId);
         if (!meta) return; // Network error, try next cycle
+
+        // Don't pop a conflict/trashed dialog over an open modal (record
+        // settings, etc.) — it would stack on it, and a Load would rebuild the
+        // UI underneath. Re-checked here (after the async fetch) so a modal
+        // opened mid-fetch is caught too. Retries next cycle.
+        if (aModalIsOpen()) return;
 
         // File was deleted in the Drive UI (moved to Trash but still reachable
         // by id). Ask what to do rather than silently recreating.
