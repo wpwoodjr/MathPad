@@ -155,7 +155,7 @@ node tests/gen-expected.js TESTNAME
 ### Import/Export
 - PalmOS-compatible text format with `~~~~~~~~~~~~~~~~~~~~~~~~~~~` record separator
 - Import: `.txt` export files, or a MathPad `.json` data file (`importFromJson` in storage.js — the localStorage/Drive `{records,categories,settings}` shape; lets a user re-import a `MathPad.json` copied out of Drive, which the `drive.file` scope can't surface). `handleFileSelect` (ui.js) routes by extension/content; both paths REPLACE all records.
-- Export: all records to text format
+- Export: all records, with a format choice (`showChoiceDialog` in `handleExport`) — a `.json` data file (`JSON.stringify(cleanDataForSave(UI.data))`, the same shape `importFromJson` reads / Drive stores) or the legacy `.txt` text format (`exportToText`)
 
 ### Google Drive Integration
 - OAuth via Google Identity Services (GIS); `drive.file` scope (per-file — the app only ever sees files it created)

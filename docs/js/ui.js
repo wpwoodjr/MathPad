@@ -1508,12 +1508,34 @@ async function handleFileSelect(e) {
 /**
  * Handle export
  */
-function handleExport() {
+async function handleExport() {
+    const choice = await showChoiceDialog({
+        title: 'Export records',
+        message: 'Save all records to a file in your downloads folder.',
+        dismissable: true,
+        options: [
+            {
+                key: 'json', primary: true, label: 'MathPad data file (.json)',
+                sub: 'Complete backup — re-imports exactly, and matches the Google Drive format.'
+            },
+            {
+                key: 'text', label: 'Text / PalmOS format (.txt)',
+                sub: 'Human-readable interchange format, compatible with the original PalmOS MathPad.'
+            }
+        ]
+    });
+    if (!choice) return;   // dismissed
+
     try {
-        const text = exportToText(cleanDataForSave(UI.data), { selectedRecordId: UI.currentRecordId });
         const d = new Date();
         const timestamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        downloadTextFile(text, `mathpad_export_${timestamp}.txt`);
+        if (choice === 'json') {
+            const json = JSON.stringify(cleanDataForSave(UI.data), null, 2);
+            downloadTextFile(json, `mathpad_export_${timestamp}.json`);
+        } else {
+            const text = exportToText(cleanDataForSave(UI.data), { selectedRecordId: UI.currentRecordId });
+            downloadTextFile(text, `mathpad_export_${timestamp}.txt`);
+        }
         setStatus('Exported successfully', false, false);
     } catch (err) {
         setStatus('Export failed: ' + err.message, true, false);

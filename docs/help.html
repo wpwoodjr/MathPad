@@ -497,7 +497,7 @@ x: 42    "the answer"</pre>
 
     <h2 id="import-export">Import / Export</h2>
     <ul>
-        <li><strong>Export</strong>: saves all records to a single text file (<code>mathpad_export_YYYY-MM-DD.txt</code>) in the browser's downloads folder.</li>
+        <li><strong>Export</strong>: saves all records to a file in the browser's downloads folder, in your choice of format — a MathPad <code>.json</code> data file (a complete backup that re-imports exactly and matches the Google Drive format), or the <code>.txt</code> text/PalmOS format.</li>
         <li><strong>Import</strong>: loads records from a <code>.txt</code> export file, or from a MathPad <code>.json</code> data file (for example one downloaded from your Google Drive). Import REPLACES all existing records, so export first if you want to keep them.</li>
         <li>The <code>.txt</code> format is also accepted by the original 1997 PalmOS MathPad's MpExport utility, so old PalmOS archives can be imported as-is.</li>
         <li>Records are separated by a line of 27 tildes (<code>~~~~~~~~~~~~~~~~~~~~~~~~~~~</code>); each block starts with metadata (Category, Places, Format, etc.) and is followed by the record's raw text. The file is plain text — open it in any editor to trim, fix, or stitch together exports.</li>

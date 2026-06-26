@@ -1611,8 +1611,8 @@ table("vv Investment growth, $5,000/yr at 7%") = {
 "At the bottom of the sidebar:"
 
 "  •  + New Record         creates a blank record in the 'Unfiled' category"
-"  •  Import               loads records from a text file (covered in 6.3)"
-"  •  Export               saves all records to a text file (covered in 6.3)"
+"  •  Import               loads records from a .json or .txt file (covered in 6.3)"
+"  •  Export               saves all records to a .json or .txt file (covered in 6.3)"
 "  •  Reset                refreshes the built-in tutorial/example records (or, optionally, wipes everything back to defaults)"
 
 "To move a record into a different category, open its detail panel (⚙ button in the header) and pick from the Category dropdown. The dropdown also includes a 'New category…' option that prompts you for a new name."
@@ -1721,7 +1721,7 @@ table("vv Investment growth, $5,000/yr at 7%") = {
 "*Export"
 ---
 
-"The 'Export' button at the bottom of the sidebar saves EVERY record to a single text file named 'mathpad_export_YYYY-MM-DD.txt'. The file lands in your browser's downloads folder."
+"The 'Export' button at the bottom of the sidebar saves EVERY record to a single file in your browser's downloads folder. It asks for a format: a MathPad '.json' data file (a complete backup that re-imports exactly), or the '.txt' text/PalmOS format described below."
 
 "Use export to:"
 
@@ -1768,9 +1768,9 @@ table("vv Investment growth, $5,000/yr at 7%") = {
 "*Tips"
 ---
 
-"  •  EDIT BEFORE IMPORT — the export file is plain text. You can open it in any editor, trim it to one record, fix a typo, or stitch two exports together (just keep the tilde separators between records)."
+"  •  EDIT BEFORE IMPORT — the .txt export file is plain text. You can open it in any editor, trim it to one record, fix a typo, or stitch two exports together (just keep the tilde separators between records)."
 
-"  •  SHARING ONE RECORD — copy a single block from your export file (everything from one tilde line through the next) and paste it as a snippet. The recipient can wrap it with their own export-style header lines if needed, or just type the formulas directly into a new record."
+"  •  SHARING ONE RECORD — copy a single block from your .txt export file (everything from one tilde line through the next) and paste it as a snippet. The recipient can wrap it with their own export-style header lines if needed, or just type the formulas directly into a new record."
 
 "  •  RESET — the 'Reset' button next to Import/Export offers two choices. 'Refresh built-in records only' (the default) restores the tutorials and examples to their latest versions while keeping your own records — and your Constants and Functions — untouched. 'Reset everything' wipes your current MathPad back to the default starter records. Export first if you've made changes you'd like to keep."
 `,
@@ -2760,7 +2760,22 @@ function importFromText(text, existingData = null, options = {}) {
 
     const SEPARATOR = '~~~~~~~~~~~~~~~~~~~~~~~~~~~';
     const records = [];
-    const chunks = text.split(SEPARATOR);
+    // Split on lines that ARE the separator, not on the 27-tilde substring
+    // anywhere: a record's own text may quote/indent the separator (e.g. the
+    // import/export tutorial shows `"   ~~~...~"` as an example), and a bare
+    // `text.split(SEPARATOR)` would chop those into spurious records. Export
+    // and PalmOS MpExport both write the separator on its own line.
+    const chunks = [];
+    let buf = [];
+    for (const line of text.split('\n')) {
+        if (line.trim() === SEPARATOR) {
+            chunks.push(buf.join('\n'));
+            buf = [];
+        } else {
+            buf.push(line);
+        }
+    }
+    chunks.push(buf.join('\n'));
     let selectedRecordIndex = -1;
 
     for (const chunk of chunks) {
