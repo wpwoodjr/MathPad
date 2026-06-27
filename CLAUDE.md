@@ -8,7 +8,7 @@ MathPad is an algebraic equation solver web application, reimplemented from the 
 
 - **Web Application** (`docs/`) - Full-featured browser-based app, no build system
 - **Legacy PalmOS** (`mathpad 1.5/`) - Original C source and utilities
-- **Live site**: https://wpwoodjr.github.io/MathPad/
+- **Live site**: https://mathpad.hoodoop.com/ (custom domain; `wpwoodjr.github.io/MathPad/` 301-redirects here)
 
 ## Running and Testing
 

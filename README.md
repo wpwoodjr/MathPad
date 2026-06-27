@@ -10,7 +10,7 @@ MathPad is an equation solver, originally created by **Rick Huebner** for PalmOS
 
 Instead of rearranging formulas by hand, you write the relationships once and let it find the unknown — give it the inputs and it computes the result, or give it the result and it works backward to an input. It handles linked systems of equations, 50+ built-in functions, tables and graphs, dates and money, and ships with an interactive tutorial. One web page, no install, no account, works offline.
 
-**[Try it online →](https://wpwoodjr.github.io/MathPad/)**
+**[Try it online →](https://mathpad.hoodoop.com/)**
 
 ### A 30-second taste
 
@@ -36,7 +36,7 @@ It hits a sweet spot between a calculator, a spreadsheet, and Wolfram. A **calcu
 
 # Web Application
 
-Open `docs/index.html` in any browser — no build step, no server — or use the [live version](https://wpwoodjr.github.io/MathPad/).
+Open `docs/index.html` in any browser — no build step, no server — or use the [live version](https://mathpad.hoodoop.com/).
 
 ### Core Features
 
