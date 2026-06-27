@@ -87,7 +87,9 @@ or `@` for the root) — Squarespace appends `.hoodoop.com` automatically.
 
 ---
 
-## 4. Google Search Console (domain verification)
+## 4. Google Search Console & SEO
+
+### Domain verification
 
 Purpose: verify ownership of `hoodoop.com` so it can be used as an OAuth
 **Authorized domain** (§5). **Must be verified by `wpwoodjr@gmail.com`** — the
@@ -99,6 +101,35 @@ same account that owns the OAuth project — or the consent screen won't accept 
 | Verifying account | `wpwoodjr@gmail.com` |
 | Method | DNS TXT at root (`@`) — see §2 |
 | Status | ✅ verified |
+
+### On-site SEO metadata (in the repo, published under `docs/`)
+
+| File | What it provides |
+|---|---|
+| `docs/index.html` `<head>` | `<meta name="description">`, `<link rel="canonical">` → `https://mathpad.hoodoop.com/`, Open Graph tags, and JSON-LD `WebApplication` structured data |
+| `docs/help.html` `<head>` | `description` + `canonical` (→ `/help.html`) |
+| `docs/sitemap.xml` | lists `/` and `/help.html` |
+| `docs/robots.txt` | allows all crawlers; points to the sitemap |
+
+> The **canonical** tags matter because the same content also serves at
+> `https://wpwoodjr.github.io/MathPad/`. Canonical → the custom domain tells
+> Google which URL is authoritative so ranking signals aren't split.
+
+### Search Console steps (one-time, signed in as `wpwoodjr@gmail.com`)
+
+1. **Submit the sitemap.** Search Console → property `hoodoop.com` →
+   **Sitemaps** → enter `https://mathpad.hoodoop.com/sitemap.xml` → Submit. ✅
+2. **Request indexing.** **URL Inspection** → enter
+   `https://mathpad.hoodoop.com/` → **Request indexing**. Repeat for
+   `/help.html`. ✅
+3. **Verify how Google sees it.** In URL Inspection, check the page is
+   *Indexable* and the detected canonical matches the custom domain.
+4. **Monitor.** **Pages** (coverage) and **Performance** reports show indexing
+   status and search queries over the following days/weeks.
+
+> Updating pages: bump `<lastmod>` in `docs/sitemap.xml` when content changes;
+> Google re-crawls on its own schedule. Snippets/indexing take days to weeks,
+> and Google may still rewrite the displayed snippet per query.
 
 ---
 
@@ -194,3 +225,6 @@ tabs Branding / Audience / Data access / Clients).
 - [x] Consent screen published → In production
 - [ ] Squarespace auto-renew confirmed ON
 - [x] End-to-end test: load site, sign into Drive, sync, no warning
+- [x] SEO metadata in `docs/` (description, canonical, Open Graph, JSON-LD, sitemap, robots)
+- [x] Submit `sitemap.xml` in Search Console (§4)
+- [x] Request indexing for `/` and `/help.html` (§4)
