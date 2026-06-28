@@ -435,6 +435,24 @@ function validateArgCount(funcName, argCount) {
     }
 }
 
+// Summation helper for the sum/avg builtins and the Sum(expr;var;start;end)
+// iteration form. Math.sumPrecise (TC39 Stage 4) returns the sum of an iterable
+// rounded ONCE to the nearest double, avoiding the last-ULP accumulation error
+// of naive left-to-right addition. It is not yet in baseline browsers or Node
+// (still absent on Node 26 / V8 14.6 as of 2026-06), so feature-detect and fall
+// back to reduce() in the same left-to-right order — making the fallback
+// byte-identical to the previous code. When a runtime gains Math.sumPrecise,
+// some many-term sums shift in the last ULP; the "Test 8" record in
+// tests/input/precision-check.txt is the canary that flags the transition
+// (regenerate expected outputs, then re-verify).
+// Empty arrays use reduce()'s 0 rather than Math.sumPrecise's -0.
+function _preciseSum(arr) {
+    if (typeof Math.sumPrecise === 'function' && arr.length > 0) {
+        return Math.sumPrecise(arr);
+    }
+    return arr.reduce((a, b) => a + b, 0);
+}
+
 const builtinFunctions = {
     // Math functions
     abs: (args) => Math.abs(args[0]),
@@ -544,8 +562,8 @@ const builtinFunctions = {
     // Additional useful functions
     min: (args) => Math.min(...args),
     max: (args) => Math.max(...args),
-    avg: (args) => args.reduce((a, b) => a + b, 0) / args.length,
-    sum: (args) => args.reduce((a, b) => a + b, 0),
+    avg: (args) => _preciseSum(args) / args.length,
+    sum: (args) => _preciseSum(args),
 
     // Random
     rand: (args) => {
@@ -760,12 +778,21 @@ function evaluate(node, context) {
                 }
 
                 const isSum = funcName === 'sum';
-                let total = isSum ? 0 : 1;
                 const iterContext = context.clone();
+                if (isSum) {
+                    // Collect terms in iteration order, then sum (precise when
+                    // available; reduce() otherwise — identical to the old loop).
+                    const terms = [];
+                    for (let i = start; i <= end; i++) {
+                        iterContext.setVariable(varName, i);
+                        terms.push(evaluate(exprNode, iterContext));
+                    }
+                    return _preciseSum(terms);
+                }
+                let total = 1;
                 for (let i = start; i <= end; i++) {
                     iterContext.setVariable(varName, i);
-                    const v = evaluate(exprNode, iterContext);
-                    total = isSum ? total + v : total * v;
+                    total *= evaluate(exprNode, iterContext);
                 }
                 return total;
             }

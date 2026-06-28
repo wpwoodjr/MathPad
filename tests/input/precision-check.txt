@@ -153,3 +153,16 @@ balance$->
 interest$->
 principal$->
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Category = "Unfiled"; Secret = 0
+Places = 4; StripZeros = 1
+Format = "float"; GroupDigits = 0; DegreesMode = 0; ShadowConstants = 0
+"Test 8: Math.sumPrecise tripwire"
+"Summing [1e16, 1, -1e16] naively left-to-right gives 0 (the +1 is lost at"
+"1e16's ULP of 2). When a runtime gains Math.sumPrecise (TC39 Stage 4; absent"
+"on Node 26 / V8 14.6 as of 2026-06), _preciseSum in evaluator.js returns the"
+"correctly-rounded total instead, flipping avg 0 -> 0.3333 and sum 0 -> 1 and"
+"FAILING this test. When it fails: regenerate expected outputs (node"
+"tests/gen-expected.js precision-check), re-verify, then update this note."
+avg(1e16; 1; -1e16)->
+sum(choose(k; 1e16; 1; -1e16); k; 1; 3)->
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
