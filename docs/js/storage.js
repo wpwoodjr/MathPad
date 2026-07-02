@@ -1833,27 +1833,27 @@ grid("vv two iterators x:0..4, y=0..8..2, z=x*y") = {
                 text: `"Sample tableGraphs"
 --Variables--
 "*Simple tableGraph - single iterator, single series"
-
-tableGraph("vv One iterator: x; One series: cube root") = {
+tableGraph("vv One iterator: x; One series: cube root of x") = {
   x: 1..9..0.5
   x->
   Cube Root x**(1/3)->
 }
+
 
 "*Single iterator, multi-series tableGraph"
 "After Solving, click 'as table' to see the calculated values for the graph"
-
-tableGraph("vv One iterator: x; Two series: square and cube root") = {
-  x: 1..9..0.5
-  x->
-  Square Root sqrt(x)->
-  Cube Root x**(1/3)->
+tableGraph("vv One iterator: x; Three series: x, sqrt(x) and x*x") = {
+  x: 0..2..0.025
+  x->          // x axis
+  x->          // y axis - graph x vs x
+  sqrt(x)->    // y axis - sqrt(x)
+  x*x->        // y axis - x*x
 }
+
 
 "*Multi-iterator, single series tableGraphs"
 "- the first iterator (x) becomes the X-axis;
 - the others (y, z) become grouping iterators — each combination draws one line per series"
-
 tableGraph("vv Two iterators: x and y; One series: length") = {
   x: 0..6..0.5
   y: 0..6..3
@@ -1872,8 +1872,8 @@ tableGraph("vv Three iterators: x, y, and z; One series: length") = {
   Length sqrt(x**2 + y**2 + z**2)->
 }
 
-"*Multi-iterator, multi-series tableGraphs"
 
+"*Multi-iterator, multi-series tableGraphs"
 tableGraph("vv Two iterators: x and y; Two series: square root and cube root") = {
   x: 0..6..0.5
   y: 0..6..3
