@@ -53,15 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Route to current editor
-        const editorInfo = UI.editors.get(UI.currentRecordId);
-        if (editorInfo) {
+        // Route to current editor (flushes pending debounces first — see
+        // undoRedoCurrentEditor in ui.js)
+        if (undoRedoCurrentEditor(isUndo)) {
             e.preventDefault();
-            if (isUndo) {
-                editorInfo.editor.undo();
-            } else {
-                editorInfo.editor.redo();
-            }
         }
     });
 

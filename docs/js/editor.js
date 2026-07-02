@@ -709,12 +709,12 @@ class SimpleEditor {
     }
 
     /**
-     * Undo the last change
+     * Undo the last change. Callers must commit pending typed state first
+     * (saveToHistoryNow) so the stack top matches the textarea — in the app
+     * that's undoRedoCurrentEditor (ui.js), which also flushes the vars-panel
+     * debounce so the committed entry gets its metadata stamped.
      */
     undo() {
-        // Flush any pending debounced state
-        this.saveToHistoryNow();
-
         // Need at least 2 entries: current state on top + a previous state to restore
         if (this.undoStack.length < 2) return false;
 
@@ -735,7 +735,8 @@ class SimpleEditor {
     }
 
     /**
-     * Redo the last undone change
+     * Redo the last undone change. Same caller contract as undo() — route
+     * through undoRedoCurrentEditor (ui.js).
      */
     redo() {
         if (this.redoStack.length === 0) return false;

@@ -347,6 +347,29 @@ function scheduleVarsUpdate(work) {
 }
 
 /**
+ * Undo/redo the current editor (Ctrl+Z/Y and the header ↶/↷ buttons).
+ * First commits pending typed state and flushes the vars-panel debounce,
+ * exactly as if the user had paused 500ms: otherwise the flush fires later
+ * with the now-undone text (wiping the restored highlight), and redo lands
+ * on a typed entry that never got its metadata stamped (keeping a stale
+ * highlight). Order matters: the history push must precede the flush so
+ * setTopMetadata stamps the typed entry, not the one before it — the same
+ * order the editor-history and vars debounces fire in naturally.
+ */
+function undoRedoCurrentEditor(isUndo) {
+    const editorInfo = UI.editors.get(UI.currentRecordId);
+    if (!editorInfo) return false;
+    editorInfo.editor.saveToHistoryNow();
+    flushPendingVarsUpdates();
+    if (isUndo) {
+        editorInfo.editor.undo();
+    } else {
+        editorInfo.editor.redo();
+    }
+    return true;
+}
+
+/**
  * Stamp record.modified = now and refresh the details panel display
  * if this record is currently shown. Used by non-editor edit paths
  * (rename, details-panel field changes); the editor's onChange handler
@@ -1360,18 +1383,12 @@ function setupEventListeners() {
 
     // Undo button
     addListener('btn-undo', 'click', () => {
-        const editorInfo = UI.editors.get(UI.currentRecordId);
-        if (editorInfo) {
-            editorInfo.editor.undo();
-        }
+        undoRedoCurrentEditor(true);
     });
 
     // Redo button
     addListener('btn-redo', 'click', () => {
-        const editorInfo = UI.editors.get(UI.currentRecordId);
-        if (editorInfo) {
-            editorInfo.editor.redo();
-        }
+        undoRedoCurrentEditor(false);
     });
 
     // Solve button — Ctrl+click enables solve trace output. A vars-panel input
