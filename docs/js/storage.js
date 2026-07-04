@@ -2382,6 +2382,144 @@ tableGraph("Square wave (N = \\N\\ terms)") = {
             },
             {
                 id: generateId(),
+                title: 'Length Conversions',
+                text: `"Length Conversions"
+
+millimeters = centimeters*10
+centimeters = inches*2.54
+meters = centimeters/100
+kilometers = meters/1000
+lightYears = kilometers/9460730472580.8
+
+inches = feet*12
+feet = miles*5280
+yards = feet/3
+
+nautMiles = meters/1852
+
+--Variables--
+"*Clear, enter one value, Solve"
+
+"Imperial"
+inches<-
+feet<-
+yards<-
+miles<-
+nautical miles nautMiles<-
+
+"Metric"
+millimeters<-
+centimeters<-
+meters<-
+kilometers<-
+lightYears<-`,
+                category: 'Conversions',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: false,
+                created: Date.UTC(2026, 6, 4, 12, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: 'Volume conversions',
+                text: `"Volume conversions"
+
+ml = 28.4130625*impOz
+
+usOz = 0.96076*impOz
+usOz = tbs/2
+usCup = usOz/8
+usPint = usCup/2
+usQuart = usCup/4
+usGal = usOz/128
+
+liters = ml/1000
+
+--Variables--
+"*Clear, enter one value, Solve"
+
+"US"
+tablespoons tbs<-
+ounces usOz<-
+cups usCup<-
+pints usPint<-
+quarts usQuart<-
+gallons usGal<-
+
+"Metric"
+milliliters ml<-
+liters<-`,
+                category: 'Conversions',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: false,
+                created: Date.UTC(2026, 6, 4, 13, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: 'Mass conversions',
+                text: `"Mass conversions"
+
+mg = gram*1000
+gram = oz*28.349523125
+kg = gram/1000
+lbs = oz/16
+ton = lbs/2000
+
+--Variables--
+"*Clear, enter one value, Solve"
+
+"US"
+ounces oz<-
+pounds lbs<-
+tons ton<-
+
+"Metric"
+milligrams mg<-
+grams gram<-
+kilograms kg<-`,
+                category: 'Conversions',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: false,
+                created: Date.UTC(2026, 6, 4, 14, 0, 0),
+            },
+            {
+                id: generateId(),
+                title: 'Time conversions',
+                text: `"Time conversions"
+
+secs = mins*60
+mins = hours*60
+hours = days*24
+days = weeks*7
+days = years*365.2425
+
+--Variables--
+"*Clear, enter one value, Solve"
+
+secs<-
+mins<-
+hours<-
+days<-
+weeks<-
+years<-           "(Gregorian)"`,
+                category: 'Conversions',
+                places: 2,
+                stripZeros: true,
+                groupDigits: true,
+                format: 'float',
+                degreesMode: false,
+                created: Date.UTC(2026, 6, 4, 15, 0, 0),
+            },
+            {
+                id: generateId(),
                 title: 'Constants',
                 text: `"Physical and mathematical constants"
 
@@ -2450,7 +2588,7 @@ disc(a; b; c) = b**2 - 4*a*c`,
             },
             { id: generateId(), ...DEFAULT_SETTINGS_RECORD }
         ],
-        categories: ['Tutorial', 'Examples', 'Unfiled', 'Finance', 'Math', 'Medical', 'Science', 'Reference'],
+        categories: ['Tutorial', 'Examples', 'Unfiled', 'Finance', 'Math', 'Medical', 'Science', 'Conversions', 'Reference'],
         settings: {
             lastRecordId: welcomeRecordId
         }
