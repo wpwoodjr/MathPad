@@ -1640,7 +1640,10 @@ body.sidebar-resizing * {
 }
 
 .variable-comment {
-    color: var(--text-primary);
+    /* Trailing comments/labels on a declaration line share the color of
+       standalone quoted comment lines (label rows override with the same
+       var below, so this base color now only styles trailing decl comments). */
+    color: var(--vars-label-color);
     font-family: var(--font-mono);
     font-size: 15px;
     font-style: italic;
