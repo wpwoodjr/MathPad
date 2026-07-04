@@ -1610,6 +1610,11 @@ function handleSolve(undoable = true, traceMode = false, includeTableOutputs = f
     const editorInfo = UI.editors.get(UI.currentRecordId);
     if (!editorInfo) return;
 
+    // Solve is a deliberate "I'm working with this record" action — promote out
+    // of preview even if the solve produces no text change (the onChange path
+    // only promotes when text actually changes). No-op unless it's the preview.
+    promotePreview(record.id);
+
     try {
         // Drop any pending typing-path vars update — solve produces its own
         // fresh state via the post-solve setValue → onChange path. The deferred
@@ -1742,6 +1747,10 @@ function handleClearInput() {
 
     const editorInfo = UI.editors.get(UI.currentRecordId);
     if (!editorInfo) return;
+
+    // Clear is a deliberate action — promote out of preview even if nothing
+    // was clearable (same rationale as handleSolve). No-op unless it's the preview.
+    promotePreview(record.id);
 
     // Drop any pending typing-path vars update — Clear produces its own fresh
     // state via the post-clear setValue → onChange path.
