@@ -71,6 +71,10 @@ function initUI(data) {
     // Set up event listeners
     setupEventListeners();
 
+    // Spin up the solve worker (solves run off the main thread so a long solve
+    // can be stopped). Created once and reused across solves.
+    createSolveWorker();
+
     // Set up sidebar resizer and restore width
     setupSidebarResizer();
 
@@ -459,8 +463,16 @@ function openRecord(recordId, { preview = false } = {}) {
     const record = findRecord(UI.data, recordId);
     if (!record) return;
 
-    // Close sidebar on mobile
+    // Close sidebar on mobile (selecting anything, even the current record,
+    // dismisses the drawer).
     closeSidebar();
+
+    // Already the current record — nothing to switch. The sidebar routes here
+    // directly on every click (it needs the {preview} behavior switchToTab
+    // lacks), so without this a re-click of the current record would redo all
+    // the switch work below — re-renders, status restore, scrollIntoView, and a
+    // Drive save — for no change. (switchToTab guards this for the tab bar.)
+    if (recordId === UI.currentRecordId) return;
 
     const alreadyOpen = UI.openTabs.includes(recordId);
     if (!alreadyOpen) {
@@ -488,7 +500,10 @@ function openRecord(recordId, { preview = false } = {}) {
     // Switch to this record
     UI.currentRecordId = recordId;
 
-    // Save last viewed record and open tabs
+    // Save last viewed record and open tabs. Reaching here means a real switch
+    // (the already-current case returned above), so lastRecordId always changes
+    // — the save is always warranted, and won't spuriously dirty the data or
+    // cancel an in-flight solve.
     UI.data.settings.lastRecordId = recordId;
     saveOpenTabsToSettings();
     debouncedSave(UI.data);
@@ -1395,6 +1410,8 @@ function setupEventListeners() {
     // losing focus to this click won't auto-solve (the blur quick-solve fires
     // only on Tab/Enter, not on a click), so no double-solve guard is needed.
     addListener('btn-solve', 'click', (e) => {
+        // While a solve runs the button is Stop.
+        if (_solveInProgress) { stopSolve(); return; }
         handleSolve(true, !!(e && e.ctrlKey), !!(e && e.shiftKey));
     });
 
@@ -1446,6 +1463,8 @@ function setupEventListeners() {
         }
         // Escape to close modals/sidebar
         if (e.key === 'Escape') {
+            // Escape aborts a running solve, like clicking Stop.
+            if (_solveInProgress) stopSolve();
             const settingsModal = document.getElementById('settings-modal');
             if (settingsModal && settingsModal.classList.contains('visible')) {
                 toggleSettings();
@@ -1598,11 +1617,183 @@ async function handleReset() {
 /**
  * Handle solve
  */
+// ---------------------------------------------------------------------------
+// Solve worker
+//
+// solveRecord runs in a Web Worker (docs/js/solve-worker.js) so the main thread
+// stays responsive and a long solve can be stopped by terminating the worker.
+// handleSolve gathers cloneable inputs and posts them; onSolveWorkerMessage
+// applies the returned result (the DOM/UI work that must stay on the main
+// thread). While a solve runs the Solve button becomes Stop.
+// ---------------------------------------------------------------------------
+let _solveWorker = null;
+let _solveInProgress = false;
+let _solveSeq = 0;         // monotonic id; each reply is matched to its request
+let _activeSolve = null;   // { id, editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart }
+
+function createSolveWorker() {
+    try {
+        _solveWorker = new Worker('js/solve-worker.js');
+        _solveWorker.onmessage = onSolveWorkerMessage;
+        _solveWorker.onerror = onSolveWorkerError;
+    } catch (e) {
+        _solveWorker = null;
+        console.error('Solve worker failed to load:', e);
+    }
+}
+
+function setSolveButtonMode(mode) {
+    const btn = document.getElementById('btn-solve');
+    if (!btn) return;
+    if (mode === 'stop') {
+        btn.textContent = 'Stop';
+        btn.classList.add('solving');
+        btn.title = 'Stop the running solve';
+    } else {
+        btn.textContent = 'Solve';
+        btn.classList.remove('solving');
+        btn.title = 'Solve equations (Ctrl+Enter; Shift: include text table outputs, Ctrl: trace)';
+    }
+}
+
+// Tear down a running solve: terminate the worker (the only way to interrupt
+// the synchronous solveRecord) and respawn a fresh one for next time. No
+// setValue ran, so the record is left exactly as it was — no text change, no
+// undo entry.
+function _teardownSolve() {
+    if (_solveWorker) _solveWorker.terminate();
+    createSolveWorker();
+    _solveInProgress = false;
+    _activeSolve = null;
+    setSolveButtonMode('solve');
+}
+
+// Stop a solve and report it in the status bar. Called by the Stop button,
+// Escape, and markDriveDirty (drive.js) on any record change — an edit / undo /
+// redo / vars-panel edit / Clear / settings change / rename makes the in-flight
+// result stale, so it's cancelled. Self-guards (no-op when nothing is solving).
+// On a record switch the "Solve stopped" message is immediately overwritten by
+// openRecord restoring the destination record's status, so a switch reads silent.
+function stopSolve() {
+    if (!_solveInProgress) return;
+    _teardownSolve();
+    setStatus('Solve stopped', true, false);
+}
+
+function onSolveWorkerError(e) {
+    console.error('Solve worker error:', (e && e.message) || e);
+    if (!_solveInProgress) return;
+    setStatus('Solve error: worker failed', true, false);
+    _solveInProgress = false;
+    _activeSolve = null;
+    setSolveButtonMode('solve');
+    if (_solveWorker) _solveWorker.terminate();
+    createSolveWorker();
+}
+
+function onSolveWorkerMessage(e) {
+    const msg = e.data;
+    const active = _activeSolve;
+    // Ignore stale/mismatched replies. A terminated worker never sends, so this
+    // is belt-and-suspenders against any id race.
+    if (!active || msg.id !== active.id) return;
+
+    _solveInProgress = false;
+    _activeSolve = null;
+    setSolveButtonMode('solve');
+
+    if (!msg.ok) {
+        setStatus('Error: ' + msg.error, true);
+        console.error('Solve error:', msg.error);
+        return;
+    }
+    applySolveResult(active, msg);
+}
+
+// Apply a completed solve back to the editor/UI. This is the DOM-touching tail
+// that must run on the main thread.
+function applySolveResult(active, msg) {
+    const { editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart } = active;
+
+    // The editor may have been destroyed (tab/record closed) while solving.
+    if (UI.editors.get(record.id) !== editorInfo) return;
+
+    // If the user edited the record while it solved, the result is stale — don't
+    // clobber their text. (The ⟲ clear-and-solve keeps the editor value unchanged
+    // until the result lands, so it passes this check.)
+    if (editorInfo.editor.getValue() !== editorValueAtStart) {
+        setStatus('Solve discarded — record changed while solving', true, false);
+        return;
+    }
+
+    const text = msg.text;
+    const errors = msg.errors || [];
+    const equationVarStatus = msg.equationVarStatus;
+    const tables = msg.tables || [];
+
+    // Enable flash before setValue so onChange's updateFromText highlights changed values
+    editorInfo.variablesManager.enableFlash();
+
+    // Update editor with results (undoable so Ctrl+Z works). Pass pre-solve
+    // status so undo restores it on the entry being left behind.
+    editorInfo.editor.setValue(text, undoable, {
+        statusMessage: preStatus.message,
+        statusIsError: preStatus.isError
+    });
+
+    // Always persist status from solve
+    if (errors.length > 0) {
+        setStatus(errors.join('\n'), true);
+    } else if (msg.solved > 0) {
+        setStatus(`Solved ${msg.solved} equation${msg.solved > 1 ? 's' : ''}`);
+    } else {
+        setStatus('Nothing to solve');
+    }
+
+    // Cache solve results on the current undo entry so undo/redo can restore
+    // highlights and status. Always cache (not just when text changed) — solves
+    // with no values to compute (all-known balance check, contradictory pair)
+    // leave the text unchanged but still produce errors/status to restore.
+    editorInfo.editor.setTopMetadata({
+        errors: errors,
+        equationVarStatus: equationVarStatus,
+        tables: tables,
+        statusMessage: UI.lastPersistentStatus.message,
+        statusIsError: UI.lastPersistentStatus.isError
+    });
+
+    // Restore cursor to end of same line only if textarea has focus
+    if (document.activeElement === editorInfo.editor.textarea) {
+        const newLines = text.split('\n');
+        const targetLine = Math.min(cursorLine, newLines.length - 1);
+        let newPos = 0;
+        for (let i = 0; i < targetLine; i++) {
+            newPos += newLines[i].length + 1; // +1 for newline
+        }
+        newPos += newLines[targetLine].length; // end of line
+        editorInfo.editor.setCursorPosition(newPos);
+        editorInfo.editor.textarea.blur();
+    }
+    record.text = text;
+    debouncedSave(UI.data);
+
+    // Set error/equation highlights and clear edit tracking
+    editorInfo.variablesManager.setErrors(errors, equationVarStatus);
+    editorInfo.editor.setErrorLines(findErrorLines(errors));
+    editorInfo.variablesManager.clearLastEdited();
+
+    // Display table results
+    editorInfo.variablesManager.setTableData(tables);
+}
+
 function handleSolve(undoable = true, traceMode = false, includeTableOutputs = false, startText = null) {
     if (!UI.currentRecordId) {
         setStatus('No record selected', true);
         return;
     }
+    // Ignore re-entrant solves. The button shows Stop while one runs, but a
+    // keyboard shortcut could still call this — one solve at a time.
+    if (_solveInProgress) return;
 
     const record = findRecord(UI.data, UI.currentRecordId);
     if (!record) return;
@@ -1610,129 +1801,60 @@ function handleSolve(undoable = true, traceMode = false, includeTableOutputs = f
     const editorInfo = UI.editors.get(UI.currentRecordId);
     if (!editorInfo) return;
 
+    if (!_solveWorker) {
+        setStatus('Solver unavailable (worker failed to load)', true, false);
+        return;
+    }
+
     // Solve is a deliberate "I'm working with this record" action — promote out
     // of preview even if the solve produces no text change (the onChange path
     // only promotes when text actually changes). No-op unless it's the preview.
     promotePreview(record.id);
 
+    // Drop any pending typing-path vars update — the solve produces its own
+    // fresh state via the post-solve setValue → onChange path.
+    cancelPendingVarsUpdates();
+
+    // Capture pre-solve status so undo can restore it on the entry left behind.
+    const preStatus = { ...UI.lastPersistentStatus };
+    setStatus('Solving...', false, false);
+
+    // Text to solve. The clear-and-solve button passes a startText with one
+    // input blanked; the editor's own value stays at the original until the
+    // result lands (so a same-value solve pushes no undo entry). We capture the
+    // editor's current value to detect edits that land while the solve runs.
+    const editorValueAtStart = editorInfo.editor.getValue();
+    const text = (startText != null) ? startText : editorValueAtStart;
+
+    const cursorPos = editorInfo.editor.getCursorPosition();
+    const cursorLine = text.substring(0, cursorPos).split('\n').length - 1;
+
+    const id = ++_solveSeq;
+    _activeSolve = { id, editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart };
+    _solveInProgress = true;
+    setSolveButtonMode('stop');
+
+    // Ship cloneable inputs; the worker builds the EvalContext from them and
+    // runs the two-pass solve. record is structured-cloned (the worker's copy is
+    // discarded — we apply the returned text ourselves). parsedConstants/
+    // parsedFunctions are plain-data Maps.
     try {
-        // Drop any pending typing-path vars update — solve produces its own
-        // fresh state via the post-solve setValue → onChange path. The deferred
-        // updateFromText would just be overwritten moments later.
-        cancelPendingVarsUpdates();
-
-        // Capture pre-solve status before it changes
-        const preStatus = { ...UI.lastPersistentStatus };
-
-        setStatus('Solving...', false, false);
-
-        // Get current text from editor. The clear-and-solve button passes a
-        // startText with one input blanked: the solve runs against that, but the
-        // editor's value (and undo top) stays at the original until the final
-        // setValue writes the result — so a solve that restores the same value
-        // produces no undo entry, and one that changes it pushes exactly one
-        // (setValue's own changed-check does the work — no separate clear edit).
-        let text = (startText != null) ? startText : editorInfo.editor.getValue();
-
-        // Remember cursor line position
-        const cursorPos = editorInfo.editor.getCursorPosition();
-        const textBeforeCursor = text.substring(0, cursorPos);
-        const cursorLine = textBeforeCursor.split('\n').length - 1;
-
-        // Create evaluation context with constants and user functions. When
-        // solving a startText that differs from the editor, tokenize it fresh
-        // (the editor's cached parserTokens describe its own value).
-        const parserTokens = (startText != null)
-            ? new Tokenizer(text).tokenize()
-            : editorInfo.editor.parserTokens;
-        const context = createEvalContext(record,
-            editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
-            text, parserTokens);
-
-        // Solve the record (captures pre-solve values and clears outputs internally)
-        // First pass always skips tables — re-solve below computes them once
-        // Trace flag enables a "--- Solve Trace ---" section for the outer solve
-        const result = solveRecord(text, context, record, parserTokens, true, traceMode, includeTableOutputs);
-        text = result.text;
-
-        // Re-solve formatted output: idempotency check, rounding detection, table evaluation,
-        // and a second chance when the first solve filled in cleared variables with balance errors
-        // (traceMode=false — re-solve strips the trace, we re-append the first-pass trace below)
-        const verifyTokens = new Tokenizer(text).tokenize();
-        const verifyContext = createEvalContext(record,
-            editorInfo.editor.parsedConstants, editorInfo.editor.parsedFunctions,
-            text, verifyTokens);
-        verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
-        const verifyResult = solveRecord(text, verifyContext, record, verifyTokens, false, false, includeTableOutputs);
-        text = verifyResult.text;
-
-        // Re-append solve trace from first pass (re-solve strips it)
-        if (traceMode && result.trace && result.trace.length > 0) {
-            text = appendTraceSection(text, result.trace);
-        }
-        let errors = verifyResult.errors;
-        let equationVarStatus = verifyResult.equationVarStatus;
-        let tables = verifyResult.tables || [];
-
-        // Enable flash before setValue so onChange's updateFromText highlights changed values
-        editorInfo.variablesManager.enableFlash();
-
-        // Update editor with results (undoable so Ctrl+Z works)
-        // Pass pre-solve status so undo restores it on the entry being left behind
-        editorInfo.editor.setValue(text, undoable, {
-            statusMessage: preStatus.message,
-            statusIsError: preStatus.isError
+        _solveWorker.postMessage({
+            id,
+            text,
+            record,
+            parsedConstants: editorInfo.editor.parsedConstants,
+            parsedFunctions: editorInfo.editor.parsedFunctions,
+            traceMode,
+            includeTableOutputs
         });
-
-        // Always persist status from solve
-        if (errors.length > 0) {
-            setStatus(errors.join('\n'), true);
-        } else if (result.solved > 0) {
-            setStatus(`Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}`);
-        } else {
-            setStatus('Nothing to solve');
-        }
-
-        // Cache solve results on the current undo entry so undo/redo can
-        // restore highlights and status. Always cache (not just when text
-        // changed) — solves where the equation system has no values to
-        // compute (all-known balance check, contradictory pair, etc.) leave
-        // the text unchanged but still produce errors/status that should be
-        // restorable on redo.
-        editorInfo.editor.setTopMetadata({
-            errors: errors,
-            equationVarStatus: equationVarStatus,
-            tables: tables,
-            statusMessage: UI.lastPersistentStatus.message,
-            statusIsError: UI.lastPersistentStatus.isError
-        });
-
-        // Restore cursor to end of same line only if textarea has focus
-        if (document.activeElement === editorInfo.editor.textarea) {
-            const newLines = text.split('\n');
-            const targetLine = Math.min(cursorLine, newLines.length - 1);
-            let newPos = 0;
-            for (let i = 0; i < targetLine; i++) {
-                newPos += newLines[i].length + 1; // +1 for newline
-            }
-            newPos += newLines[targetLine].length; // end of line
-            editorInfo.editor.setCursorPosition(newPos);
-            editorInfo.editor.textarea.blur();
-        }
-        record.text = text;
-        debouncedSave(UI.data);
-
-        // Set error/equation highlights and clear edit tracking
-        editorInfo.variablesManager.setErrors(errors, equationVarStatus);
-        editorInfo.editor.setErrorLines(findErrorLines(errors));
-        editorInfo.variablesManager.clearLastEdited();
-
-        // Display table results
-        editorInfo.variablesManager.setTableData(tables);
-
     } catch (err) {
-        setStatus('Error: ' + err.message, true);
-        console.error('Solve error:', err);
+        // Non-cloneable payload or dead worker — reset so the button isn't stuck.
+        _solveInProgress = false;
+        _activeSolve = null;
+        setSolveButtonMode('solve');
+        setStatus('Error: ' + err.message, true, false);
+        console.error('Solve postMessage failed:', err);
     }
 }
 

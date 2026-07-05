@@ -605,6 +605,10 @@ function markDriveDirty() {
     DriveState.dirtySeq++;
     saveDriveState();
     updateDriveStatus();
+    // A record changed (text, settings, rename, tab/selection state) — any
+    // in-flight solve is now stale, so cancel it. stopSolve (ui.js) is a no-op
+    // when nothing is solving.
+    stopSolve();
 }
 
 /**
