@@ -25,36 +25,26 @@ const parsedFunctions = functionsRecord ? parseFunctionsRecord(functionsRecord.t
 const traceMode = testName === 'trace-tests';
 const varStatusByRecord = [];
 for (const record of data.records) {
-    const allTokens = new Tokenizer(record.text).tokenize();
-    const context = createEvalContext(record, parsedConstants, parsedFunctions, record.text, allTokens);
-    // Tests always include the table-outputs section (production defaults
-    // to off — opt-in via Shift+Solve).
-    const result = solveRecord(record.text, context, record, allTokens, true, traceMode, true);
-    record.text = result.text;
+    // Shared two-pass solve (solve-engine.js), same as the production worker and
+    // run-tests.js. Tests always include the table-outputs section (production
+    // defaults to off — opt-in via Shift+Solve).
+    const out = solveRecordTwoPass(record.text, record, parsedConstants, parsedFunctions, {
+        traceMode,
+        includeTableOutputs: true
+    });
+    record.text = out.text;
 
-    // Re-solve formatted output: idempotency check, rounding detection, table evaluation
-    const verifyTokens = new Tokenizer(record.text).tokenize();
-    const verifyContext = createEvalContext(record, parsedConstants, parsedFunctions, record.text, verifyTokens);
-    verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
-    const verifyResult = solveRecord(record.text, verifyContext, record, verifyTokens, false, false, true);
-    record.text = verifyResult.text;
-    // Re-append trace from first pass (re-solve strips it — matches handleSolve in ui.js)
-    if (traceMode && result.trace && result.trace.length > 0) {
-        record.text = appendTraceSection(record.text, result.trace);
-    }
-    let errors = verifyResult.errors;
-
-    if (errors && errors.length > 0) {
-        record.status = errors.join('\n');
+    if (out.errors && out.errors.length > 0) {
+        record.status = out.errors.join('\n');
         record.statusIsError = true;
     } else {
-        record.status = result.solved > 0 ? "Solved " + result.solved + " equation" + (result.solved > 1 ? "s" : "") : "Nothing to solve";
+        record.status = out.solved > 0 ? "Solved " + out.solved + " equation" + (out.solved > 1 ? "s" : "") : "Nothing to solve";
         record.statusIsError = false;
     }
 
     // Capture highlighting state for the expected file (one line per
     // record, see var-status-utils.js).
-    varStatusByRecord.push(formatVarStatus(verifyResult.equationVarStatus));
+    varStatusByRecord.push(formatVarStatus(out.equationVarStatus));
 }
 const rawOutput = exportToText(data, { selectedRecordId: data.settings?.lastRecordId });
 const output = injectVarStatusLines(rawOutput, varStatusByRecord);

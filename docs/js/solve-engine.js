@@ -2022,6 +2022,52 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
 }
 
 /**
+ * The standard two-pass solve, shared by the solve worker (production) and the
+ * test scripts (run-tests.js / gen-expected.js) so the sequence lives in one
+ * place. Builds its own EvalContexts from the given inputs — all cloneable, so
+ * the worker can call it after receiving them over postMessage.
+ *
+ * Pass 1 skips tables (captures pre-solve values, clears outputs). The re-solve
+ * computes tables, does the idempotency/rounding check, and gives cleared
+ * variables a second chance; it inherits pass 1's preSolveValues so x~ counters
+ * don't double-increment. The first-pass trace is re-appended (the re-solve
+ * strips it).
+ *
+ * Returns { text, solved, errors, equationVarStatus, tables }. `solved` is the
+ * first-pass count (drives the "Solved N" status); errors/status/tables come
+ * from the re-solve.
+ *
+ * @param {object} opts - { traceMode, includeTableOutputs }
+ */
+function solveRecordTwoPass(text, record, parsedConstants, parsedFunctions, opts = {}) {
+    const traceMode = opts.traceMode || false;
+    const includeTableOutputs = opts.includeTableOutputs || false;
+
+    const tokens1 = new Tokenizer(text).tokenize();
+    const context = createEvalContext(record, parsedConstants, parsedFunctions, text, tokens1);
+    const result = solveRecord(text, context, record, tokens1, true, traceMode, includeTableOutputs);
+
+    let outText = result.text;
+    const tokens2 = new Tokenizer(outText).tokenize();
+    const verifyContext = createEvalContext(record, parsedConstants, parsedFunctions, outText, tokens2);
+    verifyContext.preSolveValues = context.preSolveValues;
+    const verifyResult = solveRecord(outText, verifyContext, record, tokens2, false, false, includeTableOutputs);
+    outText = verifyResult.text;
+
+    if (traceMode && result.trace && result.trace.length > 0) {
+        outText = appendTraceSection(outText, result.trace);
+    }
+
+    return {
+        text: outText,
+        solved: result.solved,
+        errors: verifyResult.errors,
+        equationVarStatus: verifyResult.equationVarStatus,
+        tables: verifyResult.tables || []
+    };
+}
+
+/**
  * Evaluate a table definition (unified 1D/2D).
  * Parses body for iterators (x<- 0..4), unknowns (z<-), definitions (v: 10),
  * outputs (z->), and equations. Dimensionality determined by iterator count.
@@ -2807,6 +2853,6 @@ function evaluateTable(tableDef, context, record, outerEquations, preSolveVars) 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        solveRecord, solveEquations, formatOutput, solveEquationInContext, findVariablesInAST, buildVariablesMap, appendTraceSection
+        solveRecord, solveRecordTwoPass, solveEquations, formatOutput, solveEquationInContext, findVariablesInAST, buildVariablesMap, appendTraceSection
     };
 }

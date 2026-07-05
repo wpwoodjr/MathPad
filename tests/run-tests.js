@@ -112,6 +112,7 @@ function loadModules() {
     // Solve Engine (depends on all above)
     const solveEngine = require(path.join(jsPath, 'solve-engine.js'));
     global.solveRecord = solveEngine.solveRecord;
+    global.solveRecordTwoPass = solveEngine.solveRecordTwoPass;
     global.solveEquations = solveEngine.solveEquations;
     global.formatOutput = solveEngine.formatOutput;
     global.appendTraceSection = solveEngine.appendTraceSection;
@@ -184,47 +185,30 @@ function solveAllRecords(data, traceMode = false) {
 
     const varStatusByRecord = [];
     for (const record of records) {
-        // Tokenize record text once, pass through to all consumers
-        const allTokens = new Tokenizer(record.text).tokenize();
+        // Shared two-pass solve (solve-engine.js), same as the production worker.
+        // Tests always include the table-outputs section so expected outputs can
+        // verify its formatting (production defaults to off — Shift+Solve opts in).
+        // traceMode enables the "--- Solve Trace ---" section (trace-tests.txt).
+        const out = solveRecordTwoPass(record.text, record, parsedConstants, parsedFunctions, {
+            traceMode,
+            includeTableOutputs: true
+        });
+        record.text = out.text;
 
-        // Create eval context with constants and functions
-        const context = createEvalContext(record, parsedConstants, parsedFunctions, record.text, allTokens);
-
-        // Solve (captures pre-solve values and clears outputs internally)
-        // First pass always skips tables — re-solve computes them once
-        // traceMode enables the "--- Solve Trace ---" section (trace-tests.txt)
-        // Tests always include the table-outputs section so expected outputs
-        // can verify its formatting (production defaults to off — opt-in via
-        // Shift+Solve in the UI).
-        const result = solveRecord(record.text, context, record, allTokens, true, traceMode, true);
-        record.text = result.text;
-
-        // Re-solve formatted output: idempotency check, rounding detection, table evaluation
-        const verifyTokens = new Tokenizer(record.text).tokenize();
-        const verifyContext = createEvalContext(record, parsedConstants, parsedFunctions, record.text, verifyTokens);
-        verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
-        const verifyResult = solveRecord(record.text, verifyContext, record, verifyTokens, false, false, true);
-        record.text = verifyResult.text;
-        // Re-append trace from first pass (re-solve strips it — matches handleSolve in ui.js)
-        if (traceMode && result.trace && result.trace.length > 0) {
-            record.text = appendTraceSection(record.text, result.trace);
-        }
-        let errors = verifyResult.errors;
-
-        // Store any errors in the record (match UI behavior)
-        if (errors && errors.length > 0) {
-            record.status = errors.join('\n');
+        // Store any errors/status in the record (match UI behavior)
+        if (out.errors && out.errors.length > 0) {
+            record.status = out.errors.join('\n');
             record.statusIsError = true;
         } else {
-            record.status = result.solved > 0
-                ? `Solved ${result.solved} equation${result.solved > 1 ? 's' : ''}`
+            record.status = out.solved > 0
+                ? `Solved ${out.solved} equation${out.solved > 1 ? 's' : ''}`
                 : 'Nothing to solve';
             record.statusIsError = false;
         }
 
         // Capture highlighting state for comparison against the expected
         // file's VarStatus line for this record.
-        varStatusByRecord.push(formatVarStatus(verifyResult.equationVarStatus));
+        varStatusByRecord.push(formatVarStatus(out.equationVarStatus));
     }
 
     return { data, varStatusByRecord };

@@ -35,33 +35,13 @@ self.onmessage = function(e) {
     const { id, text, record, parsedConstants, parsedFunctions, traceMode, includeTableOutputs } = e.data;
 
     try {
-        // Mirror handleSolve's two-pass solve (first pass skips tables; the
-        // re-solve computes them and gives cleared variables a second chance).
-        const parserTokens = new Tokenizer(text).tokenize();
-        const context = createEvalContext(record, parsedConstants, parsedFunctions, text, parserTokens);
-        const result = solveRecord(text, context, record, parserTokens, true, traceMode, includeTableOutputs);
-
-        let outText = result.text;
-        const verifyTokens = new Tokenizer(outText).tokenize();
-        const verifyContext = createEvalContext(record, parsedConstants, parsedFunctions, outText, verifyTokens);
-        verifyContext.preSolveValues = context.preSolveValues; // preserve x~ values so counters don't double-increment
-        const verifyResult = solveRecord(outText, verifyContext, record, verifyTokens, false, false, includeTableOutputs);
-        outText = verifyResult.text;
-
-        // Re-append the first-pass trace (the re-solve strips it).
-        if (traceMode && result.trace && result.trace.length > 0) {
-            outText = appendTraceSection(outText, result.trace);
-        }
-
-        self.postMessage({
-            id,
-            ok: true,
-            text: outText,
-            solved: result.solved,               // first-pass count drives the status message
-            errors: verifyResult.errors,
-            equationVarStatus: verifyResult.equationVarStatus,
-            tables: verifyResult.tables || []
+        // The two-pass solve lives in solve-engine.js (solveRecordTwoPass), shared
+        // with the test scripts so the sequence isn't duplicated.
+        const out = solveRecordTwoPass(text, record, parsedConstants, parsedFunctions, {
+            traceMode,
+            includeTableOutputs
         });
+        self.postMessage({ id, ok: true, ...out });
     } catch (err) {
         self.postMessage({ id, ok: false, error: (err && err.message) || String(err) });
     }
