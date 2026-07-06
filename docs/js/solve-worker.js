@@ -46,3 +46,9 @@ self.onmessage = function(e) {
         self.postMessage({ id, ok: false, error: (err && err.message) || String(err) });
     }
 };
+
+// Announce readiness: reaching here means importScripts above succeeded, so the
+// main thread knows the worker is usable (not blocked by file://) and can route
+// solves to it. If the import failed, this line never runs and the main thread
+// sees the worker's onerror instead and falls back to a synchronous solve.
+self.postMessage({ ready: true });

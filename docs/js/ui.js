@@ -1625,20 +1625,41 @@ async function handleReset() {
 // handleSolve gathers cloneable inputs and posts them; onSolveWorkerMessage
 // applies the returned result (the DOM/UI work that must stay on the main
 // thread). While a solve runs the Solve button becomes Stop.
+//
+// Fallback: the worker isn't usable from file:// (browsers block loading it —
+// Chrome throws on construction, Firefox fails asynchronously on load). So the
+// worker announces {ready:true} once its modules import, and we only route a
+// solve to it when it's ready; otherwise handleSolve solves synchronously on
+// the main thread (same solveRecordTwoPass), which blocks the UI and offers no
+// Stop but otherwise works identically. A worker error disables it for the
+// session and replays any in-flight solve synchronously.
 // ---------------------------------------------------------------------------
 let _solveWorker = null;
+let _workerReady = false;  // worker posted its ready signal (modules imported OK)
+let _workerBroken = false; // worker errored — stop retrying, use the sync fallback
 let _solveInProgress = false;
 let _solveSeq = 0;         // monotonic id; each reply is matched to its request
-let _activeSolve = null;   // { id, editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart }
+let _activeSolve = null;   // { id, editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart, text, traceMode, includeTableOutputs }
 
 function createSolveWorker() {
+    if (_workerBroken) return;  // already errored once — don't retry, use the sync fallback
+    // Browsers block loading a worker from file://, and merely attempting it logs
+    // a SecurityError (Firefox) on every page load. Since it can never succeed
+    // there, skip straight to the synchronous fallback — production is http(s).
+    if (typeof location !== 'undefined' && location.protocol === 'file:') {
+        _workerBroken = true;
+        return;
+    }
+    _workerReady = false;
     try {
         _solveWorker = new Worker('js/solve-worker.js');
         _solveWorker.onmessage = onSolveWorkerMessage;
         _solveWorker.onerror = onSolveWorkerError;
     } catch (e) {
+        // Constructor threw (no Worker support, or a blocking policy) — go synchronous.
         _solveWorker = null;
-        console.error('Solve worker failed to load:', e);
+        _workerBroken = true;
+        console.error('Solve worker unavailable — using synchronous solve:', e);
     }
 }
 
@@ -1681,18 +1702,44 @@ function stopSolve() {
 }
 
 function onSolveWorkerError(e) {
-    console.error('Solve worker error:', (e && e.message) || e);
-    if (!_solveInProgress) return;
-    setStatus('Solve error: worker failed', true, false);
-    _solveInProgress = false;
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    console.error('Solve worker error — using synchronous solve:', (e && e.message) || e);
+    // The worker can't run in this environment (typically file:// blocking its
+    // load). Disable it for the session; solves fall back to the main thread.
+    _workerBroken = true;
+    _workerReady = false;
+    if (_solveWorker) { _solveWorker.terminate(); _solveWorker = null; }
+    // Replay an in-flight solve synchronously so the user's click isn't lost.
+    // (On file:// nothing is in flight — solves are ready-gated to the sync path
+    // — so active is null here and this no-ops.)
+    const active = _activeSolve;
     _activeSolve = null;
+    _solveInProgress = false;
     setSolveButtonMode('solve');
-    if (_solveWorker) _solveWorker.terminate();
-    createSolveWorker();
+    if (active) runSolveSync(active);
+}
+
+// Solve synchronously on the main thread (the fallback when no ready worker is
+// available) and apply the result. Blocks the UI for the duration; no Stop.
+function runSolveSync(active) {
+    try {
+        const ed = active.editorInfo.editor;
+        const out = solveRecordTwoPass(active.text, active.record,
+            ed.parsedConstants, ed.parsedFunctions,
+            { traceMode: active.traceMode, includeTableOutputs: active.includeTableOutputs });
+        applySolveResult(active, out);
+    } catch (err) {
+        setStatus('Error: ' + err.message, true);
+        console.error('Solve error:', err);
+    }
 }
 
 function onSolveWorkerMessage(e) {
     const msg = e.data;
+    // Readiness handshake: the worker posts this once its modules import, so we
+    // know it's usable (and not blocked by file://) before routing solves to it.
+    if (msg && msg.ready) { _workerReady = true; return; }
+
     const active = _activeSolve;
     // Ignore stale/mismatched replies. A terminated worker never sends, so this
     // is belt-and-suspenders against any id race.
@@ -1801,11 +1848,6 @@ function handleSolve(undoable = true, traceMode = false, includeTableOutputs = f
     const editorInfo = UI.editors.get(UI.currentRecordId);
     if (!editorInfo) return;
 
-    if (!_solveWorker) {
-        setStatus('Solver unavailable (worker failed to load)', true, false);
-        return;
-    }
-
     // Solve is a deliberate "I'm working with this record" action — promote out
     // of preview even if the solve produces no text change (the onChange path
     // only promotes when text actually changes). No-op unless it's the preview.
@@ -1829,32 +1871,46 @@ function handleSolve(undoable = true, traceMode = false, includeTableOutputs = f
     const cursorPos = editorInfo.editor.getCursorPosition();
     const cursorLine = text.substring(0, cursorPos).split('\n').length - 1;
 
-    const id = ++_solveSeq;
-    _activeSolve = { id, editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart };
-    _solveInProgress = true;
-    setSolveButtonMode('stop');
+    // Carry everything a synchronous replay would need (text + flags), so the
+    // fallback and the worker-error path can re-run the solve without the worker.
+    const active = { id: ++_solveSeq, editorInfo, record, undoable, preStatus,
+                     cursorLine, editorValueAtStart, text, traceMode, includeTableOutputs };
 
-    // Ship cloneable inputs; the worker builds the EvalContext from them and
-    // runs the two-pass solve. record is structured-cloned (the worker's copy is
-    // discarded — we apply the returned text ourselves). parsedConstants/
-    // parsedFunctions are plain-data Maps.
-    try {
-        _solveWorker.postMessage({
-            id,
-            text,
-            record,
-            parsedConstants: editorInfo.editor.parsedConstants,
-            parsedFunctions: editorInfo.editor.parsedFunctions,
-            traceMode,
-            includeTableOutputs
-        });
-    } catch (err) {
-        // Non-cloneable payload or dead worker — reset so the button isn't stuck.
-        _solveInProgress = false;
-        _activeSolve = null;
-        setSolveButtonMode('solve');
-        setStatus('Error: ' + err.message, true, false);
-        console.error('Solve postMessage failed:', err);
+    if (_solveWorker && _workerReady) {
+        // Off the main thread: ship cloneable inputs; the worker runs the
+        // two-pass solve and posts the result back (applied by
+        // onSolveWorkerMessage). record is structured-cloned (its copy is
+        // discarded — we apply the returned text); parsedConstants/Functions are
+        // plain-data Maps. The button becomes Stop while it runs.
+        _activeSolve = active;
+        _solveInProgress = true;
+        setSolveButtonMode('stop');
+        try {
+            _solveWorker.postMessage({
+                id: active.id,
+                text,
+                record,
+                parsedConstants: editorInfo.editor.parsedConstants,
+                parsedFunctions: editorInfo.editor.parsedFunctions,
+                traceMode,
+                includeTableOutputs
+            });
+        } catch (err) {
+            // Non-cloneable payload or dead worker — reset and solve synchronously
+            // so the click isn't lost. (solveRecordTwoPass takes the objects
+            // directly, so a structured-clone failure doesn't affect it.)
+            _solveInProgress = false;
+            _activeSolve = null;
+            setSolveButtonMode('solve');
+            console.error('Solve postMessage failed — using synchronous solve:', err);
+            runSolveSync(active);
+        }
+    } else {
+        // No usable worker (e.g. file:// blocks it) — solve synchronously on the
+        // main thread. Blocks the UI and offers no Stop, but solving is otherwise
+        // identical; nothing else runs until it returns, so there's no
+        // _solveInProgress/button state to manage.
+        runSolveSync(active);
     }
 }
 
