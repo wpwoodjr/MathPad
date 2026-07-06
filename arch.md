@@ -497,7 +497,20 @@ Uses indentation and formatting (#, ##, ###) to indicate hierarchy of relevance.
         - Re-solve catches rounding errors (rounded values may not satisfy tight tolerances)
         - Re-solve gives a second chance when first solve filled in cleared variables
           but had balance errors (the formatted text may now be self-consistent)
-    Both run-tests.js and gen-expected.js use the same flow.
+    This two-pass sequence lives in one place: solveRecordTwoPass() in
+    solve-engine.js, called by the production solve worker AND by run-tests.js /
+    gen-expected.js (previously three hand-kept copies), so they can't drift.
+
+    ## Execution: worker + synchronous fallback (SolveRunner)
+    The solve runs in a Web Worker (solve-worker.js) when possible so the UI stays
+    responsive and a long solve can be stopped (the Solve button becomes Stop; also
+    Escape, or any record change, cancels it). SolveRunner (solve-runner.js) owns
+    the worker lifecycle: it routes a solve to the worker only once the worker has
+    posted {ready:true}, and otherwise solves synchronously on the main thread via
+    the same solveRecordTwoPass — normalizing every outcome to {ok,…} | null(stopped).
+    On file:// (browsers block the worker) it detects the protocol and goes straight
+    to sync. ui.js's async handleSolve awaits the runner and applies the result.
+    See CLAUDE.md "Solve execution" for the full behavior.
 
     ## End-of-solve limit validation
     After the recursive loop, validate every declared variable's limit expressions

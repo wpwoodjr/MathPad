@@ -544,7 +544,7 @@ x: 42    "the answer"</pre>
         <tr><td><code>Ctrl+/</code> (in formulas)</td><td>Toggle <code>//</code> line comment on selection</td></tr>
         <tr><td><code>Tab</code> / <code>Shift+Tab</code> (in vars panel)</td><td>Commit edit, Solve, and cycle to the next / previous input</td></tr>
         <tr><td><code>Enter</code> (in vars panel)</td><td>Commit edit and Solve</td></tr>
-        <tr><td><code>Escape</code></td><td>Revert edited variable value, unfocus formulas, or close modals</td></tr>
+        <tr><td><code>Escape</code></td><td>Revert edited variable value, unfocus formulas, close modals, or stop a running solve</td></tr>
     </table>
 
     <h3>Solve Button Modifiers</h3>
@@ -556,6 +556,7 @@ x: 42    "the answer"</pre>
         <tr><td>Ctrl+click</td><td>Solve in <strong>trace mode</strong> &mdash; appends a <code>*--- Solve Trace ---</code> section showing the steps the solver took. Useful when a result surprises you.</td></tr>
         <tr><td>Ctrl+Shift+click</td><td>Trace plus table outputs</td></tr>
     </table>
+    <p>While a solve is running, the <strong>Solve</strong> button turns red and reads <strong>Stop</strong> &mdash; click it (or press <code>Escape</code>) to cancel. Editing the record, or switching to another record, also cancels a running solve. Most solves finish instantly, so you'll usually only see this on a large table or a heavy computation.</p>
 
     <h2 id="settings">Record Settings</h2>
     <p>Click the gear icon to configure per-record settings:</p>

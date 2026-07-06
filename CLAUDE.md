@@ -13,12 +13,15 @@ MathPad is an algebraic equation solver web application, reimplemented from the 
 ## Running and Testing
 
 ```bash
-# Open directly in browser (no build step)
+# Open directly in browser (no build step). From file://, solving falls back to
+# synchronous (no Stop button) — browsers block the solve Web Worker from file://.
+# Serve over http(s) for the worker: `cd docs && python3 -m http.server`
 open docs/index.html
 
 # Check JavaScript syntax
 node --check docs/js/ui.js
-node --check docs/js/drive.js
+node --check docs/js/solve-runner.js
+node --check docs/js/solve-worker.js
 # etc.
 
 # Run solver tests (30 tests)
@@ -66,7 +69,7 @@ node tests/gen-expected.js TESTNAME
 - Column-preserved comment spacing
 
 ### Solving
-- **Solve button** or Ctrl+Enter triggers `solveRecord()` in solve-engine.js
+- **Solve button** or Ctrl+Enter triggers `handleSolve()` (ui.js), which runs the solve through `SolveRunner` (see "Solve execution" below) — off the main thread when possible. The core entry is `solveRecord()` in solve-engine.js.
 - Pipeline: discover variables → evaluate definitions → partition equations into independent components → solve each component (recursive backtracking) → merge → per-OUTPUT-with-limits re-solve → format output
 - **Recursive backtracking solver** (`solveRecursive` in solve-engine.js): each depth runs `deterministicAdvance` ([1]-[4]: body defs, sub map, direct-eval, sweep subs), then `enumerateAlternatives` yields Kind 1/2/3 candidates. Backtracker snapshots state, applies a candidate, recurses. First balanced branch wins; otherwise `saveCandidate` keeps the most-progressed snapshot (compare-by-`context.variables.size` before snapshotting, so eager limit-rejection saves get replaced when subsequent branches bind more vars). `maxIterations = 50`.
 - **Partitioning** (`solveEquationsByComponent`): splits equations into connected components by shared vars (transitively, including limit-expression refs and body-def RHS refs), runs `solveEquations` once per component with the shared `context`. Avoids the cartesian-product blow-up the backtracker would otherwise incur for independent contradictory sub-systems. Per-component calls pass `skipLimitValidation=true`; wrapper runs `validateLimits` once on the merged final context. Single-component records short-circuit to a direct call (no overhead).
@@ -89,6 +92,13 @@ node tests/gen-expected.js TESTNAME
 - **UI highlight layer is independent of error severity**: variables-panel.js no longer suppresses green/orange/partial when hard errors exist. The data layer drives colors honestly — vars in `equationVarStatus` get their status; vars whose declaration line appears in any error message get `has-error` (red) layered on top via the line-number regex.
 - Results inserted back into text preserving comments and formatting
 - Error reporting with line numbers shown in status bar (dedup by string)
+
+### Solve execution: worker, fallback, Stop
+- **`SolveRunner`** (`solve-runner.js`) owns *how* a solve runs; ui.js owns *what to do with inputs/results*. It runs the solve in a **Web Worker** (`solve-worker.js`) when possible — the main thread stays responsive and a long/runaway solve can be stopped by terminating the worker — and transparently **falls back to a synchronous solve** on the main thread when a worker isn't usable. It normalizes every outcome to one shape: `{ ok:true, text, solved, errors, equationVarStatus, tables }` | `{ ok:false, error }` | `null` (stopped), so `handleSolve` doesn't branch on worker-vs-sync.
+- **Two-pass solve is shared**: `solveRecordTwoPass(text, record, parsedConstants, parsedFunctions, opts)` in solve-engine.js runs pass 1 (skip tables) → re-solve (compute tables, second chance for cleared vars) → re-append trace. It's the single copy called by the worker, `run-tests.js`, and `gen-expected.js` (previously three hand-kept copies). The worker's `onmessage` is a thin `solveRecordTwoPass → postMessage` shell; the runner injects it as the `syncSolve` callback for the fallback path.
+- **`handleSolve` is async**: gather cloneable inputs → `if (runner.async) setSolveButtonMode('stop')` → `await runner.run(inputs)` → `applySolveResult` (the DOM tail — setValue, status, highlights, tables, cursor). `null` result ⇒ stopped, apply nothing. Callers are fire-and-forget.
+- **Readiness gate** (the file:// fix): the worker posts `{ready:true}` after `importScripts` succeeds; a solve is routed to it only when ready. On `file://` the worker's load is blocked so it never becomes ready → the first solve goes straight to sync (no waiting on a doomed worker, no hang). `SolveRunner._spawn` also detects `location.protocol === 'file:'` up front and skips `new Worker()` entirely, so there's no `SecurityError`/`onerror` noise on load. A worker `onerror` (non-file:// failures — CSP, sandbox) marks it broken for the session and replays any in-flight solve synchronously.
+- **Stop / cancellation** (Stop button, Escape, and `markDriveDirty` in drive.js on any record change): `stopSolve()` → `runner.stop()` (terminate + respawn, resolve the pending `run()` with `null`) and, **synchronously**, `setStatus('Solve stopped')`. That sync ordering is load-bearing: on a record switch, `openRecord` restores the destination record's status right after in the same tick, overwriting "Solve stopped" so the switch reads **silent**; `handleSolve`'s null continuation (a later microtask) touches nothing. `stopSolve` self-guards (no-op when idle). Fallback (sync) solves block the thread and have no Stop.
 
 ### Variable Limits
 - **Limits are always linear**: `[50:0]` is auto-swapped to `[0:50]` — order doesn't matter. `°` on a declaration is display-only and does NOT affect search-range semantics. For wrap-through-0° search, write a linear range extending past M (e.g. `[327.8:365.5]`) — trig is periodic so Brent's evaluating 365° == evaluating 5°. Mod-aware solving semantics live entirely in `°=` equations.
@@ -173,12 +183,14 @@ node tests/gen-expected.js TESTNAME
 ```
 app.js (entry point, ~200 lines)
   ↓
-ui.js (main orchestration, ~2010 lines)
+ui.js (main orchestration, ~1900 lines)
   ├→ storage.js (localStorage, import/export, tutorial + example records, ~3045 lines)
   ├→ drive.js (Google Drive cross-device sync — canonical file, gesture-renewed auth, conflict dialogs, ~1330 lines)
   ├→ editor.js (syntax highlighting editor, ~1435 lines)
   ├→ variables-panel.js (structured variable display, ~2455 lines)
-  ├→ solve-engine.js (solving + table/grid eval, ~2810 lines)
+  ├→ solve-runner.js (SolveRunner: worker/sync solve orchestration + Stop, ~180 lines)
+  │     └→ solve-worker.js (Web Worker entry: importScripts the solve modules, runs solveRecordTwoPass off-thread)
+  ├→ solve-engine.js (solving + table/grid eval, `solveRecordTwoPass`, ~2860 lines)
   │     ├→ solver.js (Brent's algorithm, ~840 lines)
   │     ├→ evaluator.js (expression eval, 50+ builtins, ~955 lines)
   │     └→ variables.js (variable parsing + table detection, ~1245 lines)
@@ -187,7 +199,7 @@ ui.js (main orchestration, ~2010 lines)
   └→ theme.js (light/dark toggle, ~115 lines)
 ```
 
-Script load order in `index.html`: theme → parser → line-parser → evaluator → solver → variables → storage → drive → editor → variables-panel → solve-engine → ui → app
+Script load order in `index.html`: theme → parser → line-parser → evaluator → solver → variables → storage → drive → editor → variables-panel → solve-engine → solve-runner → ui → app. (`solve-worker.js` is not a `<script>` — it's loaded by `new Worker()`; inside the worker it `importScripts` parser…solve-engine.)
 
 All modules use global scope (no ES modules, no build system). Test files use `require()` for Node.js compatibility.
 
@@ -195,8 +207,10 @@ All modules use global scope (no ES modules, no build system). Test files use `r
 
 | File | Purpose |
 |------|---------|
-| `ui.js` | UI state, event handling, record management, sidebar/tabs/details rendering |
-| `solve-engine.js` | `solveRecord()` main entry, equation solving orchestration, output formatting, table/grid evaluation (`evaluateTable`) |
+| `ui.js` | UI state, event handling, record management, sidebar/tabs/details rendering, `handleSolve()`/`applySolveResult()` |
+| `solve-runner.js` | `SolveRunner` class — runs a solve in a Web Worker when possible, else synchronously; readiness gate, terminate-to-stop, error/`file://` fallback; normalizes outcomes to `{ok,…}` \| `null` |
+| `solve-worker.js` | Web Worker entry — `importScripts` the solve modules, posts `{ready:true}`, runs `solveRecordTwoPass` on each message; not a page `<script>` |
+| `solve-engine.js` | `solveRecord()` main entry, `solveRecordTwoPass()` (shared two-pass solve), equation solving orchestration, output formatting, table/grid evaluation (`evaluateTable`) |
 | `solver.js` | Brent's root-finding algorithm, equation detection, substitution derivation (`deriveSubstitutions` generator, `tryIsolateVariables` generator, single-result wrappers for back-compat) |
 | `evaluator.js` | Expression evaluation, 50+ built-in functions, `formatNumber()`, `checkBalance()` |
 | `variables.js` | Variable declaration parsing, `parseAllVariables()`, `setVariableValue()`, `buildOutputLine()`, `findTableDefinitions()` |
@@ -371,7 +385,7 @@ Sign in → adoptCanonicalFile (find MathPad.json by name) → resolveSyncConfli
 3. Handle in `line-parser.js` `LineParser` and `getMarkerString()`
 4. Handle in `solveRecord()` if special behavior needed
 
-**Modifying solving behavior**: Edit `solveRecord()` in `solve-engine.js`. `solveEquations(context, declarations, record, equations, bodyDefinitions)` takes equations and optional body definitions as parameters, enabling reuse by both the main solver and table/grid per-row evaluation. The recursive `solveRecursive` + `deterministicAdvance` + `enumerateAlternatives` structure handles body defs, substitutions, direct-eval, and Kind 1/2/3 branching within each level. Body definitions (`:` declarations with a non-literal RHS) are evaluated in phase [1] of each Advance pass with apply-once tracking via `context.firedBodyDefs`; the body def overrides any solver-set value when it fires. See "Body-def authority" above.
+**Modifying solving behavior**: Edit `solveRecord()` in `solve-engine.js`. The two-pass sequence (skip-tables → re-solve → re-append trace) lives once in `solveRecordTwoPass()` — change it there and the worker, `run-tests.js`, and `gen-expected.js` all follow (don't re-copy it). Execution (worker vs. sync, Stop) is in `SolveRunner` (`solve-runner.js`), not the solve code. `solveEquations(context, declarations, record, equations, bodyDefinitions)` takes equations and optional body definitions as parameters, enabling reuse by both the main solver and table/grid per-row evaluation. The recursive `solveRecursive` + `deterministicAdvance` + `enumerateAlternatives` structure handles body defs, substitutions, direct-eval, and Kind 1/2/3 branching within each level. Body definitions (`:` declarations with a non-literal RHS) are evaluated in phase [1] of each Advance pass with apply-once tracking via `context.firedBodyDefs`; the body def overrides any solver-set value when it fires. See "Body-def authority" above.
 
 **Adding a table/grid/vectorDraw feature**: Table detection is in `findTableDefinitions()` (variables.js), evaluation in `evaluateTable()` (solve-engine.js), rendering in `setTableData()` / `_renderTable2()` (variables-panel.js), styling in style.css (`.mathpad-table`, `.mathpad-grid`)
 

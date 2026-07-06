@@ -280,7 +280,8 @@ Each editable variable has a ⟲ icon that clears it and solves, making it easy 
 ## Technical Details
 
 - Pure client-side JavaScript — no build system, no frameworks, no server
-- ~18,000 lines of JS across 13 modules
+- ~18,000 lines of JS across 15 modules
+- Solving runs in a Web Worker so the UI stays responsive and a long solve can be stopped (Solve button becomes Stop); transparently falls back to a synchronous solve where a worker isn't available (e.g. opened from `file://`)
 - Brent's root-finding algorithm with adaptive bracketing, known-scale heuristics, and singularity/pole rejection
 - Recursive backtracking solver with deterministic-advance phases (direct-eval, substitution building, sweep subs) and three kinds of branching candidates (direct-eval alternates, sweep-0 natural 1-unknown, sweep-1 subset-enumerated substitution combos); falls back to most-progressed snapshot when no balanced branch found
 - Equation-graph partitioning into independent components (union-find over shared vars, limit refs, body-def refs) to avoid cartesian-product blow-up on disjoint sub-systems
