@@ -93,7 +93,6 @@ class VariablesPanel {
         this.changeListeners = [];
         this.solveCallback = null;
         this.inputElements = new Map();
-        this.lastEditedVar = null; // Track most recently edited variable name
         this.hasClearedInput = false; // True if user cleared an input since last solve/clear
         this._solveOnBlur = false; // True only when a blur was triggered by Tab/Enter (not a click)
         this.errorLines = new Set(); // Lines with errors
@@ -713,7 +712,12 @@ class VariablesPanel {
             valueElement.value = this.formatValueForDisplay(info);
             // Update formula pane on blur (when user is done typing), not during typing
             valueElement.addEventListener('blur', (e) => {
-                this.handleValueChange(info.lineIndex, e.target.value);
+                // Only commit a value the user actually changed (a mere
+                // focus/blur or Escape leaves the formula text alone).
+                const unchanged = e.target.value === e.target.dataset.originalValue;
+                if (!unchanged) {
+                    this.handleValueChange(info.lineIndex, e.target.value);
+                }
                 if (!e.target.value.trim()) this.hasClearedInput = true;
                 // Auto-solve only when the blur was triggered by Tab or Enter
                 // (the user signaling "done"), not by clicking elsewhere. This
@@ -721,15 +725,17 @@ class VariablesPanel {
                 // redundant quick-solve before the button's own action runs —
                 // those are mouse clicks, not Tab/Enter. The edited value is
                 // committed via handleValueChange either way.
-                const solveRequested = this._solveOnBlur;
+                // Tab/Enter out of an unchanged field doesn't solve — nothing new
+                // to solve from. Use Solve for anything else.
+                const solveRequested = this._solveOnBlur && !unchanged;
                 this._solveOnBlur = false;
                 if (solveRequested && this.blurCallback && !this.hasClearedInput) this.blurCallback();
             });
             valueElement.addEventListener('focus', (e) => {
-                // Track this as the focused variable (for clear exclusion)
-                this.lastEditedVar = info.name;
                 // Save original value for Escape restore
                 e.target.dataset.originalValue = e.target.value;
+                // Reset "typed since focus" (read by this row's ⟲ button)
+                delete e.target.dataset.typed;
             });
             valueElement.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
@@ -742,6 +748,7 @@ class VariablesPanel {
                 }
             });
             valueElement.addEventListener('input', (e) => {
+                e.target.dataset.typed = '1';
                 this.autoSizeInput(e.target);
             });
             this.inputElements.set(info.lineIndex, valueElement);
@@ -759,26 +766,37 @@ class VariablesPanel {
             solveBtn.className = 'variable-solve-btn';
             solveBtn.textContent = '⟲';
             solveBtn.title = 'Clear and solve';
+            // "Enter a value, then ⟲" solves WITH the typed value instead of
+            // blanking it (handy on touch, where ⟲ is easier than Tab/Enter).
+            // Decided at pointerdown — before the press moves focus off the field —
+            // as: this row's field is still focused and was typed in since it got
+            // focus. Any other action in between (focusing elsewhere, Escape,
+            // solving, ...) has already taken focus away, so nothing to reset.
+            let keepTypedValue = false;
+            solveBtn.addEventListener('pointerdown', () => {
+                keepTypedValue = document.activeElement === valueElement &&
+                    valueElement.dataset.typed === '1';
+            });
             solveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
+                const keepValue = keepTypedValue;
+                keepTypedValue = false;
                 // Get current info from declarations (may have been replaced after solve)
                 const currentInfo = this.declarations.get(info.lineIndex) || info;
-                // Clear the value if present, UNLESS user just edited this variable.
+                // Clear the value if present, unless keeping a just-typed value.
                 // The blank is applied only to the text handed to solve (startText)
                 // — the editor's value and undo top keep the current value until
                 // the solve writes its result. So a solve that restores the same
                 // value produces no undo entry (setValue's own changed-check), and
                 // one that changes it pushes exactly one. No separate clear edit.
-                const justEdited = this.lastEditedVar === info.name;
                 let startText = null;
-                if (this.formatValueForDisplay(currentInfo) && !justEdited) {
+                if (this.formatValueForDisplay(currentInfo) && !keepValue) {
                     startText = this.buildClearedText(info.lineIndex);
                 }
-                // Clear tracking and trigger solve (always undoable — setValue
-                // suppresses the no-op when the value is unchanged).
+                // Trigger solve (always undoable — setValue suppresses the no-op
+                // when the value is unchanged).
                 // Ctrl+click enables the solve trace output;
                 // Shift+click appends the "--- Table Outputs ---" text section
-                this.lastEditedVar = null;
                 if (this.solveCallback) {
                     this.solveCallback(true, !!e.ctrlKey, !!e.shiftKey, startText);
                 }
@@ -825,13 +843,24 @@ class VariablesPanel {
         if (!row) return;
 
         const valueElement = row.querySelector('.variable-value-input, .variable-value-readonly');
-        // Skip update if element has focus (to not disrupt typing)
-        if (valueElement && document.activeElement !== valueElement) {
+        // Skip update if element has focus and the user has typed in it (to not
+        // disrupt typing). A focused-but-untouched field (e.g. Tab landed on it
+        // while the solve ran) is refreshed, so it doesn't show — and then
+        // commit — a stale pre-solve value.
+        const focused = valueElement && document.activeElement === valueElement;
+        const untouched = focused && valueElement.dataset.originalValue === valueElement.value;
+        if (valueElement && (!focused || untouched)) {
             const newValue = this.formatValueForDisplay(info);
             const oldValue = valueElement.tagName === 'INPUT' ? valueElement.value : valueElement.textContent;
             if (valueElement.tagName === 'INPUT') {
+                const allSelected = untouched && valueElement.selectionStart === 0 &&
+                    valueElement.selectionEnd === valueElement.value.length;
                 valueElement.value = newValue;
                 this.autoSizeInput(valueElement);
+                if (untouched) {
+                    valueElement.dataset.originalValue = newValue;
+                    if (allSelected) valueElement.select();
+                }
             } else {
                 valueElement.textContent = newValue;
             }
@@ -1159,11 +1188,10 @@ class VariablesPanel {
     }
 
     /**
-     * Clear the last edited variable tracking
-     * Called after solve to reset the "just edited" state
+     * Reset the panel's edit tracking (cleared inputs).
+     * Called when a solve starts and on Clear.
      */
     clearLastEdited() {
-        this.lastEditedVar = null;
         this.hasClearedInput = false;
     }
 
