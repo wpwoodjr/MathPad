@@ -1723,10 +1723,9 @@ function applySolveResult(active, msg) {
     record.text = text;
     debouncedSave(UI.data);
 
-    // Set error/equation highlights and clear edit tracking
+    // Set error/equation highlights (edit tracking was reset when the solve started)
     editorInfo.variablesManager.setErrors(errors, equationVarStatus);
     editorInfo.editor.setErrorLines(findErrorLines(errors));
-    editorInfo.variablesManager.clearLastEdited();
 
     // Display table results
     editorInfo.variablesManager.setTableData(tables);
@@ -1780,6 +1779,11 @@ async function handleSolve(undoable = true, traceMode = false, includeTableOutpu
         parsedFunctions: editorInfo.editor.parsedFunctions,
         traceMode, includeTableOutputs
     };
+
+    // Reset edit tracking now, not when the result lands: Tab's blur starts this
+    // solve and then focuses the next field, and any edit there (or elsewhere
+    // while an off-thread solve runs) must survive for the next solve.
+    editorInfo.variablesManager.clearLastEdited();
 
     // The button becomes Stop only for an off-thread solve — a synchronous solve
     // blocks the thread and can't be stopped.
