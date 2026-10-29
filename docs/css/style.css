@@ -1631,6 +1631,14 @@ body.sidebar-resizing * {
     border-color: var(--accent-primary);
 }
 
+/* Editable output: looks like a read-only output until hovered or focused,
+   so outputs stay visually distinct from inputs (and skip the solved/unsolved
+   border colors, which are for inputs). */
+.variable-row .variable-value-input.variable-value-output:not(:focus):not(:hover) {
+    background: transparent;
+    border-color: transparent;
+}
+
 .variable-value-readonly {
     flex: 1;
     max-width: 140px;

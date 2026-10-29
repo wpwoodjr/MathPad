@@ -94,6 +94,7 @@ class VariablesPanel {
         this.solveCallback = null;
         this.inputElements = new Map();
         this.hasClearedInput = false; // True if user cleared an input since last solve/clear
+        this.editedOutputs = new Set(); // Output var names given a value since last solve/clear (kept as givens)
         this._solveOnBlur = false; // True only when a blur was triggered by Tab/Enter (not a click)
         this.errorLines = new Set(); // Lines with errors
         this.flashChanges = false;
@@ -686,24 +687,26 @@ class VariablesPanel {
             nameLabel.title = 'Input variable (cleared on Clear)';
         } else if (decl.type === VarType.OUTPUT) {
             nameLabel.title = clearBehavior === ClearBehavior.ON_SOLVE_ONLY
-                ? 'Output variable (cleared on Solve)'
-                : 'Output variable (cleared on Solve or Clear)';
+                ? 'Output variable (cleared on Solve; enter a value to solve from it)'
+                : 'Output variable (cleared on Solve or Clear; enter a value to solve from it)';
         } else {
             nameLabel.title = 'Input variable (persistent)';
         }
 
         // Value input or display
-        // Output types (-> and ->>) are read-only
+        // Output declarations are editable: a value typed into one is kept as a
+        // given for the next solve (instead of being cleared), so the other
+        // outputs are re-derived from it — see getEditedOutputLines().
         // Expression outputs are always read-only
         const isOutput = decl.type === VarType.OUTPUT;
         const isExpressionOutput = info.isExpressionOutput || false;
-        const isEditable = !isOutput && !isExpressionOutput;
+        const isEditable = !isExpressionOutput;
         let valueElement;
 
         if (isEditable) {
             valueElement = document.createElement('input');
             valueElement.type = 'text';
-            valueElement.className = 'variable-value-input';
+            valueElement.className = isOutput ? 'variable-value-input variable-value-output' : 'variable-value-input';
             valueElement.inputMode = 'text';
             valueElement.spellcheck = false;
             valueElement.setAttribute('autocapitalize', 'none');
@@ -712,21 +715,24 @@ class VariablesPanel {
             valueElement.value = this.formatValueForDisplay(info);
             // Update formula pane on blur (when user is done typing), not during typing
             valueElement.addEventListener('blur', (e) => {
-                // Only commit a value the user actually changed (a mere
-                // focus/blur or Escape leaves the formula text alone).
+                // Only commit a value the user actually changed. For outputs this
+                // matters: committing marks it as a given for the next solve, so a
+                // mere focus/blur (or Escape) must not turn a computed value into one.
                 const unchanged = e.target.value === e.target.dataset.originalValue;
                 if (!unchanged) {
                     this.handleValueChange(info.lineIndex, e.target.value);
                 }
-                if (!e.target.value.trim()) this.hasClearedInput = true;
+                // (Blanking an output doesn't count — outputs are re-derived anyway.)
+                if (!e.target.value.trim() && !isOutput) this.hasClearedInput = true;
                 // Auto-solve only when the blur was triggered by Tab or Enter
                 // (the user signaling "done"), not by clicking elsewhere. This
                 // also means clicking Solve/Clear/the ⟲ icon won't fire a
                 // redundant quick-solve before the button's own action runs —
                 // those are mouse clicks, not Tab/Enter. The edited value is
                 // committed via handleValueChange either way.
-                // Tab/Enter out of an unchanged field doesn't solve — nothing new
-                // to solve from. Use Solve for anything else.
+                // Tab/Enter out of an unchanged field doesn't solve — nothing new to
+                // solve from (and for outputs, a solve with none entered would clear
+                // them all → "Too many unknowns"). Use Solve for anything else.
                 const solveRequested = this._solveOnBlur && !unchanged;
                 this._solveOnBlur = false;
                 if (solveRequested && this.blurCallback && !this.hasClearedInput) this.blurCallback();
@@ -760,8 +766,9 @@ class VariablesPanel {
             valueElement.value = this.formatValueForDisplay(info);
         }
 
-        // Add solve button for editable variables (before name)
-        if (isEditable) {
+        // Add solve button for editable inputs (before name). Outputs get none —
+        // every solve already re-derives them.
+        if (isEditable && !isOutput) {
             const solveBtn = document.createElement('button');
             solveBtn.className = 'variable-solve-btn';
             solveBtn.textContent = '⟲';
@@ -803,7 +810,7 @@ class VariablesPanel {
             });
             row.appendChild(solveBtn);
         } else {
-            // Placeholder for alignment (non-editable variables)
+            // Placeholder for alignment (outputs and non-editable variables)
             const placeholder = document.createElement('span');
             placeholder.className = 'variable-solve-btn-placeholder';
             row.appendChild(placeholder);
@@ -930,6 +937,13 @@ class VariablesPanel {
 
         // Update cached declaration so diff works correctly after Solve
         info.valueText = formattedValue;
+
+        // An output given a value becomes a given for the next solve; blanking
+        // it returns it to a normal (re-derived) output.
+        if (decl.type === VarType.OUTPUT) {
+            if (formattedValue) this.editedOutputs.add(varName);
+            else this.editedOutputs.delete(varName);
+        }
 
         // Get current text and update the specific line
         const oldText = this.editor.getValue();
@@ -1188,11 +1202,30 @@ class VariablesPanel {
     }
 
     /**
-     * Reset the panel's edit tracking (cleared inputs).
+     * Reset the panel's edit tracking (cleared inputs, entered outputs).
      * Called when a solve starts and on Clear.
      */
     clearLastEdited() {
         this.hasClearedInput = false;
+        this.editedOutputs.clear();
+    }
+
+    /**
+     * 1-based line numbers of the output declarations the user gave a value
+     * since the last solve/clear. The solve skips clearing these, so they act
+     * as the givens. Resolved from names against the current declarations so
+     * formula edits that shift lines don't point at the wrong line.
+     */
+    getEditedOutputLines() {
+        const lines = [];
+        if (this.editedOutputs.size === 0) return lines;
+        for (const [lineIndex, info] of this.declarations) {
+            if (info.declaration && info.declaration.type === VarType.OUTPUT &&
+                !info.isExpressionOutput && this.editedOutputs.has(info.name)) {
+                lines.push(lineIndex + 1);
+            }
+        }
+        return lines;
     }
 
     /**

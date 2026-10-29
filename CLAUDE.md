@@ -15,7 +15,9 @@ MathPad is an algebraic equation solver web application, reimplemented from the 
 ```bash
 # Open directly in browser (no build step). From file://, solving falls back to
 # synchronous (no Stop button) — browsers block the solve Web Worker from file://.
-# Serve over http(s) for the worker: `cd docs && python3 -m http.server`
+# Serve over http(s) for the worker: `python3 scripts/dev-server.py [port]` (serves docs/
+# with Cache-Control: no-store — plain `python3 -m http.server` lets the browser keep
+# stale copies of the worker's importScripts files, mixing old and new solve code)
 open docs/index.html
 
 # Check JavaScript syntax
@@ -58,7 +60,8 @@ node tests/gen-expected.js TESTNAME
 
 ### Variables Panel
 - Displays parsed variable declarations with editable value inputs
-- Output values use readonly `<input>` elements (selectable/copyable)
+- Expression outputs use readonly `<input>` elements (selectable/copyable)
+- **Editable outputs**: OUTPUT declarations (`->`, `->>`, `:>`, `:>>`) get an editable `<input>` (class `variable-value-output`, styled borderless until hover/focus, no `⟲` button). Typing a value into one adds its name to `editedOutputs`; `handleSolve` passes `getEditedOutputLines()` (names resolved to current 1-based lines) as `keepOutputLines` → `solveRecordTwoPass` → both `solveRecord` passes, which add them to the `clearVariables(..., 'solve', ...)` skip set so the entered value stays a given (discoverVariables loads the literal into context) and the other outputs re-derive from it. The set is reset when a solve starts (`clearLastEdited()` in `handleSolve`, after inputs are gathered) and on Clear, so the field is a normal output again next solve. It is not restored if that solve is stopped, fails, or is discarded — you re-enter the value (deliberately kept simple; those cases need a long-running solve). Blanking an edited output removes it from the set (and doesn't set `hasClearedInput`). This is what lets the Conversions seed records use all-`->` fields: type one value, Enter, done — no Clear step.
 - Row types: declaration (name + input), expression output (label + readonly value), label (plain text), spacer
 - `--Variables--` marker: only lines below it appear in the panel
 - Variable name labels split into text + marker spans; names truncate with ellipsis on narrow panels while markers (`:`, `->`, etc.) stay visible
@@ -66,8 +69,8 @@ node tests/gen-expected.js TESTNAME
 - Equation variable highlighting: green (balanced), orange (unbalanced), red (error)
 - Tab cycles through inputs; Escape reverts; flash animation on value changes
 - After a solve, `updateVariableRow` refreshes a focused field only if it's untouched (value still equals its `originalValue`) — e.g. the field Tab moved to while the solve ran — so it never shows, and then commits, a stale pre-solve value; a field being typed in is left alone.
-- Edit tracking (`hasClearedInput`) is reset by `clearLastEdited()` when a solve **starts** (in `handleSolve`, not when the result lands) and on Clear, so edits made while a solve runs survive for the next one.
-- **Editing an input value commits to the formula text on every blur (`handleValueChange`), but auto-solves only when the blur was triggered by Tab or Enter** (a `_solveOnBlur` flag set by those handlers) — clicking elsewhere commits without solving, Escape reverts without solving. Blur commits only a value the user actually changed (vs. the `dataset.originalValue` captured on focus), and Tab/Enter out of an **unchanged** field never solves — only changing the field you're leaving does (use Solve for anything else, e.g. after editing formulas or an earlier field you clicked away from). This also means clicking Solve/Clear/`⟲` (mouse clicks, not Tab/Enter) won't fire a redundant quick-solve before the button's own action, so no separate double-solve guard is needed.
+- Edit tracking (`hasClearedInput`, plus `editedOutputs` — see Editable outputs) is reset by `clearLastEdited()` when a solve **starts** (in `handleSolve`, not when the result lands) and on Clear, so edits made while a solve runs survive for the next one.
+- **Editing an input value commits to the formula text on every blur (`handleValueChange`), but auto-solves only when the blur was triggered by Tab or Enter** (a `_solveOnBlur` flag set by those handlers) — clicking elsewhere commits without solving, Escape reverts without solving. Blur commits only a value the user actually changed (vs. the `dataset.originalValue` captured on focus), and Tab/Enter out of an **unchanged** field never solves — only changing the field you're leaving does (use Solve for anything else, e.g. after editing formulas or an earlier field you clicked away from). No wasted solves, and an all-outputs record (Conversions) isn't wiped by a no-givens solve. This also means clicking Solve/Clear/`⟲` (mouse clicks, not Tab/Enter) won't fire a redundant quick-solve before the button's own action, so no separate double-solve guard is needed.
 - Column-preserved comment spacing
 
 ### Solving
@@ -158,7 +161,8 @@ node tests/gen-expected.js TESTNAME
 - **"Default Settings"** — template for new record settings
 
 ### Seeded categories & records
-- Default category order (`createDefaultData` in storage.js): `Tutorial`, `Examples`, `Unfiled`, `Finance`, `Math`, `Medical`, `Science`, `Reference`
+- Default category order (`createDefaultData` in storage.js): `Tutorial`, `Examples`, `Unfiled`, `Finance`, `Math`, `Medical`, `Science`, `Conversions`, `Reference`
+- **Conversions** holds Length/Volume/Mass/Time conversion records whose fields are all `->` outputs (see Editable outputs) — enter any one value and solve
 - **Examples** holds standalone demo records: "Sample tables", "Sample tableGraphs", "Table inheritance" (shows a table inheriting the record's equation/inputs and overriding `rate`/`pmt` per row). The `Finance`/`Math`/etc. categories hold the "Example: …" worked records (Retirement, Loan, …)
 - Seeded records (and changes to them) only apply to **new** data / after Reset or Import — existing localStorage isn't migrated
 - **Seed ids**: `createDefaultData` stamps sequential `seed_N` ids (`seed_1`…`seed_n`) over the `generateId()` placeholders. User records keep `r_*` ids, so the prefixes never collide. Reset matches built-ins purely by the `seed_` prefix (not specific numbers), so adding/removing/reordering a seed needs no bookkeeping. The numbers aren't stable across app versions (reordering shifts them) — only cosmetic, affecting which record a preserved tab/selection reopens after a refresh.

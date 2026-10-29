@@ -2398,21 +2398,21 @@ yards = feet/3
 nautMiles = meters/1852
 
 --Variables--
-"*Clear, enter one value, Solve"
+"*Enter any one value, then press Enter or Solve"
 
 "Imperial"
-inches<-
-feet<-
-yards<-
-miles<-
-nautical miles nautMiles<-
+inches->
+feet->
+yards->
+miles->
+nautical miles nautMiles->
 
 "Metric"
-millimeters<-
-centimeters<-
-meters<-
-kilometers<-
-lightYears<-`,
+millimeters->
+centimeters->
+meters->
+kilometers->
+lightYears->`,
                 category: 'Conversions',
                 places: 2,
                 stripZeros: true,
@@ -2438,19 +2438,19 @@ usGal = usOz/128
 liters = ml/1000
 
 --Variables--
-"*Clear, enter one value, Solve"
+"*Enter any one value, then press Enter or Solve"
 
 "US"
-tablespoons tbs<-
-ounces usOz<-
-cups usCup<-
-pints usPint<-
-quarts usQuart<-
-gallons usGal<-
+tablespoons tbs->
+ounces usOz->
+cups usCup->
+pints usPint->
+quarts usQuart->
+gallons usGal->
 
 "Metric"
-milliliters ml<-
-liters<-`,
+milliliters ml->
+liters->`,
                 category: 'Conversions',
                 places: 2,
                 stripZeros: true,
@@ -2471,17 +2471,17 @@ lbs = oz/16
 ton = lbs/2000
 
 --Variables--
-"*Clear, enter one value, Solve"
+"*Enter any one value, then press Enter or Solve"
 
 "US"
-ounces oz<-
-pounds lbs<-
-tons ton<-
+ounces oz->
+pounds lbs->
+tons ton->
 
 "Metric"
-milligrams mg<-
-grams gram<-
-kilograms kg<-`,
+milligrams mg->
+grams gram->
+kilograms kg->`,
                 category: 'Conversions',
                 places: 2,
                 stripZeros: true,
@@ -2502,14 +2502,14 @@ days = weeks*7
 days = years*365.2425
 
 --Variables--
-"*Clear, enter one value, Solve"
+"*Enter any one value, then press Enter or Solve"
 
-secs<-
-mins<-
-hours<-
-days<-
-weeks<-
-years<-           "(Gregorian)"`,
+secs->
+mins->
+hours->
+days->
+weeks->
+years->           "(Gregorian)"`,
                 category: 'Conversions',
                 places: 2,
                 stripZeros: true,

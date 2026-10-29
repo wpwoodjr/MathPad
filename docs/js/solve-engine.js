@@ -1804,8 +1804,12 @@ function appendReferencesSection(text, context) {
  * @param {boolean} includeTableOutputs - If true, append "--- Table Outputs ---"
  *   section to the text. Defaults off so the section is opt-in per solve
  *   (e.g. via Shift+Solve).
+ * @param {Array<number>|null} keepOutputLines - 1-based lines of output
+ *   declarations the user typed a value into since the last solve. Those
+ *   values are NOT cleared before solving, so they act as the givens and the
+ *   other outputs are re-derived from them (e.g. the Conversions records).
  */
-function solveRecord(text, context, record, parserTokens, skipTables = false, traceMode = false, includeTableOutputs = false) {
+function solveRecord(text, context, record, parserTokens, skipTables = false, traceMode = false, includeTableOutputs = false, keepOutputLines = null) {
     // Set up trace buffer for this solve (outer only — paused during table eval)
     const prevTraceBuffer = _traceBuffer;
     if (traceMode) _traceBuffer = [];
@@ -1832,7 +1836,12 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
 
     // Clear output variables and expression outputs so they become unknowns for solving
     // Uses 'solve' mode to also clear persistent outputs (:> :>>)
-    const clearResult = clearVariables(text, 'solve', allTokens, tableLines.size > 0 ? tableLines : null);
+    // User-entered output values (keepOutputLines) are skipped so they stay as givens.
+    let clearSkipLines = tableLines;
+    if (keepOutputLines && keepOutputLines.length > 0) {
+        clearSkipLines = new Set([...tableLines, ...keepOutputLines]);
+    }
+    const clearResult = clearVariables(text, 'solve', allTokens, clearSkipLines.size > 0 ? clearSkipLines : null);
     text = clearResult.text;
     allTokens = clearResult.allTokens;
 
@@ -2037,21 +2046,24 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
  * first-pass count (drives the "Solved N" status); errors/status/tables come
  * from the re-solve.
  *
- * @param {object} opts - { traceMode, includeTableOutputs }
+ * @param {object} opts - { traceMode, includeTableOutputs, keepOutputLines }
+ *   (keepOutputLines: see solveRecord — applied to both passes so a
+ *   user-entered output stays the given through the re-solve too)
  */
 function solveRecordTwoPass(text, record, parsedConstants, parsedFunctions, opts = {}) {
     const traceMode = opts.traceMode || false;
     const includeTableOutputs = opts.includeTableOutputs || false;
+    const keepOutputLines = opts.keepOutputLines || null;
 
     const tokens1 = new Tokenizer(text).tokenize();
     const context = createEvalContext(record, parsedConstants, parsedFunctions, text, tokens1);
-    const result = solveRecord(text, context, record, tokens1, true, traceMode, includeTableOutputs);
+    const result = solveRecord(text, context, record, tokens1, true, traceMode, includeTableOutputs, keepOutputLines);
 
     let outText = result.text;
     const tokens2 = new Tokenizer(outText).tokenize();
     const verifyContext = createEvalContext(record, parsedConstants, parsedFunctions, outText, tokens2);
     verifyContext.preSolveValues = context.preSolveValues;
-    const verifyResult = solveRecord(outText, verifyContext, record, tokens2, false, false, includeTableOutputs);
+    const verifyResult = solveRecord(outText, verifyContext, record, tokens2, false, false, includeTableOutputs, keepOutputLines);
     outText = verifyResult.text;
 
     if (traceMode && result.trace && result.trace.length > 0) {

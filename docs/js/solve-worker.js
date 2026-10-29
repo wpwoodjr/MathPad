@@ -11,7 +11,7 @@
  *
  * Protocol:
  *   main → worker: { id, text, record, parsedConstants, parsedFunctions,
- *                    traceMode, includeTableOutputs }
+ *                    traceMode, includeTableOutputs, keepOutputLines }
  *   worker → main: { id, ok: true,  text, solved, errors, equationVarStatus, tables }
  *              or: { id, ok: false, error }
  *
@@ -32,14 +32,15 @@ importScripts(
 );
 
 self.onmessage = function(e) {
-    const { id, text, record, parsedConstants, parsedFunctions, traceMode, includeTableOutputs } = e.data;
+    const { id, text, record, parsedConstants, parsedFunctions, traceMode, includeTableOutputs, keepOutputLines } = e.data;
 
     try {
         // The two-pass solve lives in solve-engine.js (solveRecordTwoPass), shared
         // with the test scripts so the sequence isn't duplicated.
         const out = solveRecordTwoPass(text, record, parsedConstants, parsedFunctions, {
             traceMode,
-            includeTableOutputs
+            includeTableOutputs,
+            keepOutputLines
         });
         self.postMessage({ id, ok: true, ...out });
     } catch (err) {
