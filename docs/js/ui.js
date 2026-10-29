@@ -1626,8 +1626,7 @@ async function handleReset() {
 // ---------------------------------------------------------------------------
 const solveRunner = new SolveRunner('js/solve-worker.js', (inputs) =>
     solveRecordTwoPass(inputs.text, inputs.record, inputs.parsedConstants, inputs.parsedFunctions,
-        { traceMode: inputs.traceMode, includeTableOutputs: inputs.includeTableOutputs,
-          keepOutputLines: inputs.keepOutputLines }));
+        { traceMode: inputs.traceMode, includeTableOutputs: inputs.includeTableOutputs }));
 
 function setSolveButtonMode(mode) {
     const btn = document.getElementById('btn-solve');
@@ -1778,9 +1777,7 @@ async function handleSolve(undoable = true, traceMode = false, includeTableOutpu
         text, record,
         parsedConstants: editorInfo.editor.parsedConstants,
         parsedFunctions: editorInfo.editor.parsedFunctions,
-        traceMode, includeTableOutputs,
-        // Outputs the user typed a value into since the last solve — kept as givens
-        keepOutputLines: editorInfo.variablesManager.getEditedOutputLines()
+        traceMode, includeTableOutputs
     };
 
     // Reset edit tracking now, not when the result lands: Tab's blur starts this

@@ -40,6 +40,23 @@ function getLineText(text, lineOffsets, lineNum) {
 }
 
 /**
+ * Given-output marker pairs: an output (-> ->>) the user entered a value into
+ * is rewritten to its given form (<-> <->>), which the solve keeps as a given
+ * instead of clearing; reverting restores the plain output marker.
+ */
+const GIVEN_MARKERS = { '->': '<->', '->>': '<->>' };
+const UNGIVEN_MARKERS = { '<->': '->', '<->>': '->>' };
+
+/**
+ * Replace a declaration's marker in its line. The marker is the last
+ * oldMarker.length characters before markerEndIndex (any format suffix such
+ * as $ or #16 precedes it and is kept).
+ */
+function replaceLineMarker(line, markerEndIndex, oldMarker, newMarker) {
+    return line.substring(0, markerEndIndex - oldMarker.length) + newMarker + line.substring(markerEndIndex);
+}
+
+/**
  * Build an output line by replacing the value after the marker
  * Used by both variable outputs and expression outputs
  * @param {string} line - The original line
@@ -277,7 +294,9 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
                 t.type === TokenType.ARROW_RIGHT ||
                 t.type === TokenType.ARROW_FULL ||
                 t.type === TokenType.ARROW_PERSIST ||
-                t.type === TokenType.ARROW_PERSIST_FULL
+                t.type === TokenType.ARROW_PERSIST_FULL ||
+                t.type === TokenType.ARROW_GIVEN ||
+                t.type === TokenType.ARROW_GIVEN_FULL
             );
             if (hasCodeMarker) {
                 const tokensForCheck = lineTokens;
@@ -477,7 +496,8 @@ function capturePreSolveValues(text, allTokens) {
 /**
  * Clear variable values based on type
  * Clears ALL matching declarations, not just one per variable
- * clearType: 'input' clears input variables (<-) and output variables (-> and ->>)
+ * clearType: 'input' clears input variables (<-) and output variables (-> and ->>),
+ *            and blanks given outputs (<-> <->>) and reverts them to -> / ->>
  *            'output' clears output variables only (-> and ->>)
  *            'solve' clears output variables (-> ->>) and persistent outputs (:> :>>)
  *            'all' clears all variables
@@ -512,6 +532,9 @@ function clearVariables(text, clearType = 'input', allTokens, skipLines) {
             const commentInfo = { comment: result.comment, commentUnquoted: result.commentUnquoted };
             const markerEndIndex = result.markerEndCol - 1;
             lines[i] = buildOutputLine(lines[i], markerEndIndex, '', commentInfo);
+        }
+        if (shouldClear && result.kind === 'declaration' && UNGIVEN_MARKERS[result.marker]) {
+            lines[i] = replaceLineMarker(lines[i], result.markerEndCol - 1, result.marker, UNGIVEN_MARKERS[result.marker]);
         }
     }
 
@@ -1132,6 +1155,7 @@ if (typeof module !== 'undefined' && module.exports) {
         parseMarkedLine, parseVariableLine, parseAllVariables,
         discoverVariables, getInlineEvalFormat, formatVariableValue,
         buildOutputLine, capturePreSolveValues, clearVariables,
+        GIVEN_MARKERS, UNGIVEN_MARKERS, replaceLineMarker,
         findExpressionOutputs, findEquationsAndOutputs,
         expandInlineExprs,
         parseConstantsRecord, parseFunctionsRecord, createEvalContext,

@@ -20,9 +20,11 @@ const MARKER_PRECEDENCE = {
     '->>': 3,
     ':>>': 3,
     '<<-': 3,
+    '<->>': 3,
     '->': 2,
     ':>': 2,
     '<-': 2,
+    '<->': 2,
     '::': 1,
     ':': 0
 };
@@ -40,6 +42,8 @@ function getMarkerString(token) {
         case TokenType.ARROW_FULL: return '->>';
         case TokenType.ARROW_PERSIST: return ':>';
         case TokenType.ARROW_PERSIST_FULL: return ':>>';
+        case TokenType.ARROW_GIVEN: return '<->';
+        case TokenType.ARROW_GIVEN_FULL: return '<->>';
         default: return null;
     }
 }
@@ -303,9 +307,13 @@ class LineParser {
 
         const markerToken = this.tokens[markerIndex];
 
-        // <- <<- : :: always indicate variable declaration, not expression output
+        // <- <<- : :: always indicate variable declaration, not expression output.
+        // So do <-> <->>: a given output holds a value entered for a variable
+        // (an expression has no variable to hold it).
         if (markerToken.type === TokenType.ARROW_LEFT ||
             markerToken.type === TokenType.ARROW_LEFT_FULL ||
+            markerToken.type === TokenType.ARROW_GIVEN ||
+            markerToken.type === TokenType.ARROW_GIVEN_FULL ||
             markerToken.type === TokenType.COLON ||
             markerToken.type === TokenType.DOUBLE_COLON) {
             return false;
@@ -332,7 +340,7 @@ class LineParser {
         }
 
         // Any operator before a variable is an expression context
-        // (unary: -x-> or binary: a-x->). Input markers (<- : ::)
+        // (unary: -x-> or binary: a-x->). Input and given markers (<- : :: <->)
         // already returned false above, so this only applies to outputs.
         if (prevToken.type === TokenType.OPERATOR) {
             return true;
@@ -356,7 +364,8 @@ class LineParser {
         // For non-output markers (: :: <-), all tokens are value (no unit comment split)
         // Date/duration formats also keep all tokens (colons in values aren't comments)
         if (markerToken.type !== TokenType.ARROW_RIGHT && markerToken.type !== TokenType.ARROW_FULL &&
-            markerToken.type !== TokenType.ARROW_PERSIST && markerToken.type !== TokenType.ARROW_PERSIST_FULL) {
+            markerToken.type !== TokenType.ARROW_PERSIST && markerToken.type !== TokenType.ARROW_PERSIST_FULL &&
+            markerToken.type !== TokenType.ARROW_GIVEN && markerToken.type !== TokenType.ARROW_GIVEN_FULL) {
             return { valueTokens: afterTokens, unitComment: null };
         }
         if (markerToken.format === 'date' || markerToken.format === 'duration') {

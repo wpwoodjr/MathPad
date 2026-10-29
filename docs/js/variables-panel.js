@@ -94,7 +94,7 @@ class VariablesPanel {
         this.solveCallback = null;
         this.inputElements = new Map();
         this.hasClearedInput = false; // True if user cleared an input since last solve/clear
-        this.editedOutputs = new Set(); // Output var names given a value since last solve/clear (kept as givens)
+        this.editedOutputs = new Set(); // Output var names entered since last solve/clear (their <-> markers aren't reverted by further entries)
         this._solveOnBlur = false; // True only when a blur was triggered by Tab/Enter (not a click)
         this.errorLines = new Set(); // Lines with errors
         this.flashChanges = false;
@@ -376,10 +376,15 @@ class VariablesPanel {
                 // If name, marker, format, limits, or comment changed, remove old row and add new one
                 const limitsChanged = JSON.stringify(existing.declaration.limits) !== JSON.stringify(info.declaration.limits);
                 const formatChanged = existing.declaration.format !== info.declaration.format || existing.declaration.base !== info.declaration.base;
-                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || existing.declaration.label !== info.declaration.label || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment || existing.isQuoted !== info.isQuoted) {
+                // An output ↔ given-output marker swap (-> ↔ <->) updates in place
+                // (applyMarkerToRow), so it doesn't replace a focused field.
+                const oldMarker = existing.declaration.marker, newMarker = info.declaration.marker;
+                const markerChanged = oldMarker !== newMarker &&
+                    GIVEN_MARKERS[oldMarker] !== newMarker && UNGIVEN_MARKERS[oldMarker] !== newMarker;
+                if (existing.name !== info.name || markerChanged || existing.declaration.label !== info.declaration.label || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment || existing.isQuoted !== info.isQuoted) {
                     toRemove.push(lineIndex);
                     toAdd.push(info);
-                } else if (this.declarationChanged(existing, info)) {
+                } else if (oldMarker !== newMarker || this.declarationChanged(existing, info)) {
                     toUpdate.push(info);
                 }
             }
@@ -667,7 +672,6 @@ class VariablesPanel {
         }
 
         // Variable name label (includes format suffix, limits, and marker)
-        const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : decl.format === 'degrees' ? '°' : decl.format === 'date' ? '@d' : decl.format === 'duration' ? '@t' : decl.base && decl.base !== 10 ? `#${decl.base}` : '';
         const limitsStr = decl.limits
             ? `[${tokensToText(decl.limits.lowTokens).trim()}:${tokensToText(decl.limits.highTokens).trim()}${decl.limits.stepTokens ? ':' + tokensToText(decl.limits.stepTokens).trim() : ''}]`
             : '';
@@ -679,34 +683,24 @@ class VariablesPanel {
         nameText.textContent = displayName;
         const markerText = document.createElement('span');
         markerText.className = 'variable-name-marker';
-        markerText.textContent = formatSuffix + (decl.marker || ':');
         nameLabel.appendChild(nameText);
         nameLabel.appendChild(markerText);
-        // Add tooltip explaining variable type
-        if (clearBehavior === ClearBehavior.ON_CLEAR) {
-            nameLabel.title = 'Input variable (cleared on Clear)';
-        } else if (decl.type === VarType.OUTPUT) {
-            nameLabel.title = clearBehavior === ClearBehavior.ON_SOLVE_ONLY
-                ? 'Output variable (cleared on Solve; enter a value to solve from it)'
-                : 'Output variable (cleared on Solve or Clear; enter a value to solve from it)';
-        } else {
-            nameLabel.title = 'Input variable (persistent)';
-        }
 
         // Value input or display
-        // Output declarations are editable: a value typed into one is kept as a
-        // given for the next solve (instead of being cleared), so the other
-        // outputs are re-derived from it — see getEditedOutputLines().
-        // Expression outputs are always read-only
+        // Plain outputs (-> ->>) are editable: entering a value rewrites the
+        // marker to its given form (<-> <->>), which the solve keeps as a given
+        // so the other outputs re-derive from it — see handleValueChange().
+        // Persistent outputs (:> :>>) have no given form, so they stay
+        // read-only, as do expression outputs.
         const isOutput = decl.type === VarType.OUTPUT;
         const isExpressionOutput = info.isExpressionOutput || false;
-        const isEditable = !isExpressionOutput;
+        const isEditable = !isExpressionOutput && clearBehavior !== ClearBehavior.ON_SOLVE_ONLY;
         let valueElement;
 
         if (isEditable) {
             valueElement = document.createElement('input');
             valueElement.type = 'text';
-            valueElement.className = isOutput ? 'variable-value-input variable-value-output' : 'variable-value-input';
+            valueElement.className = 'variable-value-input';
             valueElement.inputMode = 'text';
             valueElement.spellcheck = false;
             valueElement.setAttribute('autocapitalize', 'none');
@@ -765,6 +759,7 @@ class VariablesPanel {
             valueElement.readOnly = true;
             valueElement.value = this.formatValueForDisplay(info);
         }
+        this.applyMarkerToRow(nameLabel, valueElement, decl);
 
         // Add solve button for editable inputs (before name). Outputs get none —
         // every solve already re-derives them.
@@ -843,6 +838,35 @@ class VariablesPanel {
     }
 
     /**
+     * Show a declaration's marker on its row: the marker text (with any format
+     * suffix), the type tooltip, and the value field's output styling. Used when
+     * a row is built and when only its marker changes (-> ↔ <-> keeps the row,
+     * so a focused field isn't replaced).
+     */
+    applyMarkerToRow(nameLabel, valueElement, decl) {
+        const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : decl.format === 'degrees' ? '°' : decl.format === 'date' ? '@d' : decl.format === 'duration' ? '@t' : decl.base && decl.base !== 10 ? `#${decl.base}` : '';
+        const markerText = nameLabel.querySelector('.variable-name-marker');
+        if (markerText) markerText.textContent = formatSuffix + (decl.marker || ':');
+        const isGiven = !!UNGIVEN_MARKERS[decl.marker];
+        if (decl.type !== VarType.OUTPUT) {
+            nameLabel.title = decl.clearBehavior === ClearBehavior.ON_CLEAR
+                ? 'Input variable (cleared on Clear)'
+                : 'Input variable (persistent)';
+        } else if (isGiven) {
+            nameLabel.title = 'Given output (your entered value; the other outputs are solved from it)';
+        } else if (decl.clearBehavior === ClearBehavior.ON_SOLVE_ONLY) {
+            nameLabel.title = 'Output variable (cleared on Solve)';
+        } else {
+            nameLabel.title = 'Output variable (cleared on Solve or Clear; enter a value to solve from it)';
+        }
+        // Plain outputs look like results (borderless until hover/focus); a
+        // given output looks like the input it now is.
+        if (valueElement && valueElement.classList.contains('variable-value-input')) {
+            valueElement.classList.toggle('variable-value-output', decl.type === VarType.OUTPUT && !isGiven);
+        }
+    }
+
+    /**
      * Update an existing variable row
      */
     updateVariableRow(info) {
@@ -850,6 +874,8 @@ class VariablesPanel {
         if (!row) return;
 
         const valueElement = row.querySelector('.variable-value-input, .variable-value-readonly');
+        const nameLabel = row.querySelector('.variable-name');
+        if (nameLabel) this.applyMarkerToRow(nameLabel, valueElement, info.declaration);
         // Skip update if element has focus and the user has typed in it (to not
         // disrupt typing). A focused-but-untouched field (e.g. Tab landed on it
         // while the solve ran) is refreshed, so it doesn't show — and then
@@ -938,21 +964,41 @@ class VariablesPanel {
         // Update cached declaration so diff works correctly after Solve
         info.valueText = formattedValue;
 
-        // An output given a value becomes a given for the next solve; blanking
-        // it returns it to a normal (re-derived) output.
-        if (decl.type === VarType.OUTPUT) {
-            if (formattedValue) this.editedOutputs.add(varName);
-            else this.editedOutputs.delete(varName);
-        }
-
         // Get current text and update the specific line
         const oldText = this.editor.getValue();
         let text = oldText;
         const lines = text.split('\n');
+        let markersChanged = false;
 
         if (lineIndex >= 0 && lineIndex < lines.length) {
             const markerEndIndex = info.markerEndCol - 1;
             lines[lineIndex] = buildOutputLine(lines[lineIndex], markerEndIndex, formattedValue);
+
+            // Entering a value into an output makes it a given (-> → <->), so the
+            // solve keeps it and re-derives the other outputs from it; blanking a
+            // given makes it a plain output again. The first entry since the last
+            // solve also reverts every other given (a new value to convert from);
+            // further entries before the next solve add to the givens.
+            if (decl.type === VarType.OUTPUT) {
+                const newMarker = formattedValue ? GIVEN_MARKERS[decl.marker] : UNGIVEN_MARKERS[decl.marker];
+                if (newMarker) {
+                    lines[lineIndex] = replaceLineMarker(lines[lineIndex], markerEndIndex, decl.marker, newMarker);
+                    markersChanged = true;
+                }
+                if (formattedValue) {
+                    this.editedOutputs.add(varName);
+                    for (const [otherIndex, other] of this.declarations) {
+                        const otherMarker = other.declaration && other.declaration.marker;
+                        if (otherIndex === lineIndex || !UNGIVEN_MARKERS[otherMarker] ||
+                            this.editedOutputs.has(other.name) || otherIndex >= lines.length) continue;
+                        lines[otherIndex] = replaceLineMarker(lines[otherIndex], other.markerEndCol - 1,
+                            otherMarker, UNGIVEN_MARKERS[otherMarker]);
+                        markersChanged = true;
+                    }
+                } else {
+                    this.editedOutputs.delete(varName);
+                }
+            }
             text = lines.join('\n');
         }
 
@@ -962,6 +1008,11 @@ class VariablesPanel {
                 listener(varName, parsedValue, text);
             }
         }
+
+        // The panel isn't refreshed from its own edits, so re-read the text when
+        // markers changed — the rows' markers and cached marker positions would
+        // otherwise be stale (the swaps update rows in place, keeping focus).
+        if (markersChanged) this.updateFromText(this.editor.getValue());
 
         // Update the input element to show the formatted value
         const inputElement = this.inputElements.get(lineIndex);
@@ -1208,24 +1259,6 @@ class VariablesPanel {
     clearLastEdited() {
         this.hasClearedInput = false;
         this.editedOutputs.clear();
-    }
-
-    /**
-     * 1-based line numbers of the output declarations the user gave a value
-     * since the last solve/clear. The solve skips clearing these, so they act
-     * as the givens. Resolved from names against the current declarations so
-     * formula edits that shift lines don't point at the wrong line.
-     */
-    getEditedOutputLines() {
-        const lines = [];
-        if (this.editedOutputs.size === 0) return lines;
-        for (const [lineIndex, info] of this.declarations) {
-            if (info.declaration && info.declaration.type === VarType.OUTPUT &&
-                !info.isExpressionOutput && this.editedOutputs.has(info.name)) {
-                lines.push(lineIndex + 1);
-            }
-        }
-        return lines;
     }
 
     /**

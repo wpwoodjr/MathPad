@@ -6,13 +6,13 @@
 // Variable type enum - determines variable behavior
 const VarType = {
     INPUT: 'input',            // varname: or varname:: or varname<-
-    OUTPUT: 'output',          // varname-> or varname->>
+    OUTPUT: 'output',          // varname-> or varname->> (also <-> <->> :> :>>)
 };
 
 // Clear behavior enum - determines when a variable's value is cleared
 const ClearBehavior = {
     NONE: 'none',            // : or :: (persistent, never cleared)
-    ON_CLEAR: 'onClear',     // <- (cleared by Clear button)
+    ON_CLEAR: 'onClear',     // <- <<- <-> <->> (cleared by Clear button)
     ON_SOLVE: 'onSolve',     // -> or ->> (cleared by Clear button AND before solving)
     ON_SOLVE_ONLY: 'onSolveOnly' // :> or :>> (cleared before solving, but NOT by Clear button)
 };
@@ -41,6 +41,8 @@ const TokenType = {
     ARROW_FULL: 'ARROW_FULL',       // ->>
     ARROW_PERSIST: 'ARROW_PERSIST',           // =>
     ARROW_PERSIST_FULL: 'ARROW_PERSIST_FULL', // =>>
+    ARROW_GIVEN: 'ARROW_GIVEN',           // <->  (output held as a given)
+    ARROW_GIVEN_FULL: 'ARROW_GIVEN_FULL', // <->>
     DOUBLE_COLON: 'DOUBLE_COLON',   // ::
     FORMATTER: 'FORMATTER',          // $ % # (format suffixes)
     DOT_DOT: 'DOT_DOT',             // .. (range in table iterators)
@@ -127,7 +129,7 @@ class Tokenizer {
     /**
      * Match a declaration marker starting at lookahead `offset` from the
      * current position. Returns { type, marker } or null. Single source of
-     * the marker cascade (->> -> <<- <- :>> :> :: :) shared by the @d/@t,
+     * the marker cascade (->> -> <->> <-> <<- <- :>> :> :: :) shared by the @d/@t,
      * $/%/°, and #base suffix-merge paths in tokenize(). Marker metadata
      * (isMarker, varType, clearBehavior, fullPrecision) attaches in
      * makeToken from the returned type.
@@ -139,6 +141,10 @@ class Tokenizer {
         if (p1 === '-' && p2 === '>') {
             return p3 === '>' ? { type: TokenType.ARROW_FULL, marker: '->>' }
                               : { type: TokenType.ARROW_RIGHT, marker: '->' };
+        }
+        if (p1 === '<' && p2 === '-' && p3 === '>') {
+            return this.peek(offset + 3) === '>' ? { type: TokenType.ARROW_GIVEN_FULL, marker: '<->>' }
+                                                 : { type: TokenType.ARROW_GIVEN, marker: '<->' };
         }
         if (p1 === '<' && p2 === '<' && p3 === '-') {
             return { type: TokenType.ARROW_LEFT_FULL, marker: '<<-' };
@@ -210,6 +216,21 @@ class Tokenizer {
                 token.isMarker = true;
                 token.varType = VarType.OUTPUT;
                 token.clearBehavior = ClearBehavior.ON_SOLVE_ONLY;
+                token.fullPrecision = true;
+                break;
+            // Given outputs: an output holding a value the user entered. Not
+            // cleared before solving (so the value is a given the other
+            // outputs re-derive from); Clear blanks it and reverts it to ->.
+            case TokenType.ARROW_GIVEN:
+                token.isMarker = true;
+                token.varType = VarType.OUTPUT;
+                token.clearBehavior = ClearBehavior.ON_CLEAR;
+                token.fullPrecision = false;
+                break;
+            case TokenType.ARROW_GIVEN_FULL:
+                token.isMarker = true;
+                token.varType = VarType.OUTPUT;
+                token.clearBehavior = ClearBehavior.ON_CLEAR;
                 token.fullPrecision = true;
                 break;
         }
@@ -480,6 +501,16 @@ class Tokenizer {
         if (ch === '-' && ch2 === '>' && ch3 === '>') {
             this.advance(3);
             return this.makeToken(TokenType.ARROW_FULL, '->>', startLine, startCol);
+        }
+
+        // Given-output markers: <->> and <-> (before <- claims the first two chars)
+        if (ch === '<' && ch2 === '-' && ch3 === '>') {
+            if (this.peek(3) === '>') {
+                this.advance(4);
+                return this.makeToken(TokenType.ARROW_GIVEN_FULL, '<->>', startLine, startCol);
+            }
+            this.advance(3);
+            return this.makeToken(TokenType.ARROW_GIVEN, '<->', startLine, startCol);
         }
 
         // Three-character operator: <<-
