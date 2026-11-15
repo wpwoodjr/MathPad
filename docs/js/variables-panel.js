@@ -761,13 +761,40 @@ class VariablesPanel {
         }
         this.applyMarkerToRow(nameLabel, valueElement, decl);
 
-        // Add solve button for editable inputs (before name). Outputs get none —
-        // every solve already re-derives them.
-        if (isEditable && !isOutput) {
+        // Add solve button for editable fields (before name). On inputs it's always
+        // shown ("clear and solve for this"). On outputs it appears only once you
+        // type in the field and acts as a "solve from this value" button for touch
+        // (the same as Enter) — untyped, an output's ⟲ would just be Solve.
+        if (isEditable) {
             const solveBtn = document.createElement('button');
             solveBtn.className = 'variable-solve-btn';
             solveBtn.textContent = '⟲';
-            solveBtn.title = 'Clear and solve';
+            solveBtn.title = isOutput ? 'Solve from this value' : 'Clear and solve';
+            if (isOutput) {
+                // Shown on the first keystroke; hidden again when the field loses
+                // focus — except during a press on the button itself: that press
+                // blurs the field before its click fires, and a hidden button
+                // would never receive the click. The click (or a press that ends
+                // elsewhere) hides it instead.
+                let pressing = false;
+                const hideUnlessFocused = () => {
+                    if (document.activeElement !== valueElement) solveBtn.classList.add('variable-solve-btn-hidden');
+                };
+                solveBtn.classList.add('variable-solve-btn-hidden');
+                valueElement.addEventListener('input', () => solveBtn.classList.remove('variable-solve-btn-hidden'));
+                valueElement.addEventListener('focus', () => solveBtn.classList.add('variable-solve-btn-hidden'));
+                valueElement.addEventListener('blur', () => {
+                    if (!pressing) solveBtn.classList.add('variable-solve-btn-hidden');
+                });
+                solveBtn.addEventListener('pointerdown', () => { pressing = true; });
+                for (const type of ['pointerup', 'pointercancel']) {
+                    solveBtn.addEventListener(type, () => {
+                        pressing = false;
+                        // Let the click (which follows pointerup) run first
+                        setTimeout(hideUnlessFocused, 0);
+                    });
+                }
+            }
             // "Enter a value, then ⟲" solves WITH the typed value instead of
             // blanking it (handy on touch, where ⟲ is easier than Tab/Enter).
             // Decided at pointerdown — before the press moves focus off the field —
@@ -791,8 +818,10 @@ class VariablesPanel {
                 // the solve writes its result. So a solve that restores the same
                 // value produces no undo entry (setValue's own changed-check), and
                 // one that changes it pushes exactly one. No separate clear edit.
+                // (Outputs never blank: their ⟲ only shows after typing, and the
+                // typed value was committed as a given when the press blurred the field.)
                 let startText = null;
-                if (this.formatValueForDisplay(currentInfo) && !keepValue) {
+                if (!isOutput && this.formatValueForDisplay(currentInfo) && !keepValue) {
                     startText = this.buildClearedText(info.lineIndex);
                 }
                 // Trigger solve (always undoable — setValue suppresses the no-op
@@ -805,7 +834,7 @@ class VariablesPanel {
             });
             row.appendChild(solveBtn);
         } else {
-            // Placeholder for alignment (outputs and non-editable variables)
+            // Placeholder for alignment (read-only rows)
             const placeholder = document.createElement('span');
             placeholder.className = 'variable-solve-btn-placeholder';
             row.appendChild(placeholder);

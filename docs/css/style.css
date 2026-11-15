@@ -1631,12 +1631,15 @@ body.sidebar-resizing * {
     border-color: var(--accent-primary);
 }
 
-/* Editable output: looks like a read-only output until hovered or focused,
-   so outputs stay visually distinct from inputs (and skip the solved/unsolved
-   border colors, which are for inputs). */
+/* Editable output: reads as a result, not an input box, until hovered or
+   focused (and skips the solved/unsolved border colors, which are for inputs).
+   A faint underline at rest shows it can be typed into — the only cue on touch
+   screens, which have no hover. */
 .variable-row .variable-value-input.variable-value-output:not(:focus):not(:hover) {
     background: transparent;
     border-color: transparent;
+    border-bottom-color: var(--border-color);
+    border-radius: 0;
 }
 
 .variable-value-readonly {
@@ -1886,6 +1889,12 @@ body.sidebar-resizing * {
     transition: opacity 0.15s, background 0.15s;
     width: 24px;
     flex-shrink: 0;
+}
+
+/* An output's ⟲ until you type in its field: keeps its space, so the row
+   doesn't shift when it appears */
+.variable-solve-btn.variable-solve-btn-hidden {
+    visibility: hidden;
 }
 
 .variable-solve-btn-placeholder {
