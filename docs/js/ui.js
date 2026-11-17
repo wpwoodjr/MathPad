@@ -732,7 +732,7 @@ function createEditorForRecord(record) {
                 // Restore cached highlights and status on undo/redo
                 if (metadata) {
                     if (metadata.errors || metadata.equationVarStatus) {
-                        variablesManager.setErrors(metadata.errors, metadata.equationVarStatus);
+                        variablesManager.setErrors(metadata.errors, metadata.equationVarStatus, metadata.solveGivens);
                         editor.setErrorLines(findErrorLines(metadata.errors));
                     } else {
                         variablesManager.clearErrors();
@@ -1690,7 +1690,8 @@ function stopSolve() {
 // Apply a completed solve back to the editor/UI. This is the DOM-touching tail
 // that must run on the main thread.
 function applySolveResult(active, msg) {
-    const { editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart } = active;
+    const { editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart, solvingFor } = active;
+    let { solveGivens } = active;
 
     // The editor may have been destroyed (tab/record closed) while solving.
     if (UI.editors.get(record.id) !== editorInfo) return;
@@ -1718,6 +1719,12 @@ function applySolveResult(active, msg) {
         statusIsError: preStatus.isError
     });
 
+    // A given's ⟲ solved for it: if the solve failed, it stays a given with the
+    // value the solve found (if it found one)
+    if (solvingFor && errors.length > 0 && editorInfo.variablesManager.outputHasValue(solvingFor)) {
+        solveGivens = [...solveGivens, solvingFor];
+    }
+
     // Always persist status from solve
     if (errors.length > 0) {
         setStatus(errors.join('\n'), true);
@@ -1734,6 +1741,7 @@ function applySolveResult(active, msg) {
     editorInfo.editor.setTopMetadata({
         errors: errors,
         equationVarStatus: equationVarStatus,
+        solveGivens: solveGivens,
         tables: tables,
         statusMessage: UI.lastPersistentStatus.message,
         statusIsError: UI.lastPersistentStatus.isError
@@ -1755,7 +1763,7 @@ function applySolveResult(active, msg) {
     debouncedSave(UI.data);
 
     // Set error/equation highlights (edit tracking was reset when the solve started)
-    editorInfo.variablesManager.setErrors(errors, equationVarStatus);
+    editorInfo.variablesManager.setErrors(errors, equationVarStatus, solveGivens);
     editorInfo.editor.setErrorLines(findErrorLines(errors));
 
     // Display table results
@@ -1770,6 +1778,9 @@ async function handleSolve(undoable = true, traceMode = false, includeTableOutpu
     // Ignore re-entrant solves while an off-thread solve is pending. (Sync solves
     // block the thread, so they can't overlap.) The button shows Stop while one
     // runs, but a keyboard shortcut could still call this — one solve at a time.
+    const solvingForEditor = UI.editors.get(UI.currentRecordId);
+    const solvingFor = solvingForEditor ? solvingForEditor.variablesManager.solvingFor : null;
+    if (solvingForEditor) solvingForEditor.variablesManager.solvingFor = null;
     if (solveRunner.running) return;
 
     const record = findRecord(UI.data, UI.currentRecordId);
@@ -1802,7 +1813,9 @@ async function handleSolve(undoable = true, traceMode = false, includeTableOutpu
     const cursorLine = text.substring(0, cursorPos).split('\n').length - 1;
 
     // UI context for applying the result (kept in this closure across the await).
-    const active = { editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart };
+    // The given outputs this solve keeps — they stay givens after it, failed or not
+    const solveGivens = [...editorInfo.variablesManager.givenOutputNames()];
+    const active = { editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart, solveGivens, solvingFor };
     // Cloneable inputs for the worker; the sync path uses the same object.
     const inputs = {
         text, record,
@@ -1904,6 +1917,7 @@ function handleClearInput() {
     editorInfo.editor.setTopMetadata({
         errors: null,
         equationVarStatus: null,
+        solveGivens: null,
         statusMessage: 'Cleared',
         statusIsError: false
     });

@@ -96,13 +96,17 @@ class VariablesPanel {
         this.hasClearedInput = false; // True if user cleared an input since last solve/clear
         // Given outputs: outputs the user typed a value into, which a solve keeps
         // (and treats as inputs) instead of clearing. Until that solve they
-        // accumulate in enteredOutputs; after it, they're the output rows in the
-        // solve's status (varStatus) — outputs never get status otherwise. Those
+        // accumulate in enteredOutputs; after it, they're the outputs that solve
+        // kept (solveGivens, passed to setErrors — not derived from the status,
+        // which after a failed solve covers only the failing equation). Those
         // last as long as the highlights: the next panel entry (which starts a new
         // set), a formula edit, or Clear ends them, and undo/redo restores them.
         // See givenOutputNames().
         this.enteredOutputs = new Set();
-        this.varStatus = null;
+        this.solveGivens = new Set();
+        // A given whose ⟲ was just pressed (the solve derives it): it stays a
+        // given if that solve fails. Read and reset by handleSolve.
+        this.solvingFor = null;
         // The last solve reported errors: entries then keep the givens (you're
         // fixing the setup) instead of starting a new set
         this.lastSolveFailed = false;
@@ -854,9 +858,15 @@ class VariablesPanel {
                 // a given (not just typed) it works like an input's: the field
                 // stops being a given, and the solve derives it from the rest.
                 // No text change is needed — un-kept outputs are cleared anyway.
+                // If that solve reports errors, the field stays a given with its
+                // newly solved value (solvingFor), like the other givens of a
+                // failed solve — you're still fixing the setup.
                 let startText = null;
                 if (isOutput) {
-                    if (!keepValue) this.dropGiven(info.name);
+                    if (!keepValue) {
+                        this.dropGiven(info.name);
+                        this.solvingFor = info.name;
+                    }
                 } else if (this.formatValueForDisplay(currentInfo) && !keepValue) {
                     startText = this.buildClearedText(info.lineIndex);
                 }
@@ -1236,14 +1246,16 @@ class VariablesPanel {
      * Set errors and highlight affected variable rows
      * @param {Array} errors - Array of error strings like "Line 3: Variable 'x' ..."
      * @param {Map} equationVarStatus - Variable name → 'solved'|'unsolved' (first equation wins)
+     * @param {Array<string>} [givens] - The outputs the solve kept as givens
+     *   (default: the output rows with status — complete only for a successful solve)
      */
-    setErrors(errors, equationVarStatus) {
+    setErrors(errors, equationVarStatus, givens) {
         this._clearHighlights();
-        this.varStatus = equationVarStatus || null;
+        this.solveGivens = givens ? new Set(givens) : new Set(equationVarStatus ? equationVarStatus.keys() : []);
         this.lastSolveFailed = !!(errors && errors.length > 0);
-        // Given outputs are in the status (the solve treated them as inputs)
-        // and are colored like them; other outputs never have status.
-        const givens = this.givenOutputNames();
+        // Given outputs are colored like inputs (the solve treated them as
+        // inputs); other outputs never have status.
+        const givenNames = this.givenOutputNames();
 
         // Apply green/orange highlighting from equationVarStatus. The data
         // layer drives the colors; hard errors (Too many unknowns, Could not
@@ -1251,7 +1263,7 @@ class VariablesPanel {
         // than suppressing it.
         if (equationVarStatus) {
             for (const decl of this.declarations.values()) {
-                if (decl.declaration && decl.declaration.type === VarType.OUTPUT && !givens.has(decl.name)) continue;
+                if (decl.declaration && decl.declaration.type === VarType.OUTPUT && !givenNames.has(decl.name)) continue;
                 const status = equationVarStatus.get(decl.name);
                 if (!status) continue;
                 const row = this.container.querySelector(`[data-line-index="${decl.lineIndex}"]`);
@@ -1294,7 +1306,7 @@ class VariablesPanel {
      */
     clearErrors() {
         this._clearHighlights();
-        this.varStatus = null;
+        this.solveGivens = new Set();
         this.lastSolveFailed = false;
         this.enteredOutputs = new Set();
         this.refreshGivenStyle();
@@ -1317,9 +1329,9 @@ class VariablesPanel {
      * leaving the others'.
      */
     _dropStatus(name) {
-        if (this.varStatus && this.varStatus.has(name)) {
-            this.varStatus = new Map(this.varStatus);
-            this.varStatus.delete(name);
+        if (this.solveGivens.has(name)) {
+            this.solveGivens = new Set(this.solveGivens);
+            this.solveGivens.delete(name);
         }
         for (const [lineIndex, info] of this.declarations) {
             if (info.name !== name) continue;
@@ -1356,13 +1368,13 @@ class VariablesPanel {
     }
 
     /**
-     * Names of the outputs the last solve kept as givens: the output rows it
-     * gave status to (it treated them as inputs). Names that also have an input
+     * Names of the outputs the last solve kept as givens (solveGivens) that are
+     * still editable output rows. Names that also have an input
      * declaration are skipped, since their status belongs to the input.
      */
     solvedGivenNames() {
         const names = new Set();
-        if (!this.varStatus || this.varStatus.size === 0) return names;
+        if (this.solveGivens.size === 0) return names;
         const inputNames = new Set();
         for (const info of this.declarations.values()) {
             if (info.declaration && info.declaration.type === VarType.INPUT) inputNames.add(info.name);
@@ -1371,7 +1383,7 @@ class VariablesPanel {
             if (info.declaration && info.declaration.type === VarType.OUTPUT && !info.isExpressionOutput &&
                 info.declaration.clearBehavior !== ClearBehavior.ON_SOLVE_ONLY &&
                 this.inputElements.has(info.lineIndex) &&
-                !inputNames.has(info.name) && this.varStatus.has(info.name)) {
+                !inputNames.has(info.name) && this.solveGivens.has(info.name)) {
                 names.add(info.name);
             }
         }
@@ -1385,6 +1397,18 @@ class VariablesPanel {
         const names = this.solvedGivenNames();
         for (const name of this.enteredOutputs) names.add(name);
         return names;
+    }
+
+    /**
+     * Whether an output's field shows a value (after a solve wrote it back).
+     */
+    outputHasValue(name) {
+        for (const [lineIndex, info] of this.declarations) {
+            if (info.name !== name || !info.declaration || info.declaration.type !== VarType.OUTPUT) continue;
+            const input = this.inputElements.get(lineIndex);
+            return !!input && input.value.trim() !== '';
+        }
+        return false;
     }
 
     /**

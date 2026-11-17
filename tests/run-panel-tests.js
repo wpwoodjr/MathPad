@@ -195,6 +195,12 @@ async function openRecord(page, title) {
     await page.eval(`(() => { const it = [...document.querySelectorAll('.record-item')].find(e => e.textContent.trim() === ${JSON.stringify(title)}); it.click(); })()`);
 }
 
+// A real mouse press (pointerdown then click), like the user's
+async function mouseClick(page, elemExpr) {
+    const { x, y } = await page.eval(`(() => { const r = ${elemExpr}.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+    for (const type of ['mousePressed', 'mouseReleased']) await page.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
+}
+
 async function tap(page, elemExpr) {
     const { x, y } = await page.eval(`(() => { const r = ${elemExpr}.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
     await page.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
@@ -439,6 +445,31 @@ const SCENARIOS = [
         await type(p, 'b', '10'); await tap(p, btnOf('b'));
         await check(p, 'typed b, tapped its ⟲: a = 5, b the given', `${S('a')}.value === '5' && __t.givens() === 'b'`);
         await p.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+    }],
+
+    ['Failed solve whose error is elsewhere: the given stays (not just the failing equation\'s vars)', async p => {
+        const rec = '--Variables--\nx = sqrt(y)\nx:\ny:\n\nv = x*y\nv->';
+        for (const which of ['x', 'y']) {
+            await setText(p, rec);
+            await check(p, 'rows', `!!__t.field('v')`);
+            await type(p, 'x', '7'); await p.key('Enter');
+            await check(p, 'y = 49, v = 343', `${S('y')}.value === '49' && ${S('v')}.value === '343'`);
+            await type(p, 'v', '17');
+            await mouseClick(p, btnOf(which));
+            await check(p, `${which} ⟲: fails, v still the given`, `/doesn't balance/.test(__t.status()) && __t.givens() === 'v' && ${S('v')}.value === '17' && ${S('v')}.look`);
+        }
+        // y ⟲ case: the error is on line 2 (x = sqrt(y)), which doesn't involve v
+        await solve(p);
+        await check(p, 'plain Solve keeps v (not cleared)', `${S('v')}.value === '17' && __t.givens() === 'v'`);
+        await click(p, '#btn-undo');
+        await check(p, 'undo: y back to 49, v the given', `${S('y')}.value === '49' && __t.givens() === 'v'`);
+        await click(p, '#btn-redo');
+        await check(p, 'redo: the failed solve again, v still the given', `${S('y')}.value !== '49' && __t.givens() === 'v' && ${S('v')}.look`);
+        // v's ⟲ solves for v (7 × 2.43); line 2 still fails, so v stays a given
+        await mouseClick(p, btnOf('v'));
+        await check(p, 'v ⟲ with errors left: v re-derived, still the given', `${S('v')}.value !== '17' && ${S('v')}.value !== '' && __t.givens() === 'v' && /doesn't balance/.test(__t.status())`);
+        await solve(p);
+        await check(p, 'plain Solve keeps the re-derived v', `${S('v')}.value !== '17' && ${S('v')}.value !== '' && __t.givens() === 'v'`);
     }],
 
     ['Clear ends the givens', async p => {
