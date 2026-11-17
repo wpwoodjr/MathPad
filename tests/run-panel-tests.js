@@ -301,7 +301,7 @@ const SCENARIOS = [
         await setText(p, '--Variables--\nw->\nh->\narea->\n\narea = w*h');
         await check(p, 'rows', `!!__t.field('area')`);
         await type(p, 'h', '3'); await blur(p, 'h');
-        await type(p, 'area', '6'); await p.key('Tab');
+        await type(p, 'area', '6'); await p.key('Enter');
         await check(p, 'w = 2, givens h and area', `${S('w')}.value === '2' && __t.givens() === 'area,h'`);
         await clearField(p, 'w');
         await check(p, 'w blank while typing: h and area shown ending, w plain', `${S('h')}.ending && ${S('area')}.ending && !${S('w')}.look && !${S('w')}.btn`);
@@ -316,8 +316,8 @@ const SCENARIOS = [
         await check(p, 'over-determined error', `/balance/i.test(__t.status()) && __t.givens() === 'area,h,w'`);
         await clearField(p, 'area');
         await check(p, 'clearing given area after the error: area shown ending, h and w not', `${S('area')}.ending && !${S('area')}.look && ${S('h')}.look && !${S('h')}.ending`);
-        await p.key('Tab');
-        await check(p, 'Tab: area = 6 from h and w', `${S('area')}.value === '6' && __t.givens() === 'h,w'`);
+        await p.key('Enter');
+        await check(p, 'Enter: area = 6 from h and w', `${S('area')}.value === '6' && __t.givens() === 'h,w'`);
         await click(p, '#btn-undo');
         await check(p, 'undo the solve: area blank, h and w givens', `${S('area')}.value === '' && __t.givens() === 'h,w'`);
     }],
@@ -370,6 +370,31 @@ const SCENARIOS = [
         await check(p, 'h and w kept their values and stayed givens', `${S('h')}.value === '3' && ${S('w')}.value === '2' && __t.givens() === 'h,w' && /h-> 3/.test(__t.textarea().value)`);
         await solve(p);
         await check(p, 'Solve: area = 6', `${S('area')}.value === '6' && __t.givens() === 'h,w'`);
+    }],
+
+    ['Tab only moves; Enter solves when anything changed since the last solve', async p => {
+        await setText(p, '--Variables--\nw->\nh->\narea->\n\narea = w*h');
+        await check(p, 'rows', `!!__t.field('area')`);
+        await markStatus(p);
+        await type(p, 'w', '2'); await p.key('Tab');
+        await check(p, 'Tab moved to h', `document.activeElement === __t.field('h')`);
+        await p.insertText('3'); await p.key('Tab');
+        await check(p, 'Tab moved to area', `document.activeElement === __t.field('area')`);
+        await checkStays(p, 'no solve on Tab', `__t.status() === '__mark__' && ${S('area')}.value === ''`);
+        await p.key('Enter');
+        await check(p, 'Enter in untouched area: earlier entries count → area = 6', `${S('area')}.value === '6' && __t.givens() === 'h,w'`);
+        await markStatus(p);
+        await p.eval(`__t.field('h').focus()`); await p.key('Enter');
+        await checkStays(p, 'Enter with nothing changed: no solve', `__t.status() === '__mark__' && __t.givens() === 'h,w'`);
+        // an input typed back to its value after a success: ends the givens, Enter solves
+        await setText(p, '--Variables--\nprice: 10\nqty<- 5\ntotal->\n\ntotal = price*qty');
+        await check(p, 'rows 2', `!!__t.field('total')`);
+        await type(p, 'total', '200'); await blur(p, 'total');
+        await p.eval(`${btnOf('qty')}.click()`);
+        await check(p, 'goal seek: qty = 20', `${S('qty')}.value === '20' && __t.givens() === 'total'`);
+        await markStatus(p);
+        await type(p, 'price', '10'); await p.key('Enter');
+        await check(p, 'price retyped + Enter: given ended and solved forward (total = 200)', `__t.status() !== '__mark__' && __t.givens() === '' && ${S('total')}.value === '200' && !${S('total')}.look`);
     }],
 
     ['A formula edit ends the givens immediately', async p => {

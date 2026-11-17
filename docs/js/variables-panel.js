@@ -109,7 +109,10 @@ class VariablesPanel {
         // While a field is being typed in after a solve, the solve's givens
         // (other than that field) are shown ending: its name, else null
         this._endingFor = null;
-        this._solveOnBlur = false; // True only when a blur was triggered by Tab/Enter (not a click)
+        this._solveOnBlur = false; // True only when a blur was triggered by Enter (not Tab or a click)
+        // Something changed in the panel since the last solve (a committed value,
+        // an output made a given, givens ended by an edit): Enter solves only then
+        this.changedSinceSolve = false;
         this.errorLines = new Set(); // Lines with errors
         this.flashChanges = false;
         this._oldDisplayValues = null;
@@ -125,9 +128,8 @@ class VariablesPanel {
             if (e.key === 'Tab' && e.target.classList.contains('variable-value-input')) {
                 e.preventDefault();
                 const nextInput = this.getNextInput(e.target, e.shiftKey);
-                // Blur first (triggers undo logic), then focus next. Tab/Enter
-                // signal "done" → allow the blur to auto-solve.
-                this._solveOnBlur = true;
+                // Blur first (commits the value), then focus next. Tab only
+                // moves between fields — it never solves (Enter does).
                 e.target.blur();
                 if (nextInput) {
                     nextInput.focus();
@@ -725,7 +727,7 @@ class VariablesPanel {
                 // But typing a value into an output makes it a given even if the
                 // number is the same: being a given is panel state, not text (an
                 // input's value in the text already is its "given"). That's a
-                // commit like a changed value, so Tab/Enter solves.
+                // commit like a changed value, so Enter solves.
                 const typed = e.target.dataset.typed === '1';
                 const retypedOutput = isOutput && typed && e.target.value.trim() !== '';
                 const unchanged = e.target.value === e.target.dataset.originalValue;
@@ -734,6 +736,7 @@ class VariablesPanel {
                 } else if (typed && !this.lastSolveFailed) {
                     // Any edit after a successful solve ends its givens, even one
                     // typed back to the same value (Escape is the way to back out)
+                    if (this.solvedGivenNames().size > 0) this.changedSinceSolve = true;
                     this.clearErrors();
                 }
                 // Done typing: the givens shown ending have ended (or Escape kept
@@ -742,18 +745,17 @@ class VariablesPanel {
                 this.refreshGivenStyle();
                 // (Blanking an output doesn't count — outputs are re-derived anyway.)
                 if (!e.target.value.trim() && !isOutput) this.hasClearedInput = true;
-                // Auto-solve only when the blur was triggered by Tab or Enter
-                // (the user signaling "done"), not by clicking elsewhere. This
-                // also means clicking Solve/Clear/the ⟲ icon won't fire a
-                // redundant quick-solve before the button's own action runs —
-                // those are mouse clicks, not Tab/Enter. The edited value is
-                // committed via handleValueChange either way.
-                // Tab/Enter solves only when leaving the field committed something
-                // (a changed value, or an output that just became a given) — out
-                // of an untouched field there's nothing new to solve from (and for
-                // outputs, a solve with none entered would clear them all → "Too
-                // many unknowns"). Use Solve for anything else.
-                const solveRequested = this._solveOnBlur && (!unchanged || retypedOutput);
+                // Auto-solve only when the blur was triggered by Enter (the user
+                // signaling "done"), not by Tab (moving between fields) or by
+                // clicking elsewhere. So clicking Solve/Clear/the ⟲ icon won't
+                // fire a redundant quick-solve before the button's own action.
+                // The edited value is committed via handleValueChange either way.
+                // Enter solves only when something changed in the panel since the
+                // last solve — in this field or an earlier one (changedSinceSolve).
+                // With nothing new there's nothing to solve from (and for an
+                // all-output record, a solve with no givens would clear them all →
+                // "Too many unknowns"). Formula edits don't count: use Solve.
+                const solveRequested = this._solveOnBlur && this.changedSinceSolve;
                 this._solveOnBlur = false;
                 if (solveRequested && this.blurCallback && !this.hasClearedInput) this.blurCallback();
             });
@@ -822,7 +824,7 @@ class VariablesPanel {
                 });
             }
             // "Enter a value, then ⟲" solves WITH the typed value instead of
-            // blanking it (handy on touch, where ⟲ is easier than Tab/Enter).
+            // blanking it (handy on touch, where ⟲ is easier than Enter).
             // Decided at pointerdown — before the press moves focus off the field —
             // as: this row's field is still focused and was typed in since it got
             // focus. Any other action in between (focusing elsewhere, Escape,
@@ -989,6 +991,7 @@ class VariablesPanel {
      * Handle value change from input
      */
     handleValueChange(lineIndex, newValue) {
+        this.changedSinceSolve = true;
         // Get the declaration info for this line
         const info = this.declarations.get(lineIndex);
         if (!info) return;
@@ -1340,6 +1343,7 @@ class VariablesPanel {
     clearLastEdited() {
         this.hasClearedInput = false;
         this.enteredOutputs = new Set();
+        this.changedSinceSolve = false;
     }
 
     /**
