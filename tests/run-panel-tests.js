@@ -78,9 +78,9 @@ class Page {
         if (r.exceptionDetails) throw new Error(`${expr.slice(0, 80)}: ${r.exceptionDetails.exception?.description || r.exceptionDetails.text}`);
         return r.result.value;
     }
-    async key(key) {
+    async key(key, { shift = false } = {}) {
         const codes = { Enter: 13, Escape: 27, Tab: 9 };
-        const p = { key, code: key, windowsVirtualKeyCode: codes[key] };
+        const p = { key, code: key, windowsVirtualKeyCode: codes[key], modifiers: shift ? 8 : 0 };
         await this.send('Input.dispatchKeyEvent', { type: 'keyDown', ...p });
         await this.send('Input.dispatchKeyEvent', { type: 'keyUp', ...p });
     }
@@ -470,6 +470,21 @@ const SCENARIOS = [
         await check(p, 'v ⟲ with errors left: v re-derived, still the given', `${S('v')}.value !== '17' && ${S('v')}.value !== '' && __t.givens() === 'v' && /doesn't balance/.test(__t.status())`);
         await solve(p);
         await check(p, 'plain Solve keeps the re-derived v', `${S('v')}.value !== '17' && ${S('v')}.value !== '' && __t.givens() === 'v'`);
+    }],
+
+    ['Tab stops: inputs and given outputs, not plain outputs (all outputs when there are no inputs)', async p => {
+        await setText(p, '--Variables--\na: 1\nb->\nc: 2\n\nb = a + c');
+        await check(p, 'rows', `!!__t.field('c')`);
+        await type(p, 'a', '1'); await p.key('Tab');
+        await check(p, 'Tab from a skips plain output b → c', `document.activeElement === __t.field('c')`);
+        await p.key('Tab');
+        await check(p, 'Tab from c wraps to a', `document.activeElement === __t.field('a')`);
+        await p.key('Tab', { shift: true });
+        await check(p, 'Shift+Tab from a → c', `document.activeElement === __t.field('c')`);
+        await type(p, 'b', '5'); await p.key('Tab');
+        await check(p, 'Tab from the output being typed → c', `document.activeElement === __t.field('c')`);
+        await p.key('Tab', { shift: true });
+        await check(p, 'b is a given now: Shift+Tab from c → b', `document.activeElement === __t.field('b') && __t.givens() === 'b'`);
     }],
 
     ['Clear ends the givens', async p => {

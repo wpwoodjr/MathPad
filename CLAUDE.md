@@ -32,11 +32,11 @@ node tests/run-tests.js
 # Run syntax highlighting tests (132 tests)
 node tests/run-highlighting-tests.js
 
-# Run variables-panel browser tests (15 scenarios: given outputs, multiple givens,
+# Run variables-panel browser tests (16 scenarios: given outputs, multiple givens,
 # ending display, undo/redo, retyping, clearing outputs, ⟲ on a given, entries
 # after a failed solve, a failed solve that keeps a given not in the failing equation,
 # goal seek, Tab vs. Enter, touch ⟲, panel entry vs. the debounced update,
-# :> as an x~ seed, formula edits, Clear). Starts its own server + headless Chromium with a fresh
+# :> as an x~ seed, formula edits, Tab stops, Clear). Starts its own server + headless Chromium with a fresh
 # profile; needs Chromium/Chrome (CHROME=/path overrides), prints SKIP without one.
 # Run after any panel change. -v lists every check.
 node tests/run-panel-tests.js
@@ -76,7 +76,7 @@ node tests/gen-expected.js TESTNAME
 - Variable name labels split into text + marker spans; names truncate with ellipsis on narrow panels while markers (`:`, `->`, etc.) stay visible
 - Name widths re-aligned on window resize via `alignNameWidths()`
 - Equation variable highlighting: green (balanced), orange (unbalanced), red (error)
-- Tab cycles through inputs; Escape reverts; flash animation on value changes
+- Tab / Shift+Tab cycle through the Tab stops (`tabStopFilter`): input fields and given outputs, skipping outputs that aren't givens (results); a record with no input fields (all-output Conversions) tabs through its outputs. The stops are decided after the Tab's blur commits (so an output just typed into counts as a given, and givens an edit just ended don't); the field order is captured before it. Escape reverts; flash animation on value changes
 - After a solve, `updateVariableRow` refreshes a focused field only if it's untouched (value still equals its `originalValue`) — e.g. the field Tab moved to while the solve ran — so it never shows, and then commits, a stale pre-solve value; a field being typed in is left alone.
 - **Pending formula-edit update vs. panel use**: formula typing schedules a debounced (500ms) panel update (`scheduleVarsUpdate` → `_runVarsWork`: `updateFromText` + `clearErrors`). The panel flushes it (`flushPendingVarsUpdates`) on `pointerdown` (capture, before the press moves focus) and `focusin`, so it can't land mid-entry and wipe values/givens entered just after a formula edit; and `_runVarsWork` reads the editor's current text rather than the text captured at schedule time (`updateFromText` parses against the editor's current tokens).
 - Edit tracking (`hasClearedInput`, plus `enteredOutputs` — see Editable outputs / given outputs) is reset by `clearLastEdited()` when a solve **starts** (in `handleSolve`, not when the result lands) and on Clear, so edits made while a solve runs survive for the next one.

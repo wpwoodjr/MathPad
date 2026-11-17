@@ -131,10 +131,15 @@ class VariablesPanel {
         this.container.addEventListener('keydown', (e) => {
             if (e.key === 'Tab' && e.target.classList.contains('variable-value-input')) {
                 e.preventDefault();
-                const nextInput = this.getNextInput(e.target, e.shiftKey);
+                // The fields in panel order, captured before the blur; which of
+                // them are Tab stops is decided after it, since the commit can
+                // change the givens (a typed output becomes one, an edit after a
+                // successful solve ends them)
+                const fields = Array.from(this.container.querySelectorAll('.variable-value-input'));
                 // Blur first (commits the value), then focus next. Tab only
                 // moves between fields — it never solves (Enter does).
                 e.target.blur();
+                const nextInput = this.getNextInput(e.target, e.shiftKey, fields);
                 if (nextInput) {
                     nextInput.focus();
                 }
@@ -149,20 +154,47 @@ class VariablesPanel {
     /**
      * Get next/previous input in the variables panel (wraps around)
      */
-    getNextInput(currentInput, reverse = false) {
-        const inputs = Array.from(this.container.querySelectorAll('.variable-value-input'));
-        if (inputs.length === 0) return null;
-
-        const currentIndex = inputs.indexOf(currentInput);
-        let nextIndex;
-
-        if (reverse) {
-            nextIndex = currentIndex <= 0 ? inputs.length - 1 : currentIndex - 1;
-        } else {
-            nextIndex = currentIndex >= inputs.length - 1 ? 0 : currentIndex + 1;
+    getNextInput(currentInput, reverse = false, fields = null) {
+        fields = fields || Array.from(this.container.querySelectorAll('.variable-value-input'));
+        if (fields.length === 0) return null;
+        const isStop = this.tabStopFilter();
+        const n = fields.length;
+        const currentIndex = fields.indexOf(currentInput);
+        const step = reverse ? -1 : 1;
+        // From the current field (or before the first / after the last when it
+        // isn't one), the next Tab stop that's still in the panel, wrapping
+        for (let k = 1; k <= n; k++) {
+            const i = currentIndex < 0
+                ? (reverse ? n - k : k - 1)
+                : ((currentIndex + step * k) % n + n) % n;
+            const f = fields[i];
+            if (f !== currentInput && f.isConnected && isStop(f)) return f;
         }
+        return null;
+    }
 
-        return inputs[nextIndex];
+    /**
+     * Which fields Tab stops at: inputs and given outputs — not outputs that
+     * aren't givens (they're results). A record with no input fields (an
+     * all-output Conversions record) tabs through its outputs instead.
+     * @returns {function(HTMLInputElement): boolean}
+     */
+    tabStopFilter() {
+        const outputFields = new Set();
+        let hasInputField = false;
+        for (const [lineIndex, input] of this.inputElements) {
+            const info = this.declarations.get(lineIndex);
+            if (info && info.declaration && info.declaration.type === VarType.OUTPUT) outputFields.add(input);
+            else hasInputField = true;
+        }
+        if (!hasInputField) return () => true;
+        const givenFields = new Set();
+        for (const name of this.givenOutputNames()) {
+            for (const [lineIndex, info] of this.declarations) {
+                if (info.name === name && this.inputElements.has(lineIndex)) givenFields.add(this.inputElements.get(lineIndex));
+            }
+        }
+        return f => !outputFields.has(f) || givenFields.has(f);
     }
 
     /**
