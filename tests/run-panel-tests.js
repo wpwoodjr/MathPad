@@ -397,6 +397,23 @@ const SCENARIOS = [
         await check(p, 'price retyped + Enter: given ended and solved forward (total = 200)', `__t.status() !== '__mark__' && __t.givens() === '' && ${S('total')}.value === '200' && !${S('total')}.look`);
     }],
 
+    ['Persistent outputs (:>) are editable but never givens: the entry is what x~ reads', async p => {
+        await setText(p, '--Variables--\nn:>\nprice<- 20\nqty<- 3\ntotal:>\n\nn = if(n~?; n~ + 1; 1)\ntotal = price*qty');
+        await check(p, 'rows', `!!__t.field('n') && !__t.field('n').readOnly`);
+        await solve(p);
+        await check(p, 'n = 1, total = 60', `${S('n')}.value === '1' && ${S('total')}.value === '60'`);
+        await solve(p);
+        await check(p, 'n = 2', `${S('n')}.value === '2'`);
+        await type(p, 'n', '10');
+        await check(p, 'typing in n: output look, no ⟲', `!${S('n')}.look && !${S('n')}.btn && !${S('n')}.green`);
+        await p.key('Enter');
+        await check(p, 'Enter: solved from n~ = 10 → n = 11, not a given', `${S('n')}.value === '11' && __t.givens() === ''`);
+        await type(p, 'total', '100'); await p.key('Enter');
+        await check(p, 'entry into a :> total is recomputed: 60', `${S('total')}.value === '60' && __t.givens() === ''`);
+        await click(p, '#btn-clear');
+        await check(p, 'Clear keeps :> values (n = 12 after the total solve), clears <- inputs', `${S('n')}.value === '12' && ${S('total')}.value === '60' && __t.field('price').value === ''`);
+    }],
+
     ['A formula edit ends the givens immediately', async p => {
         await setText(p, '--Variables--\na->\nb->\n\nb = a*2');
         await check(p, 'rows', `!!__t.field('b')`);

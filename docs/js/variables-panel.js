@@ -700,13 +700,16 @@ class VariablesPanel {
 
         // Value input or display
         // Plain outputs (-> ->>) are editable: entering a value makes the field
-        // the given output, which the solve keeps (as an input) so the other
+        // a given output, which the solve keeps (as an input) so the other
         // outputs re-derive from it — see the constructor and handleValueChange().
-        // Persistent outputs (:> :>>) stay read-only (unchanged for now), as do
-        // expression outputs.
+        // Persistent outputs (:> :>>) are editable too, but never givens: an
+        // entry just writes the value into the text, where the next solve's x~
+        // reads it (resetting a counter, seeding a previous-value recall); the
+        // solve then recomputes the field. Expression outputs stay read-only.
         const isOutput = decl.type === VarType.OUTPUT;
+        const isPersistentOutput = isOutput && clearBehavior === ClearBehavior.ON_SOLVE_ONLY;
         const isExpressionOutput = info.isExpressionOutput || false;
-        const isEditable = !isExpressionOutput && clearBehavior !== ClearBehavior.ON_SOLVE_ONLY;
+        const isEditable = !isExpressionOutput;
         let valueElement;
 
         if (isEditable) {
@@ -729,7 +732,7 @@ class VariablesPanel {
                 // input's value in the text already is its "given"). That's a
                 // commit like a changed value, so Enter solves.
                 const typed = e.target.dataset.typed === '1';
-                const retypedOutput = isOutput && typed && e.target.value.trim() !== '';
+                const retypedOutput = isOutput && !isPersistentOutput && typed && e.target.value.trim() !== '';
                 const unchanged = e.target.value === e.target.dataset.originalValue;
                 if (!unchanged || retypedOutput) {
                     this.handleValueChange(info.lineIndex, e.target.value);
@@ -807,7 +810,8 @@ class VariablesPanel {
         // shown ("clear and solve for this"). On outputs it appears only once you
         // type in the field and acts as a "solve from this value" button for touch
         // (the same as Enter) — untyped, an output's ⟲ would just be Solve.
-        if (isEditable) {
+        // Persistent outputs get none: they can't be givens or solved for.
+        if (isEditable && !isPersistentOutput) {
             const solveBtn = document.createElement('button');
             solveBtn.className = 'variable-solve-btn';
             solveBtn.textContent = '⟲';
@@ -866,7 +870,7 @@ class VariablesPanel {
             });
             row.appendChild(solveBtn);
         } else {
-            // Placeholder for alignment (read-only rows)
+            // Placeholder for alignment (read-only rows, persistent outputs)
             const placeholder = document.createElement('span');
             placeholder.className = 'variable-solve-btn-placeholder';
             row.appendChild(placeholder);
@@ -912,7 +916,10 @@ class VariablesPanel {
                 ? 'Input variable (cleared on Clear)'
                 : 'Input variable (persistent)';
         } else if (decl.clearBehavior === ClearBehavior.ON_SOLVE_ONLY) {
-            nameLabel.title = 'Output variable (cleared on Solve)';
+            nameLabel.title = 'Output variable (cleared on Solve, kept through Clear; enter a value to restart from it)';
+        } else if (valueElement && valueElement.readOnly) {
+            // Expression output: computed, not typeable
+            nameLabel.title = 'Output (cleared on Solve or Clear)';
         } else {
             nameLabel.title = 'Output variable (cleared on Solve or Clear; enter a value to solve from it)';
         }
@@ -1028,7 +1035,9 @@ class VariablesPanel {
         // An output given a value becomes a given (clearErrors above ended the
         // last solve's): the next solve keeps it and derives the other outputs
         // from the givens. Blanking it makes it a plain output again.
-        if (decl.type === VarType.OUTPUT) {
+        // (Persistent outputs never become givens — the entry is just the value
+        // the next solve's x~ reads.)
+        if (decl.type === VarType.OUTPUT && decl.clearBehavior !== ClearBehavior.ON_SOLVE_ONLY) {
             if (formattedValue) this.enteredOutputs.add(varName);
             else this.enteredOutputs.delete(varName);
         }
@@ -1360,6 +1369,7 @@ class VariablesPanel {
         }
         for (const info of this.declarations.values()) {
             if (info.declaration && info.declaration.type === VarType.OUTPUT && !info.isExpressionOutput &&
+                info.declaration.clearBehavior !== ClearBehavior.ON_SOLVE_ONLY &&
                 this.inputElements.has(info.lineIndex) &&
                 !inputNames.has(info.name) && this.varStatus.has(info.name)) {
                 names.add(info.name);
@@ -1416,6 +1426,8 @@ class VariablesPanel {
             if (!info.declaration || info.declaration.type !== VarType.OUTPUT) continue;
             const input = this.inputElements.get(lineIndex);
             if (!input) continue;
+            // Persistent outputs (:> :>>) are never givens: always output styling
+            if (info.declaration.clearBehavior === ClearBehavior.ON_SOLVE_ONLY) continue;
             const typedIn = document.activeElement === input && input.dataset.typed === '1';
             const blank = input.value.trim() === '';
             // A given being cleared is ending too: leaving it blank removes it

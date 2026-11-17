@@ -1507,7 +1507,7 @@ grid("vv Travel time by distance and speed") = {
 "*Example: solve counter"
 ---
 
-"Each press of Solve increments the count. Press Clear and the count stays — only manually editing the value resets it."
+"Each press of Solve increments the count. Press Clear and the count stays — only editing the value (in the variables panel or here) resets it."
 
 solveCount = if(solveCount~?; solveCount~ + 1; 1)
 solveCount:>
