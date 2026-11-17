@@ -249,62 +249,6 @@ function runAllTests() {
             ]
         },
         {
-            name: 'given output (<->)',
-            line: 'feet<-> 3',
-            assertions: [
-                ['feet', 'variable-def'],
-                ['<->', 'punctuation'],
-                ['3', 'number']
-            ]
-        },
-        {
-            name: 'full precision given output (<->>)',
-            line: 'x<->> 1.5',
-            assertions: [
-                ['x', 'variable-def'],
-                ['<->>', 'punctuation'],
-                ['1.5', 'number']
-            ]
-        },
-        {
-            name: 'given output with unit comment (feet<-> 3 ft)',
-            line: 'feet<-> 3 ft',
-            assertions: [
-                ['feet', 'variable-def'],
-                ['<->', 'punctuation'],
-                ['3', 'number'],
-                ['ft', 'comment']
-            ]
-        },
-        {
-            name: 'given output with label and money format (cost of it c$<-> $5.00)',
-            line: 'cost of it c$<-> $5.00',
-            assertions: [
-                ['cost of it ', 'comment'],
-                ['c', 'variable-def'],
-                ['$<->', 'punctuation'],
-                ['$5.00', 'number']
-            ]
-        },
-        {
-            name: 'given output after an expression-like label, parsed like <- (a*b<-> 10)',
-            line: 'a*b<-> 10',
-            assertions: [
-                ['a*', 'comment'],
-                ['b', 'variable-def'],
-                ['<->', 'punctuation'],
-                ['10', 'number']
-            ]
-        },
-        {
-            name: 'empty given output (nm<->)',
-            line: 'nm<->',
-            assertions: [
-                ['nm', 'variable-def'],
-                ['<->', 'punctuation']
-            ]
-        },
-        {
             name: 'full precision input (::)',
             line: 'x:: 3.14159',
             assertions: [

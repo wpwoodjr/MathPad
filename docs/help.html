@@ -156,14 +156,12 @@
         <tr><td><code>var-&gt;&gt;</code></td><td>Output</td><td>Full precision, cleared on Solve</td></tr>
         <tr><td><code>var:&gt;</code></td><td>Output</td><td>Persistent output &mdash; recomputed on Solve, kept on Clear</td></tr>
         <tr><td><code>var:&gt;&gt;</code></td><td>Output</td><td>Persistent output, full precision</td></tr>
-        <tr><td><code>var&lt;-&gt; value</code></td><td>Given output</td><td>An output holding a value you entered &mdash; kept on Solve (the other outputs are computed from it); Clear blanks it and turns it back into <code>-&gt;</code></td></tr>
-        <tr><td><code>var&lt;-&gt;&gt; value</code></td><td>Given output</td><td>Full precision given output (turns back into <code>-&gt;&gt;</code>)</td></tr>
         <tr><td><code>var[lo:hi]:</code></td><td>Input</td><td>Constrain root-finding search range</td></tr>
         <tr><td><code>var[lo:hi:step]:</code></td><td>Input</td><td>With explicit step for Brent's grid scan</td></tr>
     </table>
 
     <div class="note">
-        <strong>Full precision</strong> markers (<code>::</code>, <code>&lt;&lt;-</code>, <code>-&gt;&gt;</code>, <code>:&gt;&gt;</code>, <code>&lt;-&gt;&gt;</code>) store and display values with maximum precision instead of rounding to the record's decimal places setting.
+        <strong>Full precision</strong> markers (<code>::</code>, <code>&lt;&lt;-</code>, <code>-&gt;&gt;</code>, <code>:&gt;&gt;</code>) store and display values with maximum precision instead of rounding to the record's decimal places setting.
     </div>
 
     <div class="note">
@@ -172,7 +170,7 @@
 
     <h3>Input vs Output</h3>
     <p><strong>Input</strong> markers (<code>:</code>, <code>&lt;-</code>, <code>&lt;&lt;-</code>, <code>::</code>) define variables you provide values for. <strong>Output</strong> markers (<code>-&gt;</code>, <code>-&gt;&gt;</code>, <code>:&gt;</code>, <code>:&gt;&gt;</code>) define variables that MathPad computes. Output variables are cleared before solving so the solver can fill them in.</p>
-    <p>A <strong>given output</strong> (<code>&lt;-&gt;</code>, <code>&lt;-&gt;&gt;</code>) is an output holding a value you entered: it isn't cleared, so the solve works from it and computes the other outputs. Typing a value into an output field in the variables panel turns <code>feet-&gt;</code> into <code>feet&lt;-&gt; 3</code>, and turns any older given back into a plain output, so you can convert from whichever field you type in. Several values entered before the next solve are all kept as givens. Blanking a given in the panel, or pressing Clear, makes it a plain output again. You can also write <code>&lt;-&gt;</code> in the formulas yourself.</p>
+    <p>The exception is a <strong>given output</strong>: an output you typed a value into in the variables panel. The solve keeps those values and computes the other outputs from them (see <a href="#variables-panel">Variables Panel</a>).</p>
 
     <h3>Definitions</h3>
     <p>A variable whose value is an expression (not just a number) acts as a <strong>definition</strong>:</p>
@@ -375,9 +373,9 @@ a**2 + b**2 = c**2</pre>
     <p>The variables panel (above the formulas editor) shows a structured view of all variables:</p>
     <ul>
         <li>Editable inputs for variable values &mdash; your edit is saved into the formula text whenever you leave the field (click away, Tab, or Enter). Press <strong>Tab or Enter to also re-solve</strong> (only when you changed the value); clicking away just saves without solving</li>
-        <li>Output values can also be typed into: a value you enter in an output field makes it a <strong>given output</strong> (<code>-&gt;</code> becomes <code>&lt;-&gt;</code> in the formulas), and the other outputs are computed from it. Your first entry after a solve turns any older given back into a plain output; further entries before you solve are added as givens. This makes conversion-style records (every field an output) work by just typing one value and pressing Enter &mdash; no Clear needed, and a later Solve still works from your value. Persistent outputs (<code>:&gt;</code>) and expression outputs stay read-only (selectable and copyable)</li>
+        <li>Output values can also be typed into (they show a faint underline): the value you enter makes that output a <strong>given output</strong>. It's styled like an input (its name turns green as soon as you start typing), the solve keeps its value and computes the other outputs from the givens, and it's colored green/orange like an input. You can enter several outputs before solving; they're all givens. They stay givens through later Solves, and end with any edit in a panel field after a successful solve &mdash; even clearing a field or typing the same value back (typing a value into an output starts a new set; they're shown as ending while you type, and Escape backs out). After a solve with errors, entering a value keeps them, so you can fix a wrong one or add a missing one, edit the formulas, or press Clear &mdash; the same things that clear the green/orange highlights. Undo brings them back. Retyping the value an output already shows also makes it a given (and Enter or Tab solves from it). This makes conversion-style records (every field an output) work by typing one value and pressing Enter &mdash; no Clear needed. In an ordinary record, entering an output and pressing an input's ⟲ solves backwards (goal seek); changing an input afterwards goes back to solving forwards. Persistent outputs (<code>:&gt;</code>) and expression outputs stay read-only (selectable and copyable)</li>
         <li>Equation highlighting: <span style="color:#4ec9b0">green</span> = balanced, <span style="color:#cca700">orange</span> = unbalanced, <span style="color:#f44747">red</span> = error</li>
-        <li>The <code>⟲</code> button next to an input clears its value and re-solves &mdash; a quick way to ask "what should this variable be?" without manually clearing first. If you've just typed a new value into that field, ⟲ solves <em>with</em> your value instead of clearing it &mdash; handy on touch screens. Output fields show ⟲ only while you're typing a value into them; tapping it solves from your value, the same as pressing Enter. Ctrl+click adds trace output; Shift+click appends the table-outputs text section.</li>
+        <li>The <code>⟲</code> button next to an input clears its value and re-solves &mdash; a quick way to ask "what should this variable be?" without manually clearing first. If you've just typed a new value into that field, ⟲ solves <em>with</em> your value instead of clearing it &mdash; handy on touch screens. Output fields show ⟲ while you're typing a value into them and while they're a given output, and it works the same way: right after typing, it solves from your value (like Enter); otherwise it stops that output being a given and solves for it from the other givens. Ctrl+click adds trace output; Shift+click appends the table-outputs text section.</li>
         <li>Press Escape in an input to revert to the previous value</li>
     </ul>
 

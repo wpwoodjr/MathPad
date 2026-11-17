@@ -1579,6 +1579,12 @@ body.sidebar-resizing * {
     color: var(--syn-keyword);
 }
 
+/* The given output, or an output being typed in: named in the input color
+   (before the status rules below, so solved/unsolved/error colors still win) */
+.variable-row.as-input .variable-name {
+    color: var(--success-color);
+}
+
 .variable-row.has-unsolved .variable-name {
     color: var(--warning-color);
 }
@@ -1609,6 +1615,12 @@ body.sidebar-resizing * {
 
 .variable-row.has-partial .variable-value-input {
     border-color: var(--partial-color);
+}
+
+/* The given output while another field is being typed in: shown as the plain
+   output it's about to become (its status color would still say "given") */
+.variable-row.given-ending .variable-name {
+    color: var(--syn-keyword);
 }
 
 

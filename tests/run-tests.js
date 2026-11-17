@@ -281,6 +281,38 @@ function runTest(inputPath, expectedPath) {
 /**
  * Discover and run all tests
  */
+/**
+ * Given outputs: an output the user typed a value into is passed to the solve
+ * as keepOutputLines (the panel tracks it; the record text can't say which
+ * output was entered, so this can't be a fixture). The solve must keep that
+ * value, derive the other outputs from it, and report status for it (as for
+ * an input) but for no other output.
+ */
+function runGivenOutputTest() {
+    const name = 'given-output (keepOutputLines)';
+    const record = { places: 4, stripZeros: true, format: 'float', degreesMode: false };
+    const text = 'inches = feet*12\nyards = feet/3\n\ninches->\nfeet-> 3\nyards->';
+    const problems = [];
+    const out = solveRecordTwoPass(text, record, null, null, { keepOutputLines: [5] });
+    const expectedText = 'inches = feet*12\nyards = feet/3\n\ninches-> 36\nfeet-> 3\nyards-> 1';
+    if (out.text !== expectedText) problems.push(`text:\n${out.text}\nexpected:\n${expectedText}`);
+    if (out.errors.length) problems.push(`errors: ${out.errors.join('; ')}`);
+    const status = [...(out.equationVarStatus || new Map())];
+    if (JSON.stringify(status) !== JSON.stringify([['feet', 'solved']])) {
+        problems.push(`status: ${JSON.stringify(status)} (expected only feet: solved)`);
+    }
+    // Without the kept line, every output is cleared — nothing to solve from
+    const bare = solveRecordTwoPass(out.text, record, null, null, {});
+    if (!bare.errors.some(e => /Too many unknowns/.test(e))) problems.push('a solve without keepOutputLines should have too many unknowns');
+    // Two givens: both kept, the remaining output derived from them
+    const two = solveRecordTwoPass('area = w*h\n\nw-> 2\nh-> 3\narea->', record, null, null, { keepOutputLines: [3, 4] });
+    if (two.text !== 'area = w*h\n\nw-> 2\nh-> 3\narea-> 6') problems.push(`two givens text:\n${two.text}`);
+    if (two.errors.length) problems.push(`two givens errors: ${two.errors.join('; ')}`);
+    const twoStatus = [...(two.equationVarStatus || new Map())].map(([k, v]) => `${k}:${v}`).sort().join(',');
+    if (twoStatus !== 'h:solved,w:solved') problems.push(`two givens status: ${twoStatus} (expected h, w solved)`);
+    return { name, passed: problems.length === 0, error: problems.join('\n') || null };
+}
+
 function runAllTests() {
     const inputDir = path.join(__dirname, 'input');
     const expectedDir = path.join(__dirname, 'expected');
@@ -331,6 +363,8 @@ function runAllTests() {
         const result = runTest(inputPath, expectedPath);
         results.push(result);
     }
+
+    results.push(runGivenOutputTest());
 
     // Print results
     let passed = 0;

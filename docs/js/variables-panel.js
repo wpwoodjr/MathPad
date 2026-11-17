@@ -94,7 +94,21 @@ class VariablesPanel {
         this.solveCallback = null;
         this.inputElements = new Map();
         this.hasClearedInput = false; // True if user cleared an input since last solve/clear
-        this.editedOutputs = new Set(); // Output var names entered since last solve/clear (their <-> markers aren't reverted by further entries)
+        // Given outputs: outputs the user typed a value into, which a solve keeps
+        // (and treats as inputs) instead of clearing. Until that solve they
+        // accumulate in enteredOutputs; after it, they're the output rows in the
+        // solve's status (varStatus) — outputs never get status otherwise. Those
+        // last as long as the highlights: the next panel entry (which starts a new
+        // set), a formula edit, or Clear ends them, and undo/redo restores them.
+        // See givenOutputNames().
+        this.enteredOutputs = new Set();
+        this.varStatus = null;
+        // The last solve reported errors: entries then keep the givens (you're
+        // fixing the setup) instead of starting a new set
+        this.lastSolveFailed = false;
+        // While a field is being typed in after a solve, the solve's givens
+        // (other than that field) are shown ending: its name, else null
+        this._endingFor = null;
         this._solveOnBlur = false; // True only when a blur was triggered by Tab/Enter (not a click)
         this.errorLines = new Set(); // Lines with errors
         this.flashChanges = false;
@@ -376,15 +390,10 @@ class VariablesPanel {
                 // If name, marker, format, limits, or comment changed, remove old row and add new one
                 const limitsChanged = JSON.stringify(existing.declaration.limits) !== JSON.stringify(info.declaration.limits);
                 const formatChanged = existing.declaration.format !== info.declaration.format || existing.declaration.base !== info.declaration.base;
-                // An output ↔ given-output marker swap (-> ↔ <->) updates in place
-                // (applyMarkerToRow), so it doesn't replace a focused field.
-                const oldMarker = existing.declaration.marker, newMarker = info.declaration.marker;
-                const markerChanged = oldMarker !== newMarker &&
-                    GIVEN_MARKERS[oldMarker] !== newMarker && UNGIVEN_MARKERS[oldMarker] !== newMarker;
-                if (existing.name !== info.name || markerChanged || existing.declaration.label !== info.declaration.label || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment || existing.isQuoted !== info.isQuoted) {
+                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || existing.declaration.label !== info.declaration.label || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment || existing.isQuoted !== info.isQuoted) {
                     toRemove.push(lineIndex);
                     toAdd.push(info);
-                } else if (oldMarker !== newMarker || this.declarationChanged(existing, info)) {
+                } else if (this.declarationChanged(existing, info)) {
                     toUpdate.push(info);
                 }
             }
@@ -435,6 +444,7 @@ class VariablesPanel {
 
         this.declarations = newDeclMap;
         this.flashChanges = false;
+        this.refreshGivenStyle();
         this._oldDisplayValues = null;
 
         // Show title-only placeholders for any detected table definitions
@@ -687,11 +697,11 @@ class VariablesPanel {
         nameLabel.appendChild(markerText);
 
         // Value input or display
-        // Plain outputs (-> ->>) are editable: entering a value rewrites the
-        // marker to its given form (<-> <->>), which the solve keeps as a given
-        // so the other outputs re-derive from it — see handleValueChange().
-        // Persistent outputs (:> :>>) have no given form, so they stay
-        // read-only, as do expression outputs.
+        // Plain outputs (-> ->>) are editable: entering a value makes the field
+        // the given output, which the solve keeps (as an input) so the other
+        // outputs re-derive from it — see the constructor and handleValueChange().
+        // Persistent outputs (:> :>>) stay read-only (unchanged for now), as do
+        // expression outputs.
         const isOutput = decl.type === VarType.OUTPUT;
         const isExpressionOutput = info.isExpressionOutput || false;
         const isEditable = !isExpressionOutput && clearBehavior !== ClearBehavior.ON_SOLVE_ONLY;
@@ -710,12 +720,26 @@ class VariablesPanel {
             // Update formula pane on blur (when user is done typing), not during typing
             valueElement.addEventListener('blur', (e) => {
                 // Only commit a value the user actually changed. For outputs this
-                // matters: committing marks it as a given for the next solve, so a
+                // matters: committing makes it a given for the next solve, so a
                 // mere focus/blur (or Escape) must not turn a computed value into one.
+                // But typing a value into an output makes it a given even if the
+                // number is the same: being a given is panel state, not text (an
+                // input's value in the text already is its "given"). That's a
+                // commit like a changed value, so Tab/Enter solves.
+                const typed = e.target.dataset.typed === '1';
+                const retypedOutput = isOutput && typed && e.target.value.trim() !== '';
                 const unchanged = e.target.value === e.target.dataset.originalValue;
-                if (!unchanged) {
+                if (!unchanged || retypedOutput) {
                     this.handleValueChange(info.lineIndex, e.target.value);
+                } else if (typed && !this.lastSolveFailed) {
+                    // Any edit after a successful solve ends its givens, even one
+                    // typed back to the same value (Escape is the way to back out)
+                    this.clearErrors();
                 }
+                // Done typing: the givens shown ending have ended (or Escape kept
+                // them); also restores a field Escape reverted to plain styling.
+                this._endingFor = null;
+                this.refreshGivenStyle();
                 // (Blanking an output doesn't count — outputs are re-derived anyway.)
                 if (!e.target.value.trim() && !isOutput) this.hasClearedInput = true;
                 // Auto-solve only when the blur was triggered by Tab or Enter
@@ -724,10 +748,12 @@ class VariablesPanel {
                 // redundant quick-solve before the button's own action runs —
                 // those are mouse clicks, not Tab/Enter. The edited value is
                 // committed via handleValueChange either way.
-                // Tab/Enter out of an unchanged field doesn't solve — nothing new to
-                // solve from (and for outputs, a solve with none entered would clear
-                // them all → "Too many unknowns"). Use Solve for anything else.
-                const solveRequested = this._solveOnBlur && !unchanged;
+                // Tab/Enter solves only when leaving the field committed something
+                // (a changed value, or an output that just became a given) — out
+                // of an untouched field there's nothing new to solve from (and for
+                // outputs, a solve with none entered would clear them all → "Too
+                // many unknowns"). Use Solve for anything else.
+                const solveRequested = this._solveOnBlur && (!unchanged || retypedOutput);
                 this._solveOnBlur = false;
                 if (solveRequested && this.blurCallback && !this.hasClearedInput) this.blurCallback();
             });
@@ -739,8 +765,10 @@ class VariablesPanel {
             });
             valueElement.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
-                    // Restore original value and blur
+                    // Restore original value and blur (forgetting the typing, so a
+                    // reverted output doesn't become the given)
                     e.target.value = e.target.dataset.originalValue ?? e.target.value;
+                    delete e.target.dataset.typed;
                     e.target.blur();
                 } else if (e.key === 'Enter') {
                     this._solveOnBlur = true;
@@ -750,6 +778,18 @@ class VariablesPanel {
             valueElement.addEventListener('input', (e) => {
                 e.target.dataset.typed = '1';
                 this.autoSizeInput(e.target);
+                // An output being typed in looks like an input (it becomes a given
+                // when the field is left) — except while blank (refreshGivenStyle)
+                if (isOutput) this.refreshGivenStyle();
+                // Any edit after a successful solve ends its givens when the field
+                // is left, so show them ending now; Escape brings them back (see
+                // the blur handler). After a failed solve they stay.
+                const ends = !this.lastSolveFailed && this.solvedGivenNames().size > 0;
+                const endingFor = ends ? info.name : null;
+                if (this._endingFor !== endingFor) {
+                    this._endingFor = endingFor;
+                    this.refreshGivenStyle();
+                }
             });
             this.inputElements.set(info.lineIndex, valueElement);
         } else {
@@ -771,29 +811,15 @@ class VariablesPanel {
             solveBtn.textContent = '⟲';
             solveBtn.title = isOutput ? 'Solve from this value' : 'Clear and solve';
             if (isOutput) {
-                // Shown on the first keystroke; hidden again when the field loses
-                // focus — except during a press on the button itself: that press
-                // blurs the field before its click fires, and a hidden button
-                // would never receive the click. The click (or a press that ends
-                // elsewhere) hides it instead.
-                let pressing = false;
-                const hideUnlessFocused = () => {
-                    if (document.activeElement !== valueElement) solveBtn.classList.add('variable-solve-btn-hidden');
-                };
+                // Shown while you type a value in the field, and for as long as the
+                // field is a given (refreshGivenStyle, run on every keystroke);
+                // hidden otherwise. A tap on it blurs the field first, and that
+                // blur commits the typed value — making the field a given — so the
+                // button is still there when the click arrives.
                 solveBtn.classList.add('variable-solve-btn-hidden');
-                valueElement.addEventListener('input', () => solveBtn.classList.remove('variable-solve-btn-hidden'));
-                valueElement.addEventListener('focus', () => solveBtn.classList.add('variable-solve-btn-hidden'));
                 valueElement.addEventListener('blur', () => {
-                    if (!pressing) solveBtn.classList.add('variable-solve-btn-hidden');
+                    if (!this.givenOutputNames().has(info.name)) solveBtn.classList.add('variable-solve-btn-hidden');
                 });
-                solveBtn.addEventListener('pointerdown', () => { pressing = true; });
-                for (const type of ['pointerup', 'pointercancel']) {
-                    solveBtn.addEventListener(type, () => {
-                        pressing = false;
-                        // Let the click (which follows pointerup) run first
-                        setTimeout(hideUnlessFocused, 0);
-                    });
-                }
             }
             // "Enter a value, then ⟲" solves WITH the typed value instead of
             // blanking it (handy on touch, where ⟲ is easier than Tab/Enter).
@@ -818,10 +844,14 @@ class VariablesPanel {
                 // the solve writes its result. So a solve that restores the same
                 // value produces no undo entry (setValue's own changed-check), and
                 // one that changes it pushes exactly one. No separate clear edit.
-                // (Outputs never blank: their ⟲ only shows after typing, and the
-                // typed value was committed as a given when the press blurred the field.)
+                // An output's ⟲ shows only while typing or while it's a given. On
+                // a given (not just typed) it works like an input's: the field
+                // stops being a given, and the solve derives it from the rest.
+                // No text change is needed — un-kept outputs are cleared anyway.
                 let startText = null;
-                if (!isOutput && this.formatValueForDisplay(currentInfo) && !keepValue) {
+                if (isOutput) {
+                    if (!keepValue) this.dropGiven(info.name);
+                } else if (this.formatValueForDisplay(currentInfo) && !keepValue) {
                     startText = this.buildClearedText(info.lineIndex);
                 }
                 // Trigger solve (always undoable — setValue suppresses the no-op
@@ -868,30 +898,25 @@ class VariablesPanel {
 
     /**
      * Show a declaration's marker on its row: the marker text (with any format
-     * suffix), the type tooltip, and the value field's output styling. Used when
-     * a row is built and when only its marker changes (-> ↔ <-> keeps the row,
-     * so a focused field isn't replaced).
+     * suffix), the type tooltip, and the value field's output styling (the given
+     * output's styling is then set by refreshGivenStyle()).
      */
     applyMarkerToRow(nameLabel, valueElement, decl) {
         const formatSuffix = decl.format === 'money' ? '$' : decl.format === 'percent' ? '%' : decl.format === 'degrees' ? '°' : decl.format === 'date' ? '@d' : decl.format === 'duration' ? '@t' : decl.base && decl.base !== 10 ? `#${decl.base}` : '';
         const markerText = nameLabel.querySelector('.variable-name-marker');
         if (markerText) markerText.textContent = formatSuffix + (decl.marker || ':');
-        const isGiven = !!UNGIVEN_MARKERS[decl.marker];
         if (decl.type !== VarType.OUTPUT) {
             nameLabel.title = decl.clearBehavior === ClearBehavior.ON_CLEAR
                 ? 'Input variable (cleared on Clear)'
                 : 'Input variable (persistent)';
-        } else if (isGiven) {
-            nameLabel.title = 'Given output (your entered value; the other outputs are solved from it)';
         } else if (decl.clearBehavior === ClearBehavior.ON_SOLVE_ONLY) {
             nameLabel.title = 'Output variable (cleared on Solve)';
         } else {
             nameLabel.title = 'Output variable (cleared on Solve or Clear; enter a value to solve from it)';
         }
-        // Plain outputs look like results (borderless until hover/focus); a
-        // given output looks like the input it now is.
+        // Outputs look like results (borderless until hover/focus)
         if (valueElement && valueElement.classList.contains('variable-value-input')) {
-            valueElement.classList.toggle('variable-value-output', decl.type === VarType.OUTPUT && !isGiven);
+            valueElement.classList.toggle('variable-value-output', decl.type === VarType.OUTPUT);
         }
     }
 
@@ -903,8 +928,6 @@ class VariablesPanel {
         if (!row) return;
 
         const valueElement = row.querySelector('.variable-value-input, .variable-value-readonly');
-        const nameLabel = row.querySelector('.variable-name');
-        if (nameLabel) this.applyMarkerToRow(nameLabel, valueElement, info.declaration);
         // Skip update if element has focus and the user has typed in it (to not
         // disrupt typing). A focused-but-untouched field (e.g. Tab landed on it
         // while the solve ran) is refreshed, so it doesn't show — and then
@@ -966,12 +989,18 @@ class VariablesPanel {
      * Handle value change from input
      */
     handleValueChange(lineIndex, newValue) {
-        // Clear solved/unsolved highlights since values changed
-        this.clearErrors();
-
         // Get the declaration info for this line
         const info = this.declarations.get(lineIndex);
         if (!info) return;
+
+        // Clear solved/unsolved highlights since values changed. After a
+        // successful solve that ends its givens (an entry starts a new set),
+        // keeping the outputs entered since; after a failed one every given
+        // stays — the entry is fixing the setup, not starting over. (A blanked
+        // output is removed from the set below.)
+        const keep = this.lastSolveFailed ? this.givenOutputNames() : this.enteredOutputs;
+        this.clearErrors();
+        this.enteredOutputs = keep;
 
         const varName = info.name;
         const decl = info.declaration;
@@ -993,41 +1022,24 @@ class VariablesPanel {
         // Update cached declaration so diff works correctly after Solve
         info.valueText = formattedValue;
 
+        // An output given a value becomes a given (clearErrors above ended the
+        // last solve's): the next solve keeps it and derives the other outputs
+        // from the givens. Blanking it makes it a plain output again.
+        if (decl.type === VarType.OUTPUT) {
+            if (formattedValue) this.enteredOutputs.add(varName);
+            else this.enteredOutputs.delete(varName);
+        }
+        this.refreshGivenStyle();
+
         // Get current text and update the specific line
         const oldText = this.editor.getValue();
         let text = oldText;
         const lines = text.split('\n');
-        let markersChanged = false;
 
         if (lineIndex >= 0 && lineIndex < lines.length) {
             const markerEndIndex = info.markerEndCol - 1;
             lines[lineIndex] = buildOutputLine(lines[lineIndex], markerEndIndex, formattedValue);
 
-            // Entering a value into an output makes it a given (-> → <->), so the
-            // solve keeps it and re-derives the other outputs from it; blanking a
-            // given makes it a plain output again. The first entry since the last
-            // solve also reverts every other given (a new value to convert from);
-            // further entries before the next solve add to the givens.
-            if (decl.type === VarType.OUTPUT) {
-                const newMarker = formattedValue ? GIVEN_MARKERS[decl.marker] : UNGIVEN_MARKERS[decl.marker];
-                if (newMarker) {
-                    lines[lineIndex] = replaceLineMarker(lines[lineIndex], markerEndIndex, decl.marker, newMarker);
-                    markersChanged = true;
-                }
-                if (formattedValue) {
-                    this.editedOutputs.add(varName);
-                    for (const [otherIndex, other] of this.declarations) {
-                        const otherMarker = other.declaration && other.declaration.marker;
-                        if (otherIndex === lineIndex || !UNGIVEN_MARKERS[otherMarker] ||
-                            this.editedOutputs.has(other.name) || otherIndex >= lines.length) continue;
-                        lines[otherIndex] = replaceLineMarker(lines[otherIndex], other.markerEndCol - 1,
-                            otherMarker, UNGIVEN_MARKERS[otherMarker]);
-                        markersChanged = true;
-                    }
-                } else {
-                    this.editedOutputs.delete(varName);
-                }
-            }
             text = lines.join('\n');
         }
 
@@ -1037,11 +1049,6 @@ class VariablesPanel {
                 listener(varName, parsedValue, text);
             }
         }
-
-        // The panel isn't refreshed from its own edits, so re-read the text when
-        // markers changed — the rows' markers and cached marker positions would
-        // otherwise be stale (the swaps update rows in place, keeping focus).
-        if (markersChanged) this.updateFromText(this.editor.getValue());
 
         // Update the input element to show the formatted value
         const inputElement = this.inputElements.get(lineIndex);
@@ -1219,7 +1226,12 @@ class VariablesPanel {
      * @param {Map} equationVarStatus - Variable name → 'solved'|'unsolved' (first equation wins)
      */
     setErrors(errors, equationVarStatus) {
-        this.clearErrors();
+        this._clearHighlights();
+        this.varStatus = equationVarStatus || null;
+        this.lastSolveFailed = !!(errors && errors.length > 0);
+        // Given outputs are in the status (the solve treated them as inputs)
+        // and are colored like them; other outputs never have status.
+        const givens = this.givenOutputNames();
 
         // Apply green/orange highlighting from equationVarStatus. The data
         // layer drives the colors; hard errors (Too many unknowns, Could not
@@ -1227,7 +1239,7 @@ class VariablesPanel {
         // than suppressing it.
         if (equationVarStatus) {
             for (const decl of this.declarations.values()) {
-                if (decl.declaration && decl.declaration.type === VarType.OUTPUT) continue;
+                if (decl.declaration && decl.declaration.type === VarType.OUTPUT && !givens.has(decl.name)) continue;
                 const status = equationVarStatus.get(decl.name);
                 if (!status) continue;
                 const row = this.container.querySelector(`[data-line-index="${decl.lineIndex}"]`);
@@ -1246,6 +1258,8 @@ class VariablesPanel {
             }
         }
 
+        this.refreshGivenStyle();
+
         if (!errors || errors.length === 0) return;
 
         // Parse line numbers from errors
@@ -1263,9 +1277,46 @@ class VariablesPanel {
     }
 
     /**
-     * Clear all error highlighting
+     * Clear all error highlighting. This also ends the given outputs, whose
+     * lifetime is the highlights' (see the constructor).
      */
     clearErrors() {
+        this._clearHighlights();
+        this.varStatus = null;
+        this.lastSolveFailed = false;
+        this.enteredOutputs = new Set();
+        this.refreshGivenStyle();
+    }
+
+    /**
+     * Stop an output being a given, keeping the other givens (its ⟲). The rest are carried as entered outputs, so the state's undo
+     * metadata records them.
+     */
+    dropGiven(name) {
+        const keep = this.givenOutputNames();
+        keep.delete(name);
+        this._dropStatus(name);
+        this.enteredOutputs = keep;
+        this.refreshGivenStyle();
+    }
+
+    /**
+     * Remove one variable's solve status and highlight (an output being blanked),
+     * leaving the others'.
+     */
+    _dropStatus(name) {
+        if (this.varStatus && this.varStatus.has(name)) {
+            this.varStatus = new Map(this.varStatus);
+            this.varStatus.delete(name);
+        }
+        for (const [lineIndex, info] of this.declarations) {
+            if (info.name !== name) continue;
+            const row = this.container.querySelector(`[data-line-index="${lineIndex}"]`);
+            row?.classList.remove('has-solved', 'has-unsolved', 'has-partial', 'has-error');
+        }
+    }
+
+    _clearHighlights() {
         this.errorLines.clear();
         for (const row of this.container.querySelectorAll('.variable-row.has-error')) {
             row.classList.remove('has-error');
@@ -1282,12 +1333,101 @@ class VariablesPanel {
     }
 
     /**
-     * Reset the panel's edit tracking (cleared inputs, entered outputs).
-     * Called when a solve starts and on Clear.
+     * Reset the panel's edit tracking (cleared inputs, the entered outputs).
+     * Called when a solve starts (after its inputs are gathered — the solve's
+     * status then carries the given), on Clear, and on undo/redo.
      */
     clearLastEdited() {
         this.hasClearedInput = false;
-        this.editedOutputs.clear();
+        this.enteredOutputs = new Set();
+    }
+
+    /**
+     * Names of the outputs the last solve kept as givens: the output rows it
+     * gave status to (it treated them as inputs). Names that also have an input
+     * declaration are skipped, since their status belongs to the input.
+     */
+    solvedGivenNames() {
+        const names = new Set();
+        if (!this.varStatus || this.varStatus.size === 0) return names;
+        const inputNames = new Set();
+        for (const info of this.declarations.values()) {
+            if (info.declaration && info.declaration.type === VarType.INPUT) inputNames.add(info.name);
+        }
+        for (const info of this.declarations.values()) {
+            if (info.declaration && info.declaration.type === VarType.OUTPUT && !info.isExpressionOutput &&
+                this.inputElements.has(info.lineIndex) &&
+                !inputNames.has(info.name) && this.varStatus.has(info.name)) {
+                names.add(info.name);
+            }
+        }
+        return names;
+    }
+
+    /**
+     * Names of the given outputs: the last solve's, plus those entered since.
+     */
+    givenOutputNames() {
+        const names = this.solvedGivenNames();
+        for (const name of this.enteredOutputs) names.add(name);
+        return names;
+    }
+
+    /**
+     * Make outputs the givens (undo/redo back to the entry state that set them).
+     */
+    setEnteredOutputs(names) {
+        this.enteredOutputs = new Set(names);
+        this.refreshGivenStyle();
+    }
+
+    /**
+     * 1-based lines of the given outputs' declarations, for the solve to keep
+     * instead of clearing (keepOutputLines).
+     */
+    getGivenOutputLines() {
+        const givens = this.givenOutputNames();
+        const lines = [];
+        for (const [lineIndex, info] of this.declarations) {
+            if (givens.has(info.name) && info.declaration && info.declaration.type === VarType.OUTPUT &&
+                this.inputElements.has(lineIndex)) {
+                lines.push(lineIndex + 1);
+            }
+        }
+        return lines;
+    }
+
+    /**
+     * Style the given outputs' fields like inputs, with their ⟲ shown (and every
+     * other editable output like a result, its ⟲ hidden unless you're typing in it).
+     */
+    refreshGivenStyle() {
+        // While a field is being typed in after a solve, that solve's givens
+        // (other than the field) are shown ending: styled as plain outputs, their
+        // status color muted (given-ending) — committing the field ends them
+        const givens = this.givenOutputNames();
+        const ending = this._endingFor ? this.solvedGivenNames() : new Set();
+        ending.delete(this._endingFor);
+        for (const [lineIndex, info] of this.declarations) {
+            if (!info.declaration || info.declaration.type !== VarType.OUTPUT) continue;
+            const input = this.inputElements.get(lineIndex);
+            if (!input) continue;
+            const typedIn = document.activeElement === input && input.dataset.typed === '1';
+            const blank = input.value.trim() === '';
+            // A given being cleared is ending too: leaving it blank removes it
+            const isEnding = givens.has(info.name) && (typedIn && blank ||
+                ending.has(info.name) && !this.enteredOutputs.has(info.name));
+            input.closest('.variable-row')?.classList.toggle('given-ending', isEnding);
+            const isGiven = givens.has(info.name) && !isEnding;
+            // Typing a value into an output: styled like an input (the given-to-be)
+            // right away — but not while it's blank, which won't make it a given
+            const typing = typedIn && !blank;
+            input.classList.toggle('variable-value-output', !isGiven && !typing);
+            // ...including the name's input color (green unless status overrides)
+            input.closest('.variable-row')?.classList.toggle('as-input', isGiven || typing);
+            const btn = input.closest('.variable-row')?.querySelector('.variable-solve-btn');
+            if (btn) btn.classList.toggle('variable-solve-btn-hidden', !isGiven && !typing);
+        }
     }
 
     /**

@@ -303,6 +303,10 @@ const _pendingVarsWork = new Map(); // recordId → work descriptor (latest wins
 function _runVarsWork(work) {
     // Skip if the editor was destroyed since scheduling (tab closed, record deleted).
     if (!UI.editors.has(work.recordId)) return false;
+    // Use the editor's current text, not the text captured when the update was
+    // scheduled: something else (a panel entry, a solve) may have changed it
+    // since, and updateFromText parses against the editor's current tokens.
+    work.value = work.editor.getValue();
     work.variablesManager.updateFromText(work.value);
     work.variablesManager.clearErrors();
     work.editor.setErrorLines(null);
@@ -657,6 +661,14 @@ function createEditorForRecord(record) {
         editor
     );
 
+    // Bring the panel up to date before it's used: a formula edit's debounced
+    // panel update still pending would otherwise land mid-entry — rebuilding the
+    // panel and clearing the highlights (and givens) after the user's value went
+    // in. pointerdown runs before the press moves focus; focusin covers keyboard.
+    const flushBeforePanelUse = () => { if (_pendingVarsWork.has(record.id)) flushPendingVarsUpdates(); };
+    variablesPanel.addEventListener('pointerdown', flushBeforePanelUse, true);
+    variablesPanel.addEventListener('focusin', flushBeforePanelUse);
+
     // Set up bidirectional sync
     let syncFromVariables = false;
 
@@ -696,6 +708,10 @@ function createEditorForRecord(record) {
         // immediate because they're visual feedback the user expects.
         if (!syncFromVariables) {
             if (userInput) {
+                // A formula edit ends the given outputs now, not when the debounced
+                // update below clears the highlights — a Solve within that window
+                // would otherwise still keep it. (Only does work when there's a given.)
+                if (variablesManager.givenOutputNames().size > 0) variablesManager.clearErrors();
                 scheduleVarsUpdate({
                     recordId: record.id,
                     value,
@@ -704,7 +720,14 @@ function createEditorForRecord(record) {
                     isConstantsOrFunctions: isReferenceRecord(record) && (record.title === 'Constants' || record.title === 'Functions')
                 });
             } else {
-                if (undoRedo) variablesManager.enableFlash();
+                if (undoRedo) {
+                    variablesManager.enableFlash();
+                    // Drop edit tracking from the state being left (e.g. an output
+                    // entered but not yet solved); the restored metadata below
+                    // brings back the given output of the state being entered —
+                    // from its highlights, or the entry that made it the given.
+                    variablesManager.clearLastEdited();
+                }
                 variablesManager.updateFromText(value);
                 // Restore cached highlights and status on undo/redo
                 if (metadata) {
@@ -715,6 +738,8 @@ function createEditorForRecord(record) {
                         variablesManager.clearErrors();
                         editor.setErrorLines(null);
                     }
+                    // An entry state restores the outputs entered as givens
+                    if (metadata.enteredOutputs) variablesManager.setEnteredOutputs(metadata.enteredOutputs);
                     variablesManager.setTableData(metadata.tables || null);
                     if (metadata.statusMessage != null) {
                         setStatus(metadata.statusMessage, metadata.statusIsError);
@@ -742,7 +767,12 @@ function createEditorForRecord(record) {
         // this, undoing back to the vars-panel edit state would show the
         // new value alongside stale sections from before the edit.
         const strippedText = stripStaleSections(newText);
-        editor.setValue(strippedText, true);  // undoable=true for granular undo of each change
+        // undoable=true for granular undo of each change; the entry's state also
+        // records the output it made the given, so undoing back to it (e.g.
+        // undoing the solve it triggered) restores that given
+        if (editor.setValue(strippedText, true)) {
+            editor.setTopMetadata({ enteredOutputs: [...variablesManager.enteredOutputs] });
+        }
         syncFromVariables = false;  // Reset immediately so undo can update vars panel
         if (document.activeElement === editor.textarea) {
             const delta = strippedText.length - oldLength;
@@ -1626,7 +1656,8 @@ async function handleReset() {
 // ---------------------------------------------------------------------------
 const solveRunner = new SolveRunner('js/solve-worker.js', (inputs) =>
     solveRecordTwoPass(inputs.text, inputs.record, inputs.parsedConstants, inputs.parsedFunctions,
-        { traceMode: inputs.traceMode, includeTableOutputs: inputs.includeTableOutputs }));
+        { traceMode: inputs.traceMode, includeTableOutputs: inputs.includeTableOutputs,
+          keepOutputLines: inputs.keepOutputLines }));
 
 function setSolveButtonMode(mode) {
     const btn = document.getElementById('btn-solve');
@@ -1777,7 +1808,9 @@ async function handleSolve(undoable = true, traceMode = false, includeTableOutpu
         text, record,
         parsedConstants: editorInfo.editor.parsedConstants,
         parsedFunctions: editorInfo.editor.parsedFunctions,
-        traceMode, includeTableOutputs
+        traceMode, includeTableOutputs,
+        // The output the user gave a value (if any) — kept as the given
+        keepOutputLines: editorInfo.variablesManager.getGivenOutputLines()
     };
 
     // Reset edit tracking now, not when the result lands: Tab's blur starts this
