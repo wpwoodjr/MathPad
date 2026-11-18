@@ -546,6 +546,20 @@ const SCENARIOS = [
         await click(p, '#btn-clear');
         await check(p, 'cleared, no givens', `__t.givens() === '' && ${S('a')}.value === '' && !${S('a')}.look`);
     }],
+    // A given's ⟲ pressed while another solve runs is ignored like any re-entrant
+    // solve: handleSolve drops the given (solveFor) only after its running-solve
+    // guard, so the given survives. A big Sum makes the solve slow enough to press.
+    ['A given\'s ⟲ pressed while a solve is running drops nothing', async p => {
+        await setText(p, '--Variables--\na->\nb->\n\nb = a*2 + 0*Sum(i; i; 1; 300000)');
+        await check(p, 'rows', `!!__t.field('b')`);
+        await type(p, 'a', '5'); await p.key('Enter');
+        await check(p, 'solved, a given', `${S('b')}.value === '10' && __t.givens() === 'a'`, 20000);
+        await solve(p);
+        await check(p, 'solve running', `solveRunner.running`);
+        await p.eval(`${btnOf('a')}.click()`);
+        await check(p, 'a still a given while it runs', `solveRunner.running && __t.givens() === 'a'`);
+        await check(p, 'after: still a given', `!solveRunner.running && __t.givens() === 'a' && ${S('b')}.value === '10'`, 20000);
+    }],
     // Fields are one-line <textarea>s (Chrome on Android shows its autofill bar
     // for <input>s even with autocomplete="off"): Enter never adds a line, pasted
     // line breaks are flattened, and they're the height an input was (31px).

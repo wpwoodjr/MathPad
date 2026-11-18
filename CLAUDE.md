@@ -32,12 +32,12 @@ node tests/run-tests.js
 # Run syntax highlighting tests (132 tests)
 node tests/run-highlighting-tests.js
 
-# Run variables-panel browser tests (19 scenarios: given outputs, multiple givens,
+# Run variables-panel browser tests (20 scenarios: given outputs, multiple givens,
 # ending display, undo/redo, retyping, clearing outputs, ⟲ on a given, entries
 # after a failed solve, a failed solve that keeps a given not in the failing equation,
 # goal seek, Tab vs. Enter, touch ⟲, panel entry vs. the debounced update,
 # :> as an x~ seed, formula edits, Tab stops, entries surviving a stopped solve,
-# pressing the panel right after a line-shifting formula edit, Clear, one-line textarea fields). Starts its own server + headless Chromium with a fresh
+# pressing the panel right after a line-shifting formula edit, Clear, one-line textarea fields, a given's ⟲ pressed while a solve runs). Starts its own server + headless Chromium with a fresh
 # profile; needs Chromium/Chrome (CHROME=/path overrides), prints SKIP without one.
 # Run after any panel change. -v lists every check.
 node tests/run-panel-tests.js
@@ -71,7 +71,7 @@ node tests/gen-expected.js TESTNAME
 ### Variables Panel
 - Displays parsed variable declarations with editable value fields — one-line `<textarea>`s (`rows=1`, `wrap=off`, styled like inputs), not `<input>`s, because Chrome on Android shows its autofill bar (passwords/cards/addresses) for text inputs even with `autocomplete="off"`; Enter is `preventDefault`ed (it solves/blurs), and the `input` handler flattens pasted line breaks to spaces
 - Expression outputs use readonly `<input>` elements (selectable/copyable)
-- **Editable outputs / given outputs**: plain OUTPUT declarations (`->`, `->>`) get an editable `<input>`; expression outputs stay read-only, and so does an output of a name the record also declares as an input (anywhere, even above `--Variables--`) — it just displays that input (`info.displaysInput`, set in `updateFromText`; a change in it rebuilds the row), so it's never a given. **Persistent outputs (`:>`, `:>>`) are editable but never givens** (`isPersistentOutput`): an entry just writes the value into the text — the next solve's `x~` reads it (resetting a counter, seeding any previous-value recall) and the solve then recomputes the field; no ⟲, always output styling (`refreshGivenStyle` skips them), excluded from `enteredOutputs`/`solvedGivenNames`. Goal seek through a `:>` isn't offered — use `->`. They have class `variable-value-output` (borderless until hover/focus, with a faint underline at rest as the typeable cue — touch has no hover). An editable output's `⟲` is shown while you type a value in the field and for as long as the field is a given (`refreshGivenStyle` toggles `variable-solve-btn-hidden`, `visibility:hidden` so the row doesn't shift); otherwise hidden. While a value is being typed (not while the field is blank), the field also drops `variable-value-output` and its row gets `as-input` (input styling and the green input name color; givens keep both). The output `⟲` works like an input's: right after typing a value it solves *with* that value (the touch "solve from this value" button, the same as Enter); on a given you haven't just typed in, it stops that field being a given (`dropGiven` — the other givens stay) and solves for it, e.g. after `h`, `w`, `area` over-determine `area = w*h`, area's ⟲ re-derives area from h and w — but if that solve still reports errors, the field stays a given with its newly solved value (the ⟲ passes the name as `solveFor` through `solveCallback` to `handleSolve`, which calls `dropGiven` after its re-entrancy guard — so a press while a solve runs drops nothing — and `applySolveResult` adds it back to `solveGivens` when the solve failed and the field has a value), so givens keep their givenness while there are errors. No text change is needed: un-kept outputs are cleared by the solve anyway. No press-timing logic is needed: a tap blurs the field first (on touch, at the compatibility mousedown after pointerup), that blur commits the value and makes the field a given, so the button is still visible when the click lands. **Retyping counts**: typing a value into an output makes it a given on blur even if the value is unchanged (`retypedOutput` in the blur handler) — a commit like a changed value, so Enter solves. Escape clears `dataset.typed` so a reverted field doesn't become one. **Given outputs** (several allowed): entering a value into an output adds it to `enteredOutputs`; entries since the last solve accumulate (`handleValueChange` preserves the set across its `clearErrors()`). Blanking an output removes it from the set (a given being cleared shows `given-ending` while focused, typed and blank). `handleSolve` passes `getGivenOutputLines()` as `keepOutputLines` → `solveRecordTwoPass` → both `solveRecord` passes, which skip them in `clearVariables(..., 'solve', ...)` (so their literals stay in context) **and flip their declarations to INPUT** for that solve (in `discoverVariables`, before its input-only checks: constant shadowing, duplicate inputs), so they join the solver's variable map and get solved/unsolved status like inputs (entering too many over-determines the record → a balance error, as with inputs). After the solve, the givens are the outputs it kept (`handleSolve` snapshots `givenOutputNames()` as `solveGivens`, passed to `setErrors` and cached in the solved state's undo metadata; `solvedGivenNames()` reads it), whether the solve succeeded or failed — not the output rows with status, since after a failed solve the status covers only the first failing equation's vars (e.g. `x = sqrt(y)`, `v = x*y` with v entered: ⟲ on y fails on line 2, and v must stay a given) — so a later plain Solve keeps them. `givenOutputNames()` = solved givens ∪ `enteredOutputs`. The solved givens' lifetime is the highlights': `clearErrors()` ends them, i.e. **any edit in a panel field after a successful solve** — a changed value, a blanked field, even typing the same value back (an unchanged-but-typed blur calls `clearErrors()`, keeping `enteredOutputs` — entries since the solve are new givens); Escape is the way to back out — and a value typed into an output starts a new set; after a solve that reported errors (`lastSolveFailed`, set by `setErrors`, so undo/redo restores it too) an entry keeps every given — it's fixing the setup (wrong value → over-determined, or a missing one → unknowns), not starting over — and nothing is shown ending, formula typing (immediately: the typing path in ui.js calls `clearErrors()` when there are givens, rather than waiting for the debounced vars update, so a quick Solve can't still keep them), Clear. While a field is being typed in, the solved givens other than that field are shown as ending (`_endingFor` = the field's name: plain output styling, ⟲ hidden, row class `given-ending` mutes the status-colored name); leaving the field ends them for real, while Escape restores them. (`dropGiven` + `_dropStatus` — used by an output's ⟲ — remove one given (from `solveGivens`) and its highlight, carrying the rest into `enteredOutputs` so the state's undo metadata records them.) Undo/redo restores givens: a solved state through its cached `solveGivens`, and an entry state through `enteredOutputs` stored (as an array) in that state's undo metadata (the panel's `onValueChange` listener in ui.js stamps it with `setTopMetadata`; the undo path calls `setEnteredOutputs`). `clearLastEdited()` runs first on undo/redo so the state being left doesn't leak its entries, and also resets `enteredOutputs` at solve start (after inputs are gathered); a solve that never applies (stopped, or `!out.ok`) puts them back (`restoreEdits` in `handleSolve`), along with `changedSinceSolve`. `setErrors` colors the givens' rows (other output rows are skipped). Nothing is stored in the text, so a reload ends them. This is what lets the Conversions seed records use all-`->` fields: type one value, Enter, done — no Clear step, and a later plain Solve still works; an all-output `area = w*h` record solves for whichever one isn't entered. In an ordinary record, entering an output then ⟲ on an input is a goal seek; changing an input afterwards ends the given, so it solves forward again (a "converter with a parameter" record — e.g. `eur = usd*rate` — therefore loses the given usd when rate is edited after a solve; accepted).
+- **Editable outputs / given outputs**: see "Given outputs" below.
 - Row types: declaration (name + input), expression output (label + readonly value), label (plain text), spacer
 - `--Variables--` marker: only lines below it appear in the panel
 - Variable name labels split into text + marker spans; names truncate with ellipsis on narrow panels while markers (`:`, `->`, etc.) stay visible
@@ -80,9 +80,46 @@ node tests/gen-expected.js TESTNAME
 - Tab / Shift+Tab cycle through the Tab stops (`tabStopFilter`): input fields and given outputs, skipping outputs that aren't givens (results); a record with no input fields (all-output Conversions) tabs through its outputs; a lone stop keeps focus. The stops are decided after the Tab's blur commits (so an output just typed into counts as a given, and givens an edit just ended don't); the field order is captured before it. Escape reverts; flash animation on value changes
 - After a solve, `updateVariableRow` refreshes a focused field only if it's untouched (value still equals its `originalValue`) — e.g. the field Tab moved to while the solve ran — so it never shows, and then commits, a stale pre-solve value; a field being typed in is left alone.
 - **Pending formula-edit update vs. panel use**: formula typing schedules a debounced (500ms) panel update (`scheduleVarsUpdate` → `_runVarsWork`: `updateFromText` + `clearErrors`). The panel flushes it (`flushPendingVarsUpdates`) on `pointerdown` (capture, before the press moves focus) and `focusin`; if the flush rebuilt the pressed row (a line-shifting formula edit — rows are keyed by line), a mouse/pen press is finished on the replacement under the pointer at `pointerup` (focus the field / click the ⟲; touch needs nothing — its compatibility mouse events land on the replacement), so it can't land mid-entry and wipe values/givens entered just after a formula edit; and `_runVarsWork` reads the editor's current text rather than the text captured at schedule time (`updateFromText` parses against the editor's current tokens).
-- Edit tracking (`hasClearedInput`, plus `enteredOutputs` — see Editable outputs / given outputs) is reset by `clearLastEdited()` when a solve **starts** (in `handleSolve`, not when the result lands) and on Clear, so edits made while a solve runs survive for the next one.
+- Edit tracking (`hasClearedInput`, plus `enteredOutputs` — see Given outputs) is reset by `clearLastEdited()` when a solve **starts** (in `handleSolve`, not when the result lands) and on Clear, so edits made while a solve runs survive for the next one.
 - **Editing a value commits to the formula text on every blur (`handleValueChange`), but auto-solves only on Enter** (a `_solveOnBlur` flag set by the Enter handler). **Tab only moves** between fields (commit + focus next, never solves — so entering several values with Tab doesn't run a failing solve per field); clicking elsewhere commits without solving; Escape reverts without solving. Blur commits only a value the user actually changed (vs. the `dataset.originalValue` captured on focus) or an output retyped into a given. Enter solves only when **something changed in the panel since the last solve** (`changedSinceSolve`: set by any `handleValueChange` commit and by an edit that ended the givens; reset by `clearLastEdited()` at solve start, Clear, undo/redo) — in the field being left or an earlier one, so h Tab w Tab Enter-on-untouched-area solves. With nothing changed Enter does nothing (no wasted solves, and an all-outputs Conversions record isn't wiped by a no-givens solve). Formula edits don't count — use Solve/Ctrl+Enter (deliberately: a formula edit ends the givens, so an Enter-solve after it would wipe an all-output record). Clicking Solve/Clear/`⟲` (mouse clicks, not Enter) won't fire a redundant quick-solve before the button's own action, so no separate double-solve guard is needed.
 - Column-preserved comment spacing
+
+### Given outputs (editable outputs)
+Typing a value into an output field makes it a **given**: the next solve keeps that value and treats the field like an input, so the other fields are derived from it. That's how the all-`->` Conversions records work (type one value, Enter), how `area = w*h` solves for whichever field isn't entered, and how goal seek works (enter an output, ⟲ an input). Nothing is stored in the text — givens are panel state, so a reload ends them.
+
+**Which fields**
+- Plain outputs (`->`, `->>`) are editable and can be givens.
+- Persistent outputs (`:>`, `:>>`, `isPersistentOutput`) are editable but **never givens**: an entry just writes the value into the text, which the next solve's `x~` reads (resetting a counter, seeding a previous-value recall); the solve then recomputes the field. No ⟲, always output styling (`refreshGivenStyle` skips them), excluded from `enteredOutputs`/`solvedGivenNames`. Goal seek through a `:>` isn't offered — use `->`.
+- Read-only: expression outputs, and an output of a name the record also declares as an input (anywhere, even above `--Variables--`) — it just displays that input (`info.displaysInput`, set in `updateFromText`; a change in it rebuilds the row).
+
+**State**
+- `enteredOutputs` (Set): outputs entered since the last solve. Entries accumulate (`handleValueChange` preserves the set across its `clearErrors()`); blanking an output removes it.
+- `solveGivens` (Set): the givens of the last solve, set by `setErrors(errors, status, givens)` and cached in the solved state's undo metadata; `solvedGivenNames()` reads it.
+- `givenOutputNames()` = solved givens ∪ `enteredOutputs`.
+- `lastSolveFailed` (set by `setErrors`, so undo/redo restores it), `changedSinceSolve` (see Enter in Variables Panel), `_endingFor` (the field whose typing is showing the others ending).
+
+**How a solve uses them**: `handleSolve` passes `getGivenOutputLines()` as `keepOutputLines` → `solveRecordTwoPass` → both `solveRecord` passes, which skip those lines in `clearVariables(..., 'solve', ...)` (their literals stay in context) **and flip their declarations to INPUT** (in `discoverVariables`, before its input-only checks: constant shadowing, duplicate inputs). So they join the solver's variable map and get solved/unsolved status like inputs; entering too many over-determines the record → a balance error, as with inputs. `handleSolve` snapshots `givenOutputNames()` as `solveGivens`; that snapshot — not the rows with status — is the next set of solved givens, whether the solve succeeded or failed (after a failure the status covers only the first failing equation's vars: with `x = sqrt(y)`, `v = x*y` and v entered, ⟲ on y fails on line 2, and v must stay a given). A later plain Solve keeps them. `setErrors` colors the givens' rows (other output rows are skipped).
+
+**When givens end**
+- **Any edit in a panel field after a successful solve**: a changed value, a blanked field, even the same value typed back (an unchanged-but-typed blur calls `clearErrors()`, keeping `enteredOutputs`, which are the new givens). Escape backs out. A value typed into an output starts a new set.
+- **After a solve that reported errors, an entry keeps every given** — it's fixing the setup (wrong value → over-determined, missing one → unknowns), not starting over — and nothing is shown ending. Givens keep their givenness while there are errors.
+- Formula typing ends them immediately (the typing path in ui.js calls `clearErrors()` when there are givens rather than waiting for the debounced vars update, so a quick Solve can't still keep them). So do Clear and reload.
+- While a field is typed in, the solved givens other than that field are shown ending (`_endingFor`: plain output styling, ⟲ hidden, row class `given-ending` mutes the status-colored name); leaving the field ends them, Escape restores them.
+- Accepted consequence: a "converter with a parameter" (`eur = usd*rate`) loses the given usd when rate is edited after a solve.
+
+**Typing in an output field**
+- **Retyping counts**: typing into an output makes it a given on blur even if the value is unchanged (`retypedOutput` in the blur handler) — a commit like a changed value, so Enter solves. Escape clears `dataset.typed`, so a reverted field doesn't become one.
+- While a value is typed (not while blank), the field drops `variable-value-output` and the row gets `as-input` (input styling, green name); givens keep both. A given being blanked shows `given-ending` while focused, typed and blank.
+- Plain output fields have class `variable-value-output`: borderless until hover/focus, with a faint underline at rest as the typeable cue (touch has no hover).
+
+**The output ⟲**
+- Shown while a value is typed in the field and while the field is a given (`refreshGivenStyle` toggles `variable-solve-btn-hidden`, `visibility:hidden` so the row doesn't shift); hidden otherwise.
+- Works like an input's ⟲: right after typing, it solves *with* the value (the touch "solve from this value" button, same as Enter). On a given you haven't just typed in, it stops that field being a given and solves for it (e.g. after `h`, `w`, `area` over-determine `area = w*h`, area's ⟲ re-derives area); the other givens stay. If that solve still reports errors, the field stays a given with its newly solved value.
+- Mechanics: the ⟲ passes the name as `solveFor` through `solveCallback` to `handleSolve`, which calls `dropGiven` after its running-solve guard (so a press while a solve runs drops nothing); `applySolveResult` adds it back to `solveGivens` if the solve failed and the field has a value. `dropGiven` + `_dropStatus` remove one given (from `solveGivens`) and its highlight, carrying the rest into `enteredOutputs` so the state's undo metadata records them. No text change is needed (un-kept outputs are cleared by the solve anyway), and no press-timing logic: a tap blurs the field first (on touch, at the compatibility mousedown after pointerup), that blur commits the value and makes the field a given, so the button is still there when the click lands.
+
+**Undo/redo and solve lifecycle**
+- A solved state restores its givens from cached `solveGivens`; an entry state from `enteredOutputs`, stored as an array in that state's undo metadata (the panel's `onValueChange` listener in ui.js stamps it with `setTopMetadata`; the undo path calls `setEnteredOutputs`). `clearLastEdited()` runs first on undo/redo so the state being left doesn't leak its entries.
+- `clearLastEdited()` also resets `enteredOutputs` when a solve starts (after inputs are gathered); a solve that never applies (stopped, or `!out.ok`) puts them back, with `changedSinceSolve` (`restoreEdits` in `handleSolve`).
 
 ### Solving
 - **Solve button** or Ctrl+Enter triggers `handleSolve()` (ui.js), which runs the solve through `SolveRunner` (see "Solve execution" below) — off the main thread when possible. The core entry is `solveRecord()` in solve-engine.js.
@@ -198,22 +235,22 @@ node tests/gen-expected.js TESTNAME
 ### Module Dependency Graph
 
 ```
-app.js (entry point, ~200 lines)
+app.js (entry point, ~170 lines)
   ↓
-ui.js (main orchestration, ~1900 lines)
-  ├→ storage.js (localStorage, import/export, tutorial + example records, ~3045 lines)
-  ├→ drive.js (Google Drive cross-device sync — canonical file, gesture-renewed auth, conflict dialogs, ~1330 lines)
-  ├→ editor.js (syntax highlighting editor, ~1435 lines)
-  ├→ variables-panel.js (structured variable display, ~2455 lines)
-  ├→ solve-runner.js (SolveRunner: worker/sync solve orchestration + Stop, ~180 lines)
+ui.js (main orchestration, ~2150 lines)
+  ├→ storage.js (localStorage, import/export, tutorial + example records, ~3255 lines)
+  ├→ drive.js (Google Drive cross-device sync — canonical file, gesture-renewed auth, conflict dialogs, ~1635 lines)
+  ├→ editor.js (syntax highlighting editor, ~1350 lines)
+  ├→ variables-panel.js (structured variable display, ~2885 lines)
+  ├→ solve-runner.js (SolveRunner: worker/sync solve orchestration + Stop, ~145 lines)
   │     └→ solve-worker.js (Web Worker entry: importScripts the solve modules, runs solveRecordTwoPass off-thread)
-  ├→ solve-engine.js (solving + table/grid eval, `solveRecordTwoPass`, ~2860 lines)
-  │     ├→ solver.js (Brent's algorithm, ~840 lines)
-  │     ├→ evaluator.js (expression eval, 50+ builtins, ~955 lines)
-  │     └→ variables.js (variable parsing + table detection, ~1245 lines)
-  ├→ parser.js (tokenizer & AST, ~1090 lines)
-  ├→ line-parser.js (token-based line parsing, ~775 lines)
-  └→ theme.js (light/dark toggle, ~115 lines)
+  ├→ solve-engine.js (solving + table/grid eval, `solveRecordTwoPass`, ~2870 lines)
+  │     ├→ solver.js (Brent's algorithm, ~700 lines)
+  │     ├→ evaluator.js (expression eval, 50+ builtins, ~970 lines)
+  │     └→ variables.js (variable parsing + table detection, ~1150 lines)
+  ├→ parser.js (tokenizer & AST, ~1020 lines)
+  ├→ line-parser.js (token-based line parsing, ~735 lines)
+  └→ theme.js (light/dark toggle, ~120 lines)
 ```
 
 Script load order in `index.html`: theme → parser → line-parser → evaluator → solver → variables → storage → drive → editor → variables-panel → solve-engine → solve-runner → ui → app. (`solve-worker.js` is not a `<script>` — it's loaded by `new Worker()`; inside the worker it `importScripts` parser…solve-engine.)
