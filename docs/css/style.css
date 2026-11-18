@@ -158,8 +158,11 @@ body {
 .app-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    height: 100dvh; /* Dynamic viewport height - adjusts for mobile URL bar */
+    /* The window's height (html/body are 100%), not 100dvh: in an Android
+       desktop-mode PWA window, Chrome sizes dvh from the wrong height at launch
+       until the window is resized, cutting off the status bar. The page never
+       scrolls, so the mobile URL bar never hides and dvh gained nothing. */
+    height: 100%;
 }
 
 /* Header */
@@ -456,7 +459,6 @@ button {
 
 .sidebar-actions {
     padding: 12px;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     margin-top: auto;
     flex-shrink: 0;
     border-top: 1px solid var(--border-color);
@@ -1002,9 +1004,6 @@ button {
     font-size: 12px;
     flex-wrap: wrap;
     white-space: pre-line;
-    /* viewport-fit=cover: in the installed app the page can extend under the
-       Android navigation bar; the status bar's color fills that strip */
-    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
 }
 
 .status-bar.error {
@@ -1300,8 +1299,7 @@ button {
         position: fixed;
         left: -100%;
         top: var(--header-height);
-        height: calc(100vh - var(--header-height));
-        height: calc(100dvh - var(--header-height)); /* Dynamic viewport height */
+        height: calc(100% - var(--header-height)); /* fixed: % of the window (not dvh — see .app-container) */
         z-index: 100;
         transition: left 0.3s ease;
         width: 260px !important;

@@ -1519,9 +1519,11 @@ function setupEventListeners() {
         }
     });
 
-    // Clamp divider and re-align variable name widths on window resize
+    // Clamp divider and re-align variable name widths on window resize — and
+    // whenever the editor area changes size without one (e.g. a PWA window
+    // whose layout settles after launch)
     let kbdTimeout = null;
-    window.addEventListener('resize', () => {
+    const relayout = () => {
         // chrome needs time to settle on orientation changes
         if (kbdTimeout) clearTimeout(kbdTimeout);
         kbdTimeout = setTimeout(() => {
@@ -1530,7 +1532,15 @@ function setupEventListeners() {
             const editorInfo = UI.editors.get(UI.currentRecordId);
             if (editorInfo) editorInfo.variablesManager.alignNameWidths();
         }, 100);
-    });
+    };
+    window.addEventListener('resize', relayout);
+    if (window.ResizeObserver && UI.editorContainer) {
+        let lastHeight = UI.editorContainer.offsetHeight;
+        new ResizeObserver(() => {
+            const h = UI.editorContainer.offsetHeight;
+            if (h !== lastHeight) { lastHeight = h; relayout(); }
+        }).observe(UI.editorContainer);
+    }
 }
 
 /**
