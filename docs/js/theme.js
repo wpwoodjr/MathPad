@@ -38,12 +38,17 @@
         return getSystemTheme();
     }
 
+    // Browser / installed-app bar color: the header's --bg-secondary
+    var THEME_COLORS = { light: '#eff5e4', dark: '#252526' };
+
     function applyTheme(theme) {
         if (theme === 'light') {
             document.documentElement.setAttribute('data-theme', 'light');
         } else {
             document.documentElement.removeAttribute('data-theme');
         }
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', THEME_COLORS[theme === 'light' ? 'light' : 'dark']);
     }
 
     function updateToggleButtons(theme) {

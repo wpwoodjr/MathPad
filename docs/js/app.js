@@ -167,3 +167,14 @@ function showHelp() {
 
 // Export to global scope
 window.showHelp = showHelp;
+
+/**
+ * Service worker (sw.js): makes the app installable as a PWA and usable offline.
+ * Network-first, so it never serves stale files while online. Skipped on
+ * file:// (not allowed there) and where unsupported.
+ */
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => console.warn('Service worker not registered:', err));
+    });
+}

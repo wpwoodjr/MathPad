@@ -49,6 +49,7 @@ Open `docs/index.html` in any browser — no build step, no server — or use th
 - **Vector Diagrams** — `vectorDraw` renders SVG vector diagrams in navigation, polar, or cartesian coordinates with legend and per-vector solving
 - **Import/Export** — compatible with original PalmOS MathPad export format
 - **Optional Google Drive sync** — keep your records in the cloud and synced across devices; works entirely in the browser without it
+- **Installable app (PWA)** — install from the browser to get its own window and offline use
 
 ### Editor
 

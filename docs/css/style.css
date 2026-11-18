@@ -140,6 +140,12 @@ html, body {
     overflow: hidden;
 }
 
+/* Whatever shows past the body (e.g. under the Android navigation bar in the
+   installed app) is the app background, not the browser's white */
+html {
+    background-color: var(--bg-primary);
+}
+
 body {
     font-family: var(--font-ui);
     font-size: 13px;
@@ -450,6 +456,7 @@ button {
 
 .sidebar-actions {
     padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     margin-top: auto;
     flex-shrink: 0;
     border-top: 1px solid var(--border-color);
@@ -995,6 +1002,9 @@ button {
     font-size: 12px;
     flex-wrap: wrap;
     white-space: pre-line;
+    /* viewport-fit=cover: in the installed app the page can extend under the
+       Android navigation bar; the status bar's color fills that strip */
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
 }
 
 .status-bar.error {
