@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Let vars panel inputs use native undo
         const active = document.activeElement;
-        if (active && active.closest('.variables-panel') && active.tagName === 'INPUT') {
+        if (active && active.closest('.variables-panel') && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
             return;
         }
 

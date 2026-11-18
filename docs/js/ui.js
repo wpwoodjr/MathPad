@@ -676,11 +676,11 @@ function createEditorForRecord(record) {
         // events come after the touch ends and already land on the replacement.)
         if (e.target.isConnected || e.pointerType === 'touch') return;
         const el = document.elementFromPoint(e.clientX, e.clientY);
-        const target = el && el.closest('.variable-solve-btn, input');
+        const target = el && el.closest('.variable-solve-btn, input, textarea');
         if (!target || !variablesPanel.contains(target)) return;
         window.addEventListener('pointerup', () => {
             if (!target.isConnected) return;
-            if (target.matches('input')) target.focus();
+            if (target.matches('input, textarea')) target.focus();
             else target.click();
         }, { once: true, capture: true });
     }, true);

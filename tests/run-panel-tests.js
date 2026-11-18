@@ -94,10 +94,10 @@ window.__t = {
         return [...this.panel().container.querySelectorAll('.variable-row')].find(r =>
             r.querySelector('.variable-name-text')?.textContent.trim().split(/\\s+/).pop() === n);
     },
-    field(n) { return this.row(n)?.querySelector('input'); },
+    field(n) { return this.row(n)?.querySelector('.variable-value-input, .variable-value-readonly'); },
     // given-look: input styling (no variable-value-output) + as-input row
     st(n) {
-        const r = this.row(n), i = r?.querySelector('input');
+        const r = this.row(n), i = r?.querySelector('.variable-value-input, .variable-value-readonly');
         if (!i) return null;
         const btn = r.querySelector('.variable-solve-btn');
         const nameColor = getComputedStyle(r.querySelector('.variable-name')).color;
@@ -116,7 +116,7 @@ window.__t = {
     givens() { return [...this.panel().givenOutputNames()].sort().join(','); },
     panel() { return UIState.editors.get(UIState.currentRecordId).variablesManager; },
     // the active record's formulas textarea (other open tabs have hidden ones)
-    textarea() { return [...document.querySelectorAll('textarea')].find(t => t.offsetParent); },
+    textarea() { return [...document.querySelectorAll('textarea.editor-textarea')].find(t => t.offsetParent); },
     status() { return document.getElementById('status-text').textContent; },
 };
 true`;
@@ -545,6 +545,23 @@ const SCENARIOS = [
         await check(p, 'a given', `__t.givens() === 'a'`);
         await click(p, '#btn-clear');
         await check(p, 'cleared, no givens', `__t.givens() === '' && ${S('a')}.value === '' && !${S('a')}.look`);
+    }],
+    // Fields are one-line <textarea>s (Chrome on Android shows its autofill bar
+    // for <input>s even with autocomplete="off"): Enter never adds a line, pasted
+    // line breaks are flattened, and they're the height an input was (31px).
+    ['Panel fields are one-line textareas', async p => {
+        await setText(p, '--Variables--\na: 1\nb->\n\nb = a*2');
+        await check(p, 'rows', `!!__t.field('b')`);
+        await check(p, 'textarea', `__t.field('a').tagName === 'TEXTAREA'`);
+        await check(p, 'input height', `Math.round(__t.field('a').getBoundingClientRect().height) === 31`);
+        await type(p, 'a', '5');
+        await p.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
+        await p.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+        await check(p, 'Enter solves, no newline', `${S('b')}.value === '10' && ${S('a')}.value === '5' && /\\na: 5\\nb->/.test(__t.textarea().value)`);
+        await type(p, 'a', '');
+        await p.insertText('7\n8');
+        await check(p, 'pasted line break flattened', `__t.field('a').value === '7 8'`);
+        await p.key('Escape');
     }],
 ];
 

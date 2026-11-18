@@ -1636,6 +1636,14 @@ body.sidebar-resizing * {
     font-size: 15px;
     line-height: 1.4;
     box-sizing: border-box;
+    /* A one-line <textarea> (see variables-panel.js): size and scroll like an input */
+    height: calc(1.4em + 10px);
+    resize: none;
+    overflow: hidden;
+    white-space: pre;
+    overflow-wrap: normal;
+    vertical-align: middle;
+    display: block;
 }
 
 .variable-value-input:focus {

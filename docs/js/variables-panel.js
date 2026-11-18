@@ -175,7 +175,7 @@ class VariablesPanel {
      * Which fields Tab stops at: inputs and given outputs — not outputs that
      * aren't givens (they're results). A record with no input fields (an
      * all-output Conversions record) tabs through its outputs instead.
-     * @returns {function(HTMLInputElement): boolean}
+     * @returns {function(HTMLTextAreaElement): boolean}
      */
     tabStopFilter() {
         const outputFields = new Set();
@@ -760,10 +760,16 @@ class VariablesPanel {
         let valueElement;
 
         if (isEditable) {
-            valueElement = document.createElement('input');
-            valueElement.type = 'text';
+            // A one-line <textarea>, not an <input>: Chrome on Android shows its
+            // autofill bar (passwords / cards / addresses) for text inputs even
+            // with autocomplete="off", but not for textareas. Enter is handled
+            // below (never a newline) and pasted line breaks are flattened.
+            valueElement = document.createElement('textarea');
+            valueElement.rows = 1;
+            valueElement.wrap = 'off';
             valueElement.className = 'variable-value-input';
             valueElement.inputMode = 'text';
+            valueElement.enterKeyHint = 'done';
             valueElement.spellcheck = false;
             valueElement.setAttribute('autocapitalize', 'none');
             valueElement.setAttribute('autocorrect', 'off');
@@ -827,11 +833,20 @@ class VariablesPanel {
                     delete e.target.dataset.typed;
                     e.target.blur();
                 } else if (e.key === 'Enter') {
+                    e.preventDefault();  // a textarea would insert a newline
                     this._solveOnBlur = true;
                     e.target.blur();
                 }
             });
             valueElement.addEventListener('input', (e) => {
+                // One line only: flatten line breaks (paste, drop, soft keyboards
+                // that ignore the Enter preventDefault)
+                if (/[\r\n]/.test(e.target.value)) {
+                    const pos = e.target.selectionStart;
+                    const before = e.target.value.slice(0, pos).replace(/\r\n|[\r\n]/g, ' ');
+                    e.target.value = before + e.target.value.slice(pos).replace(/\r\n|[\r\n]/g, ' ');
+                    e.target.setSelectionRange(before.length, before.length);
+                }
                 e.target.dataset.typed = '1';
                 this.autoSizeInput(e.target);
                 // An output being typed in looks like an input (it becomes a given
@@ -998,8 +1013,9 @@ class VariablesPanel {
         const untouched = focused && valueElement.dataset.originalValue === valueElement.value;
         if (valueElement && (!focused || untouched)) {
             const newValue = this.formatValueForDisplay(info);
-            const oldValue = valueElement.tagName === 'INPUT' ? valueElement.value : valueElement.textContent;
-            if (valueElement.tagName === 'INPUT') {
+            const isField = valueElement.tagName === 'INPUT' || valueElement.tagName === 'TEXTAREA';
+            const oldValue = isField ? valueElement.value : valueElement.textContent;
+            if (isField) {
                 const allSelected = untouched && valueElement.selectionStart === 0 &&
                     valueElement.selectionEnd === valueElement.value.length;
                 valueElement.value = newValue;
