@@ -348,7 +348,9 @@ function formatDuration(seconds, fractional) {
  */
 function checkBalance(a, b, places) {
     const tolPlaces = Math.max(3, places + 1);
-    const balanceTolerance = 5 * Math.pow(10, -tolPlaces);
+    // Divide by a positive power of ten: exact on every platform, unlike
+    // Math.pow(10, -n), which V8 on ARM returns a bit off (0.0001 → 0.00009999999999999999)
+    const balanceTolerance = 5 / Math.pow(10, tolPlaces);
     // Exact equality short-circuit. Handles Infinity === Infinity (where the
     // diff arithmetic would otherwise produce NaN and incorrectly report "doesn't
     // balance"). NaN === NaN is false in JS so NaN values still fall through to
@@ -903,7 +905,8 @@ function formatNumber(value, places = 14, stripZeros = true, format = 'float', b
             } else {
                 const exp = Math.floor(Math.log10(Math.abs(value)));
                 const engExp = Math.floor(exp / 3) * 3;
-                const mantissa = value / Math.pow(10, engExp);
+                // Scale by a positive power of ten (exact; see checkBalance)
+                const mantissa = engExp < 0 ? value * Math.pow(10, -engExp) : value / Math.pow(10, engExp);
                 str = toFixed(mantissa, places) + 'e' + engExp;
             }
             break;

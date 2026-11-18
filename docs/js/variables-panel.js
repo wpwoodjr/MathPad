@@ -2097,8 +2097,11 @@ class VariablesPanel {
         const coordFmt = (v, fmt) => {
             if (!isFinite(v)) return '—';
             const mag = v === 0 ? 0 : Math.floor(Math.log10(Math.abs(v)));
-            const rf = Math.pow(10, SIG - 1 - mag);
-            const value = v === 0 ? 0 : Math.round(v * rf) / rf;
+            // Round to SIG significant figures, scaling by a positive power of
+            // ten either way (Math.pow(10, -n) is a bit off on ARM)
+            const e = SIG - 1 - mag;
+            const value = v === 0 ? 0 : e >= 0 ? Math.round(v * Math.pow(10, e)) / Math.pow(10, e)
+                : Math.round(v / Math.pow(10, -e)) * Math.pow(10, -e);
             let places;
             if (opts.numberFormat === 'sci') places = SIG - 1;
             else if (opts.numberFormat === 'eng') places = Math.max(0, SIG - 1 - (((mag % 3) + 3) % 3));
@@ -2704,7 +2707,9 @@ class VariablesPanel {
             step = timeSteps.find(s => s >= rough) || rough;
         } else {
             const rough = range / count;
-            const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+            const magExp = Math.floor(Math.log10(rough));
+            // 1 / 10^n, not Math.pow(10, -n), which is a bit off on ARM
+            const mag = magExp < 0 ? 1 / Math.pow(10, -magExp) : Math.pow(10, magExp);
             const norm = rough / mag;
             step = norm < 1.5 ? mag : norm < 3 ? 2 * mag : norm < 7 ? 5 * mag : 10 * mag;
         }
