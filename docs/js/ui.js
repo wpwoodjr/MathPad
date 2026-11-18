@@ -666,7 +666,24 @@ function createEditorForRecord(record) {
     // panel and clearing the highlights (and givens) after the user's value went
     // in. pointerdown runs before the press moves focus; focusin covers keyboard.
     const flushBeforePanelUse = () => { if (_pendingVarsWork.has(record.id)) flushPendingVarsUpdates(); };
-    variablesPanel.addEventListener('pointerdown', flushBeforePanelUse, true);
+    variablesPanel.addEventListener('pointerdown', (e) => {
+        if (!_pendingVarsWork.has(record.id)) return;
+        flushPendingVarsUpdates();
+        // A formula edit that shifted lines rebuilds the rows (they're keyed by
+        // line), detaching the field or ⟲ being pressed — the browser then
+        // neither focuses nor clicks anything. Finish the press on the row's
+        // replacement under the pointer. (Not for touch: its compatibility mouse
+        // events come after the touch ends and already land on the replacement.)
+        if (e.target.isConnected || e.pointerType === 'touch') return;
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const target = el && el.closest('.variable-solve-btn, input');
+        if (!target || !variablesPanel.contains(target)) return;
+        window.addEventListener('pointerup', () => {
+            if (!target.isConnected) return;
+            if (target.matches('input')) target.focus();
+            else target.click();
+        }, { once: true, capture: true });
+    }, true);
     variablesPanel.addEventListener('focusin', flushBeforePanelUse);
 
     // Set up bidirectional sync
@@ -780,8 +797,8 @@ function createEditorForRecord(record) {
         }
     });
 
-    variablesManager.onSolve((undoable, traceMode, includeTableOutputs, startText) => {
-        handleSolve(undoable, traceMode, includeTableOutputs, startText);
+    variablesManager.onSolve((undoable, traceMode, includeTableOutputs, startText, solveFor) => {
+        handleSolve(undoable, traceMode, includeTableOutputs, startText, solveFor);
     });
 
     variablesManager.onBlur(() => {
@@ -1690,7 +1707,7 @@ function stopSolve() {
 // Apply a completed solve back to the editor/UI. This is the DOM-touching tail
 // that must run on the main thread.
 function applySolveResult(active, msg) {
-    const { editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart, solvingFor } = active;
+    const { editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart, solveFor } = active;
     let { solveGivens } = active;
 
     // The editor may have been destroyed (tab/record closed) while solving.
@@ -1721,8 +1738,8 @@ function applySolveResult(active, msg) {
 
     // A given's ⟲ solved for it: if the solve failed, it stays a given with the
     // value the solve found (if it found one)
-    if (solvingFor && errors.length > 0 && editorInfo.variablesManager.outputHasValue(solvingFor)) {
-        solveGivens = [...solveGivens, solvingFor];
+    if (solveFor && errors.length > 0 && editorInfo.variablesManager.outputHasValue(solveFor)) {
+        solveGivens = [...solveGivens, solveFor];
     }
 
     // Always persist status from solve
@@ -1770,7 +1787,7 @@ function applySolveResult(active, msg) {
     editorInfo.variablesManager.setTableData(tables);
 }
 
-async function handleSolve(undoable = true, traceMode = false, includeTableOutputs = false, startText = null) {
+async function handleSolve(undoable = true, traceMode = false, includeTableOutputs = false, startText = null, solveFor = null) {
     if (!UI.currentRecordId) {
         setStatus('No record selected', true);
         return;
@@ -1778,9 +1795,6 @@ async function handleSolve(undoable = true, traceMode = false, includeTableOutpu
     // Ignore re-entrant solves while an off-thread solve is pending. (Sync solves
     // block the thread, so they can't overlap.) The button shows Stop while one
     // runs, but a keyboard shortcut could still call this — one solve at a time.
-    const solvingForEditor = UI.editors.get(UI.currentRecordId);
-    const solvingFor = solvingForEditor ? solvingForEditor.variablesManager.solvingFor : null;
-    if (solvingForEditor) solvingForEditor.variablesManager.solvingFor = null;
     if (solveRunner.running) return;
 
     const record = findRecord(UI.data, UI.currentRecordId);
@@ -1797,6 +1811,10 @@ async function handleSolve(undoable = true, traceMode = false, includeTableOutpu
     // Drop any pending typing-path vars update — the solve produces its own
     // fresh state via the post-solve setValue → onChange path.
     cancelPendingVarsUpdates();
+
+    // A given output's ⟲ (solveFor): it stops being a given, so this solve
+    // derives it (if the solve fails, applySolveResult keeps it a given)
+    if (solveFor) editorInfo.variablesManager.dropGiven(solveFor);
 
     // Capture pre-solve status so undo can restore it on the entry left behind.
     const preStatus = { ...UI.lastPersistentStatus };
@@ -1815,7 +1833,7 @@ async function handleSolve(undoable = true, traceMode = false, includeTableOutpu
     // UI context for applying the result (kept in this closure across the await).
     // The given outputs this solve keeps — they stay givens after it, failed or not
     const solveGivens = [...editorInfo.variablesManager.givenOutputNames()];
-    const active = { editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart, solveGivens, solvingFor };
+    const active = { editorInfo, record, undoable, preStatus, cursorLine, editorValueAtStart, solveGivens, solveFor };
     // Cloneable inputs for the worker; the sync path uses the same object.
     const inputs = {
         text, record,
@@ -1829,7 +1847,18 @@ async function handleSolve(undoable = true, traceMode = false, includeTableOutpu
     // Reset edit tracking now, not when the result lands: Tab's blur starts this
     // solve and then focuses the next field, and any edit there (or elsewhere
     // while an off-thread solve runs) must survive for the next solve.
-    editorInfo.variablesManager.clearLastEdited();
+    // Kept to put back if this solve never applies (stopped, or failed to run).
+    const vm = editorInfo.variablesManager;
+    const enteredBefore = vm.enteredOutputs, changedBefore = vm.changedSinceSolve;
+    vm.clearLastEdited();
+    const restoreEdits = () => {
+        // The solve didn't happen: its entries are still pending, along with
+        // any made while it ran (the editor may be gone after a record switch)
+        if (UI.editors.get(record.id) !== editorInfo) return;
+        for (const name of enteredBefore) vm.enteredOutputs.add(name);
+        if (changedBefore) vm.changedSinceSolve = true;
+        vm.refreshGivenStyle();
+    };
 
     // The button becomes Stop only for an off-thread solve — a synchronous solve
     // blocks the thread and can't be stopped.
@@ -1839,12 +1868,13 @@ async function handleSolve(undoable = true, traceMode = false, includeTableOutpu
 
     // Stopped (Stop button / Escape / record change): stopSolve already reset the
     // button and set the status; there's nothing to apply.
-    if (out === null) return;
+    if (out === null) { restoreEdits(); return; }
 
     setSolveButtonMode('solve');
     if (!out.ok) {
         setStatus('Error: ' + out.error, true);
         console.error('Solve error:', out.error);
+        restoreEdits();
         return;
     }
     applySolveResult(active, out);

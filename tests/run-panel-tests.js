@@ -487,6 +487,57 @@ const SCENARIOS = [
         await check(p, 'b is a given now: Shift+Tab from c → b', `document.activeElement === __t.field('b') && __t.givens() === 'b'`);
     }],
 
+    ['Entries survive: an unchanged typed field, a stopped solve; Tab on a lone stop; an output displaying an input is read-only', async p => {
+        await setText(p, '--Variables--\nfeet->\ninches->\n\ninches = feet*12');
+        await check(p, 'rows', `!!__t.field('inches')`);
+        await type(p, 'feet', '3'); await p.key('Tab');
+        await check(p, 'Tab → inches', `document.activeElement === __t.field('inches')`);
+        await p.insertText('5');
+        await p.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8 });
+        await p.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8 });
+        await p.key('Enter');
+        await check(p, 'typing and erasing in inches keeps feet the given: inches = 36', `${S('inches')}.value === '36' && __t.givens() === 'feet'`);
+
+        await type(p, 'inches', '24'); await blur(p, 'inches');
+        await check(p, 'inches entered', `__t.givens() === 'inches'`);
+        const stopped = await p.eval(`(() => { if (!solveRunner.async) return false; handleSolve(); stopSolve(); return true; })()`);
+        if (stopped) {
+            await check(p, 'solve stopped', `/stopped/.test(__t.status())`);
+            await check(p, 'stopped solve: inches still the given', `__t.givens() === 'inches' && ${S('inches')}.look`);
+            await solve(p);
+            await check(p, 'the next Solve uses it: feet = 2', `${S('feet')}.value === '2'`);
+        } else current.failures.push('solve runner not async (worker unavailable) — stop path not tested');
+
+        await setText(p, '--Variables--\nx: 1\ny->\n\ny = x*2');
+        await check(p, 'rows', `!!__t.field('y')`);
+        await type(p, 'x', '1'); await p.key('Tab');
+        await check(p, 'Tab with x the only stop: focus stays on x', `document.activeElement === __t.field('x')`);
+        await blur(p, 'x');
+
+        // x-> displays the input x (declared above the marker too): read-only;
+        // a formula edit that adds/removes the input rebuilds the row
+        await setText(p, 'x: 5\n--Variables--\nx->\ny->\n\ny = x*2');
+        await check(p, 'rows', `!!__t.field('y')`);
+        await check(p, 'x-> displaying input x is read-only, no ⟲', `__t.field('x').readOnly && !${S('x')}.btn`);
+        await solve(p);
+        await check(p, 'solves: x shows 5, y = 10', `${S('x')}.value === '5' && ${S('y')}.value === '10'`);
+        await setText(p, '// x: 5\n--Variables--\nx->\ny->\n\ny = x*2');  // same lines, input commented out
+        await check(p, 'without the input, x-> is an editable output', `!__t.field('x').readOnly`);
+    }],
+
+    ['Pressing the panel right after a line-shifting formula edit (mouse)', async p => {
+        await setText(p, '--Variables--\nx: 1\ny->\n\ny = x*2');
+        await check(p, 'rows', `!!__t.field('x')`);
+        await p.eval(`(() => { const ta = __t.textarea(); ta.focus(); ta.value = 'z = 1\\n' + ta.value; ta.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+        await mouseClick(p, `__t.field('x')`);
+        await check(p, 'the click focuses x (its row was rebuilt under the press)', `document.activeElement === __t.field('x')`);
+        await blur(p, 'x');
+        await p.eval(`(() => { const ta = __t.textarea(); ta.focus(); ta.value = 'w = 1\\n' + ta.value; ta.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+        await markStatus(p);
+        await mouseClick(p, btnOf('x'));
+        await check(p, 'the click on ⟲ solves', `__t.status() !== '__mark__' && !/Solving/.test(__t.status())`);
+    }],
+
     ['Clear ends the givens', async p => {
         await setText(p, '--Variables--\na->\nb->\n\nb = a*2');
         await check(p, 'rows', `!!__t.field('b')`);

@@ -104,9 +104,6 @@ class VariablesPanel {
         // See givenOutputNames().
         this.enteredOutputs = new Set();
         this.solveGivens = new Set();
-        // A given whose ⟲ was just pressed (the solve derives it): it stays a
-        // given if that solve fails. Read and reset by handleSolve.
-        this.solvingFor = null;
         // The last solve reported errors: entries then keep the givens (you're
         // fixing the setup) instead of starting a new set
         this.lastSolveFailed = false;
@@ -168,7 +165,8 @@ class VariablesPanel {
                 ? (reverse ? n - k : k - 1)
                 : ((currentIndex + step * k) % n + n) % n;
             const f = fields[i];
-            if (f !== currentInput && f.isConnected && isStop(f)) return f;
+            // (k = n comes back to the current field: the only stop stays focused)
+            if (f.isConnected && isStop(f)) return f;
         }
         return null;
     }
@@ -247,6 +245,17 @@ class VariablesPanel {
         const newDeclMap = new Map();
         for (const info of newDeclarations) {
             newDeclMap.set(info.lineIndex, info);
+        }
+        // An output of a name the record also declares as an input (anywhere,
+        // even above --Variables--) just displays that input: read-only, never
+        // a given (the input's value is what the solve uses)
+        const inputNames = new Set(newDeclarations
+            .filter(info => info.declaration && info.declaration.type === VarType.INPUT)
+            .map(info => info.name));
+        for (const info of newDeclarations) {
+            if (info.declaration && info.declaration.type === VarType.OUTPUT && inputNames.has(info.name)) {
+                info.displaysInput = true;
+            }
         }
 
         // Also include expression outputs (expr:, expr::, expr->, expr->>)
@@ -428,7 +437,8 @@ class VariablesPanel {
                 // If name, marker, format, limits, or comment changed, remove old row and add new one
                 const limitsChanged = JSON.stringify(existing.declaration.limits) !== JSON.stringify(info.declaration.limits);
                 const formatChanged = existing.declaration.format !== info.declaration.format || existing.declaration.base !== info.declaration.base;
-                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || existing.declaration.label !== info.declaration.label || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment || existing.isQuoted !== info.isQuoted) {
+                if (existing.name !== info.name || existing.declaration.marker !== info.declaration.marker || existing.declaration.label !== info.declaration.label || formatChanged || limitsChanged || existing.declaration.comment !== info.declaration.comment || existing.isQuoted !== info.isQuoted ||
+                    !!existing.displaysInput !== !!info.displaysInput) {
                     toRemove.push(lineIndex);
                     toAdd.push(info);
                 } else if (this.declarationChanged(existing, info)) {
@@ -741,11 +751,12 @@ class VariablesPanel {
         // Persistent outputs (:> :>>) are editable too, but never givens: an
         // entry just writes the value into the text, where the next solve's x~
         // reads it (resetting a counter, seeding a previous-value recall); the
-        // solve then recomputes the field. Expression outputs stay read-only.
+        // solve then recomputes the field. Expression outputs stay read-only, as
+        // do outputs that display an input of the same name (displaysInput).
         const isOutput = decl.type === VarType.OUTPUT;
         const isPersistentOutput = isOutput && clearBehavior === ClearBehavior.ON_SOLVE_ONLY;
         const isExpressionOutput = info.isExpressionOutput || false;
-        const isEditable = !isExpressionOutput;
+        const isEditable = !isExpressionOutput && !info.displaysInput;
         let valueElement;
 
         if (isEditable) {
@@ -774,9 +785,13 @@ class VariablesPanel {
                     this.handleValueChange(info.lineIndex, e.target.value);
                 } else if (typed && !this.lastSolveFailed) {
                     // Any edit after a successful solve ends its givens, even one
-                    // typed back to the same value (Escape is the way to back out)
+                    // typed back to the same value (Escape is the way to back out).
+                    // Outputs entered since then are new givens, not the solve's: kept.
                     if (this.solvedGivenNames().size > 0) this.changedSinceSolve = true;
+                    const entered = this.enteredOutputs;
                     this.clearErrors();
+                    this.enteredOutputs = entered;
+                    this.refreshGivenStyle();
                 }
                 // Done typing: the givens shown ending have ended (or Escape kept
                 // them); also restores a field Escape reverted to plain styling.
@@ -859,9 +874,6 @@ class VariablesPanel {
                 // blur commits the typed value — making the field a given — so the
                 // button is still there when the click arrives.
                 solveBtn.classList.add('variable-solve-btn-hidden');
-                valueElement.addEventListener('blur', () => {
-                    if (!this.givenOutputNames().has(info.name)) solveBtn.classList.add('variable-solve-btn-hidden');
-                });
             }
             // "Enter a value, then ⟲" solves WITH the typed value instead of
             // blanking it (handy on touch, where ⟲ is easier than Enter).
@@ -890,15 +902,14 @@ class VariablesPanel {
                 // a given (not just typed) it works like an input's: the field
                 // stops being a given, and the solve derives it from the rest.
                 // No text change is needed — un-kept outputs are cleared anyway.
-                // If that solve reports errors, the field stays a given with its
-                // newly solved value (solvingFor), like the other givens of a
-                // failed solve — you're still fixing the setup.
+                // handleSolve drops the given (solveFor) once the solve really
+                // starts; if that solve reports errors, the field stays a given
+                // with its newly solved value, like the other givens of a failed
+                // solve — you're still fixing the setup.
                 let startText = null;
+                let solveFor = null;
                 if (isOutput) {
-                    if (!keepValue) {
-                        this.dropGiven(info.name);
-                        this.solvingFor = info.name;
-                    }
+                    if (!keepValue) solveFor = info.name;
                 } else if (this.formatValueForDisplay(currentInfo) && !keepValue) {
                     startText = this.buildClearedText(info.lineIndex);
                 }
@@ -907,7 +918,7 @@ class VariablesPanel {
                 // Ctrl+click enables the solve trace output;
                 // Shift+click appends the "--- Table Outputs ---" text section
                 if (this.solveCallback) {
-                    this.solveCallback(true, !!e.ctrlKey, !!e.shiftKey, startText);
+                    this.solveCallback(true, !!e.ctrlKey, !!e.shiftKey, startText, solveFor);
                 }
             });
             row.appendChild(solveBtn);
@@ -960,7 +971,7 @@ class VariablesPanel {
         } else if (decl.clearBehavior === ClearBehavior.ON_SOLVE_ONLY) {
             nameLabel.title = 'Output variable (cleared on Solve, kept through Clear; enter a value to restart from it)';
         } else if (valueElement && valueElement.readOnly) {
-            // Expression output: computed, not typeable
+            // Expression output, or an output displaying an input: not typeable
             nameLabel.title = 'Output (cleared on Solve or Clear)';
         } else {
             nameLabel.title = 'Output variable (cleared on Solve or Clear; enter a value to solve from it)';
@@ -1401,21 +1412,16 @@ class VariablesPanel {
 
     /**
      * Names of the outputs the last solve kept as givens (solveGivens) that are
-     * still editable output rows. Names that also have an input
-     * declaration are skipped, since their status belongs to the input.
+     * still editable output rows (an output displaying an input of its name is
+     * read-only, so it never is one).
      */
     solvedGivenNames() {
         const names = new Set();
         if (this.solveGivens.size === 0) return names;
-        const inputNames = new Set();
-        for (const info of this.declarations.values()) {
-            if (info.declaration && info.declaration.type === VarType.INPUT) inputNames.add(info.name);
-        }
         for (const info of this.declarations.values()) {
             if (info.declaration && info.declaration.type === VarType.OUTPUT && !info.isExpressionOutput &&
                 info.declaration.clearBehavior !== ClearBehavior.ON_SOLVE_ONLY &&
-                this.inputElements.has(info.lineIndex) &&
-                !inputNames.has(info.name) && this.solveGivens.has(info.name)) {
+                this.inputElements.has(info.lineIndex) && this.solveGivens.has(info.name)) {
                 names.add(info.name);
             }
         }

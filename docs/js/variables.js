@@ -212,9 +212,13 @@ function parseAllVariables(text, allTokens, skipLines) {
  * @param {string} text - The formula text
  * @param {EvalContext} context - Context with constants and functions loaded
  * @param {object} record - Record settings for formatting
+ * @param {Set<number>} [skipLines] - 1-based lines to skip (table bodies)
+ * @param {Set<number>} [keepOutputLines] - 1-based lines of given outputs: their
+ *   OUTPUT declarations are treated as INPUT for this solve, before the
+ *   input-only checks below (constant shadowing, duplicate inputs)
  * @returns {{ text: string, declarations: Array, errors: Array }}
  */
-function discoverVariables(text, context, record, allTokens, skipLines) {
+function discoverVariables(text, context, record, allTokens, skipLines, keepOutputLines) {
     const lines = text.split('\n');
     const declarations = [];
     const errors = [];
@@ -229,7 +233,14 @@ function discoverVariables(text, context, record, allTokens, skipLines) {
         // Parse declaration or expression output from this line
         const marked = parseMarkedLine(line, lineTokens);
         if (marked && marked.kind === 'declaration') {
-            const decl = marked;
+            let decl = marked;
+            // A given output (the user entered its value) acts as an input for
+            // this solve: it joins the solver's variable map (OUTPUTs are left
+            // out), gets solved/unsolved status like an input, and its value
+            // isn't rewritten as a result
+            if (decl.type === VarType.OUTPUT && keepOutputLines && keepOutputLines.has(i + 1)) {
+                decl = { ...decl, type: VarType.INPUT };
+            }
             const name = decl.name;
             const isOutput = decl.type === VarType.OUTPUT;
 

@@ -1849,24 +1849,12 @@ function solveRecord(text, context, record, parserTokens, skipTables = false, tr
     context.clearUsageTracking();
 
     // Pass 1: Variable Discovery (parses declarations, evaluates definitions)
-    const discovery = discoverVariables(text, context, record, allTokens, tableLines.size > 0 ? tableLines : null);
+    const discovery = discoverVariables(text, context, record, allTokens, tableLines.size > 0 ? tableLines : null,
+        keepOutputLines && keepOutputLines.length > 0 ? new Set(keepOutputLines) : null);
     text = discovery.text;
     allTokens = discovery.allTokens;
     const declarations = discovery.declarations;
     const errors = [...(context.functionErrors || []), ...discovery.errors];
-
-    // A user-entered output acts as an input for this solve: it joins the
-    // solver's variable map (OUTPUTs are left out), so it gets solved/unsolved
-    // status like any input — the panel reads that status to keep it the given
-    // on later solves — and its value isn't rewritten as a result.
-    if (keepOutputLines && keepOutputLines.length > 0) {
-        const keepLines = new Set(keepOutputLines);
-        for (const decl of declarations) {
-            if (keepLines.has(decl.lineIndex + 1) && decl.declaration.type === VarType.OUTPUT) {
-                decl.declaration = { ...decl.declaration, type: VarType.INPUT };
-            }
-        }
-    }
 
     // Save pre-solve variable state for tables. Captured BEFORE the outer
     // equation solve so that equation-solved intermediates (e.g. `adjTemp`

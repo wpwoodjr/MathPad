@@ -279,9 +279,6 @@ function runTest(inputPath, expectedPath) {
 }
 
 /**
- * Discover and run all tests
- */
-/**
  * Given outputs: an output the user typed a value into is passed to the solve
  * as keepOutputLines (the panel tracks it; the record text can't say which
  * output was entered, so this can't be a fixture). The solve must keep that
@@ -310,9 +307,17 @@ function runGivenOutputTest() {
     if (two.errors.length) problems.push(`two givens errors: ${two.errors.join('; ')}`);
     const twoStatus = [...(two.equationVarStatus || new Map())].map(([k, v]) => `${k}:${v}`).sort().join(',');
     if (twoStatus !== 'h:solved,w:solved') problems.push(`two givens status: ${twoStatus} (expected h, w solved)`);
+    // A given named like a global constant: its entered value is used (a
+    // given is flipped to INPUT in discovery, so it also shadows the constant)
+    const consts = new Map([['g', { value: 9.8, comment: null }]]);
+    const shadow = solveRecordTwoPass('f = m*g\n\nm-> 2\ng-> 10\nf->', record, consts, null, { keepOutputLines: [3, 4] });
+    if (!/f-> 20$/.test(shadow.text)) problems.push(`given shadowing a constant:\n${shadow.text}`);
     return { name, passed: problems.length === 0, error: problems.join('\n') || null };
 }
 
+/**
+ * Discover and run all tests
+ */
 function runAllTests() {
     const inputDir = path.join(__dirname, 'input');
     const expectedDir = path.join(__dirname, 'expected');
